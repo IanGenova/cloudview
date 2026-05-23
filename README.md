@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Cloud View MVP
 
 Cloud View — Smart Hospitality, One Tap Away.
@@ -294,3 +295,7 @@ Traditional shared hosting that only supports PHP/static files is not enough for
 - Add billing/subscription integration for Super Admin.
 - Add printer integration for kitchen tickets.
 - Add tests before production launch.
+=======
+# cloudview
+A guest portal for the HOTEL GUEST using NFC Tag
+>>>>>>> 121a9498f22c172c427f3376522b8d719463e954
