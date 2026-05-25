@@ -20,6 +20,11 @@ enum TagType {
   RESTAURANT
   LOBBY
   AMENITY
+  SPA
+  PARKING
+  GYM
+  BAR
+  OTHER
 }
 
 enum TagStatus {

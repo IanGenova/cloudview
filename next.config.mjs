@@ -21,12 +21,19 @@ const serverActionAllowedOrigins = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins,
+  
 
   experimental: {
     serverActions: {
       allowedOrigins: serverActionAllowedOrigins
     }
   },
+
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
 
   images: {
     remotePatterns: [

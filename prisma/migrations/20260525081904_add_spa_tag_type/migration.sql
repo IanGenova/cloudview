@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `location` MODIFY `type` ENUM('ROOM', 'POOL', 'RESTAURANT', 'LOBBY', 'AMENITY', 'SPA', 'PARKING', 'GYM', 'BAR', 'OTHER') NOT NULL;
+
+-- AlterTable
+ALTER TABLE `nfctag` MODIFY `tagType` ENUM('ROOM', 'POOL', 'RESTAURANT', 'LOBBY', 'AMENITY', 'SPA', 'PARKING', 'GYM', 'BAR', 'OTHER') NOT NULL;

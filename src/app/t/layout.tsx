@@ -1,18 +1,9 @@
-import { NfcBrowserSessionGuard } from '@/components/guest/NfcBrowserSessionGuard';
+import type { ReactNode } from 'react';
 
-export default async function GuestTagLayout({
-  children,
-  params
-}: {
-  children: React.ReactNode;
-  params: Promise<{ tagCode: string }>;
-}) {
-  const { tagCode } = await params;
+type GuestRootLayoutProps = {
+  children: ReactNode;
+};
 
-  return (
-    <>
-      <NfcBrowserSessionGuard tagCode={tagCode} />
-      {children}
-    </>
-  );
+export default function GuestRootLayout({ children }: GuestRootLayoutProps) {
+  return <>{children}</>;
 }

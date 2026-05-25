@@ -115,7 +115,7 @@ export default async function OrderTrackingPage({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <AutoRefresh seconds={10} />
+      <AutoRefresh intervalMs={10_000} />
 
       <div className="mx-auto min-h-screen max-w-md bg-black px-5 pb-28 pt-5">
         <div className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">

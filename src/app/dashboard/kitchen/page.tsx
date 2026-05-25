@@ -303,9 +303,14 @@ export default async function KitchenDisplayPage({
 
   const pendingOrders = liveOrders.filter((order) => order.status === OrderStatus.PENDING);
 
- const preparingOrders = liveOrders.filter((order) =>
-  [OrderStatus.ACCEPTED, OrderStatus.PREPARING].includes(order.status)
-);
+  const preparingStatuses: readonly OrderStatus[] = [
+    OrderStatus.ACCEPTED,
+    OrderStatus.PREPARING,
+  ];
+
+  const preparingOrders = liveOrders.filter((order) =>
+    preparingStatuses.includes(order.status)
+  );
 
   const readyOrders = liveOrders.filter((order) => order.status === OrderStatus.READY);
 

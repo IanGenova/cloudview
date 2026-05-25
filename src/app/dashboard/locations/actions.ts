@@ -5,18 +5,19 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import type { TagType } from '@prisma/client';
 
 const LOCATION_TYPES = [
+  'ROOM',
   'POOL',
   'LOBBY',
   'RESTAURANT',
-  'SPA',
   'PARKING',
   'AMENITY',
   'GYM',
   'BAR',
-  'OTHER'
-] as const;
+  'OTHER',
+] as const satisfies readonly TagType[];
 
 const roomSchema = z.object({
   hotelId: z.string().min(1),
