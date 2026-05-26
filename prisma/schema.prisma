@@ -520,3 +520,31 @@ model NfcAccessSession {
   @@index([expiresAt])
   @@index([idleExpiresAt])
 }
+
+model RoomAddOnCharge {
+  id               String   @id @default(cuid())
+  chargeCode       String   @unique
+  hotelId          String
+  roomId           String
+  serviceRequestId String   @unique
+
+  itemName         String
+  description      String?
+  quantity         Int      @default(1)
+  unitPrice        Decimal  @db.Decimal(10, 2)
+  totalAmount      Decimal  @db.Decimal(10, 2)
+
+  postedById       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([hotelId])
+  @@index([roomId])
+  @@index([serviceRequestId])
+}
+
+enum RoomAddOnPaymentStatus {
+  UNPAID
+  PAID
+  VOIDED
+}

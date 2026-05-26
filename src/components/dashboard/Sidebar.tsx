@@ -5,6 +5,7 @@ import {
   BedDouble,
   Boxes,
   ChefHat,
+  ChevronDown,
   ConciergeBell,
   CreditCard,
   Home,
@@ -17,11 +18,18 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-type SidebarItem = {
+type SidebarSubItem = {
   href: string;
+  label: string;
+  roles: readonly Role[];
+};
+
+type SidebarItem = {
+  href?: string;
   label: string;
   icon: LucideIcon;
   roles: readonly Role[];
+  children?: readonly SidebarSubItem[];
 };
 
 const items: readonly SidebarItem[] = [
@@ -92,10 +100,21 @@ const items: readonly SidebarItem[] = [
     roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN],
   },
   {
-    href: '/dashboard/settings',
     label: 'Settings',
     icon: Settings,
     roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN],
+    children: [
+            {
+              href: '/dashboard/settings',
+              label: 'Hotel Settings',
+              roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN],
+            },
+            {
+              href: '/dashboard/settings/users',
+              label: 'User Account Settings',
+              roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN],
+            },
+          ],
   },
 ];
 
@@ -129,6 +148,41 @@ export function Sidebar({
           .filter((item) => item.roles.includes(role))
           .map((item) => {
             const Icon = item.icon;
+
+            const visibleChildren = item.children?.filter((child) =>
+              child.roles.includes(role)
+            );
+
+            if (visibleChildren?.length) {
+              return (
+                <details key={item.label} className="group" open>
+                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold text-neutral-700 hover:bg-cream hover:text-ink [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center gap-3">
+                      <Icon className="size-4" />
+                      {item.label}
+                    </span>
+
+                    <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                  </summary>
+
+                  <div className="ml-6 mt-1 space-y-1 border-l border-neutral-200 pl-3">
+                    {visibleChildren.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className="block rounded-2xl px-4 py-2 text-sm font-black text-neutral-900 hover:bg-cream hover:text-ink"
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+              );
+            }
+
+            if (!item.href) {
+              return null;
+            }
 
             return (
               <Link
