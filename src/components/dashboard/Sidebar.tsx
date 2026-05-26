@@ -10,8 +10,10 @@ import {
   CreditCard,
   Home,
   Hotel,
+  BookOpen,
   LayoutDashboard,
   RadioTower,
+  Wrench,
   Settings,
   ShoppingBag,
   Utensils,
@@ -44,6 +46,12 @@ const items: readonly SidebarItem[] = [
     label: 'Hotels',
     icon: Hotel,
     roles: [Role.SUPER_ADMIN],
+  },
+  {
+  href: '/dashboard/hotel-guide',
+  label: 'Hotel Guide',
+  icon: BookOpen,
+  roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN],
   },
   {
     href: '/dashboard/locations',
@@ -80,6 +88,12 @@ const items: readonly SidebarItem[] = [
     label: 'Kitchen Display',
     icon: ChefHat,
     roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN, Role.STAFF, Role.KITCHEN],
+  },
+  {
+  href: '/dashboard/services',
+  label: 'Services Module',
+  icon: Wrench,
+  roles: [Role.SUPER_ADMIN, Role.HOTEL_ADMIN],
   },
   {
     href: '/dashboard/service-requests',

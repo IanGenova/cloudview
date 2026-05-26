@@ -1,69 +1,96 @@
 import { notFound } from 'next/navigation';
-import { Baby, BedDouble, Car, Clock, ConciergeBell, Droplets, Hammer, PackagePlus, Shirt, Sparkles, SprayCan, Waves } from 'lucide-react';
-import { db } from '@/lib/db';
 import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { createServiceRequestAction } from '../actions';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+import { db } from '@/lib/db';
+import { GuestServiceOrderForm } from './GuestServiceOrderForm';
 
-const requestTypes = [
-  { group: 'Housekeeping', items: [
-    { type: 'Extra Towels', icon: Waves },
-    { type: 'Room Cleaning', icon: Sparkles },
-    { type: 'Laundry', icon: Shirt }
-  ] },
-  { group: 'Room Assistance', items: [
-    { type: 'Maintenance', icon: Hammer },
-    { type: 'Extra Amenities', icon: PackagePlus },
-    { type: 'Baby Cot', icon: Baby }
-  ] },
-  { group: 'Concierge', items: [
-    { type: 'Airport Transfer', icon: Car },
-    { type: 'Toiletries', icon: SprayCan },
-    { type: 'Late Checkout', icon: Clock }
-  ] },
-  { group: 'Essentials', items: [
-    { type: 'Water refill', icon: Droplets },
-    { type: 'Extra pillow', icon: BedDouble },
-    { type: 'Other request', icon: ConciergeBell }
-  ] }
-];
-
-export default async function ServicePage({ params }: { params: Promise<{ tagCode: string }> }) {
+export default async function ServicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{
+    tagCode: string;
+  }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+    count?: string;
+  }>;
+}) {
   const { tagCode } = await params;
+  const { error, success, count } = await searchParams;
+
   const tag = await requireNfcGuestAccess(tagCode);
-  if (!tag || tag.status !== 'ACTIVE') notFound();
+
+  if (!tag || tag.status !== 'ACTIVE') {
+    notFound();
+  }
+
+  const services = await db.serviceCatalogItem.findMany({
+    where: {
+      hotelId: tag.hotelId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      category: true,
+      description: true,
+      iconKey: true,
+      billingMode: true,
+      unitPrice: true,
+      unitLabel: true,
+      sortOrder: true,
+    },
+    orderBy: [
+      {
+        sortOrder: 'asc',
+      },
+      {
+        category: 'asc',
+      },
+      {
+        name: 'asc',
+      },
+    ],
+  });
+
+  const guestServices = services.map((service) => ({
+    id: service.id,
+    code: service.code,
+    name: service.name,
+    category: service.category,
+    description: service.description ?? '',
+    iconKey: service.iconKey,
+    billingMode: service.billingMode,
+    unitPrice: Number(service.unitPrice),
+    unitLabel: service.unitLabel ?? '',
+    sortOrder: service.sortOrder,
+  }));
+
+  const roomLabel = tag.room
+    ? `Room ${tag.room.number}`
+    : tag.location?.name ?? tag.label;
 
   return (
     <>
-      <GuestShell hotel={tag.hotel} title="Request Service" subtitle={tag.room ? `Room ${tag.room.number}` : tag.location?.name ?? tag.label} backHref={`/t/${tagCode}`}>
-        <form action={createServiceRequestAction} className="space-y-6">
-          <input type="hidden" name="tagCode" value={tagCode} />
-          <Input name="guestName" placeholder="Guest name optional" className="bg-white" />
-
-          {requestTypes.map((group) => (
-            <section key={group.group}>
-              <h2 className="mb-3 text-sm font-black text-neutral-700">{group.group}</h2>
-              <div className="grid grid-cols-3 gap-3">
-                {group.items.map(({ type, icon: Icon }) => (
-                  <label key={type} className="cursor-pointer">
-                    <input className="peer sr-only" type="radio" name="type" value={type} required />
-                    <span className="grid min-h-[92px] place-items-center rounded-2xl bg-white p-3 text-center text-xs font-black shadow-sm ring-2 ring-transparent transition peer-checked:bg-ink peer-checked:text-white peer-checked:ring-gold">
-                      <Icon className="mb-2 size-6" />
-                      {type}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </section>
-          ))}
-
-          <Textarea name="notes" placeholder="Add notes, exact need, or urgency" className="bg-white" />
-          <Button size="lg" className="w-full bg-sand text-ink hover:bg-gold">My Requests</Button>
-        </form>
+      <GuestShell
+        hotel={tag.hotel}
+        title="Services & Room Add-ons"
+        subtitle={roomLabel}
+        backHref={`/t/${tagCode}`}
+      >
+        <GuestServiceOrderForm
+          tagCode={tagCode}
+          roomLabel={roomLabel}
+          services={guestServices}
+          error={error}
+          success={success}
+          count={count}
+        />
       </GuestShell>
+
       <GuestBottomNav tagCode={tagCode} active="services" />
     </>
   );

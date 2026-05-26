@@ -13,6 +13,11 @@ enum Role {
   STAFF
   KITCHEN
 }
+enum ServiceBillingMode {
+  FREE
+  FIXED_PRICE
+  PRICE_ON_CONFIRMATION
+}
 
 enum TagType {
   ROOM
@@ -129,6 +134,9 @@ model Hotel {
   activityLogs ActivityLog[]
   nfcAccessSessions NfcAccessSession[]
   subscription HotelSubscription?
+  serviceCatalogItems ServiceCatalogItem[]
+  guideSections HotelGuideSection[]
+  guideItems    HotelGuideItem[]
 }
 
 model HotelSettings {
@@ -534,7 +542,7 @@ model RoomAddOnCharge {
   unitPrice        Decimal  @db.Decimal(10, 2)
   totalAmount      Decimal  @db.Decimal(10, 2)
 
-  postedById       String
+  postedById       String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -547,4 +555,104 @@ enum RoomAddOnPaymentStatus {
   UNPAID
   PAID
   VOIDED
+}
+
+model ServiceCatalogItem {
+  id          String             @id @default(cuid())
+  hotelId     String
+  code        String
+  name        String
+  category    String
+  description String?
+  iconKey     String             @default("ConciergeBell")
+
+  billingMode ServiceBillingMode @default(FREE)
+  unitPrice   Decimal            @default(0) @db.Decimal(10, 2)
+  unitLabel   String?
+
+  isActive    Boolean            @default(true)
+  sortOrder   Int                @default(0)
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  hotel        Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, code])
+  @@index([hotelId])
+  @@index([category])
+  @@index([isActive])
+}
+
+enum HotelGuideItemType {
+  INFORMATION
+  QUICK_ACTION
+  POLICY
+  CONTACT
+  LOCATION
+  FACILITY
+  DINING
+  TRANSPORTATION
+  FAQ
+}
+
+model HotelGuideSection {
+  id          String   @id @default(cuid())
+  hotelId     String
+
+  title       String
+  subtitle    String?
+  description String?
+  imageUrl    String?
+  iconKey     String   @default("Info")
+
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hotel        Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  items        HotelGuideItem[]
+
+  @@index([hotelId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model HotelGuideItem {
+  id          String             @id @default(cuid())
+  sectionId   String
+  hotelId     String
+
+  title       String
+  subtitle    String?
+  content     String?
+  itemType    HotelGuideItemType @default(INFORMATION)
+
+  imageUrl    String?
+  iconKey     String             @default("Info")
+
+  hours       String?
+  location    String?
+  contact     String?
+  mapUrl      String?
+
+  buttonLabel String?
+  buttonHref  String?
+
+  sortOrder   Int                @default(0)
+  isActive    Boolean            @default(true)
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  hotel        Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  section      HotelGuideSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([sectionId])
+  @@index([itemType])
+  @@index([isActive])
+  @@index([sortOrder])
 }

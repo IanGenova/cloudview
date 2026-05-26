@@ -16,6 +16,8 @@
     "jose": "latest",
     "lucide-react": "latest",
     "next": "latest",
+    "pusher": "^5.3.3",
+    "pusher-js": "^8.5.0",
     "qrcode": "latest",
     "react": "latest",
     "react-dom": "latest",
