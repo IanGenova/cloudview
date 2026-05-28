@@ -137,6 +137,11 @@ model Hotel {
   serviceCatalogItems ServiceCatalogItem[]
   guideSections HotelGuideSection[]
   guideItems    HotelGuideItem[]
+  menuDailyStocks         MenuDailyStock[]
+  menuDailyStockMovements MenuDailyStockMovement[]
+  menuAvailabilityStocks    MenuAvailabilityStock[]
+  menuAvailabilityMovements MenuAvailabilityMovement[]
+
 }
 
 model HotelSettings {
@@ -260,9 +265,14 @@ model MenuProduct {
   images ProductImage[]
   recipes ProductInventoryRecipe[]
   orderItems OrderItem[]
+  dailyStocks         MenuDailyStock[]
+  dailyStockMovements MenuDailyStockMovement[]
+  availabilityStocks    MenuAvailabilityStock[]
+  availabilityMovements MenuAvailabilityMovement[]
 
   @@index([hotelId])
   @@index([categoryId])
+ 
 }
 
 model ProductImage {
@@ -655,4 +665,122 @@ model HotelGuideItem {
   @@index([itemType])
   @@index([isActive])
   @@index([sortOrder])
+}
+
+enum MenuStockMovementType {
+  SET_OPENING
+  ADD
+  REMOVE
+  SALE
+  CANCEL_RESTORE
+  SOLD_OUT
+  REOPEN
+}
+
+model MenuDailyStock {
+  id           String   @id @default(cuid())
+  hotelId      String
+  productId    String
+  stockDate    DateTime
+
+  openingQty   Int      @default(0)
+  availableQty Int      @default(0)
+  soldQty      Int      @default(0)
+  isSoldOut    Boolean  @default(false)
+
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hotel        Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product      MenuProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements    MenuDailyStockMovement[]
+
+  @@unique([hotelId, productId, stockDate])
+  @@index([hotelId])
+  @@index([productId])
+  @@index([stockDate])
+  @@index([isSoldOut])
+}
+
+model MenuDailyStockMovement {
+  id        String                @id @default(cuid())
+  hotelId   String
+  productId String
+  stockId   String
+  stockDate DateTime
+
+  type      MenuStockMovementType
+  quantity  Int
+  reason    String?
+  userId    String?
+
+  createdAt DateTime @default(now())
+
+  hotel     Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product   MenuProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock     MenuDailyStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([productId])
+  @@index([stockId])
+  @@index([stockDate])
+  @@index([type])
+}
+
+enum MenuAvailabilityMovementType {
+  SET_STOCK
+  ADD_STOCK
+  REMOVE_STOCK
+  SOLD_OUT
+  REOPEN
+  ORDER_DEDUCTION
+  CANCEL_RESTORE
+}
+
+model MenuAvailabilityStock {
+  id           String   @id @default(cuid())
+  hotelId      String
+  productId    String
+
+  availableQty Int      @default(0)
+  soldQty      Int      @default(0)
+  isSoldOut    Boolean  @default(false)
+  notes        String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hotel         Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product       MenuProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements     MenuAvailabilityMovement[]
+
+  @@unique([hotelId, productId])
+  @@index([hotelId])
+  @@index([productId])
+  @@index([isSoldOut])
+}
+
+model MenuAvailabilityMovement {
+  id           String                       @id @default(cuid())
+  hotelId      String
+  productId    String
+  stockId      String
+
+  type         MenuAvailabilityMovementType
+  quantity     Int
+  balanceAfter Int
+  reason       String?
+  userId       String?
+
+  createdAt    DateTime @default(now())
+
+  hotel         Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product       MenuProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock         MenuAvailabilityStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([productId])
+  @@index([stockId])
+  @@index([type])
 }

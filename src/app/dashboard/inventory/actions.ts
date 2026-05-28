@@ -1,63 +1,249 @@
 'use server';
 
-import { Prisma, InventoryMovementType } from '@prisma/client';
+import { MenuAvailabilityMovementType } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { requireUser, requireRole } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { requireRole, requireUser } from '@/lib/auth';
+import { assertHotelScope } from '@/lib/access';
 import { db } from '@/lib/db';
-import { scopedHotelId } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
 
-export async function createInventoryItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
-  const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
-  const name = cleanText(formData.get('name'), 160);
-  const unit = cleanText(formData.get('unit'), 40);
-  const stockQuantity = new Prisma.Decimal(Number(formData.get('stockQuantity') || 0));
-  const reorderLevel = new Prisma.Decimal(Number(formData.get('reorderLevel') || 0));
-  if (!hotelId || !name || !unit) throw new Error('Inventory name and unit required');
-  await db.inventoryItem.create({
-    data: { hotelId, name, unit, stockQuantity, reorderLevel, sku: cleanText(formData.get('sku'), 80), supplier: cleanText(formData.get('supplier'), 160) }
-  });
-  revalidatePath('/dashboard/inventory');
+const MANUAL_OPERATIONS: readonly MenuAvailabilityMovementType[] = [
+  MenuAvailabilityMovementType.SET_STOCK,
+  MenuAvailabilityMovementType.ADD_STOCK,
+  MenuAvailabilityMovementType.REMOVE_STOCK,
+  MenuAvailabilityMovementType.SOLD_OUT,
+  MenuAvailabilityMovementType.REOPEN,
+];
+
+function redirectToInventory(params: {
+  error?: string;
+  success?: string;
+}) {
+  const query = new URLSearchParams();
+
+  if (params.error) {
+    query.set('error', params.error);
+  }
+
+  if (params.success) {
+    query.set('success', params.success);
+  }
+
+  redirect(`/dashboard/inventory?${query.toString()}`);
 }
 
-export async function stockMovementAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
-  const itemId = cleanText(formData.get('itemId'));
-  const type = formData.get('type') as InventoryMovementType;
-  const quantity = Number(formData.get('quantity') || 0);
-  if (!itemId || !Object.values(InventoryMovementType).includes(type) || quantity <= 0) throw new Error('Invalid movement');
-  const item = await db.inventoryItem.findUnique({ where: { id: itemId } });
-  if (!item) throw new Error('Item not found');
-  scopedHotelId(user, item.hotelId);
-  const isOut = type === 'STOCK_OUT' || type === 'ORDER_DEDUCTION';
-  await db.$transaction([
-    db.inventoryItem.update({ where: { id: item.id }, data: { stockQuantity: isOut ? { decrement: quantity } : { increment: quantity } } }),
-    db.inventoryMovement.create({ data: { hotelId: item.hotelId, itemId: item.id, type, quantity: new Prisma.Decimal(quantity), reason: cleanText(formData.get('reason'), 240), userId: user.id } })
-  ]);
-  revalidatePath('/dashboard/inventory');
+function parseWholeNumber(value: FormDataEntryValue | null) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
 }
 
-export async function linkRecipeAction(formData: FormData) {
+export async function controlMenuStockAction(formData: FormData) {
   const user = await requireUser();
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN']);
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
   const productId = cleanText(formData.get('productId'));
-  const inventoryItemId = cleanText(formData.get('inventoryItemId'));
-  const quantity = Number(formData.get('quantity') || 0);
-  if (!productId || !inventoryItemId || quantity <= 0) throw new Error('Invalid recipe');
-  const [product, item] = await Promise.all([
-    db.menuProduct.findUnique({ where: { id: productId } }),
-    db.inventoryItem.findUnique({ where: { id: inventoryItemId } })
-  ]);
-  if (!product || !item || product.hotelId !== item.hotelId) throw new Error('Product and inventory item must be in same hotel');
-  scopedHotelId(user, product.hotelId);
-  await db.productInventoryRecipe.upsert({
-    where: { productId_inventoryItemId: { productId, inventoryItemId } },
-    update: { quantity: new Prisma.Decimal(quantity) },
-    create: { productId, inventoryItemId, quantity: new Prisma.Decimal(quantity) }
+  const operation = formData.get(
+    'operation'
+  ) as MenuAvailabilityMovementType;
+  const quantity = parseWholeNumber(formData.get('quantity'));
+  const reason = cleanText(formData.get('reason'), 300);
+  const notes = cleanText(formData.get('notes'), 300);
+
+  if (!productId) {
+    redirectToInventory({
+      error: 'product-required',
+    });
+  }
+
+  if (
+    !Object.values(MenuAvailabilityMovementType).includes(operation) ||
+    !MANUAL_OPERATIONS.includes(operation)
+  ) {
+    redirectToInventory({
+      error: 'invalid-operation',
+    });
+  }
+
+  const product = await db.menuProduct.findUnique({
+    where: {
+      id: productId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      name: true,
+    },
   });
+
+  if (!product) {
+    redirectToInventory({
+      error: 'product-not-found',
+    });
+  }
+
+  assertHotelScope(user, product.hotelId);
+
+  const requiresPositiveQuantity =
+    operation === MenuAvailabilityMovementType.ADD_STOCK ||
+    operation === MenuAvailabilityMovementType.REMOVE_STOCK ||
+    operation === MenuAvailabilityMovementType.REOPEN;
+
+  const requiresQuantity =
+    operation === MenuAvailabilityMovementType.SET_STOCK ||
+    requiresPositiveQuantity;
+
+  if (requiresQuantity && quantity === null) {
+    redirectToInventory({
+      error: 'invalid-quantity',
+    });
+  }
+
+  if (requiresPositiveQuantity && (!quantity || quantity <= 0)) {
+    redirectToInventory({
+      error: 'positive-quantity-required',
+    });
+  }
+
+  await db.$transaction(async (tx) => {
+    const existingStock = await tx.menuAvailabilityStock.findUnique({
+      where: {
+        hotelId_productId: {
+          hotelId: product.hotelId,
+          productId: product.id,
+        },
+      },
+    });
+
+    const currentQty = existingStock?.availableQty ?? 0;
+    let nextQty = currentQty;
+    let movementQty = quantity ?? 0;
+
+    if (operation === MenuAvailabilityMovementType.SET_STOCK) {
+      nextQty = quantity ?? 0;
+      movementQty = nextQty;
+    }
+
+    if (operation === MenuAvailabilityMovementType.ADD_STOCK) {
+      nextQty = currentQty + quantity!;
+      movementQty = quantity!;
+    }
+
+    if (operation === MenuAvailabilityMovementType.REMOVE_STOCK) {
+      movementQty = Math.min(quantity!, currentQty);
+      nextQty = Math.max(currentQty - quantity!, 0);
+    }
+
+    if (operation === MenuAvailabilityMovementType.SOLD_OUT) {
+      movementQty = currentQty;
+      nextQty = 0;
+    }
+
+    if (operation === MenuAvailabilityMovementType.REOPEN) {
+      nextQty = currentQty + quantity!;
+      movementQty = quantity!;
+    }
+
+    const stock = await tx.menuAvailabilityStock.upsert({
+      where: {
+        hotelId_productId: {
+          hotelId: product.hotelId,
+          productId: product.id,
+        },
+      },
+      update: {
+        availableQty: nextQty,
+        isSoldOut: nextQty <= 0,
+        notes: notes || null,
+      },
+      create: {
+        hotelId: product.hotelId,
+        productId: product.id,
+        availableQty: nextQty,
+        soldQty: 0,
+        isSoldOut: nextQty <= 0,
+        notes: notes || null,
+      },
+    });
+
+    await tx.menuAvailabilityMovement.create({
+      data: {
+        hotelId: product.hotelId,
+        productId: product.id,
+        stockId: stock.id,
+        type: operation,
+        quantity: movementQty,
+        balanceAfter: nextQty,
+        reason:
+          reason ||
+          (operation === MenuAvailabilityMovementType.SET_STOCK
+            ? 'Set exact available menu stock'
+            : operation === MenuAvailabilityMovementType.ADD_STOCK
+              ? 'Added menu stock'
+              : operation === MenuAvailabilityMovementType.REMOVE_STOCK
+                ? 'Removed menu stock'
+                : operation === MenuAvailabilityMovementType.SOLD_OUT
+                  ? 'Marked menu item as sold out'
+                  : 'Reopened menu item stock'),
+        userId: user.id,
+      },
+    });
+  });
+
   revalidatePath('/dashboard/inventory');
   revalidatePath('/dashboard/menu');
+
+  redirectToInventory({
+    success: 'stock-updated',
+  });
+}
+
+export async function initializeMenuStocksAction() {
+  const user = await requireUser();
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
+  const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+
+  const products = await db.menuProduct.findMany({
+    where,
+    select: {
+      id: true,
+      hotelId: true,
+    },
+  });
+
+  await Promise.all(
+    products.map((product) =>
+      db.menuAvailabilityStock.upsert({
+        where: {
+          hotelId_productId: {
+            hotelId: product.hotelId,
+            productId: product.id,
+          },
+        },
+        update: {},
+        create: {
+          hotelId: product.hotelId,
+          productId: product.id,
+          availableQty: 0,
+          soldQty: 0,
+          isSoldOut: true,
+          notes: 'Initialized menu stock',
+        },
+      })
+    )
+  );
+
+  revalidatePath('/dashboard/inventory');
+
+  redirectToInventory({
+    success: 'stocks-initialized',
+  });
 }

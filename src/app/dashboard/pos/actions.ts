@@ -1,172 +1,236 @@
 'use server';
 
-import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { MenuAvailabilityMovementType, PaymentMethod } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-import { requireUser } from '@/lib/auth';
+import { requireRole, requireUser } from '@/lib/auth';
+import { assertHotelScope } from '@/lib/access';
 import { db } from '@/lib/db';
+import { cleanText } from '@/lib/sanitize';
+import { randomCode } from '@/lib/utils';
+import { logActivity } from '@/lib/activity';
 
-const posOrderSchema = z.object({
-  hotelId: z.string().min(1),
-  roomId: z.string().optional().nullable(),
-  guestName: z.string().optional(),
-  notes: z.string().optional(),
-  paymentMethod: z.enum(['CASH', 'POS', 'ROOM_CHARGE', 'PAY_AT_COUNTER']),
-  items: z.array(
-    z.object({
-      productId: z.string().min(1),
-      quantity: z.number().int().min(1).max(99)
-    })
-  ).min(1)
-});
+type POSOrderInput = {
+  hotelId: string;
+  roomId?: string | null;
+  guestName?: string;
+  notes?: string;
+  paymentMethod: 'CASH' | 'POS' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER';
+  items: {
+    productId: string;
+    quantity: number;
+  }[];
+};
 
-function cleanText(value?: string | null, max = 255) {
-  return String(value || '').trim().slice(0, max);
-}
-
-function makeOrderCode() {
-  return `ORD-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-}
-
-export async function createPOSOrder(input: z.infer<typeof posOrderSchema>) {
-  const user = await requireUser();
-  const parsed = posOrderSchema.parse(input);
-
-  if (user.role !== 'SUPER_ADMIN' && user.hotelId !== parsed.hotelId) {
-    throw new Error('You are not allowed to create POS orders for this hotel.');
+function parsePositiveQuantity(value: number) {
+  if (!Number.isInteger(value) || value <= 0) {
+    return null;
   }
 
-  const productIds = parsed.items.map((item) => item.productId);
+  return value;
+}
 
-  const result = await db.$transaction(async (tx) => {
-    const hotel = await tx.hotel.findUnique({
-      where: { id: parsed.hotelId },
-      include: { settings: true }
-    });
+export async function createPOSOrder(input: POSOrderInput) {
+  const user = await requireUser();
 
-    if (!hotel) {
-      throw new Error('Hotel not found.');
-    }
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
-    const products = await tx.menuProduct.findMany({
-      where: {
-        id: { in: productIds },
-        hotelId: parsed.hotelId
-      }
-    });
+  const hotelId = cleanText(input.hotelId);
+  const roomId = cleanText(input.roomId);
+  const guestName = cleanText(input.guestName, 100);
+  const notes = cleanText(input.notes, 1000);
+  const paymentMethod = input.paymentMethod as PaymentMethod;
 
-    if (products.length !== productIds.length) {
-      throw new Error('Some products are invalid or unavailable.');
-    }
+  if (!hotelId) {
+    throw new Error('Hotel is required.');
+  }
 
-    const productMap = new Map(products.map((product) => [product.id, product]));
+  assertHotelScope(user, hotelId);
 
-    const subtotalCents = parsed.items.reduce((sum, item) => {
-      const product = productMap.get(item.productId);
+  if (!Object.values(PaymentMethod).includes(paymentMethod)) {
+    throw new Error('Invalid payment method.');
+  }
 
-      if (!product) return sum;
+  if (!input.items?.length) {
+    throw new Error('Please add at least one item.');
+  }
 
-      return sum + product.priceCents * item.quantity;
-    }, 0);
+  const normalizedItems = input.items.map((item) => ({
+    productId: cleanText(item.productId),
+    quantity: parsePositiveQuantity(item.quantity),
+  }));
 
-    const serviceChargeRate = Number(hotel.settings?.serviceChargeRate || 0);
-    const taxRate = Number(hotel.settings?.taxRate || 0);
+  if (
+    normalizedItems.some((item) => !item.productId || item.quantity === null)
+  ) {
+    throw new Error('Invalid cart item quantity.');
+  }
 
-    const serviceChargeCents = Math.round(subtotalCents * serviceChargeRate);
-    const taxCents = Math.round(subtotalCents * taxRate);
-    const totalCents = subtotalCents + serviceChargeCents + taxCents;
+  const productIds = normalizedItems.map((item) => item.productId);
 
-    const recipes = await tx.productInventoryRecipe.findMany({
-      where: {
-        productId: { in: productIds }
+  const products = await db.menuProduct.findMany({
+    where: {
+      id: {
+        in: productIds,
       },
-      include: {
-        inventoryItem: true
-      }
-    });
+      hotelId,
+      isAvailable: true,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      name: true,
+      priceCents: true,
+    },
+  });
 
-    for (const recipe of recipes) {
-      const cartItem = parsed.items.find((item) => item.productId === recipe.productId);
-      if (!cartItem) continue;
+  if (products.length !== new Set(productIds).size) {
+    throw new Error('One or more products are no longer available.');
+  }
 
-      const requiredQty = Number(recipe.quantity) * cartItem.quantity;
-      const currentStock = Number(recipe.inventoryItem.stockQuantity);
+  const productMap = new Map(products.map((product) => [product.id, product]));
 
-      if (currentStock < requiredQty) {
-        throw new Error(
-          `Insufficient inventory for ${recipe.inventoryItem.name}. Available: ${currentStock}, required: ${requiredQty}`
-        );
-      }
+  const stocks = await db.menuAvailabilityStock.findMany({
+    where: {
+      hotelId,
+      productId: {
+        in: productIds,
+      },
+    },
+    select: {
+      id: true,
+      productId: true,
+      availableQty: true,
+      soldQty: true,
+      isSoldOut: true,
+    },
+  });
+
+  const stockMap = new Map(stocks.map((stock) => [stock.productId, stock]));
+
+  for (const item of normalizedItems) {
+    const product = productMap.get(item.productId);
+    const stock = stockMap.get(item.productId);
+    const quantity = item.quantity!;
+
+    if (!product) {
+      throw new Error('Product not found.');
     }
 
-    const order = await tx.order.create({
+    if (!stock) {
+      throw new Error(`${product.name} has no stock record yet.`);
+    }
+
+    if (stock.isSoldOut || stock.availableQty <= 0) {
+      throw new Error(`${product.name} is sold out.`);
+    }
+
+    if (quantity > stock.availableQty) {
+      throw new Error(
+        `${product.name} only has ${stock.availableQty} available.`
+      );
+    }
+  }
+
+  const subtotal = normalizedItems.reduce((sum, item) => {
+    const product = productMap.get(item.productId)!;
+    return sum + product.priceCents * item.quantity!;
+  }, 0);
+
+  const orderCode = randomCode('ORD');
+
+  const order = await db.$transaction(async (tx) => {
+    const createdOrder = await tx.order.create({
       data: {
-        hotelId: parsed.hotelId,
-        roomId: parsed.roomId || null,
+        hotelId,
+        roomId: roomId || null,
         locationId: null,
         tagId: null,
-
-        orderCode: makeOrderCode(),
-        guestName: cleanText(parsed.guestName, 100) || 'POS Customer',
-        notes: cleanText(parsed.notes, 500),
-
-        paymentMethod: parsed.paymentMethod as PaymentMethod,
-        paymentStatus:
-          parsed.paymentMethod === 'ROOM_CHARGE' || parsed.paymentMethod === 'PAY_AT_COUNTER'
-            ? PaymentStatus.UNPAID
-            : PaymentStatus.PAID,
-
-        status: OrderStatus.PREPARING,
-
-        subtotalCents,
-        serviceChargeCents,
-        taxCents,
-        totalCents,
-
-        posSyncStatus: 'PENDING',
-
+        orderCode,
+        guestName: guestName || null,
+        notes: notes || null,
+        paymentMethod,
+        subtotalCents: subtotal,
+        serviceChargeCents: 0,
+        taxCents: 0,
+        totalCents: subtotal,
         items: {
-          create: parsed.items.map((item) => {
+          create: normalizedItems.map((item) => {
             const product = productMap.get(item.productId)!;
 
             return {
               productId: product.id,
               productNameSnapshot: product.name,
+              quantity: item.quantity!,
               unitPriceCents: product.priceCents,
-              quantity: item.quantity,
-              notes: null
             };
-          })
-        }
-      }
+          }),
+        },
+        statusHistory: {
+          create: {
+            status: 'PENDING',
+            note: 'POS sale created from dashboard',
+            userId: user.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        orderCode: true,
+      },
     });
 
-    for (const recipe of recipes) {
-      const cartItem = parsed.items.find((item) => item.productId === recipe.productId);
-      if (!cartItem) continue;
+    for (const item of normalizedItems) {
+      const product = productMap.get(item.productId)!;
+      const stock = stockMap.get(item.productId)!;
+      const quantity = item.quantity!;
+      const nextAvailableQty = stock.availableQty - quantity;
+      const nextSoldQty = stock.soldQty + quantity;
 
-      const requiredQty = Number(recipe.quantity) * cartItem.quantity;
-
-      await tx.inventoryItem.update({
-        where: { id: recipe.inventoryItemId },
+      await tx.menuAvailabilityStock.update({
+        where: {
+          id: stock.id,
+        },
         data: {
-          stockQuantity: {
-            decrement: requiredQty
-          }
-        }
+          availableQty: nextAvailableQty,
+          soldQty: nextSoldQty,
+          isSoldOut: nextAvailableQty <= 0,
+        },
+      });
+
+      await tx.menuAvailabilityMovement.create({
+        data: {
+          hotelId,
+          productId: product.id,
+          stockId: stock.id,
+          type: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+          quantity,
+          balanceAfter: nextAvailableQty,
+          reason: `POS order ${createdOrder.orderCode}`,
+          userId: user.id,
+        },
       });
     }
 
-    return order;
+    return createdOrder;
+  });
+
+  await logActivity({
+    hotelId,
+    actor: user.name ?? user.email ?? 'Dashboard User',
+    action: 'CREATE',
+    entity: 'Order',
+    entityId: order.id,
+    message: `POS order ${order.orderCode} created`,
   });
 
   revalidatePath('/dashboard/pos');
-  revalidatePath('/dashboard/kitchen');
   revalidatePath('/dashboard/orders');
+  revalidatePath('/dashboard/kitchen');
   revalidatePath('/dashboard/inventory');
+  revalidatePath('/dashboard/menu');
 
   return {
     ok: true,
-    orderCode: result.orderCode
+    orderCode: order.orderCode,
   };
 }
