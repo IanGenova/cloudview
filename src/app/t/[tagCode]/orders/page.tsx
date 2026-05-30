@@ -8,11 +8,13 @@ import {
   PackageCheck,
   ReceiptText,
   ShoppingBag,
+  Utensils,
 } from 'lucide-react';
 import { OrderStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +57,22 @@ function statusLabel(status: OrderStatus) {
   return status.replaceAll('_', ' ');
 }
 
+function extractOrderType(notes?: string | null) {
+  if (!notes) {
+    return 'Order type not specified';
+  }
+
+  const line = notes
+    .split('\n')
+    .find((item) => item.toLowerCase().startsWith('order type:'));
+
+  if (!line) {
+    return 'Order type not specified';
+  }
+
+  return line.replace(/^Order Type:\s*/i, '').trim();
+}
+
 export default async function MyOrdersPage({
   params,
 }: {
@@ -66,31 +84,36 @@ export default async function MyOrdersPage({
 
   const tag = await requireNfcGuestAccess(tagCode);
 
-  if (!tag || tag.status !== 'ACTIVE') {
+  if (!tag) {
     notFound();
   }
+
+  const guestSession = await getCurrentNfcGuestSession(tagCode);
 
   const location = tag.room
     ? `Room ${tag.room.number}`
     : tag.location?.name ?? tag.label;
 
-  const orders = await db.order.findMany({
-    where: {
-      tagId: tag.id,
-      hotelId: tag.hotelId,
-    },
-    include: {
-      items: {
-        orderBy: {
-          createdAt: 'asc',
+  const orders = guestSession
+    ? await db.order.findMany({
+        where: {
+          hotelId: tag.hotelId,
+          tagId: tag.id,
+          guestSessionId: guestSession.id,
         },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 50,
-  });
+        include: {
+          items: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 50,
+      })
+    : [];
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -119,7 +142,9 @@ export default async function MyOrdersPage({
             </div>
 
             <div>
-              <p className="text-sm font-bold text-white/50">Order History</p>
+              <p className="text-sm font-bold text-white/50">
+                Current Guest Session
+              </p>
               <h2 className="text-2xl font-black text-white">
                 {orders.length} order{orders.length === 1 ? '' : 's'}
               </h2>
@@ -138,6 +163,8 @@ export default async function MyOrdersPage({
               .slice(0, 2)
               .map((item) => `${item.quantity}× ${item.productNameSnapshot}`)
               .join(', ');
+
+            const orderType = extractOrderType(order.notes);
 
             return (
               <Link
@@ -170,6 +197,18 @@ export default async function MyOrdersPage({
                 </div>
 
                 <div className="mt-4 space-y-3">
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-3">
+                    <Utensils className="mt-0.5 size-4 shrink-0 text-gold" />
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        {orderType}
+                      </p>
+                      <p className="mt-1 text-xs text-white/45">
+                        Order fulfillment type
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-3">
                     <ReceiptText className="mt-0.5 size-4 shrink-0 text-gold" />
                     <div>
@@ -215,10 +254,10 @@ export default async function MyOrdersPage({
                 <Clock className="size-7" />
               </div>
 
-              <h2 className="mt-4 font-black">No orders yet</h2>
+              <h2 className="mt-4 font-black">No orders for this guest</h2>
               <p className="mt-2 text-sm leading-6 text-white/45">
-                Your food and drink orders will appear here after you place an
-                order.
+                Orders from previous guests are hidden. Tap the NFC card again
+                to start a new guest session.
               </p>
 
               <Link

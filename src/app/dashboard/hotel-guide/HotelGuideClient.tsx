@@ -8,16 +8,27 @@ import { Select } from '@/components/ui/Select';
 import {
   createGuideItemAction,
   createGuideSectionAction,
+  deleteGuideImageAction,
   deleteGuideItemAction,
   deleteGuideSectionAction,
   seedDefaultHotelGuideAction,
   updateGuideItemAction,
   updateGuideSectionAction,
+  uploadGuideImageAction,
 } from './actions';
 
 type HotelOption = {
   id: string;
   name: string;
+};
+
+type GuideImage = {
+  id: string;
+  title: string;
+  caption: string;
+  imageUrl: string;
+  sortOrder: number;
+  isActive: boolean;
 };
 
 type GuideItem = {
@@ -38,6 +49,7 @@ type GuideItem = {
   buttonHref: string;
   sortOrder: number;
   isActive: boolean;
+  galleryImages: GuideImage[];
 };
 
 type GuideSection = {
@@ -51,6 +63,7 @@ type GuideSection = {
   iconKey: string;
   sortOrder: number;
   isActive: boolean;
+  galleryImages: GuideImage[];
   items: GuideItem[];
 };
 
@@ -191,7 +204,7 @@ function SectionFormFields({
       <div className="grid gap-3 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Image URL
+            Cover Image URL
           </label>
           <input
             name="imageUrl"
@@ -348,53 +361,18 @@ function ItemFormFields({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <input
-          name="hours"
-          defaultValue={item?.hours ?? ''}
-          placeholder="Hours e.g. 7:00 AM - 9:00 PM"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-
-        <input
-          name="location"
-          defaultValue={item?.location ?? ''}
-          placeholder="Location"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-
-        <input
-          name="contact"
-          defaultValue={item?.contact ?? ''}
-          placeholder="Contact / Extension"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-
-        <input
-          name="mapUrl"
-          defaultValue={item?.mapUrl ?? ''}
-          placeholder="Map URL"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-
-        <input
-          name="buttonLabel"
-          defaultValue={item?.buttonLabel ?? ''}
-          placeholder="Button Label e.g. View Menu"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-
-        <input
-          name="buttonHref"
-          defaultValue={item?.buttonHref ?? ''}
-          placeholder="Button Link e.g. menu, service, pool, https://..."
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
+        <input name="hours" defaultValue={item?.hours ?? ''} placeholder="Hours e.g. 7:00 AM - 9:00 PM" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
+        <input name="location" defaultValue={item?.location ?? ''} placeholder="Location" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
+        <input name="contact" defaultValue={item?.contact ?? ''} placeholder="Contact / Extension" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
+        <input name="mapUrl" defaultValue={item?.mapUrl ?? ''} placeholder="Map URL" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
+        <input name="buttonLabel" defaultValue={item?.buttonLabel ?? ''} placeholder="Button Label e.g. View Menu" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
+        <input name="buttonHref" defaultValue={item?.buttonHref ?? ''} placeholder="Button Link e.g. menu, service, pool, https://..." className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
       </div>
 
       <input
         name="imageUrl"
         defaultValue={item?.imageUrl ?? ''}
-        placeholder="Optional image URL"
+        placeholder="Optional cover image URL"
         className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
       />
 
@@ -409,6 +387,192 @@ function ItemFormFields({
         Show in Guest Portal
       </label>
     </>
+  );
+}
+
+function UploadImageModal({
+  sections,
+  section,
+  item,
+  onClose,
+}: {
+  sections: GuideSection[];
+  section?: GuideSection;
+  item?: GuideItem;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Upload Hotel Guide Image"
+      description="Upload brochure-style gallery photos for this Hotel Guide section or item."
+      onClose={onClose}
+    >
+      <form action={uploadGuideImageAction} className="space-y-4">
+        {item ? (
+          <>
+            <input type="hidden" name="itemId" value={item.id} />
+            <input type="hidden" name="sectionId" value={item.sectionId} />
+          </>
+        ) : section ? (
+          <input type="hidden" name="sectionId" value={section.id} />
+        ) : (
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Section
+            </label>
+            <Select name="sectionId" defaultValue={sections[0]?.id ?? ''}>
+              {sections.map((sectionOption) => (
+                <option key={sectionOption.id} value={sectionOption.id}>
+                  {sectionOption.hotelName} · {sectionOption.title}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Image File
+          </label>
+          <input
+            name="image"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            required
+            className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold"
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            JPG, PNG, or WEBP only. Maximum 4MB.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Image Title
+            </label>
+            <input
+              name="title"
+              placeholder="Pool Area"
+              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Sort Order
+            </label>
+            <input
+              name="sortOrder"
+              type="number"
+              defaultValue="0"
+              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Caption
+          </label>
+          <textarea
+            name="caption"
+            rows={3}
+            placeholder="Short brochure caption for guests."
+            className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-bold outline-none"
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm font-bold">
+          <input
+            type="checkbox"
+            name="isActive"
+            value="true"
+            defaultChecked
+            className="size-4"
+          />
+          Show in Guest Portal Gallery
+        </label>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+
+          <Button>Upload Image</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function GalleryPreview({
+  images,
+}: {
+  images: GuideImage[];
+}) {
+  if (!images.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-neutral-300 p-4 text-center text-xs font-bold text-neutral-400">
+        No gallery images yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {images.map((image) => (
+        <div
+          key={image.id}
+          className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+        >
+          <div
+            className="h-28 bg-neutral-100 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${image.imageUrl})`,
+            }}
+          />
+
+          <div className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-xs font-black">
+                {image.title || 'Gallery Image'}
+              </p>
+
+              <span
+                className={
+                  image.isActive
+                    ? 'rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700'
+                    : 'rounded-full bg-neutral-100 px-2 py-1 text-[9px] font-black text-neutral-500'
+                }
+              >
+                {image.isActive ? 'ACTIVE' : 'HIDDEN'}
+              </span>
+            </div>
+
+            {image.caption ? (
+              <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
+                {image.caption}
+              </p>
+            ) : null}
+
+            <form action={deleteGuideImageAction} className="mt-3">
+              <input type="hidden" name="imageId" value={image.id} />
+              <button
+                type="submit"
+                className="h-9 w-full rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
+              >
+                Delete Image
+              </button>
+            </form>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -427,13 +591,28 @@ export function HotelGuideClient({
 }) {
   const [creatingSection, setCreatingSection] = useState(false);
   const [creatingItem, setCreatingItem] = useState(false);
-  const [editingSection, setEditingSection] = useState<GuideSection | null>(
-    null
-  );
+  const [editingSection, setEditingSection] = useState<GuideSection | null>(null);
   const [editingItem, setEditingItem] = useState<GuideItem | null>(null);
+  const [uploadSection, setUploadSection] = useState<GuideSection | null>(null);
+  const [uploadItem, setUploadItem] = useState<GuideItem | null>(null);
 
   const totalItems = useMemo(
     () => sections.reduce((sum, section) => sum + section.items.length, 0),
+    [sections]
+  );
+
+  const totalImages = useMemo(
+    () =>
+      sections.reduce(
+        (sum, section) =>
+          sum +
+          section.galleryImages.length +
+          section.items.reduce(
+            (itemSum, item) => itemSum + item.galleryImages.length,
+            0
+          ),
+        0
+      ),
     [sections]
   );
 
@@ -455,8 +634,7 @@ export function HotelGuideClient({
         <div>
           <h2 className="text-xl font-black">Dynamic Hotel Guide</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Create sections and items that appear in the Guest Portal Hotel
-            Guide.
+            Create sections, items, and brochure-style gallery images for the Guest Portal.
           </p>
         </div>
 
@@ -480,7 +658,7 @@ export function HotelGuideClient({
         </div>
       </div>
 
-      <div className="mb-5 grid gap-3 md:grid-cols-3">
+      <div className="mb-5 grid gap-3 md:grid-cols-4">
         <div className="rounded-3xl border border-neutral-200 bg-white p-5">
           <p className="text-sm font-bold text-neutral-500">Sections</p>
           <p className="mt-2 text-3xl font-black">{sections.length}</p>
@@ -489,6 +667,11 @@ export function HotelGuideClient({
         <div className="rounded-3xl border border-neutral-200 bg-white p-5">
           <p className="text-sm font-bold text-neutral-500">Guide Items</p>
           <p className="mt-2 text-3xl font-black">{totalItems}</p>
+        </div>
+
+        <div className="rounded-3xl border border-neutral-200 bg-white p-5">
+          <p className="text-sm font-bold text-neutral-500">Gallery Images</p>
+          <p className="mt-2 text-3xl font-black">{totalImages}</p>
         </div>
 
         <form
@@ -517,7 +700,7 @@ export function HotelGuideClient({
         <CardContent>
           <h2 className="text-xl font-black">Existing Guide Content</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            These sections and items are shown dynamically in the Guest Portal.
+            These sections, items, and gallery images are shown dynamically in the Guest Portal.
           </p>
 
           <div className="mt-5 space-y-5">
@@ -543,12 +726,19 @@ export function HotelGuideClient({
                     </div>
 
                     <p className="mt-1 text-sm text-neutral-500">
-                      {section.hotelName} · {section.subtitle || 'No subtitle'} ·
-                      Sort {section.sortOrder}
+                      {section.hotelName} · {section.subtitle || 'No subtitle'} · Sort {section.sortOrder}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setUploadSection(section)}
+                      className="h-10 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800"
+                    >
+                      Upload Images
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setEditingSection(section)}
@@ -558,11 +748,7 @@ export function HotelGuideClient({
                     </button>
 
                     <form action={deleteGuideSectionAction}>
-                      <input
-                        type="hidden"
-                        name="sectionId"
-                        value={section.id}
-                      />
+                      <input type="hidden" name="sectionId" value={section.id} />
                       <button
                         type="submit"
                         className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-black text-white hover:bg-red-700"
@@ -571,6 +757,13 @@ export function HotelGuideClient({
                       </button>
                     </form>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-black uppercase text-neutral-500">
+                    Section Brochure Gallery
+                  </p>
+                  <GalleryPreview images={section.galleryImages} />
                 </div>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
@@ -583,8 +776,7 @@ export function HotelGuideClient({
                         <div>
                           <p className="font-black">{item.title}</p>
                           <p className="mt-1 text-xs font-bold text-neutral-500">
-                            {item.itemType} · {item.iconKey} · Sort{' '}
-                            {item.sortOrder}
+                            {item.itemType} · {item.iconKey} · Sort {item.sortOrder}
                           </p>
                         </div>
 
@@ -609,7 +801,22 @@ export function HotelGuideClient({
                         </p>
                       )}
 
-                      <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="mt-4">
+                        <p className="mb-2 text-[10px] font-black uppercase text-neutral-500">
+                          Item Gallery
+                        </p>
+                        <GalleryPreview images={item.galleryImages} />
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setUploadItem(item)}
+                          className="h-10 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+                        >
+                          Images
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => setEditingItem(item)}
@@ -653,11 +860,7 @@ export function HotelGuideClient({
       </Card>
 
       {creatingSection ? (
-        <Modal
-          title="Create Guide Section"
-          description="Create a main card/category in the Guest Portal Hotel Guide."
-          onClose={() => setCreatingSection(false)}
-        >
+        <Modal title="Create Guide Section" onClose={() => setCreatingSection(false)}>
           <form action={createGuideSectionAction} className="space-y-4">
             <SectionFormFields
               hotels={hotels}
@@ -666,14 +869,9 @@ export function HotelGuideClient({
             />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setCreatingSection(false)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-              >
+              <button type="button" onClick={() => setCreatingSection(false)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
                 Cancel
               </button>
-
               <Button>Create Section</Button>
             </div>
           </form>
@@ -681,23 +879,14 @@ export function HotelGuideClient({
       ) : null}
 
       {creatingItem ? (
-        <Modal
-          title="Create Guide Item"
-          description="Create information under a guide section."
-          onClose={() => setCreatingItem(false)}
-        >
+        <Modal title="Create Guide Item" onClose={() => setCreatingItem(false)}>
           <form action={createGuideItemAction} className="space-y-4">
             <ItemFormFields sections={sections} />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setCreatingItem(false)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-              >
+              <button type="button" onClick={() => setCreatingItem(false)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
                 Cancel
               </button>
-
               <Button>Create Item</Button>
             </div>
           </form>
@@ -705,18 +894,9 @@ export function HotelGuideClient({
       ) : null}
 
       {editingSection ? (
-        <Modal
-          title="Edit Guide Section"
-          description="Update this Hotel Guide section."
-          onClose={() => setEditingSection(null)}
-        >
+        <Modal title="Edit Guide Section" onClose={() => setEditingSection(null)}>
           <form action={updateGuideSectionAction} className="space-y-4">
-            <input
-              type="hidden"
-              name="sectionId"
-              value={editingSection.id}
-            />
-
+            <input type="hidden" name="sectionId" value={editingSection.id} />
             <SectionFormFields
               hotels={hotels}
               defaultHotelId={defaultHotelId}
@@ -725,14 +905,9 @@ export function HotelGuideClient({
             />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditingSection(null)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-              >
+              <button type="button" onClick={() => setEditingSection(null)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
                 Cancel
               </button>
-
               <Button>Save Changes</Button>
             </div>
           </form>
@@ -740,29 +915,35 @@ export function HotelGuideClient({
       ) : null}
 
       {editingItem ? (
-        <Modal
-          title="Edit Guide Item"
-          description="Update this Hotel Guide item."
-          onClose={() => setEditingItem(null)}
-        >
+        <Modal title="Edit Guide Item" onClose={() => setEditingItem(null)}>
           <form action={updateGuideItemAction} className="space-y-4">
             <input type="hidden" name="itemId" value={editingItem.id} />
-
             <ItemFormFields sections={sections} item={editingItem} />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditingItem(null)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-              >
+              <button type="button" onClick={() => setEditingItem(null)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
                 Cancel
               </button>
-
               <Button>Save Changes</Button>
             </div>
           </form>
         </Modal>
+      ) : null}
+
+      {uploadSection ? (
+        <UploadImageModal
+          sections={sections}
+          section={uploadSection}
+          onClose={() => setUploadSection(null)}
+        />
+      ) : null}
+
+      {uploadItem ? (
+        <UploadImageModal
+          sections={sections}
+          item={uploadItem}
+          onClose={() => setUploadItem(null)}
+        />
       ) : null}
     </>
   );

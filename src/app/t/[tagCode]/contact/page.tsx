@@ -6,9 +6,7 @@ import {
   Mail,
   MessageCircle,
   Phone,
-  Settings,
   ShoppingBag,
-  Star,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -17,6 +15,30 @@ import {
   GuestShell,
 } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+
+function getGuestGreeting() {
+  const manilaHour = Number(
+    new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'Asia/Manila',
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date())
+  );
+
+  if (manilaHour >= 5 && manilaHour < 12) {
+    return 'Good Morning';
+  }
+
+  if (manilaHour >= 12 && manilaHour < 18) {
+    return 'Good Afternoon';
+  }
+
+  if (manilaHour >= 18 && manilaHour < 21) {
+    return 'Good Evening';
+  }
+
+  return 'Good Night';
+}
 
 export default async function ContactPage({
   params,
@@ -32,6 +54,8 @@ export default async function ContactPage({
   if (!tag || tag.status !== 'ACTIVE') {
     notFound();
   }
+
+  const greeting = getGuestGreeting();
 
   const phone = tag.hotel.settings?.contactPhone;
   const email = tag.hotel.settings?.contactEmail;
@@ -50,29 +74,25 @@ export default async function ContactPage({
         showTopBar={false}
       >
         <div className="pt-8">
-          <GuestLogo hotel={tag.hotel} className="text-gold" />
+          <div className="flex justify-center">
+            <GuestLogo hotel={tag.hotel} className="text-gold" />
+          </div>
 
           <div className="mt-12">
             <p className="font-serif text-3xl leading-tight text-sand">
-              Good Evening,
+              {greeting},
             </p>
+
             <h1 className="font-serif text-4xl leading-tight text-sand">
               Guest
             </h1>
+
             <p className="mt-3 max-w-xs text-sm text-white/70">
               Thank you for choosing {tag.hotel.name}.
             </p>
           </div>
 
-          <div className="mt-7 grid grid-cols-[1fr_72px] items-center gap-4 rounded-[1.75rem] bg-white/6 p-5">
-        
-
-            <div className="grid size-14 place-items-center rounded-2xl bg-gold/15 text-gold">
-            
-            </div>
-          </div>
-
-          <div className="mt-7 space-y-2">
+          <div className="mt-10 space-y-2">
             <ProfileLink
               href={`/t/${tagCode}/orders`}
               icon={ShoppingBag}
@@ -102,12 +122,6 @@ export default async function ContactPage({
             ) : null}
 
             <ProfileLink
-              href={`/t/${tagCode}/guide`}
-              icon={Settings}
-              label="Account Settings"
-            />
-
-            <ProfileLink
               href={`/t/${tagCode}/support`}
               icon={HelpCircle}
               label="Help & Support"
@@ -116,7 +130,7 @@ export default async function ContactPage({
 
           <Link
             href={`/t/${tagCode}`}
-            className="mt-7 block rounded-2xl bg-white/8 p-4 text-center font-black text-sand"
+            className="mt-10 block rounded-2xl bg-white/8 p-4 text-center font-black text-sand"
           >
             Back to Home
           </Link>

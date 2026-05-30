@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { InventoryClient } from './InventoryClient';
+import { RealtimeInventoryRefresh } from '@/components/dashboard/RealtimeInventoryRefresh';
 
 function getMessage(error?: string, success?: string) {
   if (success) {
@@ -158,6 +159,7 @@ export default async function InventoryPage({
 
   return (
     <div>
+      <RealtimeInventoryRefresh />
       <PageHeader
         title="Menu Inventory Management"
         description="Manage menu item availability and live stock counts shown to guests."

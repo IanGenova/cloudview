@@ -1,6 +1,10 @@
 'use server';
 
-import { MenuAvailabilityMovementType, PaymentMethod } from '@prisma/client';
+import {
+  MenuAvailabilityMovementType,
+  OrderStatus,
+  PaymentMethod,
+} from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope } from '@/lib/access';
@@ -8,6 +12,8 @@ import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 import { randomCode } from '@/lib/utils';
 import { logActivity } from '@/lib/activity';
+import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
+import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 
 type POSOrderInput = {
   hotelId: string;
@@ -133,6 +139,7 @@ export async function createPOSOrder(input: POSOrderInput) {
 
   const subtotal = normalizedItems.reduce((sum, item) => {
     const product = productMap.get(item.productId)!;
+
     return sum + product.priceCents * item.quantity!;
   }, 0);
 
@@ -167,7 +174,7 @@ export async function createPOSOrder(input: POSOrderInput) {
         },
         statusHistory: {
           create: {
-            status: 'PENDING',
+            status: OrderStatus.PENDING,
             note: 'POS sale created from dashboard',
             userId: user.id,
           },
@@ -183,6 +190,7 @@ export async function createPOSOrder(input: POSOrderInput) {
       const product = productMap.get(item.productId)!;
       const stock = stockMap.get(item.productId)!;
       const quantity = item.quantity!;
+
       const nextAvailableQty = stock.availableQty - quantity;
       const nextSoldQty = stock.soldQty + quantity;
 
@@ -221,6 +229,20 @@ export async function createPOSOrder(input: POSOrderInput) {
     entity: 'Order',
     entityId: order.id,
     message: `POS order ${order.orderCode} created`,
+  });
+
+
+await triggerInventoryUpdated({
+  hotelId,
+  productIds,
+  source: 'POS_TERMINAL',
+});
+
+  await triggerKitchenOrderCreated({
+    hotelId,
+    orderCode: order.orderCode,
+    status: OrderStatus.PENDING,
+    source: 'POS_TERMINAL',
   });
 
   revalidatePath('/dashboard/pos');

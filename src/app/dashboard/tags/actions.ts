@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { randomSecret } from '@/lib/nfc-security';
 import { redirect } from 'next/navigation';
+import { cleanText } from '@/lib/sanitize';
 
 const tagSchema = z.object({
   hotelId: z.string().min(1),
@@ -31,9 +32,6 @@ function cleanCode(value: FormDataEntryValue | null) {
     .slice(0, 160);
 }
 
-function cleanText(value: FormDataEntryValue | null, max = 160) {
-  return String(value || '').trim().slice(0, max);
-}
 
 function redirectTags(success: string) {
   revalidatePath('/dashboard/tags');
@@ -49,6 +47,47 @@ async function assertHotelAccess(hotelId: string) {
   }
 
   return user;
+}
+export async function toggleTagStatusAction(formData: FormData) {
+  const user = await requireUser();
+
+  const tagId = cleanText(formData.get('tagId'));
+
+  if (!tagId) {
+    throw new Error('NFC tag is required.');
+  }
+
+  const tag = await db.nfcTag.findUnique({
+    where: {
+      id: tagId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      status: true,
+    },
+  });
+
+  if (!tag) {
+    throw new Error('NFC tag not found.');
+  }
+
+  if (user.role !== 'SUPER_ADMIN' && tag.hotelId !== user.hotelId) {
+    throw new Error('You are not allowed to update this NFC tag.');
+  }
+
+  const nextStatus = tag.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+  await db.nfcTag.update({
+    where: {
+      id: tag.id,
+    },
+    data: {
+      status: nextStatus,
+    },
+  });
+
+  revalidatePath('/dashboard/tags');
 }
 
 export async function createTagAction(formData: FormData) {

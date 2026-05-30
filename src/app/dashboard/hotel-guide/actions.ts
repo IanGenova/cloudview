@@ -7,6 +7,217 @@ import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope, scopedHotelId } from '@/lib/access';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
+import { mkdir, writeFile, unlink } from 'fs/promises';
+import path from 'path';
+import { randomUUID } from 'crypto';
+
+const MAX_GUIDE_IMAGE_SIZE = 4 * 1024 * 1024;
+
+function getFileExtension(file: File) {
+  const name = file.name || '';
+  const ext = name.split('.').pop()?.toLowerCase();
+
+  if (ext && ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+    return ext;
+  }
+
+  if (file.type === 'image/jpeg') return 'jpg';
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/webp') return 'webp';
+
+  return null;
+}
+
+async function saveHotelGuideImageFile(file: File) {
+  if (!file || file.size <= 0) {
+    throw new Error('Image file is required.');
+  }
+
+  if (file.size > MAX_GUIDE_IMAGE_SIZE) {
+    throw new Error('Image must be 4MB or smaller.');
+  }
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Uploaded file must be an image.');
+  }
+
+  const extension = getFileExtension(file);
+
+  if (!extension) {
+    throw new Error('Only JPG, PNG, and WEBP images are allowed.');
+  }
+
+  const fileName = `${randomUUID()}.${extension}`;
+  const uploadDir = path.join(
+    process.cwd(),
+    'public',
+    'uploads',
+    'hotel-guide'
+  );
+
+  await mkdir(uploadDir, {
+    recursive: true,
+  });
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+
+  await writeFile(path.join(uploadDir, fileName), buffer);
+
+  return `/uploads/hotel-guide/${fileName}`;
+}
+
+async function deletePublicImageFile(imageUrl: string) {
+  if (!imageUrl.startsWith('/uploads/hotel-guide/')) {
+    return;
+  }
+
+  const fullPath = path.join(process.cwd(), 'public', imageUrl);
+
+  try {
+    await unlink(fullPath);
+  } catch {
+    // Ignore missing local file.
+  }
+}
+
+export async function uploadGuideImageAction(formData: FormData) {
+  const user = await requireUser();
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN']);
+
+  const sectionId = cleanText(formData.get('sectionId'));
+  const itemId = cleanText(formData.get('itemId'));
+  const title = cleanText(formData.get('title'), 120);
+  const caption = cleanText(formData.get('caption'), 300);
+  const sortOrder = parseSortOrder(formData.get('sortOrder'));
+  const isActive = formData.get('isActive') === 'true';
+  const file = formData.get('image') as File | null;
+
+  if (!sectionId && !itemId) {
+    redirectToGuide({
+      error: 'section-required',
+    });
+  }
+
+  let hotelId = '';
+  let finalSectionId: string | null = sectionId || null;
+  let finalItemId: string | null = itemId || null;
+
+  if (itemId) {
+    const item = await db.hotelGuideItem.findUnique({
+      where: {
+        id: itemId,
+      },
+      select: {
+        id: true,
+        hotelId: true,
+        sectionId: true,
+      },
+    });
+
+    if (!item) {
+      redirectToGuide({
+        error: 'item-not-found',
+      });
+    }
+
+    assertHotelScope(user, item.hotelId);
+
+    hotelId = item.hotelId;
+    finalSectionId = item.sectionId;
+    finalItemId = item.id;
+  } else if (sectionId) {
+    const section = await db.hotelGuideSection.findUnique({
+      where: {
+        id: sectionId,
+      },
+      select: {
+        id: true,
+        hotelId: true,
+      },
+    });
+
+    if (!section) {
+      redirectToGuide({
+        error: 'section-not-found',
+      });
+    }
+
+    assertHotelScope(user, section.hotelId);
+
+    hotelId = section.hotelId;
+    finalSectionId = section.id;
+    finalItemId = null;
+  }
+
+  try {
+    const imageUrl = await saveHotelGuideImageFile(file!);
+
+    await db.hotelGuideImage.create({
+      data: {
+        hotelId,
+        sectionId: finalSectionId,
+        itemId: finalItemId,
+        title: title || null,
+        caption: caption || null,
+        imageUrl,
+        sortOrder,
+        isActive,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    redirectToGuide({
+      error: 'image-upload-failed',
+    });
+  }
+
+  revalidatePath('/dashboard/hotel-guide');
+  redirectToGuide({
+    success: 'image-uploaded',
+  });
+}
+
+export async function deleteGuideImageAction(formData: FormData) {
+  const user = await requireUser();
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN']);
+
+  const imageId = cleanText(formData.get('imageId'));
+
+  if (!imageId) {
+    redirectToGuide({
+      error: 'image-required',
+    });
+  }
+
+  const image = await db.hotelGuideImage.findUnique({
+    where: {
+      id: imageId,
+    },
+  });
+
+  if (!image) {
+    redirectToGuide({
+      error: 'image-not-found',
+    });
+  }
+
+  assertHotelScope(user, image.hotelId);
+
+  await db.hotelGuideImage.delete({
+    where: {
+      id: image.id,
+    },
+  });
+
+  await deletePublicImageFile(image.imageUrl);
+
+  revalidatePath('/dashboard/hotel-guide');
+  redirectToGuide({
+    success: 'image-deleted',
+  });
+}
 
 const DEFAULT_SECTIONS = [
   {

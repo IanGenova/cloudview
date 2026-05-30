@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { GuestBottomNav, GuestLogo } from '@/components/guest/GuestShell';
 import { LiveElapsedTimer } from '@/components/guest/LiveElapsedTimer';
 import { RealtimeOrderRefresh } from '@/components/guest/RealtimeOrderRefresh';
@@ -226,7 +227,17 @@ export default async function OrderTrackingPage({
 
   const tag = await requireNfcGuestAccess(tagCode);
 
-  if (!tag || tag.status !== 'ACTIVE') {
+  if (!tag) {
+    notFound();
+  }
+
+  const guestSession = await getCurrentNfcGuestSession(tagCode);
+
+  if (!guestSession) {
+    notFound();
+  }
+
+  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
     notFound();
   }
 
@@ -235,6 +246,7 @@ export default async function OrderTrackingPage({
       orderCode,
       tagId: tag.id,
       hotelId: tag.hotelId,
+      guestSessionId: guestSession.id,
     },
     include: {
       hotel: {
@@ -272,6 +284,7 @@ export default async function OrderTrackingPage({
     : order.location?.name ?? tag.location?.name ?? tag.label;
 
   const statusContent = getStatusContent(order.status);
+
   const currentStepIndex =
     order.status === OrderStatus.CANCELLED
       ? getHighestCompletedStepIndex(order.statusHistory)
@@ -289,7 +302,7 @@ export default async function OrderTrackingPage({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <RealtimeOrderRefresh orderCode={order.orderCode} />
+      <RealtimeOrderRefresh tagCode={tagCode} orderCode={order.orderCode} />
 
       <div className="mx-auto min-h-screen max-w-md bg-black px-5 pb-32 pt-5">
         <div className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">
@@ -431,6 +444,7 @@ export default async function OrderTrackingPage({
                         >
                           {step.label}
                         </p>
+
                         <p className="mt-1 text-xs text-white/45">
                           {step.description}
                         </p>

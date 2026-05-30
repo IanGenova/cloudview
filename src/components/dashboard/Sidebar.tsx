@@ -140,7 +140,7 @@ export function Sidebar({
   hotelName?: string;
 }) {
   return (
-    <aside className="hidden min-h-screen w-72 shrink-0 border-r border-neutral-200 bg-white p-5 lg:block">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 self-start overflow-y-auto border-r border-neutral-200 bg-white p-5 lg:block">
       <Link
         href="/dashboard"
         className="mb-8 flex items-center gap-3 rounded-3xl bg-ink p-4 text-white"

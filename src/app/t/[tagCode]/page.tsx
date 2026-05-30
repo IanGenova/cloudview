@@ -23,6 +23,30 @@ type GuestHomeProps = {
   }>;
 };
 
+function getGuestGreeting() {
+  const manilaHour = Number(
+    new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'Asia/Manila',
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date())
+  );
+
+  if (manilaHour >= 5 && manilaHour < 12) {
+    return 'Good Morning';
+  }
+
+  if (manilaHour >= 12 && manilaHour < 18) {
+    return 'Good Afternoon';
+  }
+
+  if (manilaHour >= 18 && manilaHour < 21) {
+    return 'Good Evening';
+  }
+
+  return 'Good Night';
+}
+
 export default async function GuestHome({ params }: GuestHomeProps) {
   const { tagCode } = await params;
 
@@ -62,6 +86,8 @@ export default async function GuestHome({ params }: GuestHomeProps) {
     notFound();
   }
 
+  const greeting = getGuestGreeting();
+
   const locationName = tag.room
     ? `Room ${tag.room.number}`
     : tag.location?.name ?? tag.label;
@@ -76,26 +102,30 @@ export default async function GuestHome({ params }: GuestHomeProps) {
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${resortImage})` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/30 to-black" />
 
-          <div className="relative z-10 flex items-start justify-between">
-            <GuestLogo hotel={tag.hotel} />
+          <button
+            className="absolute right-5 top-10 z-20 grid size-10 place-items-center rounded-full bg-black/30 backdrop-blur"
+            aria-label="Notifications"
+          >
+            <Bell className="size-5" />
+          </button>
 
-            <button
-              className="grid size-10 place-items-center rounded-full bg-black/25 backdrop-blur"
-              aria-label="Notifications"
-            >
-              <Bell className="size-5" />
-            </button>
+          <div className="relative z-10 flex justify-center pt-3">
+            <div className="scale-[1.45]">
+              <GuestLogo hotel={tag.hotel} />
+            </div>
           </div>
 
-          <div className="relative z-10 mt-20">
+          <div className="relative z-10 mt-24">
             <p className="font-serif text-3xl leading-tight text-white">
-              Good Morning,
+              {greeting},
             </p>
+
             <h1 className="font-serif text-4xl leading-tight text-white">
               Guest
             </h1>
+
             <p className="mt-3 max-w-xs text-sm text-white/80">
               We’re delighted to have you with us.
             </p>

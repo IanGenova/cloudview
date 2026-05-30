@@ -13,6 +13,8 @@ function getMessage(error?: string, success?: string) {
       'item-created': 'Guide item created successfully.',
       'item-updated': 'Guide item updated successfully.',
       'item-deleted': 'Guide item deleted successfully.',
+      'image-uploaded': 'Gallery image uploaded successfully.',
+      'image-deleted': 'Gallery image deleted successfully.',
       seeded: 'Default hotel guide content added successfully.',
     };
 
@@ -31,6 +33,9 @@ function getMessage(error?: string, success?: string) {
       'item-required': 'Guide item is required.',
       'item-not-found': 'Guide item was not found.',
       'item-type-required': 'Guide item type is required.',
+      'image-required': 'Image is required.',
+      'image-not-found': 'Gallery image was not found.',
+      'image-upload-failed': 'Image upload failed. Please try again.',
     };
 
     return {
@@ -89,7 +94,29 @@ export default async function HotelGuideModulePage({
             name: true,
           },
         },
+        galleryImages: {
+          orderBy: [
+            {
+              sortOrder: 'asc',
+            },
+            {
+              createdAt: 'desc',
+            },
+          ],
+        },
         items: {
+          include: {
+            galleryImages: {
+              orderBy: [
+                {
+                  sortOrder: 'asc',
+                },
+                {
+                  createdAt: 'desc',
+                },
+              ],
+            },
+          },
           orderBy: [
             {
               sortOrder: 'asc',
@@ -123,7 +150,7 @@ export default async function HotelGuideModulePage({
     <div>
       <PageHeader
         title="Hotel Guide Module"
-        description="Control the guide sections and information shown in the Guest Portal."
+        description="Control the guide sections, brochure images, and information shown in the Guest Portal."
       />
 
       <HotelGuideClient
@@ -139,6 +166,14 @@ export default async function HotelGuideModulePage({
           iconKey: section.iconKey,
           sortOrder: section.sortOrder,
           isActive: section.isActive,
+          galleryImages: section.galleryImages.map((image) => ({
+            id: image.id,
+            title: image.title ?? '',
+            caption: image.caption ?? '',
+            imageUrl: image.imageUrl,
+            sortOrder: image.sortOrder,
+            isActive: image.isActive,
+          })),
           items: section.items.map((item) => ({
             id: item.id,
             sectionId: item.sectionId,
@@ -157,6 +192,14 @@ export default async function HotelGuideModulePage({
             buttonHref: item.buttonHref ?? '',
             sortOrder: item.sortOrder,
             isActive: item.isActive,
+            galleryImages: item.galleryImages.map((image) => ({
+              id: image.id,
+              title: image.title ?? '',
+              caption: image.caption ?? '',
+              imageUrl: image.imageUrl,
+              sortOrder: image.sortOrder,
+              isActive: image.isActive,
+            })),
           })),
         }))}
         message={getMessage(error, success)}

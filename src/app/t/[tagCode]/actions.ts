@@ -1,12 +1,18 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { PaymentMethod } from '@prisma/client';
+import {
+  MenuAvailabilityMovementType,
+  PaymentMethod,
+} from '@prisma/client';
 import { db } from '@/lib/db';
 import { createGuestOrderSchema } from '@/lib/validators';
 import { cleanText } from '@/lib/sanitize';
 import { randomCode } from '@/lib/utils';
 import { logActivity } from '@/lib/activity';
+import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
+import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 
 
 export async function createGuestOrder(input: unknown) {
@@ -34,12 +40,20 @@ export async function createGuestOrder(input: unknown) {
     throw new Error('This NFC tag is inactive or invalid.');
   }
 
-  const productIds = parsed.items.map((item) => item.productId);
+  const guestSession = await requireCurrentNfcGuestSession(parsed.tagCode);
+
+  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+    throw new Error('Invalid guest session. Please tap the NFC card again.');
+  }
+
+  const uniqueProductIds = Array.from(
+    new Set(parsed.items.map((item) => item.productId))
+  );
 
   const products = await db.menuProduct.findMany({
     where: {
       id: {
-        in: productIds,
+        in: uniqueProductIds,
       },
       hotelId: tag.hotelId,
       isAvailable: true,
@@ -48,12 +62,22 @@ export async function createGuestOrder(input: unknown) {
 
   const productMap = new Map(products.map((product) => [product.id, product]));
 
-  if (products.length !== new Set(productIds).size) {
+  if (products.length !== uniqueProductIds.length) {
     throw new Error('One or more products are no longer available.');
+  }
+
+  const quantityByProductId = new Map<string, number>();
+
+  for (const item of parsed.items) {
+    quantityByProductId.set(
+      item.productId,
+      (quantityByProductId.get(item.productId) ?? 0) + item.quantity
+    );
   }
 
   const subtotal = parsed.items.reduce((sum, item) => {
     const product = productMap.get(item.productId)!;
+
     return sum + product.priceCents * item.quantity;
   }, 0);
 
@@ -67,40 +91,147 @@ export async function createGuestOrder(input: unknown) {
   const total = subtotal + serviceCharge + tax;
   const orderCode = randomCode('ORD');
 
-  const order = await db.order.create({
-    data: {
-      hotelId: tag.hotelId,
-      roomId: tag.roomId,
-      locationId: tag.locationId,
-      tagId: tag.id,
-      orderCode,
-      guestName: cleanText(parsed.guestName, 100),
-      notes: cleanText(parsed.notes, 1000),
-      paymentMethod: parsed.paymentMethod as PaymentMethod,
-      subtotalCents: subtotal,
-      serviceChargeCents: serviceCharge,
-      taxCents: tax,
-      totalCents: total,
-      items: {
-        create: parsed.items.map((item) => {
-          const product = productMap.get(item.productId)!;
+  const order = await db.$transaction(async (tx) => {
+    const createdOrder = await tx.order.create({
+      data: {
+        hotelId: tag.hotelId,
+        roomId: tag.roomId,
+        locationId: tag.locationId,
+        tagId: tag.id,
+        guestSessionId: guestSession.id,
+        orderCode,
+        guestName: cleanText(parsed.guestName, 100),
+        notes: cleanText(parsed.notes, 1000),
+        paymentMethod: parsed.paymentMethod as PaymentMethod,
+        subtotalCents: subtotal,
+        serviceChargeCents: serviceCharge,
+        taxCents: tax,
+        totalCents: total,
+        items: {
+          create: parsed.items.map((item) => {
+            const product = productMap.get(item.productId)!;
 
-          return {
-            productId: product.id,
-            productNameSnapshot: product.name,
-            quantity: item.quantity,
-            unitPriceCents: product.priceCents,
-            notes: cleanText(item.notes, 300),
-          };
-        }),
-      },
-      statusHistory: {
-        create: {
-          status: 'PENDING',
-          note: 'Guest submitted order from NFC portal',
+            return {
+              productId: product.id,
+              productNameSnapshot: product.name,
+              quantity: item.quantity,
+              unitPriceCents: product.priceCents,
+              notes: cleanText(item.notes, 300),
+            };
+          }),
+        },
+        statusHistory: {
+          create: {
+            status: 'PENDING',
+            note: 'Guest submitted order from NFC portal',
+          },
         },
       },
-    },
+      select: {
+        id: true,
+        orderCode: true,
+        status: true,
+      },
+    });
+
+    for (const [productId, quantity] of quantityByProductId.entries()) {
+      const product = productMap.get(productId);
+
+      if (!product) {
+        throw new Error('Product not found.');
+      }
+
+      const stock = await tx.menuAvailabilityStock.findUnique({
+        where: {
+          hotelId_productId: {
+            hotelId: tag.hotelId,
+            productId,
+          },
+        },
+        select: {
+          id: true,
+          availableQty: true,
+          isSoldOut: true,
+        },
+      });
+
+      if (!stock) {
+        throw new Error(`${product.name} has no inventory stock record yet.`);
+      }
+
+      if (stock.isSoldOut || stock.availableQty <= 0) {
+        throw new Error(`${product.name} is sold out.`);
+      }
+
+      if (quantity > stock.availableQty) {
+        throw new Error(
+          `${product.name} only has ${stock.availableQty} available.`
+        );
+      }
+
+      const updateResult = await tx.menuAvailabilityStock.updateMany({
+        where: {
+          id: stock.id,
+          isSoldOut: false,
+          availableQty: {
+            gte: quantity,
+          },
+        },
+        data: {
+          availableQty: {
+            decrement: quantity,
+          },
+          soldQty: {
+            increment: quantity,
+          },
+        },
+      });
+
+      if (updateResult.count !== 1) {
+        throw new Error(
+          `${product.name} stock changed while ordering. Please try again.`
+        );
+      }
+
+      const updatedStock = await tx.menuAvailabilityStock.findUnique({
+        where: {
+          id: stock.id,
+        },
+        select: {
+          availableQty: true,
+        },
+      });
+
+      if (!updatedStock) {
+        throw new Error(`${product.name} inventory stock was not found.`);
+      }
+
+      if (updatedStock.availableQty <= 0) {
+        await tx.menuAvailabilityStock.update({
+          where: {
+            id: stock.id,
+          },
+          data: {
+            isSoldOut: true,
+          },
+        });
+      }
+
+      await tx.menuAvailabilityMovement.create({
+        data: {
+          hotelId: tag.hotelId,
+          productId,
+          stockId: stock.id,
+          type: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+          quantity,
+          balanceAfter: Math.max(updatedStock.availableQty, 0),
+          reason: `Guest portal order ${createdOrder.orderCode}`,
+          userId: null,
+        },
+      });
+    }
+
+    return createdOrder;
   });
 
   await logActivity({
@@ -112,9 +243,22 @@ export async function createGuestOrder(input: unknown) {
     message: `New guest order ${order.orderCode}`,
   });
 
+  await triggerKitchenOrderCreated({
+    hotelId: tag.hotelId,
+    orderCode: order.orderCode,
+    status: order.status,
+    source: 'GUEST_PORTAL',
+  });
+
+  await triggerInventoryUpdated({
+    hotelId: tag.hotelId,
+    productIds: uniqueProductIds,
+    source: 'GUEST_PORTAL',
+  });
+
   return {
     ok: true,
-    orderCode,
+    orderCode: order.orderCode,
   };
 }
 
@@ -200,6 +344,22 @@ export async function createServiceRequestAction(formData: FormData) {
   if (tag.status !== 'ACTIVE') {
     redirectToService(tagCode, {
       error: 'inactive_tag',
+    });
+  }
+
+  let guestSession;
+
+  try {
+    guestSession = await requireCurrentNfcGuestSession(tagCode);
+  } catch {
+    redirectToService(tagCode, {
+      error: 'invalid_session',
+    });
+  }
+
+  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+    redirectToService(tagCode, {
+      error: 'invalid_session',
     });
   }
 
@@ -295,6 +455,7 @@ export async function createServiceRequestAction(formData: FormData) {
             roomId: tag.roomId,
             locationId: tag.locationId,
             tagId: tag.id,
+            guestSessionId: guestSession.id,
             requestCode: randomCode('REQ'),
             type: item.service.name,
             guestName: guestName || null,
@@ -348,7 +509,7 @@ export async function createServiceRequestAction(formData: FormData) {
 
       return requests;
     });
-  } catch (error) {
+  } catch {
     redirectToService(tagCode, {
       error: 'request_failed',
     });

@@ -6,12 +6,12 @@ import {
   ConciergeBell,
   CreditCard,
   MessageCircle,
-  PackageCheck,
   ReceiptText,
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,24 +64,29 @@ export default async function MyRequestsPage({
 
   const tag = await requireNfcGuestAccess(tagCode);
 
-  if (!tag || tag.status !== 'ACTIVE') {
+  if (!tag) {
     notFound();
   }
+
+  const guestSession = await getCurrentNfcGuestSession(tagCode);
 
   const location = tag.room
     ? `Room ${tag.room.number}`
     : tag.location?.name ?? tag.label;
 
-  const requests = await db.serviceRequest.findMany({
-    where: {
-      tagId: tag.id,
-      hotelId: tag.hotelId,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 50,
-  });
+  const requests = guestSession
+    ? await db.serviceRequest.findMany({
+        where: {
+          tagId: tag.id,
+          hotelId: tag.hotelId,
+          guestSessionId: guestSession.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 50,
+      })
+    : [];
 
   const requestIds = requests.map((request) => request.id);
 
@@ -133,11 +138,16 @@ export default async function MyRequestsPage({
             </div>
 
             <p className="mt-4 text-sm font-bold text-white/50">
-              Total Requests
+              Current Session
             </p>
+
             <h2 className="mt-1 text-2xl font-black text-white">
               {requests.length}
             </h2>
+
+            <p className="mt-1 text-xs text-white/35">
+              Request{requests.length === 1 ? '' : 's'}
+            </p>
           </div>
 
           <div className="rounded-[2rem] border border-emerald-500/20 bg-emerald-500/10 p-5">
@@ -146,9 +156,14 @@ export default async function MyRequestsPage({
             </div>
 
             <p className="mt-4 text-sm font-bold text-white/50">Billed</p>
+
             <h2 className="mt-1 text-2xl font-black text-white">
               {billedCount}
             </h2>
+
+            <p className="mt-1 text-xs text-white/35">
+              Add-on charge{billedCount === 1 ? '' : 's'}
+            </p>
           </div>
         </section>
 
@@ -243,10 +258,11 @@ export default async function MyRequestsPage({
                 <Clock className="size-7" />
               </div>
 
-              <h2 className="mt-4 font-black">No requests yet</h2>
+              <h2 className="mt-4 font-black">No requests for this guest</h2>
+
               <p className="mt-2 text-sm leading-6 text-white/45">
-                Your service requests and room add-ons will appear here after
-                submission.
+                Requests from previous guests are hidden. Tap the NFC card again
+                to start a new guest session.
               </p>
 
               <Link

@@ -141,6 +141,8 @@ model Hotel {
   menuDailyStockMovements MenuDailyStockMovement[]
   menuAvailabilityStocks    MenuAvailabilityStock[]
   menuAvailabilityMovements MenuAvailabilityMovement[]
+  guideImages HotelGuideImage[]
+  nfcGuestSessions NfcGuestSession[]
 
 }
 
@@ -180,6 +182,7 @@ model Room {
   nfcTags NfcTag[]
   orders  Order[]
   serviceRequests ServiceRequest[]
+  nfcGuestSessions NfcGuestSession[]
 
   @@unique([hotelId, number])
   @@index([hotelId])
@@ -200,9 +203,12 @@ model Location {
   nfcTags NfcTag[]
   orders  Order[]
   serviceRequests ServiceRequest[]
+  nfcGuestSessions NfcGuestSession[]
 
   @@index([hotelId])
 }
+
+
 
 model NfcTag {
   id         String    @id @default(cuid())
@@ -226,6 +232,7 @@ model NfcTag {
 
   orders Order[]
   serviceRequests ServiceRequest[]
+  guestSessions NfcGuestSession[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -365,6 +372,10 @@ model Order {
   statusHistory OrderStatusHistory[]
   posLogs PosSyncLog[]
   inventoryMovements InventoryMovement[]
+  guestSessionId String?
+  guestSession   NfcGuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+
+  @@index([guestSessionId])
 
   @@index([hotelId])
   @@index([status])
@@ -421,6 +432,10 @@ model ServiceRequest {
   updatedAt   DateTime @updatedAt
 
   statusHistory ServiceRequestStatusHistory[]
+  guestSessionId String?
+  guestSession   NfcGuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+
+  @@index([guestSessionId])
 
   @@index([hotelId])
   @@index([status])
@@ -539,6 +554,33 @@ model NfcAccessSession {
   @@index([idleExpiresAt])
 }
 
+model NfcGuestSession {
+  id          String   @id @default(cuid())
+  sessionKey  String   @unique
+  hotelId     String
+  tagId       String
+  roomId      String?
+  locationId  String?
+
+  startedAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  endedAt     DateTime?
+
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  tag         NfcTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  room        Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  orders          Order[]
+  serviceRequests ServiceRequest[]
+
+  @@index([hotelId])
+  @@index([tagId])
+  @@index([roomId])
+  @@index([locationId])
+  @@index([startedAt])
+}
+
 model RoomAddOnCharge {
   id               String   @id @default(cuid())
   chargeCode       String   @unique
@@ -613,7 +655,7 @@ model HotelGuideSection {
   title       String
   subtitle    String?
   description String?
-  imageUrl    String?
+  imageUrl    String? @db.Text
   iconKey     String   @default("Info")
 
   sortOrder   Int      @default(0)
@@ -624,6 +666,7 @@ model HotelGuideSection {
 
   hotel        Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   items        HotelGuideItem[]
+  galleryImages HotelGuideImage[]
 
   @@index([hotelId])
   @@index([isActive])
@@ -640,7 +683,7 @@ model HotelGuideItem {
   content     String?
   itemType    HotelGuideItemType @default(INFORMATION)
 
-  imageUrl    String?
+  imageUrl    String? @db.Text
   iconKey     String             @default("Info")
 
   hours       String?
@@ -659,10 +702,38 @@ model HotelGuideItem {
 
   hotel        Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   section      HotelGuideSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  galleryImages HotelGuideImage[]
 
   @@index([hotelId])
   @@index([sectionId])
   @@index([itemType])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model HotelGuideImage {
+  id        String   @id @default(cuid())
+  hotelId   String
+  sectionId String?
+  itemId    String?
+
+  title     String?
+  caption   String?
+  imageUrl  String   @db.Text
+
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel   Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  section HotelGuideSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  item    HotelGuideItem?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([sectionId])
+  @@index([itemId])
   @@index([isActive])
   @@index([sortOrder])
 }
