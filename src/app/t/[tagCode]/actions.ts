@@ -255,6 +255,12 @@ export async function createGuestOrder(input: unknown) {
     productIds: uniqueProductIds,
     source: 'GUEST_PORTAL',
   });
+  await triggerServiceRequestCreated({
+  hotelId: tag.hotelId,
+  requestId: request.id,
+  requestCode: request.requestCode,
+  status: 'NEW',
+});
 
   return {
     ok: true,

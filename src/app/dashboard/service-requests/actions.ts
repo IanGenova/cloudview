@@ -7,6 +7,7 @@ import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
+import { triggerServiceRequestUpdated } from '@/lib/realtime/service-request-events';
 
 function generateChargeCode() {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -35,7 +36,7 @@ function parsePositiveMoney(value: FormDataEntryValue | null) {
   return Math.round(parsed * 100) / 100;
 }
 
-function redirectWithError(error: string) {
+function redirectWithError(error: string): never {
   redirect(`/dashboard/service-requests?error=${error}`);
 }
 
@@ -149,5 +150,14 @@ export async function updateServiceRequestAction(formData: FormData) {
   });
 
   revalidatePath('/dashboard/service-requests');
+
+  await triggerServiceRequestUpdated({
+    hotelId: request.hotelId,
+    requestId: request.id,
+    requestCode: request.requestCode,
+    status,
+    billed: shouldPostCharge,
+  });
+
   redirect('/dashboard/service-requests');
 }
