@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   ArrowLeft,
+  ConciergeBell,
   Minus,
   Plus,
   ReceiptText,
@@ -12,6 +13,7 @@ import {
   ShoppingCart,
   Trash2,
 } from 'lucide-react';
+import { ServiceBillingMode } from '@prisma/client';
 import { cn } from '@/lib/utils';
 import { createPOSOrder } from './actions';
 
@@ -63,23 +65,67 @@ type POSProduct = {
   bundleComponents: POSBundleComponent[];
 };
 
-type CartItem = {
+type POSService = {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  description: string;
+  iconKey: string;
+  billingMode: ServiceBillingMode;
+  unitPrice: number;
+  unitLabel: string;
+  isActive: boolean;
+  inventoryTracked: boolean;
+  stockId: string | null;
+  availableQty: number;
+  usedQty: number;
+  isSoldOut: boolean;
+  notes: string;
+};
+
+type FoodCartItem = {
   productId: string;
   quantity: number;
 };
 
-type AvailabilityFilter =
+type ServiceCartItem = {
+  serviceId: string;
+  quantity: number;
+};
+
+type ProductAvailabilityFilter =
   | 'ALL'
   | 'AVAILABLE'
   | 'SOLD_OUT'
   | 'NOT_SET'
   | 'BUNDLE';
 
+type ServiceAvailabilityFilter =
+  | 'ALL'
+  | 'AVAILABLE'
+  | 'SOLD_OUT'
+  | 'TRACKED'
+  | 'UNTRACKED';
+
+type POSMode = 'food' | 'services';
+
 function money(cents: number, currency = 'PHP') {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency,
   }).format(cents / 100);
+}
+
+function moneyAmount(value: number, currency = 'PHP') {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency,
+  }).format(value);
+}
+
+function getServiceUnitPriceCents(service: POSService) {
+  return Math.round(Number(service.unitPrice || 0) * 100);
 }
 
 function isBundleProduct(product: POSProduct) {
@@ -106,7 +152,7 @@ function getStockStatus(product: POSProduct) {
   return 'AVAILABLE';
 }
 
-function getStockLabel(product: POSProduct) {
+function getProductStockLabel(product: POSProduct) {
   const status = getStockStatus(product);
 
   if (status === 'AVAILABLE') {
@@ -128,7 +174,7 @@ function getStockLabel(product: POSProduct) {
   return 'Menu hidden';
 }
 
-function getStockBadgeClass(product: POSProduct) {
+function getProductStockBadgeClass(product: POSProduct) {
   const status = getStockStatus(product);
 
   if (status === 'AVAILABLE') {
@@ -154,6 +200,106 @@ function canSellProduct(product: POSProduct) {
     product.availableQty > 0 &&
     (!product.isDerivedStock || product.bundleComponents.length > 0)
   );
+}
+
+function getServiceStatus(service: POSService) {
+  if (!service.isActive) {
+    return 'HIDDEN';
+  }
+
+  if (!service.inventoryTracked) {
+    return 'AVAILABLE';
+  }
+
+  if (!service.stockId) {
+    return 'NOT_SET';
+  }
+
+  if (service.isSoldOut || service.availableQty <= 0) {
+    return 'SOLD_OUT';
+  }
+
+  return 'AVAILABLE';
+}
+
+function canSellService(service: POSService) {
+  if (!service.isActive) {
+    return false;
+  }
+
+  if (!service.inventoryTracked) {
+    return true;
+  }
+
+  return Boolean(service.stockId) && !service.isSoldOut && service.availableQty > 0;
+}
+
+function getServiceStockLabel(service: POSService) {
+  const status = getServiceStatus(service);
+
+  if (!service.inventoryTracked) {
+    return 'Not tracked';
+  }
+
+  if (status === 'AVAILABLE') {
+    return `${service.availableQty} left`;
+  }
+
+  if (status === 'SOLD_OUT') {
+    return 'Sold out';
+  }
+
+  if (status === 'NOT_SET') {
+    return 'Stock not set';
+  }
+
+  return 'Hidden';
+}
+
+function getServiceStockBadgeClass(service: POSService) {
+  const status = getServiceStatus(service);
+
+  if (!service.inventoryTracked) {
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  if (status === 'AVAILABLE') {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  if (status === 'SOLD_OUT') {
+    return 'bg-red-100 text-red-700';
+  }
+
+  if (status === 'NOT_SET') {
+    return 'bg-amber-100 text-amber-700';
+  }
+
+  return 'bg-neutral-200 text-neutral-600';
+}
+
+function getBillingLabel(service: POSService) {
+  if (service.billingMode === ServiceBillingMode.FREE) {
+    return 'Free';
+  }
+
+  if (service.billingMode === ServiceBillingMode.FIXED_PRICE) {
+    return `${moneyAmount(service.unitPrice)}`;
+  }
+
+  return 'Confirm price';
+}
+
+function getBillingBadgeClass(service: POSService) {
+  if (service.billingMode === ServiceBillingMode.FREE) {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  if (service.billingMode === ServiceBillingMode.FIXED_PRICE) {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  return 'bg-blue-100 text-blue-700';
 }
 
 function BundleBadge({ product }: { product: POSProduct }) {
@@ -252,22 +398,33 @@ export function POSClient({
   hotels,
   rooms,
   products,
+  services,
   currency,
 }: {
   selectedHotelId: string;
   hotels: POSHotel[];
   rooms: POSRoom[];
   products: POSProduct[];
+  services: POSService[];
   currency: string;
 }) {
   const router = useRouter();
 
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('All');
-  const [availabilityFilter, setAvailabilityFilter] =
-    useState<AvailabilityFilter>('ALL');
+  const [activeMode, setActiveMode] = useState<POSMode>('food');
+
+  const [foodCart, setFoodCart] = useState<FoodCartItem[]>([]);
+  const [serviceCart, setServiceCart] = useState<ServiceCartItem[]>([]);
+
+  const [productQuery, setProductQuery] = useState('');
+  const [productCategory, setProductCategory] = useState('All');
+  const [productAvailabilityFilter, setProductAvailabilityFilter] =
+    useState<ProductAvailabilityFilter>('ALL');
+
+  const [serviceQuery, setServiceQuery] = useState('');
+  const [serviceCategory, setServiceCategory] = useState('All');
+  const [serviceAvailabilityFilter, setServiceAvailabilityFilter] =
+    useState<ServiceAvailabilityFilter>('ALL');
 
   const [guestName, setGuestName] = useState('');
   const [roomId, setRoomId] = useState('');
@@ -276,7 +433,7 @@ export function POSClient({
     'CASH' | 'POS' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER'
   >('CASH');
   const [cashTendered, setCashTendered] = useState('');
-  const [lastOrderCode, setLastOrderCode] = useState<string | null>(null);
+  const [lastReceiptLabel, setLastReceiptLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [pending, startTransition] = useTransition();
@@ -285,29 +442,42 @@ export function POSClient({
     return new Map(products.map((product) => [product.id, product]));
   }, [products]);
 
-  const categories = useMemo(() => {
+  const serviceMap = useMemo(() => {
+    return new Map(services.map((service) => [service.id, service]));
+  }, [services]);
+
+  const productCategories = useMemo(() => {
     return [
       'All',
       ...Array.from(new Set(products.map((product) => product.categoryName))),
     ];
   }, [products]);
 
+  const serviceCategories = useMemo(() => {
+    return [
+      'All',
+      ...Array.from(new Set(services.map((service) => service.category))),
+    ];
+  }, [services]);
+
   const filteredProducts = useMemo(() => {
-    const lowerQuery = query.trim().toLowerCase();
+    const lowerQuery = productQuery.trim().toLowerCase();
 
     return products.filter((product) => {
       const stockStatus = getStockStatus(product);
 
       const matchesCategory =
-        category === 'All' || product.categoryName === category;
+        productCategory === 'All' || product.categoryName === productCategory;
 
       const matchesAvailability =
-        availabilityFilter === 'ALL' ||
-        availabilityFilter === stockStatus ||
-        (availabilityFilter === 'AVAILABLE' && stockStatus === 'AVAILABLE') ||
-        (availabilityFilter === 'SOLD_OUT' && stockStatus === 'SOLD_OUT') ||
-        (availabilityFilter === 'NOT_SET' && stockStatus === 'NOT_SET') ||
-        (availabilityFilter === 'BUNDLE' && product.isDerivedStock);
+        productAvailabilityFilter === 'ALL' ||
+        (productAvailabilityFilter === 'AVAILABLE' &&
+          stockStatus === 'AVAILABLE') ||
+        (productAvailabilityFilter === 'SOLD_OUT' &&
+          stockStatus === 'SOLD_OUT') ||
+        (productAvailabilityFilter === 'NOT_SET' &&
+          stockStatus === 'NOT_SET') ||
+        (productAvailabilityFilter === 'BUNDLE' && product.isDerivedStock);
 
       const componentText = product.bundleComponents
         .map((component) => component.name)
@@ -323,20 +493,74 @@ export function POSClient({
 
       return matchesCategory && matchesAvailability && matchesSearch;
     });
-  }, [availabilityFilter, category, products, query]);
+  }, [
+    productAvailabilityFilter,
+    productCategory,
+    products,
+    productQuery,
+  ]);
 
-  const subtotal = cart.reduce((sum, item) => {
+  const filteredServices = useMemo(() => {
+    const lowerQuery = serviceQuery.trim().toLowerCase();
+
+    return services.filter((service) => {
+      const status = getServiceStatus(service);
+
+      const matchesCategory =
+        serviceCategory === 'All' || service.category === serviceCategory;
+
+      const matchesAvailability =
+        serviceAvailabilityFilter === 'ALL' ||
+        (serviceAvailabilityFilter === 'AVAILABLE' &&
+          status === 'AVAILABLE') ||
+        (serviceAvailabilityFilter === 'SOLD_OUT' &&
+          status === 'SOLD_OUT') ||
+        (serviceAvailabilityFilter === 'TRACKED' &&
+          service.inventoryTracked) ||
+        (serviceAvailabilityFilter === 'UNTRACKED' &&
+          !service.inventoryTracked);
+
+      const matchesSearch =
+        !lowerQuery ||
+        `${service.name} ${service.description || ''} ${service.category} ${
+          service.code
+        }`
+          .toLowerCase()
+          .includes(lowerQuery);
+
+      return matchesCategory && matchesAvailability && matchesSearch;
+    });
+  }, [serviceAvailabilityFilter, serviceCategory, services, serviceQuery]);
+
+  const foodSubtotal = foodCart.reduce((sum, item) => {
     const product = productMap.get(item.productId);
+
     return sum + (product?.priceCents || 0) * item.quantity;
   }, 0);
 
-  const total = subtotal;
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const serviceSubtotal = serviceCart.reduce((sum, item) => {
+    const service = serviceMap.get(item.serviceId);
+
+    if (!service || service.billingMode !== ServiceBillingMode.FIXED_PRICE) {
+      return sum;
+    }
+
+    return sum + getServiceUnitPriceCents(service) * item.quantity;
+  }, 0);
+
+  const total = foodSubtotal + serviceSubtotal;
+  const foodItemCount = foodCart.reduce((sum, item) => sum + item.quantity, 0);
+  const serviceItemCount = serviceCart.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+  const itemCount = foodItemCount + serviceItemCount;
+
   const cashValue = Number(cashTendered || 0) * 100;
   const change = paymentMethod === 'CASH' ? Math.max(0, cashValue - total) : 0;
 
-  function addItem(productId: string) {
-    setLastOrderCode(null);
+  function addFoodItem(productId: string) {
+    setLastReceiptLabel(null);
     setError(null);
 
     const product = productMap.get(productId);
@@ -351,7 +575,7 @@ export function POSClient({
       return;
     }
 
-    setCart((current) => {
+    setFoodCart((current) => {
       const existing = current.find((item) => item.productId === productId);
       const existingQty = existing?.quantity ?? 0;
 
@@ -383,7 +607,54 @@ export function POSClient({
     });
   }
 
-  function updateQty(productId: string, quantity: number) {
+  function addServiceItem(serviceId: string) {
+    setLastReceiptLabel(null);
+    setError(null);
+
+    const service = serviceMap.get(serviceId);
+
+    if (!service) {
+      setError('Service item was not found.');
+      return;
+    }
+
+    if (!canSellService(service)) {
+      setError(`${service.name} is not available.`);
+      return;
+    }
+
+    setServiceCart((current) => {
+      const existing = current.find((item) => item.serviceId === serviceId);
+      const existingQty = existing?.quantity ?? 0;
+      const maxQty = service.inventoryTracked ? service.availableQty : 20;
+
+      if (existingQty + 1 > maxQty) {
+        setError(`${service.name} only has ${maxQty} available.`);
+        return current;
+      }
+
+      if (existing) {
+        return current.map((item) =>
+          item.serviceId === serviceId
+            ? {
+                ...item,
+                quantity: item.quantity + 1,
+              }
+            : item
+        );
+      }
+
+      return [
+        ...current,
+        {
+          serviceId,
+          quantity: 1,
+        },
+      ];
+    });
+  }
+
+  function updateFoodQty(productId: string, quantity: number) {
     setError(null);
 
     const product = productMap.get(productId);
@@ -397,7 +668,7 @@ export function POSClient({
       return;
     }
 
-    setCart((current) =>
+    setFoodCart((current) =>
       current
         .map((item) =>
           item.productId === productId
@@ -411,8 +682,39 @@ export function POSClient({
     );
   }
 
+  function updateServiceQty(serviceId: string, quantity: number) {
+    setError(null);
+
+    const service = serviceMap.get(serviceId);
+
+    if (!service) {
+      return;
+    }
+
+    const maxQty = service.inventoryTracked ? service.availableQty : 20;
+
+    if (quantity > maxQty) {
+      setError(`${service.name} only has ${maxQty} available.`);
+      return;
+    }
+
+    setServiceCart((current) =>
+      current
+        .map((item) =>
+          item.serviceId === serviceId
+            ? {
+                ...item,
+                quantity,
+              }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  }
+
   function clearCart() {
-    setCart([]);
+    setFoodCart([]);
+    setServiceCart([]);
     setGuestName('');
     setRoomId('');
     setNotes('');
@@ -421,11 +723,11 @@ export function POSClient({
   }
 
   function validateCartAgainstStock() {
-    for (const item of cart) {
+    for (const item of foodCart) {
       const product = productMap.get(item.productId);
 
       if (!product) {
-        return 'One or more cart items no longer exist.';
+        return 'One or more food cart items no longer exist.';
       }
 
       if (!canSellProduct(product)) {
@@ -437,14 +739,32 @@ export function POSClient({
       }
     }
 
+    for (const item of serviceCart) {
+      const service = serviceMap.get(item.serviceId);
+
+      if (!service) {
+        return 'One or more service cart items no longer exist.';
+      }
+
+      if (!canSellService(service)) {
+        return `${service.name} is no longer available.`;
+      }
+
+      const maxQty = service.inventoryTracked ? service.availableQty : 20;
+
+      if (item.quantity > maxQty) {
+        return `${service.name} only has ${maxQty} available.`;
+      }
+    }
+
     return null;
   }
 
   function completeSale() {
     setError(null);
 
-    if (cart.length === 0) {
-      setError('Please add at least one item.');
+    if (foodCart.length === 0 && serviceCart.length === 0) {
+      setError('Please add at least one food item or service item.');
       return;
     }
 
@@ -468,11 +788,19 @@ export function POSClient({
           guestName,
           notes,
           paymentMethod,
-          items: cart,
+          items: foodCart,
+          services: serviceCart,
         });
 
         if (response.ok) {
-          setLastOrderCode(response.orderCode);
+          const parts = [
+            response.orderCode ? `Order ${response.orderCode}` : null,
+            response.serviceRequestCodes?.length
+              ? `Requests ${response.serviceRequestCodes.join(', ')}`
+              : null,
+          ].filter(Boolean);
+
+          setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
           clearCart();
           setMobileView('products');
           router.refresh();
@@ -529,6 +857,32 @@ export function POSClient({
           )}
         >
           <div className="mb-5 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft">
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveMode('food')}
+                className={
+                  activeMode === 'food'
+                    ? 'h-12 rounded-2xl bg-black px-4 text-sm font-black text-white'
+                    : 'h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+                }
+              >
+                Food Menu
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMode('services')}
+                className={
+                  activeMode === 'services'
+                    ? 'h-12 rounded-2xl bg-black px-4 text-sm font-black text-white'
+                    : 'h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+                }
+              >
+                Services
+              </button>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-[240px_1fr_220px]">
               <div>
                 <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
@@ -549,124 +903,276 @@ export function POSClient({
                 </select>
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                  Search Product
-                </label>
-                <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
-                  <Search className="size-4 shrink-0 text-neutral-400" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search product, bundle, or component..."
-                    className="w-full bg-transparent text-sm font-semibold outline-none"
-                  />
-                </div>
-              </div>
+              {activeMode === 'food' ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                      Search Food Product
+                    </label>
+                    <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+                      <Search className="size-4 shrink-0 text-neutral-400" />
+                      <input
+                        value={productQuery}
+                        onChange={(event) => setProductQuery(event.target.value)}
+                        placeholder="Search product, bundle, or component..."
+                        className="w-full bg-transparent text-sm font-semibold outline-none"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                  Stock Filter
-                </label>
-                <select
-                  value={availabilityFilter}
-                  onChange={(event) =>
-                    setAvailabilityFilter(
-                      event.target.value as AvailabilityFilter
-                    )
-                  }
-                  className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
-                >
-                  <option value="ALL">All Products</option>
-                  <option value="AVAILABLE">Available</option>
-                  <option value="SOLD_OUT">Sold Out</option>
-                  <option value="NOT_SET">Stock Not Set</option>
-                  <option value="BUNDLE">Bundles Only</option>
-                </select>
-              </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                      Food Stock Filter
+                    </label>
+                    <select
+                      value={productAvailabilityFilter}
+                      onChange={(event) =>
+                        setProductAvailabilityFilter(
+                          event.target.value as ProductAvailabilityFilter
+                        )
+                      }
+                      className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                    >
+                      <option value="ALL">All Products</option>
+                      <option value="AVAILABLE">Available</option>
+                      <option value="SOLD_OUT">Sold Out</option>
+                      <option value="NOT_SET">Stock Not Set</option>
+                      <option value="BUNDLE">Bundles Only</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                      Search Service
+                    </label>
+                    <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+                      <Search className="size-4 shrink-0 text-neutral-400" />
+                      <input
+                        value={serviceQuery}
+                        onChange={(event) => setServiceQuery(event.target.value)}
+                        placeholder="Search service request item..."
+                        className="w-full bg-transparent text-sm font-semibold outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                      Service Filter
+                    </label>
+                    <select
+                      value={serviceAvailabilityFilter}
+                      onChange={(event) =>
+                        setServiceAvailabilityFilter(
+                          event.target.value as ServiceAvailabilityFilter
+                        )
+                      }
+                      className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                    >
+                      <option value="ALL">All Services</option>
+                      <option value="AVAILABLE">Available</option>
+                      <option value="SOLD_OUT">Sold Out</option>
+                      <option value="TRACKED">Inventory Tracked</option>
+                      <option value="UNTRACKED">Not Tracked</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-              {categories.map((item) => {
-                const active = category === item;
+              {(activeMode === 'food' ? productCategories : serviceCategories).map(
+                (item) => {
+                  const active =
+                    activeMode === 'food'
+                      ? productCategory === item
+                      : serviceCategory === item;
 
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setCategory(item)}
-                    className={cn(
-                      'shrink-0 touch-manipulation rounded-full border px-4 py-2 text-sm font-black transition active:scale-95',
-                      active
-                        ? 'border-black bg-black text-white'
-                        : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
-                    )}
-                  >
-                    {item}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => {
+                        if (activeMode === 'food') {
+                          setProductCategory(item);
+                        } else {
+                          setServiceCategory(item);
+                        }
+                      }}
+                      className={cn(
+                        'shrink-0 touch-manipulation rounded-full border px-4 py-2 text-sm font-black transition active:scale-95',
+                        active
+                          ? 'border-black bg-black text-white'
+                          : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
+                      )}
+                    >
+                      {item}
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {filteredProducts.map((product) => {
-              const sellable = canSellProduct(product);
+          {activeMode === 'food' ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredProducts.map((product) => {
+                const sellable = canSellProduct(product);
 
-              return (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => addItem(product.id)}
-                  disabled={!sellable}
-                  className={cn(
-                    'touch-manipulation overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white text-left shadow-soft transition active:scale-[0.99]',
-                    sellable
-                      ? 'hover:-translate-y-0.5 hover:shadow-lg'
-                      : 'cursor-not-allowed opacity-60'
-                  )}
-                >
-                  <div
-                    className="relative h-28 bg-neutral-100 bg-cover bg-center sm:h-36"
-                    style={{
-                      backgroundImage: product.imageUrl
-                        ? `url(${product.imageUrl})`
-                        : undefined,
-                    }}
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => addFoodItem(product.id)}
+                    disabled={!sellable}
+                    className={cn(
+                      'touch-manipulation overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white text-left shadow-soft transition active:scale-[0.99]',
+                      sellable
+                        ? 'hover:-translate-y-0.5 hover:shadow-lg'
+                        : 'cursor-not-allowed opacity-60'
+                    )}
                   >
-                    <span
-                      className={`absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-3 py-1 text-[10px] font-black ${getStockBadgeClass(
-                        product
-                      )}`}
+                    <div
+                      className="relative h-28 bg-neutral-100 bg-cover bg-center sm:h-36"
+                      style={{
+                        backgroundImage: product.imageUrl
+                          ? `url(${product.imageUrl})`
+                          : undefined,
+                      }}
                     >
-                      {getStockLabel(product)}
-                    </span>
+                      <span
+                        className={`absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-3 py-1 text-[10px] font-black ${getProductStockBadgeClass(
+                          product
+                        )}`}
+                      >
+                        {getProductStockLabel(product)}
+                      </span>
 
-                    {!sellable ? (
-                      <div className="absolute inset-0 grid place-items-center bg-white/70">
-                        <span className="rounded-full bg-black px-4 py-2 text-xs font-black text-white">
-                          Not Available
+                      {!sellable ? (
+                        <div className="absolute inset-0 grid place-items-center bg-white/70">
+                          <span className="rounded-full bg-black px-4 py-2 text-xs font-black text-white">
+                            Not Available
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-base font-black sm:text-lg">
+                              {product.name}
+                            </h3>
+                            <BundleBadge product={product} />
+                          </div>
+
+                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
+                            {product.description || 'No description'}
+                          </p>
+
+                          <BundleSavings
+                            product={product}
+                            currency={currency}
+                          />
+                          <BundleIncludes product={product} compact />
+                        </div>
+
+                        <span
+                          className={cn(
+                            'grid size-10 shrink-0 place-items-center rounded-full',
+                            sellable
+                              ? 'bg-black text-white'
+                              : 'bg-neutral-200 text-neutral-400'
+                          )}
+                        >
+                          <Plus className="size-5" />
                         </span>
                       </div>
-                    ) : null}
-                  </div>
 
-                  <div className="p-3 sm:p-4">
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <p className="text-base font-black text-gold sm:text-lg">
+                          {money(product.priceCents, currency)}
+                        </p>
+
+                        <p className="text-xs font-bold text-neutral-400">
+                          Sold: {product.soldQty}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {filteredProducts.length === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
+                  <p className="font-black text-neutral-600">
+                    No food products found
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Try another keyword, category, or stock filter.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredServices.map((service) => {
+                const sellable = canSellService(service);
+
+                return (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => addServiceItem(service.id)}
+                    disabled={!sellable}
+                    className={cn(
+                      'touch-manipulation overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white p-4 text-left shadow-soft transition active:scale-[0.99]',
+                      sellable
+                        ? 'hover:-translate-y-0.5 hover:shadow-lg'
+                        : 'cursor-not-allowed opacity-60'
+                    )}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-base font-black sm:text-lg">
-                            {product.name}
-                          </h3>
-                          <BundleBadge product={product} />
+                          <div className="grid size-11 place-items-center rounded-2xl bg-blue-50 text-blue-700">
+                            <ConciergeBell className="size-5" />
+                          </div>
+
+                          <div className="min-w-0">
+                            <h3 className="truncate text-base font-black">
+                              {service.name}
+                            </h3>
+                            <p className="text-xs font-bold text-neutral-400">
+                              {service.category}
+                            </p>
+                          </div>
                         </div>
 
-                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
-                          {product.description || 'No description'}
+                        <p className="mt-3 line-clamp-3 text-xs leading-5 text-neutral-500">
+                          {service.description || 'No description'}
                         </p>
 
-                        <BundleSavings product={product} currency={currency} />
-                        <BundleIncludes product={product} compact />
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-[10px] font-black ${getServiceStockBadgeClass(
+                              service
+                            )}`}
+                          >
+                            {getServiceStockLabel(service)}
+                          </span>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-[10px] font-black ${getBillingBadgeClass(
+                              service
+                            )}`}
+                          >
+                            {getBillingLabel(service)}
+                          </span>
+                        </div>
                       </div>
 
                       <span
@@ -680,30 +1186,22 @@ export function POSClient({
                         <Plus className="size-5" />
                       </span>
                     </div>
+                  </button>
+                );
+              })}
 
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <p className="text-base font-black text-gold sm:text-lg">
-                        {money(product.priceCents, currency)}
-                      </p>
-
-                      <p className="text-xs font-bold text-neutral-400">
-                        Sold: {product.soldQty}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-
-            {filteredProducts.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
-                <p className="font-black text-neutral-600">No products found</p>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Try another keyword, category, or stock filter.
-                </p>
-              </div>
-            ) : null}
-          </div>
+              {filteredServices.length === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
+                  <p className="font-black text-neutral-600">
+                    No service items found
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Try another keyword, category, or service filter.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </section>
 
         <aside
@@ -746,16 +1244,16 @@ export function POSClient({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              {lastOrderCode ? (
+              {lastReceiptLabel ? (
                 <div className="mb-4 rounded-[1.5rem] border border-green-200 bg-green-50 p-4 text-green-800">
                   <p className="font-black">Sale completed</p>
                   <p className="mt-1 text-sm font-semibold">
-                    Order {lastOrderCode} was sent to the kitchen.
+                    {lastReceiptLabel}
                   </p>
                 </div>
               ) : null}
 
-              {cart.length === 0 ? (
+              {foodCart.length === 0 && serviceCart.length === 0 ? (
                 <div className="grid min-h-52 place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
                   <div>
                     <ReceiptText className="mx-auto size-9 text-neutral-400" />
@@ -763,90 +1261,177 @@ export function POSClient({
                       Cart is empty
                     </p>
                     <p className="mt-1 text-sm text-neutral-500">
-                      Tap available products to add them to the POS cart.
+                      Tap available food or service items to add them.
                     </p>
                   </div>
                 </div>
               ) : null}
 
-              <div className="space-y-3">
-                {cart.map((item) => {
-                  const product = productMap.get(item.productId);
+              {foodCart.length > 0 ? (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-neutral-400">
+                    Food Menu
+                  </p>
 
-                  if (!product) return null;
+                  <div className="space-y-3">
+                    {foodCart.map((item) => {
+                      const product = productMap.get(item.productId);
 
-                  return (
-                    <div
-                      key={item.productId}
-                      className="rounded-[1.25rem] border border-neutral-200 bg-white p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate font-black">
-                              {product.name}
-                            </h3>
-                            <BundleBadge product={product} />
+                      if (!product) return null;
+
+                      return (
+                        <div
+                          key={item.productId}
+                          className="rounded-[1.25rem] border border-neutral-200 bg-white p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="truncate font-black">
+                                  {product.name}
+                                </h3>
+                                <BundleBadge product={product} />
+                              </div>
+
+                              <p className="mt-1 text-sm font-bold text-neutral-500">
+                                {money(product.priceCents, currency)}
+                              </p>
+
+                              <p className="mt-1 text-xs font-bold text-neutral-400">
+                                {product.isDerivedStock
+                                  ? `Can sell: ${product.availableQty}`
+                                  : `Stock left: ${product.availableQty}`}
+                              </p>
+
+                              <BundleIncludes product={product} compact />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => updateFoodQty(item.productId, 0)}
+                              className="grid size-10 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
                           </div>
 
-                          <p className="mt-1 text-sm font-bold text-neutral-500">
-                            {money(product.priceCents, currency)}
-                          </p>
+                          <div className="mt-3 flex items-center justify-between">
+                            <QuantityControls
+                              quantity={item.quantity}
+                              onDecrease={() =>
+                                updateFoodQty(item.productId, item.quantity - 1)
+                              }
+                              onIncrease={() =>
+                                updateFoodQty(item.productId, item.quantity + 1)
+                              }
+                              disableIncrease={
+                                item.quantity >= product.availableQty
+                              }
+                            />
 
-                          <p className="mt-1 text-xs font-bold text-neutral-400">
-                            {product.isDerivedStock
-                              ? `Can sell: ${product.availableQty}`
-                              : `Stock left: ${product.availableQty}`}
-                          </p>
-
-                          <BundleIncludes product={product} compact />
+                            <p className="font-black">
+                              {money(
+                                product.priceCents * item.quantity,
+                                currency
+                              )}
+                            </p>
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
-                        <button
-                          type="button"
-                          onClick={() => updateQty(item.productId, 0)}
-                          className="grid size-10 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
+              {serviceCart.length > 0 ? (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-neutral-400">
+                    Services
+                  </p>
+
+                  <div className="space-y-3">
+                    {serviceCart.map((item) => {
+                      const service = serviceMap.get(item.serviceId);
+
+                      if (!service) return null;
+
+                      const serviceLineTotal =
+                        service.billingMode === ServiceBillingMode.FIXED_PRICE
+                          ? getServiceUnitPriceCents(service) * item.quantity
+                          : 0;
+
+                      const maxQty = service.inventoryTracked
+                        ? service.availableQty
+                        : 20;
+
+                      return (
+                        <div
+                          key={item.serviceId}
+                          className="rounded-[1.25rem] border border-blue-100 bg-white p-3"
                         >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="truncate font-black">
+                                  {service.name}
+                                </h3>
 
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="inline-flex items-center rounded-full bg-neutral-50 p-1">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateQty(item.productId, item.quantity - 1)
-                            }
-                            className="grid size-10 touch-manipulation place-items-center rounded-full bg-white active:scale-95"
-                          >
-                            <Minus className="size-4" />
-                          </button>
+                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-700">
+                                  Service
+                                </span>
+                              </div>
 
-                          <span className="min-w-10 text-center text-sm font-black">
-                            {item.quantity}
-                          </span>
+                              <p className="mt-1 text-sm font-bold text-neutral-500">
+                                {getBillingLabel(service)}
+                              </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateQty(item.productId, item.quantity + 1)
-                            }
-                            disabled={item.quantity >= product.availableQty}
-                            className="grid size-10 touch-manipulation place-items-center rounded-full bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <Plus className="size-4" />
-                          </button>
+                              <p className="mt-1 text-xs font-bold text-neutral-400">
+                                {service.inventoryTracked
+                                  ? `Stock left: ${service.availableQty}`
+                                  : 'Inventory not tracked'}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => updateServiceQty(item.serviceId, 0)}
+                              className="grid size-10 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-between">
+                            <QuantityControls
+                              quantity={item.quantity}
+                              onDecrease={() =>
+                                updateServiceQty(
+                                  item.serviceId,
+                                  item.quantity - 1
+                                )
+                              }
+                              onIncrease={() =>
+                                updateServiceQty(
+                                  item.serviceId,
+                                  item.quantity + 1
+                                )
+                              }
+                              disableIncrease={item.quantity >= maxQty}
+                            />
+
+                            <p className="font-black">
+                              {service.billingMode ===
+                              ServiceBillingMode.FIXED_PRICE
+                                ? money(serviceLineTotal, currency)
+                                : '—'}
+                            </p>
+                          </div>
                         </div>
-
-                        <p className="font-black">
-                          {money(product.priceCents * item.quantity, currency)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-5 space-y-3">
                 <div>
@@ -918,7 +1503,7 @@ export function POSClient({
 
                 <div>
                   <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                    Order Notes
+                    Order / Service Notes
                   </label>
                   <textarea
                     value={notes}
@@ -933,9 +1518,16 @@ export function POSClient({
             <div className="border-t border-neutral-100 bg-neutral-50 p-4">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-bold text-neutral-500">Subtotal</span>
+                  <span className="font-bold text-neutral-500">Food</span>
                   <span className="font-black">
-                    {money(subtotal, currency)}
+                    {money(foodSubtotal, currency)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="font-bold text-neutral-500">Services</span>
+                  <span className="font-black">
+                    {money(serviceSubtotal, currency)}
                   </span>
                 </div>
 
@@ -973,7 +1565,7 @@ export function POSClient({
                 <button
                   type="button"
                   onClick={completeSale}
-                  disabled={pending || cart.length === 0}
+                  disabled={pending || itemCount === 0}
                   className="min-h-12 touch-manipulation rounded-2xl bg-black px-4 py-3 text-sm font-black text-white hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pending ? 'Processing...' : 'Complete Sale'}
@@ -996,6 +1588,43 @@ export function POSClient({
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function QuantityControls({
+  quantity,
+  onDecrease,
+  onIncrease,
+  disableIncrease,
+}: {
+  quantity: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  disableIncrease?: boolean;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-full bg-neutral-50 p-1">
+      <button
+        type="button"
+        onClick={onDecrease}
+        className="grid size-10 touch-manipulation place-items-center rounded-full bg-white active:scale-95"
+      >
+        <Minus className="size-4" />
+      </button>
+
+      <span className="min-w-10 text-center text-sm font-black">
+        {quantity}
+      </span>
+
+      <button
+        type="button"
+        onClick={onIncrease}
+        disabled={disableIncrease}
+        className="grid size-10 touch-manipulation place-items-center rounded-full bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Plus className="size-4" />
+      </button>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { MenuProductType, OrderStatus } from '@prisma/client';
+import { MenuProductType, OrderStatus, ServiceBillingMode } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -58,7 +58,7 @@ export default async function POSPage({
     );
   }
 
-  const [rooms, products] = await Promise.all([
+  const [rooms, products, services] = await Promise.all([
     db.room.findMany({
       where: {
         hotelId: selectedHotelId,
@@ -97,6 +97,27 @@ export default async function POSPage({
       orderBy: {
         name: 'asc',
       },
+    }),
+
+    db.serviceCatalogItem.findMany({
+      where: {
+        hotelId: selectedHotelId,
+        isActive: true,
+      },
+      include: {
+        availabilityStock: true,
+      },
+      orderBy: [
+        {
+          category: 'asc',
+        },
+        {
+          sortOrder: 'asc',
+        },
+        {
+          name: 'asc',
+        },
+      ],
     }),
   ]);
 
@@ -269,11 +290,35 @@ export default async function POSPage({
     };
   });
 
+  const mappedServices = services.map((service) => {
+    const stock = service.availabilityStock;
+    const inventoryTracked = service.inventoryTracked;
+
+    return {
+      id: service.id,
+      code: service.code,
+      name: service.name,
+      category: service.category,
+      description: service.description ?? '',
+      iconKey: service.iconKey,
+      billingMode: service.billingMode ?? ServiceBillingMode.FREE,
+      unitPrice: Number(service.unitPrice),
+      unitLabel: service.unitLabel ?? '',
+      isActive: service.isActive,
+      inventoryTracked,
+      stockId: stock?.id ?? null,
+      availableQty: inventoryTracked ? stock?.availableQty ?? 0 : 999,
+      usedQty: inventoryTracked ? stock?.usedQty ?? 0 : 0,
+      isSoldOut: inventoryTracked ? stock?.isSoldOut ?? true : false,
+      notes: inventoryTracked ? stock?.notes ?? '' : '',
+    };
+  });
+
   return (
     <div>
       <PageHeader
         title="POS Terminal"
-        description="Create walk-in, restaurant, front-desk, or room-charge orders directly from the dashboard."
+        description="Create walk-in, restaurant, front-desk, room-charge, food, and service request orders directly from the dashboard."
       />
 
       <POSClient
@@ -288,6 +333,7 @@ export default async function POSPage({
           name: room.name,
         }))}
         products={mappedProducts}
+        services={mappedServices}
         currency={hotel.settings?.currency || 'PHP'}
       />
     </div>
