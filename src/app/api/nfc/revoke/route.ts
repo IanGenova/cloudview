@@ -1,27 +1,59 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { db } from '@/lib/db';
-import { hashValue, NFC_ACCESS_COOKIE } from '@/lib/nfc-security';
+import { NFC_ACCESS_COOKIE } from '@/lib/nfc-security';
+import {
+  closeCurrentNfcGuestSessionIfNoPendingWork,
+  getNfcGuestSessionCookieName,
+} from '@/lib/nfc-guest-session';
 
-export async function POST() {
-  const cookieStore = await cookies();
-  const rawToken = cookieStore.get(NFC_ACCESS_COOKIE)?.value;
+export const dynamic = 'force-dynamic';
 
-  if (rawToken) {
-    await db.nfcAccessSession.updateMany({
-      where: {
-        tokenHash: hashValue(rawToken),
-        revokedAt: null
+async function readBody(request: Request) {
+  try {
+    return (await request.json()) as {
+      tagCode?: string;
+    };
+  } catch {
+    return {};
+  }
+}
+
+function clearCookie(response: NextResponse, name: string) {
+  response.cookies.set(name, '', {
+    path: '/',
+    maxAge: 0,
+  });
+}
+
+export async function POST(request: Request) {
+  const body = await readBody(request);
+  const tagCode = String(body.tagCode || '').trim();
+
+  if (!tagCode) {
+    return NextResponse.json(
+      {
+        error: 'tagCode is required.',
       },
-      data: {
-        revokedAt: new Date()
+      {
+        status: 400,
       }
-    });
+    );
   }
 
-  cookieStore.delete(NFC_ACCESS_COOKIE);
+  const result = await closeCurrentNfcGuestSessionIfNoPendingWork(tagCode);
 
-  return NextResponse.json({
-    ok: true
+  const response = NextResponse.json({
+    ok: true,
+    ...result,
   });
+
+  /**
+   * Only clear cookies when the session is really closed.
+   * If there are pending orders/requests, keep the cookies alive.
+   */
+  if (!result.keepSession) {
+    clearCookie(response, getNfcGuestSessionCookieName(tagCode));
+    clearCookie(response, NFC_ACCESS_COOKIE);
+  }
+
+  return response;
 }

@@ -51,39 +51,134 @@ async function restoreMenuStockForCancelledOrder({
     hotelId: string;
     orderCode: string;
     items: {
+      id: string;
       productId: string | null;
       quantity: number;
       productNameSnapshot: string;
+      isBundleSnapshot: boolean;
+      bundleComponents: {
+        id: string;
+        componentProductId: string | null;
+        componentNameSnapshot: string;
+        quantity: number;
+      }[];
     }[];
   };
 }) {
-  const quantityByProductId = new Map<string, number>();
-  const productNameByProductId = new Map<string, string>();
+  type RestoreRequirement = {
+    productId: string;
+    productName: string;
+    quantity: number;
+    deductionType: MenuAvailabilityMovementType;
+    restoreType: MenuAvailabilityMovementType;
+    reason: string;
+  };
+
+  const restoreRequirements = new Map<string, RestoreRequirement>();
+
+  function addRestoreRequirement(input: RestoreRequirement) {
+    const key = `${input.productId}:${input.deductionType}:${input.restoreType}`;
+    const existing = restoreRequirements.get(key);
+
+    if (existing) {
+      existing.quantity += input.quantity;
+      return;
+    }
+
+    restoreRequirements.set(key, input);
+  }
 
   for (const item of order.items) {
+    /**
+     * Bundle order item:
+     * Restore component products, not the bundle product.
+     */
+    if (item.isBundleSnapshot) {
+      if (item.bundleComponents.length > 0) {
+        for (const component of item.bundleComponents) {
+          if (!component.componentProductId) {
+            continue;
+          }
+
+          addRestoreRequirement({
+            productId: component.componentProductId,
+            productName: component.componentNameSnapshot,
+            quantity: component.quantity,
+            deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+            restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+            reason: `Cancelled bundle order ${order.orderCode} stock restored`,
+          });
+        }
+
+        continue;
+      }
+
+      /**
+       * Fallback for older bundle orders created before
+       * OrderItemBundleComponent snapshots existed.
+       *
+       * This uses the current bundle setup. It is less perfect than snapshots,
+       * but it prevents old bundle cancellations from failing silently.
+       */
+      if (item.productId) {
+        const currentBundleComponents = await tx.menuBundleComponent.findMany({
+          where: {
+            bundleProductId: item.productId,
+          },
+          include: {
+            componentProduct: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+        for (const component of currentBundleComponents) {
+          addRestoreRequirement({
+            productId: component.componentProductId,
+            productName: component.componentProduct.name,
+            quantity: component.quantity * item.quantity,
+            deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+            restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+            reason: `Cancelled bundle order ${order.orderCode} stock restored`,
+          });
+        }
+      }
+
+      continue;
+    }
+
+    /**
+     * Normal single menu item:
+     * Restore the product itself.
+     */
     if (!item.productId) {
       continue;
     }
 
-    quantityByProductId.set(
-      item.productId,
-      (quantityByProductId.get(item.productId) ?? 0) + item.quantity
-    );
-
-    productNameByProductId.set(item.productId, item.productNameSnapshot);
+    addRestoreRequirement({
+      productId: item.productId,
+      productName: item.productNameSnapshot,
+      quantity: item.quantity,
+      deductionType: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+      restoreType: MenuAvailabilityMovementType.CANCEL_RESTORE,
+      reason: `Cancelled order ${order.orderCode} stock restored`,
+    });
   }
 
   const restoredProductIds: string[] = [];
 
-  for (const [productId, orderedQuantity] of quantityByProductId.entries()) {
-    const productName =
-      productNameByProductId.get(productId) ?? 'Menu item';
-
+  for (const requirement of restoreRequirements.values()) {
+    /**
+     * Prevent double restoration.
+     */
     const existingRestore = await tx.menuAvailabilityMovement.findFirst({
       where: {
         hotelId: order.hotelId,
-        productId,
-        type: MenuAvailabilityMovementType.CANCEL_RESTORE,
+        productId: requirement.productId,
+        type: requirement.restoreType,
         reason: {
           contains: order.orderCode,
         },
@@ -97,11 +192,14 @@ async function restoreMenuStockForCancelledOrder({
       continue;
     }
 
+    /**
+     * Restore only what was actually deducted.
+     */
     const deductionMovements = await tx.menuAvailabilityMovement.findMany({
       where: {
         hotelId: order.hotelId,
-        productId,
-        type: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+        productId: requirement.productId,
+        type: requirement.deductionType,
         reason: {
           contains: order.orderCode,
         },
@@ -120,13 +218,17 @@ async function restoreMenuStockForCancelledOrder({
       continue;
     }
 
-    const restoreQuantity = Math.min(orderedQuantity, deductedQuantity);
+    const restoreQuantity = Math.min(requirement.quantity, deductedQuantity);
+
+    if (restoreQuantity <= 0) {
+      continue;
+    }
 
     const stock = await tx.menuAvailabilityStock.findUnique({
       where: {
         hotelId_productId: {
           hotelId: order.hotelId,
-          productId,
+          productId: requirement.productId,
         },
       },
       select: {
@@ -137,13 +239,13 @@ async function restoreMenuStockForCancelledOrder({
     });
 
     if (!stock) {
-      throw new Error(`${productName} inventory stock record was not found.`);
+      continue;
     }
 
     const nextAvailableQty = stock.availableQty + restoreQuantity;
     const nextSoldQty = Math.max(stock.soldQty - restoreQuantity, 0);
 
-    await tx.menuAvailabilityStock.update({
+    const updatedStock = await tx.menuAvailabilityStock.update({
       where: {
         id: stock.id,
       },
@@ -152,25 +254,28 @@ async function restoreMenuStockForCancelledOrder({
         soldQty: nextSoldQty,
         isSoldOut: false,
       },
+      select: {
+        availableQty: true,
+      },
     });
 
     await tx.menuAvailabilityMovement.create({
       data: {
         hotelId: order.hotelId,
-        productId,
+        productId: requirement.productId,
         stockId: stock.id,
-        type: MenuAvailabilityMovementType.CANCEL_RESTORE,
+        type: requirement.restoreType,
         quantity: restoreQuantity,
-        balanceAfter: nextAvailableQty,
-        reason: `Cancelled order ${order.orderCode} stock restored`,
+        balanceAfter: updatedStock.availableQty,
+        reason: requirement.reason,
         userId,
       },
     });
 
-    restoredProductIds.push(productId);
+    restoredProductIds.push(requirement.productId);
   }
 
-  return restoredProductIds;
+  return Array.from(new Set(restoredProductIds));
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
@@ -195,12 +300,22 @@ export async function updateOrderStatusAction(formData: FormData) {
       orderCode: true,
       inventoryDeductedAt: true,
       items: {
-        select: {
-          productId: true,
-          quantity: true,
-          productNameSnapshot: true,
-        },
+  select: {
+    id: true,
+    productId: true,
+    quantity: true,
+    productNameSnapshot: true,
+    isBundleSnapshot: true,
+    bundleComponents: {
+      select: {
+        id: true,
+        componentProductId: true,
+        componentNameSnapshot: true,
+        quantity: true,
       },
+    },
+  },
+},
       tag: {
         select: {
           code: true,

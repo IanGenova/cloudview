@@ -1,12 +1,109 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Lock, Utensils } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import { MenuProductType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { MenuClient } from '@/components/guest/MenuClient';
 
 export const dynamic = 'force-dynamic';
+
+function safeRequiredQuantity(value: number) {
+  if (!Number.isInteger(value) || value <= 0) {
+    return 1;
+  }
+
+  return value;
+}
+
+function getSingleProductStock(product: {
+  availabilityStocks: {
+    availableQty: number;
+    soldQty: number;
+    isSoldOut: boolean;
+  }[];
+}) {
+  const stock = product.availabilityStocks[0];
+
+  return {
+    availableQty: stock?.availableQty ?? 0,
+    soldQty: stock?.soldQty ?? 0,
+    isSoldOut: !stock || stock.isSoldOut || stock.availableQty <= 0,
+  };
+}
+
+function getBundleDerivedStock(product: {
+  bundleComponents: {
+    id: string;
+    quantity: number;
+    componentProduct: {
+      id: string;
+      name: string;
+      priceCents: number;
+      isAvailable: boolean;
+      productType: MenuProductType;
+      availabilityStocks: {
+        availableQty: number;
+        soldQty: number;
+        isSoldOut: boolean;
+      }[];
+    };
+  }[];
+}) {
+  const bundleComponents = product.bundleComponents.map((component) => {
+    const requiredQty = safeRequiredQuantity(component.quantity);
+    const stock = component.componentProduct.availabilityStocks[0];
+
+    const availableQty = stock?.availableQty ?? 0;
+    const soldQty = stock?.soldQty ?? 0;
+
+    const canSellQty =
+      component.componentProduct.isAvailable &&
+      component.componentProduct.productType === MenuProductType.SINGLE &&
+      stock &&
+      !stock.isSoldOut &&
+      availableQty >= requiredQty
+        ? Math.floor(availableQty / requiredQty)
+        : 0;
+
+    return {
+      id: component.id,
+      productId: component.componentProduct.id,
+      name: component.componentProduct.name,
+      quantity: requiredQty,
+      availableQty,
+      soldQty,
+      canSellQty,
+      isSoldOut:
+        !component.componentProduct.isAvailable ||
+        component.componentProduct.productType !== MenuProductType.SINGLE ||
+        !stock ||
+        stock.isSoldOut ||
+        availableQty < requiredQty,
+    };
+  });
+
+  const availableQty =
+    bundleComponents.length > 0
+      ? Math.min(...bundleComponents.map((component) => component.canSellQty))
+      : 0;
+
+  const limitingComponent =
+    bundleComponents.length > 0
+      ? bundleComponents.reduce((lowest, component) =>
+          component.canSellQty < lowest.canSellQty ? component : lowest
+        )
+      : null;
+
+  return {
+    availableQty,
+    soldQty: 0,
+    isSoldOut: availableQty <= 0,
+    limitingComponentName: limitingComponent?.name ?? null,
+    bundleComponents,
+  };
+}
 
 export default async function GuestMenuPage({
   params,
@@ -97,6 +194,44 @@ export default async function GuestMenuPage({
         },
         take: 1,
       },
+      availabilityStocks: {
+        where: {
+          hotelId: tag.hotelId,
+        },
+        select: {
+          availableQty: true,
+          soldQty: true,
+          isSoldOut: true,
+        },
+        take: 1,
+      },
+      bundleComponents: {
+        include: {
+          componentProduct: {
+            select: {
+              id: true,
+              name: true,
+              priceCents: true,
+              isAvailable: true,
+              productType: true,
+              availabilityStocks: {
+                where: {
+                  hotelId: tag.hotelId,
+                },
+                select: {
+                  availableQty: true,
+                  soldQty: true,
+                  isSoldOut: true,
+                },
+                take: 1,
+              },
+            },
+          },
+        },
+        orderBy: {
+          sortOrder: 'asc',
+        },
+      },
     },
     orderBy: [
       {
@@ -110,14 +245,65 @@ export default async function GuestMenuPage({
     ],
   });
 
-  const menuProducts = products.map((product) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    priceCents: product.priceCents,
-    imageUrl: product.images[0]?.url ?? null,
-    categoryName: product.category?.name ?? 'Uncategorized',
-  }));
+  const menuProducts = products.map((product) => {
+    const isBundle = product.productType === MenuProductType.BUNDLE;
+
+    const singleStock = getSingleProductStock(product);
+
+    const bundleStock = isBundle
+      ? getBundleDerivedStock(product)
+      : {
+          availableQty: singleStock.availableQty,
+          soldQty: singleStock.soldQty,
+          isSoldOut: singleStock.isSoldOut,
+          limitingComponentName: null,
+          bundleComponents: [],
+        };
+
+    const normalBundlePriceCents = isBundle
+      ? product.bundleComponents.reduce(
+          (sum, component) =>
+            sum +
+            safeRequiredQuantity(component.quantity) *
+              component.componentProduct.priceCents,
+          0
+        )
+      : 0;
+
+    const bundleSavingsCents =
+      isBundle && normalBundlePriceCents > product.priceCents
+        ? normalBundlePriceCents - product.priceCents
+        : 0;
+
+    const availableQty = isBundle
+      ? bundleStock.availableQty
+      : singleStock.availableQty;
+
+    const soldQty = isBundle ? bundleStock.soldQty : singleStock.soldQty;
+
+    const isSoldOut = isBundle
+      ? bundleStock.isSoldOut
+      : singleStock.isSoldOut;
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      priceCents: product.priceCents,
+      imageUrl: product.images[0]?.url ?? null,
+      categoryName: product.category?.name ?? 'Uncategorized',
+
+      productType: product.productType,
+      isBundle,
+      availableQty,
+      soldQty,
+      isSoldOut,
+      limitingComponentName: bundleStock.limitingComponentName,
+      normalBundlePriceCents,
+      bundleSavingsCents,
+      bundleComponents: bundleStock.bundleComponents,
+    };
+  });
 
   return (
     <>

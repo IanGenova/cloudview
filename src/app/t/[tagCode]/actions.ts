@@ -3,7 +3,9 @@
 import { redirect } from 'next/navigation';
 import {
   MenuAvailabilityMovementType,
+  MenuProductType,
   PaymentMethod,
+  ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { createGuestOrderSchema } from '@/lib/validators';
@@ -13,7 +15,47 @@ import { logActivity } from '@/lib/activity';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
+import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
 
+type StockRequirement = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  singleQuantity: number;
+  bundleQuantity: number;
+};
+
+function addStockRequirement(
+  requirements: Map<string, StockRequirement>,
+  input: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    source: 'SINGLE' | 'BUNDLE';
+  }
+) {
+  const current = requirements.get(input.productId);
+
+  if (current) {
+    current.quantity += input.quantity;
+
+    if (input.source === 'SINGLE') {
+      current.singleQuantity += input.quantity;
+    } else {
+      current.bundleQuantity += input.quantity;
+    }
+
+    return;
+  }
+
+  requirements.set(input.productId, {
+    productId: input.productId,
+    productName: input.productName,
+    quantity: input.quantity,
+    singleQuantity: input.source === 'SINGLE' ? input.quantity : 0,
+    bundleQuantity: input.source === 'BUNDLE' ? input.quantity : 0,
+  });
+}
 
 export async function createGuestOrder(input: unknown) {
   const parsed = createGuestOrderSchema.parse(input);
@@ -58,6 +100,23 @@ export async function createGuestOrder(input: unknown) {
       hotelId: tag.hotelId,
       isAvailable: true,
     },
+    include: {
+      bundleComponents: {
+        include: {
+          componentProduct: {
+            select: {
+              id: true,
+              name: true,
+              isAvailable: true,
+              productType: true,
+            },
+          },
+        },
+        orderBy: {
+          sortOrder: 'asc',
+        },
+      },
+    },
   });
 
   const productMap = new Map(products.map((product) => [product.id, product]));
@@ -66,13 +125,68 @@ export async function createGuestOrder(input: unknown) {
     throw new Error('One or more products are no longer available.');
   }
 
-  const quantityByProductId = new Map<string, number>();
+  for (const product of products) {
+    if (product.productType !== MenuProductType.BUNDLE) {
+      continue;
+    }
+
+    if (!product.bundleComponents.length) {
+      throw new Error(
+        `${product.name} is a bundle but has no component items yet.`
+      );
+    }
+
+    for (const component of product.bundleComponents) {
+      if (!component.componentProduct.isAvailable) {
+        throw new Error(
+          `${product.name} cannot be ordered because ${component.componentProduct.name} is unavailable.`
+        );
+      }
+
+      if (component.componentProduct.productType === MenuProductType.BUNDLE) {
+        throw new Error(
+          `${product.name} contains another bundle. Nested bundles are not supported yet.`
+        );
+      }
+
+      if (!Number.isInteger(component.quantity) || component.quantity <= 0) {
+        throw new Error(
+          `${product.name} has an invalid component quantity for ${component.componentProduct.name}.`
+        );
+      }
+    }
+  }
+
+  const stockRequirements = new Map<string, StockRequirement>();
 
   for (const item of parsed.items) {
-    quantityByProductId.set(
-      item.productId,
-      (quantityByProductId.get(item.productId) ?? 0) + item.quantity
-    );
+    const product = productMap.get(item.productId);
+
+    if (!product) {
+      throw new Error('Product not found.');
+    }
+
+    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+      throw new Error(`Invalid quantity for ${product.name}.`);
+    }
+
+    if (product.productType === MenuProductType.BUNDLE) {
+      for (const component of product.bundleComponents) {
+        addStockRequirement(stockRequirements, {
+          productId: component.componentProductId,
+          productName: component.componentProduct.name,
+          quantity: component.quantity * item.quantity,
+          source: 'BUNDLE',
+        });
+      }
+    } else {
+      addStockRequirement(stockRequirements, {
+        productId: product.id,
+        productName: product.name,
+        quantity: item.quantity,
+        source: 'SINGLE',
+      });
+    }
   }
 
   const subtotal = parsed.items.reduce((sum, item) => {
@@ -92,6 +206,49 @@ export async function createGuestOrder(input: unknown) {
   const orderCode = randomCode('ORD');
 
   const order = await db.$transaction(async (tx) => {
+    const stockByProductId = new Map<
+      string,
+      {
+        id: string;
+        availableQty: number;
+        isSoldOut: boolean;
+      }
+    >();
+
+    for (const requirement of stockRequirements.values()) {
+      const stock = await tx.menuAvailabilityStock.findUnique({
+        where: {
+          hotelId_productId: {
+            hotelId: tag.hotelId,
+            productId: requirement.productId,
+          },
+        },
+        select: {
+          id: true,
+          availableQty: true,
+          isSoldOut: true,
+        },
+      });
+
+      if (!stock) {
+        throw new Error(
+          `${requirement.productName} has no inventory stock record yet.`
+        );
+      }
+
+      if (stock.isSoldOut || stock.availableQty <= 0) {
+        throw new Error(`${requirement.productName} is sold out.`);
+      }
+
+      if (requirement.quantity > stock.availableQty) {
+        throw new Error(
+          `${requirement.productName} only has ${stock.availableQty} available.`
+        );
+      }
+
+      stockByProductId.set(requirement.productId, stock);
+    }
+
     const createdOrder = await tx.order.create({
       data: {
         hotelId: tag.hotelId,
@@ -107,19 +264,6 @@ export async function createGuestOrder(input: unknown) {
         serviceChargeCents: serviceCharge,
         taxCents: tax,
         totalCents: total,
-        items: {
-          create: parsed.items.map((item) => {
-            const product = productMap.get(item.productId)!;
-
-            return {
-              productId: product.id,
-              productNameSnapshot: product.name,
-              quantity: item.quantity,
-              unitPriceCents: product.priceCents,
-              notes: cleanText(item.notes, 300),
-            };
-          }),
-        },
         statusHistory: {
           create: {
             status: 'PENDING',
@@ -134,39 +278,38 @@ export async function createGuestOrder(input: unknown) {
       },
     });
 
-    for (const [productId, quantity] of quantityByProductId.entries()) {
-      const product = productMap.get(productId);
+    for (const item of parsed.items) {
+      const product = productMap.get(item.productId)!;
+      const isBundle = product.productType === MenuProductType.BUNDLE;
 
-      if (!product) {
-        throw new Error('Product not found.');
-      }
-
-      const stock = await tx.menuAvailabilityStock.findUnique({
-        where: {
-          hotelId_productId: {
-            hotelId: tag.hotelId,
-            productId,
-          },
-        },
-        select: {
-          id: true,
-          availableQty: true,
-          isSoldOut: true,
+      await tx.orderItem.create({
+        data: {
+          orderId: createdOrder.id,
+          productId: product.id,
+          productNameSnapshot: product.name,
+          quantity: item.quantity,
+          unitPriceCents: product.priceCents,
+          notes: cleanText(item.notes, 300),
+          isBundleSnapshot: isBundle,
+          bundleComponents: isBundle
+            ? {
+                create: product.bundleComponents.map((component) => ({
+                  bundleProductId: product.id,
+                  componentProductId: component.componentProductId,
+                  componentNameSnapshot: component.componentProduct.name,
+                  quantity: component.quantity * item.quantity,
+                })),
+              }
+            : undefined,
         },
       });
+    }
+
+    for (const requirement of stockRequirements.values()) {
+      const stock = stockByProductId.get(requirement.productId);
 
       if (!stock) {
-        throw new Error(`${product.name} has no inventory stock record yet.`);
-      }
-
-      if (stock.isSoldOut || stock.availableQty <= 0) {
-        throw new Error(`${product.name} is sold out.`);
-      }
-
-      if (quantity > stock.availableQty) {
-        throw new Error(
-          `${product.name} only has ${stock.availableQty} available.`
-        );
+        throw new Error(`${requirement.productName} inventory stock was not found.`);
       }
 
       const updateResult = await tx.menuAvailabilityStock.updateMany({
@@ -174,22 +317,22 @@ export async function createGuestOrder(input: unknown) {
           id: stock.id,
           isSoldOut: false,
           availableQty: {
-            gte: quantity,
+            gte: requirement.quantity,
           },
         },
         data: {
           availableQty: {
-            decrement: quantity,
+            decrement: requirement.quantity,
           },
           soldQty: {
-            increment: quantity,
+            increment: requirement.quantity,
           },
         },
       });
 
       if (updateResult.count !== 1) {
         throw new Error(
-          `${product.name} stock changed while ordering. Please try again.`
+          `${requirement.productName} stock changed while ordering. Please try again.`
         );
       }
 
@@ -203,7 +346,7 @@ export async function createGuestOrder(input: unknown) {
       });
 
       if (!updatedStock) {
-        throw new Error(`${product.name} inventory stock was not found.`);
+        throw new Error(`${requirement.productName} inventory stock was not found.`);
       }
 
       if (updatedStock.availableQty <= 0) {
@@ -217,18 +360,35 @@ export async function createGuestOrder(input: unknown) {
         });
       }
 
-      await tx.menuAvailabilityMovement.create({
-        data: {
-          hotelId: tag.hotelId,
-          productId,
-          stockId: stock.id,
-          type: MenuAvailabilityMovementType.ORDER_DEDUCTION,
-          quantity,
-          balanceAfter: Math.max(updatedStock.availableQty, 0),
-          reason: `Guest portal order ${createdOrder.orderCode}`,
-          userId: null,
-        },
-      });
+      if (requirement.singleQuantity > 0) {
+        await tx.menuAvailabilityMovement.create({
+          data: {
+            hotelId: tag.hotelId,
+            productId: requirement.productId,
+            stockId: stock.id,
+            type: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+            quantity: requirement.singleQuantity,
+            balanceAfter: Math.max(updatedStock.availableQty, 0),
+            reason: `Guest portal order ${createdOrder.orderCode}`,
+            userId: null,
+          },
+        });
+      }
+
+      if (requirement.bundleQuantity > 0) {
+        await tx.menuAvailabilityMovement.create({
+          data: {
+            hotelId: tag.hotelId,
+            productId: requirement.productId,
+            stockId: stock.id,
+            type: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+            quantity: requirement.bundleQuantity,
+            balanceAfter: Math.max(updatedStock.availableQty, 0),
+            reason: `Guest portal bundle order ${createdOrder.orderCode}`,
+            userId: null,
+          },
+        });
+      }
     }
 
     return createdOrder;
@@ -252,15 +412,9 @@ export async function createGuestOrder(input: unknown) {
 
   await triggerInventoryUpdated({
     hotelId: tag.hotelId,
-    productIds: uniqueProductIds,
+    productIds: Array.from(stockRequirements.keys()),
     source: 'GUEST_PORTAL',
   });
-  await triggerServiceRequestCreated({
-  hotelId: tag.hotelId,
-  requestId: request.id,
-  requestCode: request.requestCode,
-  status: 'NEW',
-});
 
   return {
     ok: true,
@@ -530,6 +684,17 @@ export async function createServiceRequestAction(formData: FormData) {
         entity: 'ServiceRequest',
         entityId: request.id,
         message: `New service request ${request.requestCode}`,
+      })
+    )
+  );
+
+  await Promise.allSettled(
+    createdRequests.map((request) =>
+      triggerServiceRequestCreated({
+        hotelId: tag.hotelId,
+        requestId: request.id,
+        requestCode: request.requestCode,
+        status: ServiceRequestStatus.NEW,
       })
     )
   );

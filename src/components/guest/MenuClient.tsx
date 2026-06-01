@@ -25,6 +25,19 @@ import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { createGuestOrder } from '@/app/t/[tagCode]/actions';
 
+type MenuProductTypeValue = 'SINGLE' | 'BUNDLE';
+
+type BundleComponent = {
+  id: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  availableQty: number;
+  soldQty: number;
+  canSellQty: number;
+  isSoldOut: boolean;
+};
+
 type Product = {
   id: string;
   name: string;
@@ -32,6 +45,16 @@ type Product = {
   priceCents: number;
   imageUrl: string | null;
   categoryName: string;
+
+  productType?: MenuProductTypeValue;
+  isBundle?: boolean;
+  availableQty?: number;
+  soldQty?: number;
+  isSoldOut?: boolean;
+  limitingComponentName?: string | null;
+  normalBundlePriceCents?: number;
+  bundleSavingsCents?: number;
+  bundleComponents?: BundleComponent[];
 };
 
 type CartItem = {
@@ -53,6 +76,7 @@ function TapButton({
   onTap,
   className,
   children,
+  disabled,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { onTap: () => void }) {
   const lastPointerTap = useRef(0);
@@ -61,7 +85,12 @@ function TapButton({
     <button
       {...props}
       type="button"
+      disabled={disabled}
       onPointerUp={(event) => {
+        if (disabled) {
+          return;
+        }
+
         event.preventDefault();
         event.stopPropagation();
         lastPointerTap.current = Date.now();
@@ -70,6 +99,10 @@ function TapButton({
       onClick={(event) => {
         event.stopPropagation();
 
+        if (disabled) {
+          return;
+        }
+
         if (Date.now() - lastPointerTap.current < 450) {
           return;
         }
@@ -77,7 +110,7 @@ function TapButton({
         onTap();
       }}
       className={cn(
-        'relative z-20 pointer-events-auto touch-manipulation select-none active:scale-95',
+        'relative z-20 pointer-events-auto touch-manipulation select-none active:scale-95 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40',
         className
       )}
     >
@@ -92,6 +125,34 @@ function simpleMoney(cents: number, currency: string) {
     currency,
     maximumFractionDigits: 0,
   }).format(cents / 100);
+}
+
+function isBundleProduct(product: Product) {
+  return product.isBundle || product.productType === 'BUNDLE';
+}
+
+function getProductAvailableQty(product: Product) {
+  return Math.max(Number(product.availableQty ?? 0), 0);
+}
+
+function isProductSoldOut(product: Product) {
+  return Boolean(product.isSoldOut) || getProductAvailableQty(product) <= 0;
+}
+
+function getSoldOutReason(product: Product) {
+  if (!isProductSoldOut(product)) {
+    return null;
+  }
+
+  if (isBundleProduct(product) && product.limitingComponentName) {
+    return `Sold out because ${product.limitingComponentName} is unavailable.`;
+  }
+
+  if (isBundleProduct(product) && !product.bundleComponents?.length) {
+    return 'Sold out because this bundle has no components yet.';
+  }
+
+  return 'Sold out';
 }
 
 function ProductImage({
@@ -122,6 +183,182 @@ function ProductImage({
       }}
       aria-label={product.name}
     />
+  );
+}
+
+function ProductBadges({
+  product,
+  light = false,
+}: {
+  product: Product;
+  light?: boolean;
+}) {
+  const isBundle = isBundleProduct(product);
+  const soldOut = isProductSoldOut(product);
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      <span
+        className={
+          isBundle
+            ? light
+              ? 'rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black text-amber-800'
+              : 'rounded-full bg-amber-400/15 px-3 py-1 text-[10px] font-black text-amber-200'
+            : light
+              ? 'rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-700'
+              : 'rounded-full bg-white/10 px-3 py-1 text-[10px] font-black text-white/75'
+        }
+      >
+        {isBundle ? 'Bundle / Combo' : 'Single Item'}
+      </span>
+
+      <span
+        className={
+          soldOut
+            ? light
+              ? 'rounded-full bg-red-100 px-3 py-1 text-[10px] font-black text-red-700'
+              : 'rounded-full bg-red-500/20 px-3 py-1 text-[10px] font-black text-red-200'
+            : light
+              ? 'rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700'
+              : 'rounded-full bg-emerald-400/15 px-3 py-1 text-[10px] font-black text-emerald-200'
+        }
+      >
+        {soldOut ? 'Sold Out' : `${getProductAvailableQty(product)} available`}
+      </span>
+    </div>
+  );
+}
+
+function BundleIncludes({
+  product,
+  light = false,
+  compact = false,
+}: {
+  product: Product;
+  light?: boolean;
+  compact?: boolean;
+}) {
+  if (!isBundleProduct(product)) {
+    return null;
+  }
+
+  const components = product.bundleComponents ?? [];
+
+  if (!components.length) {
+    return (
+      <p
+        className={
+          light
+            ? 'mt-2 rounded-2xl bg-amber-50 p-3 text-xs font-bold text-amber-800'
+            : 'mt-2 rounded-2xl bg-amber-400/10 p-3 text-xs font-bold text-amber-100'
+        }
+      >
+        No bundle components yet.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className={
+        light
+          ? 'mt-2 rounded-2xl bg-amber-50 p-3'
+          : 'mt-2 rounded-2xl bg-amber-400/10 p-3'
+      }
+    >
+      <p
+        className={
+          light
+            ? 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-700'
+            : 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-200'
+        }
+      >
+        Includes
+      </p>
+
+      <div className="mt-2 space-y-1">
+        {components.slice(0, compact ? 3 : 6).map((component) => (
+          <p
+            key={component.id}
+            className={
+              light
+                ? 'text-xs font-bold text-amber-900'
+                : 'text-xs font-bold text-amber-50'
+            }
+          >
+            {component.quantity}× {component.name}
+          </p>
+        ))}
+
+        {components.length > (compact ? 3 : 6) ? (
+          <p
+            className={
+              light
+                ? 'text-xs font-bold text-amber-700'
+                : 'text-xs font-bold text-amber-100'
+            }
+          >
+            +{components.length - (compact ? 3 : 6)} more item
+            {components.length - (compact ? 3 : 6) === 1 ? '' : 's'}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BundleSavings({
+  product,
+  currency,
+  light = false,
+}: {
+  product: Product;
+  currency: string;
+  light?: boolean;
+}) {
+  if (!isBundleProduct(product)) {
+    return null;
+  }
+
+  const normalTotal = product.normalBundlePriceCents ?? 0;
+  const savings = product.bundleSavingsCents ?? 0;
+
+  if (normalTotal <= 0 && savings <= 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className={
+        light
+          ? 'mt-2 flex flex-wrap gap-2 text-xs font-black'
+          : 'mt-2 flex flex-wrap gap-2 text-xs font-black'
+      }
+    >
+      {normalTotal > 0 ? (
+        <span
+          className={
+            light
+              ? 'rounded-full bg-neutral-100 px-3 py-1 text-neutral-600'
+              : 'rounded-full bg-white/10 px-3 py-1 text-white/65'
+          }
+        >
+          Normal: {simpleMoney(normalTotal, currency)}
+        </span>
+      ) : null}
+
+      {savings > 0 ? (
+        <span
+          className={
+            light
+              ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
+              : 'rounded-full bg-emerald-400/15 px-3 py-1 text-emerald-200'
+          }
+        >
+          Save {simpleMoney(savings, currency)}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -195,13 +432,23 @@ export function MenuClient({
         return true;
       }
 
-      return `${p.name} ${p.description ?? ''} ${p.categoryName}`
+      const componentText = (p.bundleComponents ?? [])
+        .map((component) => component.name)
+        .join(' ');
+
+      return `${p.name} ${p.description ?? ''} ${
+        p.categoryName
+      } ${componentText}`
         .toLowerCase()
         .includes(query);
     });
   }, [activeCategory, products, searchQuery]);
 
-  const featured = filteredProducts[0] ?? products[0];
+  const featured =
+    filteredProducts.find((product) => !isProductSoldOut(product)) ??
+    filteredProducts[0] ??
+    products.find((product) => !isProductSoldOut(product)) ??
+    products[0];
 
   const subtotal = cart.reduce(
     (sum, item) =>
@@ -214,8 +461,34 @@ export function MenuClient({
   const total = subtotal + serviceCharge + tax;
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  function getCartQuantity(productId: string) {
+    return cart.find((item) => item.productId === productId)?.quantity ?? 0;
+  }
+
   function add(productId: string) {
     setError(null);
+
+    const product = productMap.get(productId);
+
+    if (!product) {
+      setError('This menu item is no longer available.');
+      return;
+    }
+
+    if (isProductSoldOut(product)) {
+      setError(getSoldOutReason(product) ?? 'This menu item is sold out.');
+      return;
+    }
+
+    const availableQty = getProductAvailableQty(product);
+    const currentQty = getCartQuantity(productId);
+
+    if (currentQty >= availableQty) {
+      setError(
+        `${product.name} only has ${availableQty} available right now.`
+      );
+      return;
+    }
 
     setCart((current) => {
       const existing = current.find((item) => item.productId === productId);
@@ -225,7 +498,7 @@ export function MenuClient({
           item.productId === productId
             ? {
                 ...item,
-                quantity: item.quantity + 1,
+                quantity: Math.min(item.quantity + 1, availableQty),
               }
             : item
         );
@@ -238,13 +511,30 @@ export function MenuClient({
   function updateQty(productId: string, quantity: number) {
     setError(null);
 
+    const product = productMap.get(productId);
+
+    if (!product) {
+      setCart((current) =>
+        current.filter((item) => item.productId !== productId)
+      );
+      return;
+    }
+
+    const availableQty = getProductAvailableQty(product);
+
+    if (quantity > availableQty) {
+      setError(
+        `${product.name} only has ${availableQty} available right now.`
+      );
+    }
+
     setCart((current) =>
       current
         .map((item) =>
           item.productId === productId
             ? {
                 ...item,
-                quantity,
+                quantity: Math.min(quantity, availableQty),
               }
             : item
         )
@@ -257,6 +547,27 @@ export function MenuClient({
 
     if (!cart.length) {
       setError('Please add at least one item before placing your order.');
+      return;
+    }
+
+    const unavailableCartItem = cart.find((item) => {
+      const product = productMap.get(item.productId);
+
+      if (!product) {
+        return true;
+      }
+
+      return isProductSoldOut(product) || item.quantity > getProductAvailableQty(product);
+    });
+
+    if (unavailableCartItem) {
+      const product = productMap.get(unavailableCartItem.productId);
+
+      setError(
+        product
+          ? `${product.name} is no longer available in the selected quantity.`
+          : 'One item in your cart is no longer available.'
+      );
       return;
     }
 
@@ -336,6 +647,9 @@ export function MenuClient({
             <div className="space-y-4">
               {cart.map((item) => {
                 const product = productMap.get(item.productId)!;
+                const availableQty = getProductAvailableQty(product);
+                const canIncrease =
+                  !isProductSoldOut(product) && item.quantity < availableQty;
 
                 return (
                   <div
@@ -348,12 +662,33 @@ export function MenuClient({
                     />
 
                     <div>
-                      <h3 className="font-black leading-tight">
-                        {product.name}
-                      </h3>
+                      <div className="flex flex-wrap items-start gap-2">
+                        <h3 className="font-black leading-tight">
+                          {product.name}
+                        </h3>
+
+                        {isBundleProduct(product) ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                            Bundle
+                          </span>
+                        ) : null}
+                      </div>
+
                       <p className="mt-1 text-sm font-bold text-neutral-700">
                         {simpleMoney(product.priceCents, currency)}
                       </p>
+
+                      <BundleIncludes product={product} light compact />
+
+                      {isProductSoldOut(product) ? (
+                        <p className="mt-2 rounded-xl bg-red-50 p-2 text-xs font-bold text-red-700">
+                          {getSoldOutReason(product)}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-xs font-bold text-neutral-400">
+                          {availableQty} available
+                        </p>
+                      )}
 
                       <div className="mt-3 inline-flex items-center gap-3 rounded-full bg-neutral-50 px-2 py-1">
                         <TapButton
@@ -374,6 +709,7 @@ export function MenuClient({
                           onTap={() =>
                             updateQty(item.productId, item.quantity + 1)
                           }
+                          disabled={!canIncrease}
                           className="grid size-8 place-items-center rounded-full hover:bg-white"
                           aria-label={`Increase ${product.name}`}
                         >
@@ -434,7 +770,15 @@ export function MenuClient({
                   </label>
                   <Select
                     value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as any)}
+                    onChange={(e) =>
+                      setPaymentMethod(
+                        e.target.value as
+                          | 'ROOM_CHARGE'
+                          | 'PAY_AT_COUNTER'
+                          | 'CASH'
+                          | 'POS'
+                      )
+                    }
                   >
                     <option value="ROOM_CHARGE">Room charge</option>
                     <option value="PAY_AT_COUNTER">Pay at counter</option>
@@ -537,7 +881,7 @@ export function MenuClient({
         <div className="text-center">
           <h2 className="font-black">Order Food</h2>
           <p className="text-xs text-white/50">
-            Tap items to add them to your cart
+            Tap available items to add them to your cart
           </p>
         </div>
 
@@ -561,7 +905,7 @@ export function MenuClient({
         <input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search menu..."
+          placeholder="Search menu or bundle items..."
           className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/40"
         />
       </div>
@@ -593,61 +937,120 @@ export function MenuClient({
           <button
             type="button"
             onClick={() => add(featured.id)}
-            className="w-full overflow-hidden rounded-[1.75rem] bg-white text-left text-ink"
+            disabled={isProductSoldOut(featured)}
+            className="relative w-full overflow-hidden rounded-[1.75rem] bg-white text-left text-ink disabled:cursor-not-allowed disabled:opacity-70"
           >
             <ProductImage
               product={featured}
               className="h-44 w-full bg-neutral-900"
             />
 
-            <div className="grid grid-cols-[1fr_64px] items-center gap-3 p-4">
-              <div>
-                <h4 className="text-lg font-black">{featured.name}</h4>
-                <p className="mt-2 text-base font-black">
-                  {simpleMoney(featured.priceCents, currency)}
-                </p>
+            {isProductSoldOut(featured) ? (
+              <div className="absolute left-4 top-4 rounded-full bg-red-600 px-4 py-2 text-xs font-black text-white shadow-lg">
+                SOLD OUT
+              </div>
+            ) : null}
+
+            <div className="p-4">
+              <div className="grid grid-cols-[1fr_64px] items-center gap-3">
+                <div>
+                  <h4 className="text-lg font-black">{featured.name}</h4>
+                  <p className="mt-2 text-base font-black">
+                    {simpleMoney(featured.priceCents, currency)}
+                  </p>
+                  <ProductBadges product={featured} light />
+                  <BundleSavings
+                    product={featured}
+                    currency={currency}
+                    light
+                  />
+                </div>
+
+                <span
+                  className={
+                    isProductSoldOut(featured)
+                      ? 'grid size-14 place-items-center rounded-full bg-neutral-200 text-neutral-400'
+                      : 'grid size-14 place-items-center rounded-full bg-black text-white'
+                  }
+                >
+                  <Plus className="size-7" />
+                </span>
               </div>
 
-              <span className="grid size-14 place-items-center rounded-full bg-black text-white">
-                <Plus className="size-7" />
-              </span>
+              <BundleIncludes product={featured} light compact />
+
+              {isProductSoldOut(featured) ? (
+                <p className="mt-3 rounded-2xl bg-red-50 p-3 text-xs font-bold text-red-700">
+                  {getSoldOutReason(featured)}
+                </p>
+              ) : null}
             </div>
           </button>
         </section>
       ) : null}
 
       <div className="space-y-3">
-        {filteredProducts.map((product) => (
-          <button
-            key={product.id}
-            type="button"
-            onClick={() => add(product.id)}
-            className="grid w-full grid-cols-[84px_1fr_48px] items-center gap-3 rounded-[1.5rem] bg-white/5 p-3 text-left"
-          >
-            <ProductImage
-              product={product}
-              className="size-[84px] rounded-2xl bg-neutral-900"
-            />
+        {filteredProducts.map((product) => {
+          const soldOut = isProductSoldOut(product);
 
-            <div className="min-w-0">
-              <h4 className="truncate font-black">{product.name}</h4>
-              {product.description ? (
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/55">
-                  {product.description}
+          return (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => add(product.id)}
+              disabled={soldOut}
+              className="grid w-full grid-cols-[84px_1fr_48px] items-center gap-3 rounded-[1.5rem] bg-white/5 p-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ProductImage
+                product={product}
+                className="size-[84px] rounded-2xl bg-neutral-900"
+              />
+
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="truncate font-black">{product.name}</h4>
+                  {isBundleProduct(product) ? (
+                    <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-black text-amber-200">
+                      Bundle
+                    </span>
+                  ) : null}
+                </div>
+
+                {product.description ? (
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/55">
+                    {product.description}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-white/35">No description</p>
+                )}
+
+                <ProductBadges product={product} />
+                <BundleSavings product={product} currency={currency} />
+                <BundleIncludes product={product} compact />
+
+                {soldOut ? (
+                  <p className="mt-2 rounded-xl bg-red-500/15 p-2 text-xs font-bold text-red-100">
+                    {getSoldOutReason(product)}
+                  </p>
+                ) : null}
+
+                <p className="mt-2 text-sm font-black text-sand">
+                  {simpleMoney(product.priceCents, currency)}
                 </p>
-              ) : (
-                <p className="mt-1 text-xs text-white/35">No description</p>
-              )}
-              <p className="mt-1 text-sm font-black text-sand">
-                {simpleMoney(product.priceCents, currency)}
-              </p>
-            </div>
+              </div>
 
-            <span className="grid size-11 place-items-center rounded-full bg-white text-black">
-              <Plus className="size-5" />
-            </span>
-          </button>
-        ))}
+              <span
+                className={
+                  soldOut
+                    ? 'grid size-11 place-items-center rounded-full bg-white/10 text-white/30'
+                    : 'grid size-11 place-items-center rounded-full bg-white text-black'
+                }
+              >
+                <Plus className="size-5" />
+              </span>
+            </button>
+          );
+        })}
 
         {!filteredProducts.length ? (
           <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center">
@@ -659,6 +1062,12 @@ export function MenuClient({
           </div>
         ) : null}
       </div>
+
+      {error ? (
+        <div className="fixed inset-x-5 bottom-44 z-30 mx-auto max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-xl">
+          {error}
+        </div>
+      ) : null}
 
       {itemCount > 0 ? (
         <button

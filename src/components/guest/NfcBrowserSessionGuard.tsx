@@ -3,25 +3,43 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-function revokeSession(tagCode: string) {
+async function revokeSession(tagCode: string) {
   try {
-    const payload = JSON.stringify({ tagCode });
-
-    const blob = new Blob([payload], {
-      type: 'application/json'
-    });
-
-    navigator.sendBeacon('/api/nfc/revoke', blob);
-  } catch {
-    fetch('/api/nfc/revoke', {
+    await fetch('/api/nfc/revoke', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ tagCode }),
-      keepalive: true
-    }).catch(() => {});
+      keepalive: true,
+      cache: 'no-store',
+    });
+  } catch {
+    // Ignore revoke network errors. The server will verify again on next request.
   }
+}
+
+async function getServerSessionStatus(tagCode: string) {
+  const response = await fetch(
+    `/api/nfc/session-status?tagCode=${encodeURIComponent(tagCode)}`,
+    {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+    }
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return response.json() as Promise<{
+    hasSession: boolean;
+    keepSession: boolean;
+    pendingOrders: number;
+    pendingServiceRequests: number;
+    totalPending: number;
+  }>;
 }
 
 export function NfcBrowserSessionGuard({ tagCode }: { tagCode: string }) {
@@ -30,6 +48,8 @@ export function NfcBrowserSessionGuard({ tagCode }: { tagCode: string }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    let cancelled = false;
+
     const storageKey = `cloudview:nfc-browser-session:${tagCode}`;
     const cameFromNfc = searchParams.get('nfcSession') === '1';
 
@@ -47,15 +67,48 @@ export function NfcBrowserSessionGuard({ tagCode }: { tagCode: string }) {
       return;
     }
 
-    const browserSessionIsActive = sessionStorage.getItem(storageKey) === 'active';
+    const browserSessionIsActive =
+      sessionStorage.getItem(storageKey) === 'active';
 
-    if (!browserSessionIsActive) {
-      revokeSession(tagCode);
+    if (browserSessionIsActive) {
+      return;
+    }
+
+    async function verifyReopenedBrowserSession() {
+      const status = await getServerSessionStatus(tagCode);
+
+      if (cancelled) {
+        return;
+      }
+
+      /**
+       * This is the important fix:
+       * If the browser tab was closed but the guest still has active orders
+       * or service requests, restore the browser session.
+       */
+      if (status?.hasSession && status.keepSession) {
+        sessionStorage.setItem(storageKey, 'active');
+        return;
+      }
+
+      await revokeSession(tagCode);
+
+      if (cancelled) {
+        return;
+      }
 
       router.replace(
-        `/nfc-access-denied?tag=${encodeURIComponent(tagCode)}&reason=browser-reopened`
+        `/nfc-access-denied?tag=${encodeURIComponent(
+          tagCode
+        )}&reason=session-complete`
       );
     }
+
+    void verifyReopenedBrowserSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, router, searchParams, tagCode]);
 
   return null;

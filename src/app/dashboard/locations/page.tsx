@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Building2, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Building2, MapPin, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -17,8 +17,9 @@ import {
   deleteLocationAction,
   deleteRoomAction,
   updateLocationAction,
-  updateRoomAction
+  updateRoomAction,
 } from './actions';
+
 const LOCATION_TYPES = [
   'POOL',
   'LOBBY',
@@ -28,14 +29,16 @@ const LOCATION_TYPES = [
   'AMENITY',
   'GYM',
   'BAR',
-  'OTHER'
+  'OTHER',
 ] as const;
+
+type DirectoryTab = 'rooms' | 'locations';
 
 function FormField({
   label,
   helper,
   children,
-  className = ''
+  className = '',
 }: {
   label: string;
   helper?: string;
@@ -60,7 +63,7 @@ function Modal({
   title,
   description,
   children,
-  size = 'max-w-3xl'
+  size = 'max-w-3xl',
 }: {
   id: string;
   title: string;
@@ -96,117 +99,296 @@ function Modal({
   );
 }
 
+function getActiveTab(tab?: string): DirectoryTab {
+  return tab === 'locations' ? 'locations' : 'rooms';
+}
+
+function cleanSearchQuery(value?: string) {
+  return String(value || '').trim().slice(0, 120);
+}
+
+function normalizeSearchValue(value: unknown) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function matchesSearch(values: unknown[], query: string) {
+  if (!query) {
+    return true;
+  }
+
+  const normalizedQuery = normalizeSearchValue(query);
+
+  return values.some((value) =>
+    normalizeSearchValue(value).includes(normalizedQuery)
+  );
+}
+
+function buildDirectoryHref(tab: DirectoryTab, query?: string) {
+  const params = new URLSearchParams();
+
+  params.set('tab', tab);
+
+  if (query) {
+    params.set('q', query);
+  }
+
+  return `/dashboard/locations?${params.toString()}`;
+}
+
+function tabClassName(isActive: boolean) {
+  return isActive
+    ? 'inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white shadow-sm'
+    : 'inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50';
+}
+
+function countBadgeClassName(isActive: boolean) {
+  return isActive
+    ? 'rounded-full bg-white px-2 py-0.5 text-xs font-black text-black'
+    : 'rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-black text-neutral-700';
+}
+
 export default async function RoomsAndLocationsPage({
-  searchParams
+  searchParams,
 }: {
-  searchParams?: Promise<{ success?: string }>;
+        searchParams?: Promise<{
+        success?: string;
+        error?: string;
+        tab?: string;
+        q?: string;
+      }>;
 }) {
   const params = await searchParams;
+  const activeTab = getActiveTab(params?.tab);
+  const searchQuery = cleanSearchQuery(params?.q);
 
   const user = await requireUser();
 
   const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
-  const itemWhere = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+  const itemWhere =
+    user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
-  const [hotels, rooms, locations] = await Promise.all([
+  const [hotels, roomsRaw, locationsRaw] = await Promise.all([
     db.hotel.findMany({
       where: hotelWhere,
       orderBy: {
-        name: 'asc'
-      }
+        name: 'asc',
+      },
     }),
 
     db.room.findMany({
       where: {
         ...itemWhere,
-        deletedAt: null
+        deletedAt: null,
       },
       include: {
         hotel: true,
-        nfcTags: true
+        nfcTags: true,
       },
       orderBy: [
         {
           hotel: {
-            name: 'asc'
-          }
+            name: 'asc',
+          },
         },
         {
-          number: 'asc'
-        }
-      ]
+          number: 'asc',
+        },
+      ],
     }),
 
     db.location.findMany({
       where: {
         ...itemWhere,
-        deletedAt: null
+        deletedAt: null,
       },
       include: {
         hotel: true,
-        nfcTags: true
+        nfcTags: true,
       },
       orderBy: [
         {
           hotel: {
-            name: 'asc'
-          }
+            name: 'asc',
+          },
         },
         {
-          name: 'asc'
-        }
-      ]
-    })
+          name: 'asc',
+        },
+      ],
+    }),
   ]);
+
+  const rooms = roomsRaw.filter((room) =>
+    matchesSearch(
+      [
+        room.hotel.name,
+        room.number,
+        room.name,
+        room.floor,
+        ...room.nfcTags.map((tag) => tag.code),
+        ...room.nfcTags.map((tag) => tag.label),
+      ],
+      searchQuery
+    )
+  );
+
+  const locations = locationsRaw.filter((location) =>
+    matchesSearch(
+      [
+        location.hotel.name,
+        location.name,
+        location.type,
+        location.description,
+        ...location.nfcTags.map((tag) => tag.code),
+        ...location.nfcTags.map((tag) => tag.label),
+      ],
+      searchQuery
+    )
+  );
 
   return (
     <div>
       <PageHeader
-      
         title="Rooms & Locations"
         description="Create and manage guest rooms, pool areas, lobby panels, restaurants, amenities, and other NFC destinations."
       />
-          <DashboardSuccess
-            success={params?.success}
-            messages={{
-              'room-created': 'Room successfully added.',
-              'room-updated': 'Room successfully updated.',
-              'room-deleted': 'Room successfully deleted.',
-              'location-created': 'Location successfully added.',
-              'location-updated': 'Location successfully updated.',
-              'location-deleted': 'Location successfully deleted.'
-            }}
-                />
-      <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl font-black">Room & Location Directory</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            These records can be assigned to NFC tags and shown in the guest portal.
-          </p>
+
+      <DashboardSuccess
+        success={params?.success}
+        messages={{
+          'room-created': 'Room successfully added.',
+          'room-updated': 'Room successfully updated.',
+          'room-deleted': 'Room successfully deleted.',
+          'location-created': 'Location successfully added.',
+          'location-updated': 'Location successfully updated.',
+          'location-deleted': 'Location successfully deleted.',
+          
+        }}
+        
+      />
+              {params?.error ? (
+          <div className="mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+            {{
+              'room-number-exists':
+                'A room with this number already exists in this hotel. Please use a different room number.',
+            }[params.error] ?? 'Something went wrong. Please try again.'}
+          </div>
+        ) : null}
+
+      <div className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <h2 className="text-xl font-black">Room & Location Directory</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Use the tabs to manage rooms or non-room locations in a full-width
+              workspace.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <ModalOpenButton
+              modalId="add-room-modal"
+              className={
+                activeTab === 'rooms'
+                  ? 'gap-2 bg-black text-white hover:bg-neutral-800'
+                  : 'gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100'
+              }
+            >
+              <Plus className="size-4" />
+              Add Room
+            </ModalOpenButton>
+
+            <ModalOpenButton
+              modalId="add-location-modal"
+              className={
+                activeTab === 'locations'
+                  ? 'gap-2 bg-black text-white hover:bg-neutral-800'
+                  : 'gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100'
+              }
+            >
+              <Plus className="size-4" />
+              Add Location
+            </ModalOpenButton>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <ModalOpenButton
-            modalId="add-room-modal"
-            className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100"
-          >
-            <Plus className="size-4" />
-            Add Room
-          </ModalOpenButton>
+        <div className="mt-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-col gap-2 rounded-[1.5rem] bg-neutral-50 p-2 sm:flex-row">
+            <a
+              href={buildDirectoryHref('rooms', searchQuery)}
+              className={tabClassName(activeTab === 'rooms')}
+            >
+              <Building2 className="size-4" />
+              Rooms
+              <span className={countBadgeClassName(activeTab === 'rooms')}>
+                {rooms.length}
+              </span>
+            </a>
 
-          <ModalOpenButton
-            modalId="add-location-modal"
-            className="gap-2 bg-black text-white hover:bg-neutral-800"
+            <a
+              href={buildDirectoryHref('locations', searchQuery)}
+              className={tabClassName(activeTab === 'locations')}
+            >
+              <MapPin className="size-4" />
+              Locations
+              <span
+                className={countBadgeClassName(activeTab === 'locations')}
+              >
+                {locations.length}
+              </span>
+            </a>
+          </div>
+
+          <form
+            action="/dashboard/locations"
+            method="GET"
+            className="flex w-full flex-col gap-2 sm:flex-row xl:max-w-xl"
           >
-            <Plus className="size-4" />
-            Add Location
-          </ModalOpenButton>
+            <input type="hidden" name="tab" value={activeTab} />
+
+            <div className="flex h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+              <Search className="size-4 shrink-0 text-neutral-400" />
+              <input
+                name="q"
+                defaultValue={searchQuery}
+                placeholder={
+                  activeTab === 'rooms'
+                    ? 'Search rooms, room number, floor, NFC tag...'
+                    : 'Search locations, type, description, NFC tag...'
+                }
+                className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-neutral-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+            >
+              <Search className="size-4" />
+              Search
+            </button>
+
+            {searchQuery ? (
+              <a
+                href={buildDirectoryHref(activeTab)}
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50"
+              >
+                Clear
+              </a>
+            ) : null}
+          </form>
         </div>
+
+        {searchQuery ? (
+          <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+            Showing results for “{searchQuery}”.
+          </div>
+        ) : null}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {activeTab === 'rooms' ? (
         <section>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-black">Rooms</h2>
               <p className="text-sm text-neutral-500">
@@ -214,17 +396,23 @@ export default async function RoomsAndLocationsPage({
               </p>
             </div>
 
-            <span className="rounded-full bg-black px-4 py-2 text-sm font-black text-white">
-              {rooms.length}
+            <span className="w-fit rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+              {searchQuery
+                ? `${rooms.length} of ${roomsRaw.length} rooms`
+                : `${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}`}
             </span>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
             {rooms.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-8 text-center">
-                <p className="font-black text-neutral-600">No rooms yet</p>
+              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
+                <p className="font-black text-neutral-600">
+                  {searchQuery ? 'No matching rooms found' : 'No rooms yet'}
+                </p>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Create your first room using Add Room.
+                  {searchQuery
+                    ? 'Try a different room name, number, floor, or NFC tag code.'
+                    : 'Create your first room using Add Room.'}
                 </p>
               </div>
             ) : null}
@@ -241,8 +429,12 @@ export default async function RoomsAndLocationsPage({
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-xl font-black">{room.name}</h3>
-                          <StatusBadge status={room.isActive ? 'Active' : 'Inactive'} />
+                          <h3 className="truncate text-xl font-black">
+                            {room.name}
+                          </h3>
+                          <StatusBadge
+                            status={room.isActive ? 'Active' : 'Inactive'}
+                          />
                         </div>
 
                         <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -259,12 +451,16 @@ export default async function RoomsAndLocationsPage({
                     <div className="grid gap-2 rounded-2xl bg-neutral-50 p-4 text-sm">
                       <p>
                         <span className="font-black">Room Number:</span>{' '}
-                        <span className="font-semibold text-neutral-600">{room.number}</span>
+                        <span className="font-semibold text-neutral-600">
+                          {room.number}
+                        </span>
                       </p>
 
                       <p>
                         <span className="font-black">Display Name:</span>{' '}
-                        <span className="font-semibold text-neutral-600">{room.name}</span>
+                        <span className="font-semibold text-neutral-600">
+                          {room.name}
+                        </span>
                       </p>
 
                       <p>
@@ -293,11 +489,11 @@ export default async function RoomsAndLocationsPage({
 
                       <form action={deleteRoomAction}>
                         <input type="hidden" name="roomId" value={room.id} />
-                                  <ConfirmSubmitButton
-                                label="Delete"
-                                message="Are you sure you want to delete this room?"
-                                className="bg-red-600 text-white hover:bg-red-700"
-                              />
+                        <ConfirmSubmitButton
+                          label="Delete"
+                          message="Are you sure you want to delete this room?"
+                          className="bg-red-600 text-white hover:bg-red-700"
+                        />
                       </form>
                     </div>
                   </div>
@@ -307,12 +503,19 @@ export default async function RoomsAndLocationsPage({
                     title={`Edit ${room.name}`}
                     description="Update room details and availability."
                   >
-                    <form action={updateRoomAction} className="grid gap-5 md:grid-cols-2">
+                    <form
+                      action={updateRoomAction}
+                      className="grid gap-5 md:grid-cols-2"
+                    >
                       <input type="hidden" name="roomId" value={room.id} />
 
                       {user.role === 'SUPER_ADMIN' ? (
                         <FormField label="Hotel / Property">
-                          <Select name="hotelId" defaultValue={room.hotelId} required>
+                          <Select
+                            name="hotelId"
+                            defaultValue={room.hotelId}
+                            required
+                          >
                             {hotels.map((hotel) => (
                               <option key={hotel.id} value={hotel.id}>
                                 {hotel.name}
@@ -321,11 +524,19 @@ export default async function RoomsAndLocationsPage({
                           </Select>
                         </FormField>
                       ) : (
-                        <input type="hidden" name="hotelId" value={room.hotelId} />
+                        <input
+                          type="hidden"
+                          name="hotelId"
+                          value={room.hotelId}
+                        />
                       )}
 
                       <FormField label="Room Number">
-                        <Input name="number" defaultValue={room.number} required />
+                        <Input
+                          name="number"
+                          defaultValue={room.number}
+                          required
+                        />
                       </FormField>
 
                       <FormField label="Room Display Name">
@@ -348,7 +559,8 @@ export default async function RoomsAndLocationsPage({
                             Available / Active
                           </span>
                           <span className="text-xs font-medium text-neutral-500">
-                            Active rooms can be assigned to NFC tags and used in guest ordering.
+                            Active rooms can be assigned to NFC tags and used in
+                            guest ordering.
                           </span>
                         </span>
                       </label>
@@ -363,27 +575,40 @@ export default async function RoomsAndLocationsPage({
             })}
           </div>
         </section>
+      ) : null}
 
+      {activeTab === 'locations' ? (
         <section>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-black">Locations</h2>
               <p className="text-sm text-neutral-500">
-                Non-room areas such as pool, lobby, restaurant, spa, parking, or amenities.
+                Non-room areas such as pool, lobby, restaurant, spa, parking, or
+                amenities.
               </p>
             </div>
 
-            <span className="rounded-full bg-black px-4 py-2 text-sm font-black text-white">
-              {locations.length}
+            <span className="w-fit rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+              {searchQuery
+                ? `${locations.length} of ${locationsRaw.length} locations`
+                : `${locations.length} ${
+                    locations.length === 1 ? 'location' : 'locations'
+                  }`}
             </span>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
             {locations.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-8 text-center">
-                <p className="font-black text-neutral-600">No locations yet</p>
+              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
+                <p className="font-black text-neutral-600">
+                  {searchQuery
+                    ? 'No matching locations found'
+                    : 'No locations yet'}
+                </p>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Create your first location using Add Location.
+                  {searchQuery
+                    ? 'Try a different location name, type, description, or NFC tag code.'
+                    : 'Create your first location using Add Location.'}
                 </p>
               </div>
             ) : null}
@@ -400,8 +625,12 @@ export default async function RoomsAndLocationsPage({
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-xl font-black">{location.name}</h3>
-                          <StatusBadge status={location.isActive ? 'Active' : 'Inactive'} />
+                          <h3 className="truncate text-xl font-black">
+                            {location.name}
+                          </h3>
+                          <StatusBadge
+                            status={location.isActive ? 'Active' : 'Inactive'}
+                          />
                         </div>
 
                         <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -417,12 +646,16 @@ export default async function RoomsAndLocationsPage({
                     <div className="grid gap-2 rounded-2xl bg-neutral-50 p-4 text-sm">
                       <p>
                         <span className="font-black">Location Name:</span>{' '}
-                        <span className="font-semibold text-neutral-600">{location.name}</span>
+                        <span className="font-semibold text-neutral-600">
+                          {location.name}
+                        </span>
                       </p>
 
                       <p>
                         <span className="font-black">Location Type:</span>{' '}
-                        <span className="font-semibold text-neutral-600">{location.type}</span>
+                        <span className="font-semibold text-neutral-600">
+                          {location.type}
+                        </span>
                       </p>
 
                       <p>
@@ -450,12 +683,16 @@ export default async function RoomsAndLocationsPage({
                       </ModalOpenButton>
 
                       <form action={deleteLocationAction}>
-                        <input type="hidden" name="locationId" value={location.id} />
-                                              <ConfirmSubmitButton
-                        label="Delete"
-                        message="Are you sure you want to delete this Location?"
-                        className="bg-red-600 text-white hover:bg-red-700"
-                      />
+                        <input
+                          type="hidden"
+                          name="locationId"
+                          value={location.id}
+                        />
+                        <ConfirmSubmitButton
+                          label="Delete"
+                          message="Are you sure you want to delete this location?"
+                          className="bg-red-600 text-white hover:bg-red-700"
+                        />
                       </form>
                     </div>
                   </div>
@@ -465,12 +702,23 @@ export default async function RoomsAndLocationsPage({
                     title={`Edit ${location.name}`}
                     description="Update location details and availability."
                   >
-                    <form action={updateLocationAction} className="grid gap-5 md:grid-cols-2">
-                      <input type="hidden" name="locationId" value={location.id} />
+                    <form
+                      action={updateLocationAction}
+                      className="grid gap-5 md:grid-cols-2"
+                    >
+                      <input
+                        type="hidden"
+                        name="locationId"
+                        value={location.id}
+                      />
 
                       {user.role === 'SUPER_ADMIN' ? (
                         <FormField label="Hotel / Property">
-                          <Select name="hotelId" defaultValue={location.hotelId} required>
+                          <Select
+                            name="hotelId"
+                            defaultValue={location.hotelId}
+                            required
+                          >
                             {hotels.map((hotel) => (
                               <option key={hotel.id} value={hotel.id}>
                                 {hotel.name}
@@ -479,16 +727,28 @@ export default async function RoomsAndLocationsPage({
                           </Select>
                         </FormField>
                       ) : (
-                        <input type="hidden" name="hotelId" value={location.hotelId} />
+                        <input
+                          type="hidden"
+                          name="hotelId"
+                          value={location.hotelId}
+                        />
                       )}
 
                       <FormField label="Location Name">
-                        <Input name="name" defaultValue={location.name} required />
+                        <Input
+                          name="name"
+                          defaultValue={location.name}
+                          required
+                        />
                       </FormField>
 
                       <FormField label="Location Type">
-                        <Select name="type" defaultValue={location.type} required>
-                           {LOCATION_TYPES.map((type) => (
+                        <Select
+                          name="type"
+                          defaultValue={location.type}
+                          required
+                        >
+                          {LOCATION_TYPES.map((type) => (
                             <option key={type} value={type}>
                               {type}
                             </option>
@@ -496,7 +756,10 @@ export default async function RoomsAndLocationsPage({
                         </Select>
                       </FormField>
 
-                      <FormField label="Guest-facing Description" className="md:col-span-2">
+                      <FormField
+                        label="Guest-facing Description"
+                        className="md:col-span-2"
+                      >
                         <Textarea
                           name="description"
                           defaultValue={location.description || ''}
@@ -515,13 +778,16 @@ export default async function RoomsAndLocationsPage({
                             Available / Active
                           </span>
                           <span className="text-xs font-medium text-neutral-500">
-                            Active locations can be assigned to NFC tags and used in guest portal context.
+                            Active locations can be assigned to NFC tags and
+                            used in guest portal context.
                           </span>
                         </span>
                       </label>
 
                       <div className="md:col-span-2">
-                        <Button className="w-full">Save Location Changes</Button>
+                        <Button className="w-full">
+                          Save Location Changes
+                        </Button>
                       </div>
                     </form>
                   </Modal>
@@ -530,7 +796,7 @@ export default async function RoomsAndLocationsPage({
             })}
           </div>
         </section>
-      </div>
+      ) : null}
 
       <Modal
         id="add-room-modal"
@@ -539,7 +805,10 @@ export default async function RoomsAndLocationsPage({
       >
         <form action={createRoomAction} className="grid gap-5 md:grid-cols-2">
           {user.role === 'SUPER_ADMIN' ? (
-            <FormField label="Hotel / Property" helper="Choose the hotel where this room belongs.">
+            <FormField
+              label="Hotel / Property"
+              helper="Choose the hotel where this room belongs."
+            >
               <Select name="hotelId" required>
                 {hotels.map((hotel) => (
                   <option key={hotel.id} value={hotel.id}>
@@ -552,15 +821,24 @@ export default async function RoomsAndLocationsPage({
             <input type="hidden" name="hotelId" value={user.hotelId!} />
           )}
 
-          <FormField label="Room Number" helper="Example: 305, Villa 2, Suite A.">
+          <FormField
+            label="Room Number"
+            helper="Example: 305, Villa 2, Suite A."
+          >
             <Input name="number" placeholder="305" required />
           </FormField>
 
-          <FormField label="Room Display Name" helper="Guest/staff friendly room name.">
+          <FormField
+            label="Room Display Name"
+            helper="Guest/staff friendly room name."
+          >
             <Input name="name" placeholder="Deluxe Room 305" required />
           </FormField>
 
-          <FormField label="Floor / Area" helper="Example: 3rd Floor or Beach Wing.">
+          <FormField
+            label="Floor / Area"
+            helper="Example: 3rd Floor or Beach Wing."
+          >
             <Input name="floor" placeholder="3rd Floor" />
           </FormField>
 
@@ -575,9 +853,15 @@ export default async function RoomsAndLocationsPage({
         title="Add Location"
         description="Create a non-room destination such as pool, lobby, spa, restaurant, or amenity area."
       >
-        <form action={createLocationAction} className="grid gap-5 md:grid-cols-2">
+        <form
+          action={createLocationAction}
+          className="grid gap-5 md:grid-cols-2"
+        >
           {user.role === 'SUPER_ADMIN' ? (
-            <FormField label="Hotel / Property" helper="Choose the hotel where this location belongs.">
+            <FormField
+              label="Hotel / Property"
+              helper="Choose the hotel where this location belongs."
+            >
               <Select name="hotelId" required>
                 {hotels.map((hotel) => (
                   <option key={hotel.id} value={hotel.id}>
@@ -590,11 +874,17 @@ export default async function RoomsAndLocationsPage({
             <input type="hidden" name="hotelId" value={user.hotelId!} />
           )}
 
-          <FormField label="Location Name" helper="Example: Pool Deck, Main Lobby, Rooftop Bar.">
+          <FormField
+            label="Location Name"
+            helper="Example: Pool Deck, Main Lobby, Rooftop Bar."
+          >
             <Input name="name" placeholder="Pool Deck" required />
           </FormField>
 
-          <FormField label="Location Type" helper="Controls what guest experience appears when assigned to NFC.">
+          <FormField
+            label="Location Type"
+            helper="Controls what guest experience appears when assigned to NFC."
+          >
             <Select name="type" required>
               {LOCATION_TYPES.map((type) => (
                 <option key={type} value={type}>

@@ -58,6 +58,20 @@ const trackingSteps = [
   },
 ] as const;
 
+type TrackingOrderItem = {
+  id: string;
+  productNameSnapshot: string;
+  quantity: number;
+  unitPriceCents: number;
+  notes: string | null;
+  isBundleSnapshot: boolean;
+  bundleComponents: {
+    id: string;
+    componentNameSnapshot: string;
+    quantity: number;
+  }[];
+};
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
@@ -215,6 +229,63 @@ function getTimerEnd(order: {
   return currentStatusHistory?.createdAt ?? null;
 }
 
+function OrderItemLine({ item }: { item: TrackingOrderItem }) {
+  const itemTotal = item.quantity * item.unitPriceCents;
+
+  return (
+    <div className="rounded-2xl bg-white/5 p-3 text-sm">
+      <div className="flex justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-bold text-white">
+              {item.quantity}× {item.productNameSnapshot}
+            </p>
+
+            {item.isBundleSnapshot ? (
+              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
+                Bundle
+              </span>
+            ) : null}
+          </div>
+
+          {item.notes ? (
+            <p className="mt-1 whitespace-pre-line text-xs text-white/40">
+              {item.notes}
+            </p>
+          ) : null}
+        </div>
+
+        <b className="shrink-0">{money(itemTotal)}</b>
+      </div>
+
+      {item.isBundleSnapshot ? (
+        <div className="mt-3 rounded-xl bg-gold/10 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gold">
+            Includes
+          </p>
+
+          {item.bundleComponents.length ? (
+            <div className="mt-2 space-y-1">
+              {item.bundleComponents.map((component) => (
+                <p
+                  key={component.id}
+                  className="text-xs font-bold text-white/75"
+                >
+                  {component.quantity}× {component.componentNameSnapshot}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs font-bold text-white/45">
+              Bundle component details were not saved for this order.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default async function OrderTrackingPage({
   params,
 }: {
@@ -257,6 +328,13 @@ export default async function OrderTrackingPage({
       room: true,
       location: true,
       items: {
+        include: {
+          bundleComponents: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
         orderBy: {
           createdAt: 'asc',
         },
@@ -498,22 +576,7 @@ export default async function OrderTrackingPage({
 
           <div className="space-y-2">
             {order.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between gap-3 rounded-2xl bg-white/5 p-3 text-sm"
-              >
-                <div>
-                  <p className="font-bold">
-                    {item.quantity}× {item.productNameSnapshot}
-                  </p>
-
-                  {item.notes ? (
-                    <p className="mt-1 text-xs text-white/40">{item.notes}</p>
-                  ) : null}
-                </div>
-
-                <b>{money(item.quantity * item.unitPriceCents)}</b>
-              </div>
+              <OrderItemLine key={item.id} item={item} />
             ))}
           </div>
 

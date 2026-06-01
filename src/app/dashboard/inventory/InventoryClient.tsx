@@ -1,7 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { MenuAvailabilityMovementType } from '@prisma/client';
+import {
+  MenuAvailabilityMovementType,
+  MenuProductType,
+} from '@prisma/client';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,18 +14,36 @@ import {
   initializeMenuStocksAction,
 } from './actions';
 
+type BundleComponent = {
+  id: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  isMenuActive: boolean;
+  availableQty: number;
+  soldQty: number;
+  isSoldOut: boolean;
+  canSellQty: number;
+  updatedAt: string | Date | null;
+};
+
 type MenuItem = {
   id: string;
   hotelId: string;
   hotelName: string;
   name: string;
+  productType: MenuProductType;
+  isBundle: boolean;
+  isDerivedStock: boolean;
   isMenuActive: boolean;
   stockId: string | null;
   availableQty: number;
   soldQty: number;
   isSoldOut: boolean;
   notes: string;
-  updatedAt: string | null;
+  updatedAt: string | Date | null;
+  bundleComponents: BundleComponent[];
+  limitingComponentName: string | null;
 };
 
 type Movement = {
@@ -57,9 +78,10 @@ type FilterValue =
   | 'AVAILABLE'
   | 'SOLD_OUT'
   | 'NOT_SET'
-  | 'MENU_HIDDEN';
+  | 'MENU_HIDDEN'
+  | 'BUNDLE';
 
-function formatDateTime(value: string | null) {
+function formatDateTime(value: string | Date | null) {
   if (!value) {
     return 'Not updated yet';
   }
@@ -78,7 +100,11 @@ function getStatusLabel(item: MenuItem) {
     return 'MENU HIDDEN';
   }
 
-  if (!item.stockId) {
+  if (item.isDerivedStock && item.bundleComponents.length === 0) {
+    return 'NOT SET';
+  }
+
+  if (!item.isDerivedStock && !item.stockId) {
     return 'NOT SET';
   }
 
@@ -105,6 +131,16 @@ function getStatusClass(item: MenuItem) {
   }
 
   return 'bg-amber-100 text-amber-700';
+}
+
+function getProductTypeLabel(item: MenuItem) {
+  return item.isDerivedStock ? 'Bundle / Derived Stock' : 'Single Item Stock';
+}
+
+function getProductTypeClass(item: MenuItem) {
+  return item.isDerivedStock
+    ? 'bg-amber-100 text-amber-800'
+    : 'bg-neutral-100 text-neutral-600';
 }
 
 function Modal({
@@ -137,6 +173,7 @@ function Modal({
             type="button"
             onClick={onClose}
             className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            aria-label="Close modal"
           >
             ✕
           </button>
@@ -148,6 +185,146 @@ function Modal({
   );
 }
 
+function BundleDerivedStockModal({
+  item,
+  onClose,
+}: {
+  item: MenuItem;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Bundle Derived Stock"
+      description="Bundle stock is calculated from component menu item stock. Update the component items to change how many bundles can be sold."
+      onClose={onClose}
+      maxWidth="max-w-3xl"
+    >
+      <div className="mb-5 rounded-3xl bg-amber-50 p-4">
+        <p className="text-xs font-black uppercase text-amber-700">
+          Bundle Menu Item
+        </p>
+        <h3 className="mt-1 text-xl font-black text-neutral-950">
+          {item.name}
+        </h3>
+        <p className="mt-1 text-sm font-semibold text-amber-800">
+          {item.hotelName}
+        </p>
+
+        <div className="mt-4 grid gap-2 text-center md:grid-cols-4">
+          <Metric label="Can Sell" value={item.availableQty} strong />
+          <Metric label="Sold" value={item.soldQty} />
+          <Metric
+            label="Status"
+            value={getStatusLabel(item)}
+            small
+          />
+          <Metric
+            label="Limiting Item"
+            value={item.limitingComponentName || 'None'}
+            small
+          />
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-amber-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-black text-neutral-950">Bundle Components</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Each bundle sold deducts stock from these component items.
+            </p>
+          </div>
+
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">
+            {item.bundleComponents.length}{' '}
+            {item.bundleComponents.length === 1 ? 'component' : 'components'}
+          </span>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {item.bundleComponents.map((component) => (
+            <div
+              key={component.id}
+              className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-black text-neutral-950">
+                    {component.name}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Requires {component.quantity} per bundle
+                  </p>
+                </div>
+
+                <span
+                  className={
+                    component.isSoldOut
+                      ? 'rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700'
+                      : 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
+                  }
+                >
+                  {component.isSoldOut ? 'Limiting / Sold Out' : 'Available'}
+                </span>
+              </div>
+
+              <div className="mt-3 grid gap-2 text-center md:grid-cols-4">
+                <Metric
+                  label="Available"
+                  value={component.availableQty}
+                  strong
+                />
+                <Metric label="Sold" value={component.soldQty} />
+                <Metric label="Can Support" value={component.canSellQty} />
+                <Metric
+                  label="Updated"
+                  value={component.updatedAt ? 'Yes' : 'No'}
+                  small
+                />
+              </div>
+
+              <p className="mt-3 text-xs font-bold text-neutral-400">
+                Last updated: {formatDateTime(component.updatedAt)}
+              </p>
+            </div>
+          ))}
+
+          {!item.bundleComponents.length ? (
+            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-6 text-center">
+              <p className="font-black text-amber-900">
+                No bundle components yet.
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                Add components in Menu Management before this bundle can be
+                sold.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-3xl bg-neutral-50 p-4">
+        <p className="text-sm font-black text-neutral-900">How this works</p>
+        <p className="mt-2 text-sm leading-6 text-neutral-600">
+          A bundle does not have manual stock. Its available quantity is based
+          on the lowest component stock after dividing by the required component
+          quantity.
+        </p>
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+        >
+          Close
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function ControlStockModal({
   item,
   onClose,
@@ -155,6 +332,10 @@ function ControlStockModal({
   item: MenuItem;
   onClose: () => void;
 }) {
+  if (item.isDerivedStock) {
+    return <BundleDerivedStockModal item={item} onClose={onClose} />;
+  }
+
   return (
     <Modal
       title="Control Menu Stock"
@@ -182,7 +363,10 @@ function ControlStockModal({
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
             Stock Operation
           </label>
-          <Select name="operation" defaultValue={MenuAvailabilityMovementType.SET_STOCK}>
+          <Select
+            name="operation"
+            defaultValue={MenuAvailabilityMovementType.SET_STOCK}
+          >
             <option value={MenuAvailabilityMovementType.SET_STOCK}>
               Set exact available stock
             </option>
@@ -345,7 +529,13 @@ export function InventoryClient({
       const matchesSearch =
         !searchText ||
         item.name.toLowerCase().includes(searchText) ||
-        item.hotelName.toLowerCase().includes(searchText);
+        item.hotelName.toLowerCase().includes(searchText) ||
+        item.bundleComponents.some((component) =>
+          component.name.toLowerCase().includes(searchText)
+        ) ||
+        String(item.limitingComponentName || '')
+          .toLowerCase()
+          .includes(searchText);
 
       const status = getStatusLabel(item);
 
@@ -354,7 +544,8 @@ export function InventoryClient({
         (filter === 'AVAILABLE' && status === 'AVAILABLE') ||
         (filter === 'SOLD_OUT' && status === 'SOLD OUT') ||
         (filter === 'NOT_SET' && status === 'NOT SET') ||
-        (filter === 'MENU_HIDDEN' && status === 'MENU HIDDEN');
+        (filter === 'MENU_HIDDEN' && status === 'MENU HIDDEN') ||
+        (filter === 'BUNDLE' && item.isDerivedStock);
 
       return matchesSearch && matchesFilter;
     });
@@ -397,7 +588,8 @@ export function InventoryClient({
             <div>
               <h2 className="text-xl font-black">Menu Stock Availability</h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Control available stock for each menu item at all times.
+                Control stock for single menu items. Bundle stock is calculated
+                from its component items.
               </p>
             </div>
 
@@ -429,7 +621,7 @@ export function InventoryClient({
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by menu name or hotel"
+                placeholder="Search by menu name, hotel, component, or limiting item"
               />
             </div>
 
@@ -439,7 +631,9 @@ export function InventoryClient({
               </label>
               <select
                 value={filter}
-                onChange={(event) => setFilter(event.target.value as FilterValue)}
+                onChange={(event) =>
+                  setFilter(event.target.value as FilterValue)
+                }
                 className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
               >
                 <option value="ALL">All Items</option>
@@ -447,6 +641,7 @@ export function InventoryClient({
                 <option value="SOLD_OUT">Sold Out</option>
                 <option value="NOT_SET">Not Set</option>
                 <option value="MENU_HIDDEN">Menu Hidden</option>
+                <option value="BUNDLE">Bundles Only</option>
               </select>
             </div>
           </div>
@@ -455,7 +650,11 @@ export function InventoryClient({
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm"
+                className={
+                  item.isDerivedStock
+                    ? 'rounded-3xl border border-amber-200 bg-white p-4 shadow-sm'
+                    : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
+                }
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -465,6 +664,14 @@ export function InventoryClient({
                     <p className="mt-1 truncate text-xs font-bold text-neutral-500">
                       {item.hotelName}
                     </p>
+
+                    <span
+                      className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getProductTypeClass(
+                        item
+                      )}`}
+                    >
+                      {getProductTypeLabel(item)}
+                    </span>
                   </div>
 
                   <span
@@ -477,12 +684,65 @@ export function InventoryClient({
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <Metric label="Available" value={item.availableQty} strong />
+                  <Metric
+                    label={item.isDerivedStock ? 'Can Sell' : 'Available'}
+                    value={item.availableQty}
+                    strong
+                  />
                   <Metric label="Sold" value={item.soldQty} />
-                  <Metric label="Updated" value={item.updatedAt ? 'Yes' : 'No'} small />
+                  <Metric
+                    label={item.isDerivedStock ? 'Components' : 'Updated'}
+                    value={
+                      item.isDerivedStock
+                        ? item.bundleComponents.length
+                        : item.updatedAt
+                          ? 'Yes'
+                          : 'No'
+                    }
+                    small
+                  />
                 </div>
 
-                {item.notes ? (
+                {item.isDerivedStock ? (
+                  <div className="mt-3 rounded-2xl bg-amber-50 p-3">
+                    <p className="text-xs font-black uppercase text-amber-700">
+                      Bundle Components
+                    </p>
+
+                    {item.bundleComponents.length ? (
+                      <div className="mt-2 space-y-1">
+                        {item.bundleComponents.slice(0, 4).map((component) => (
+                          <p
+                            key={component.id}
+                            className="text-xs font-bold text-amber-900"
+                          >
+                            {component.quantity}× {component.name} ·{' '}
+                            {component.availableQty} available
+                          </p>
+                        ))}
+
+                        {item.bundleComponents.length > 4 ? (
+                          <p className="text-xs font-bold text-amber-800">
+                            +{item.bundleComponents.length - 4} more component
+                            {item.bundleComponents.length - 4 === 1
+                              ? ''
+                              : 's'}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs font-bold text-amber-800">
+                        No components yet.
+                      </p>
+                    )}
+
+                    {item.limitingComponentName ? (
+                      <p className="mt-3 rounded-xl bg-white/80 p-2 text-xs font-black text-amber-900">
+                        Limiting item: {item.limitingComponentName}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : item.notes ? (
                   <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
                     {item.notes}
                   </p>
@@ -499,9 +759,13 @@ export function InventoryClient({
                 <button
                   type="button"
                   onClick={() => setControllingItem(item)}
-                  className="mt-4 h-10 w-full rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800"
+                  className={
+                    item.isDerivedStock
+                      ? 'mt-4 h-10 w-full rounded-2xl bg-amber-500 text-sm font-black text-white hover:bg-amber-600'
+                      : 'mt-4 h-10 w-full rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800'
+                  }
                 >
-                  Control Stock
+                  {item.isDerivedStock ? 'View Components' : 'Control Stock'}
                 </button>
               </div>
             ))}

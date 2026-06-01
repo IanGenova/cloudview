@@ -23,6 +23,18 @@ const pesoFormatter = new Intl.NumberFormat('en-PH', {
   currency: 'PHP',
 });
 
+type OrderItemWithBundleComponents = {
+  id: string;
+  productNameSnapshot: string;
+  quantity: number;
+  isBundleSnapshot: boolean;
+  bundleComponents: {
+    id: string;
+    componentNameSnapshot: string;
+    quantity: number;
+  }[];
+};
+
 function money(cents: number) {
   return pesoFormatter.format(cents / 100);
 }
@@ -73,6 +85,76 @@ function extractOrderType(notes?: string | null) {
   return line.replace(/^Order Type:\s*/i, '').trim();
 }
 
+function getOrderItemCount(items: OrderItemWithBundleComponents[]) {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+function getOrderPreview(items: OrderItemWithBundleComponents[]) {
+  const firstItems = items
+    .slice(0, 2)
+    .map((item) => {
+      const label = item.isBundleSnapshot
+        ? `${item.quantity}× ${item.productNameSnapshot} bundle`
+        : `${item.quantity}× ${item.productNameSnapshot}`;
+
+      return label;
+    })
+    .join(', ');
+
+  if (!firstItems) {
+    return 'No items';
+  }
+
+  return `${firstItems}${items.length > 2 ? '…' : ''}`;
+}
+
+function OrderItemSummary({
+  item,
+}: {
+  item: OrderItemWithBundleComponents;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-black text-white">
+          {item.quantity}× {item.productNameSnapshot}
+        </p>
+
+        {item.isBundleSnapshot ? (
+          <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
+            Bundle
+          </span>
+        ) : null}
+      </div>
+
+      {item.isBundleSnapshot ? (
+        <div className="mt-3 rounded-xl bg-gold/10 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gold">
+            Includes
+          </p>
+
+          {item.bundleComponents.length ? (
+            <div className="mt-2 space-y-1">
+              {item.bundleComponents.map((component) => (
+                <p
+                  key={component.id}
+                  className="text-xs font-bold text-white/75"
+                >
+                  {component.quantity}× {component.componentNameSnapshot}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs font-bold text-white/45">
+              Bundle component details were not saved for this order.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default async function MyOrdersPage({
   params,
 }: {
@@ -103,6 +185,13 @@ export default async function MyOrdersPage({
         },
         include: {
           items: {
+            include: {
+              bundleComponents: {
+                orderBy: {
+                  createdAt: 'asc',
+                },
+              },
+            },
             orderBy: {
               createdAt: 'asc',
             },
@@ -154,16 +243,8 @@ export default async function MyOrdersPage({
 
         <div className="space-y-3">
           {orders.map((order) => {
-            const itemCount = order.items.reduce(
-              (sum, item) => sum + item.quantity,
-              0
-            );
-
-            const firstItems = order.items
-              .slice(0, 2)
-              .map((item) => `${item.quantity}× ${item.productNameSnapshot}`)
-              .join(', ');
-
+            const itemCount = getOrderItemCount(order.items);
+            const firstItems = getOrderPreview(order.items);
             const orderType = extractOrderType(order.notes);
 
             return (
@@ -216,10 +297,22 @@ export default async function MyOrdersPage({
                         {itemCount} item{itemCount === 1 ? '' : 's'}
                       </p>
                       <p className="mt-1 text-xs text-white/45">
-                        {firstItems || 'No items'}
-                        {order.items.length > 2 ? '…' : ''}
+                        {firstItems}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {order.items.slice(0, 3).map((item) => (
+                      <OrderItemSummary key={item.id} item={item} />
+                    ))}
+
+                    {order.items.length > 3 ? (
+                      <div className="rounded-2xl bg-white/5 p-3 text-xs font-bold text-white/45">
+                        +{order.items.length - 3} more ordered item
+                        {order.items.length - 3 === 1 ? '' : 's'}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

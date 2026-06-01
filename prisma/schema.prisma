@@ -13,6 +13,7 @@ enum Role {
   STAFF
   KITCHEN
 }
+
 enum ServiceBillingMode {
   FREE
   FIXED_PRICE
@@ -87,6 +88,11 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum MenuProductType {
+  SINGLE
+  BUNDLE
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -99,7 +105,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assignedServiceRequests ServiceRequest[] @relation("AssignedRequests")
+  assignedServiceRequests ServiceRequest[]              @relation("AssignedRequests")
   orderStatusUpdates      OrderStatusHistory[]
   serviceStatusUpdates    ServiceRequestStatusHistory[]
   inventoryMovements      InventoryMovement[]
@@ -109,79 +115,79 @@ model User {
 }
 
 model Hotel {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  logoUrl   String?
-  brandColor String  @default("#111111")
-  accentColor String @default("#B88938")
-  isActive  Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?
+  brandColor  String   @default("#111111")
+  accentColor String   @default("#B88938")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  settings       HotelSettings?
-  users          User[]
-  rooms          Room[]
-  locations      Location[]
-  nfcTags        NfcTag[]
-  menuCategories MenuCategory[]
-  menuProducts   MenuProduct[]
-  inventoryItems InventoryItem[]
-  inventoryMovements InventoryMovement[]
-  orders         Order[]
-  serviceRequests ServiceRequest[]
-  posIntegration PosIntegration?
-  activityLogs ActivityLog[]
-  nfcAccessSessions NfcAccessSession[]
-  subscription HotelSubscription?
-  serviceCatalogItems ServiceCatalogItem[]
-  guideSections HotelGuideSection[]
-  guideItems    HotelGuideItem[]
-  menuDailyStocks         MenuDailyStock[]
-  menuDailyStockMovements MenuDailyStockMovement[]
+  settings                  HotelSettings?
+  users                     User[]
+  rooms                     Room[]
+  locations                 Location[]
+  nfcTags                   NfcTag[]
+  menuCategories            MenuCategory[]
+  menuProducts              MenuProduct[]
+  inventoryItems            InventoryItem[]
+  inventoryMovements        InventoryMovement[]
+  orders                    Order[]
+  serviceRequests           ServiceRequest[]
+  posIntegration            PosIntegration?
+  activityLogs              ActivityLog[]
+  nfcAccessSessions         NfcAccessSession[]
+  subscription              HotelSubscription?
+  serviceCatalogItems       ServiceCatalogItem[]
+  guideSections             HotelGuideSection[]
+  guideItems                HotelGuideItem[]
+  menuDailyStocks           MenuDailyStock[]
+  menuDailyStockMovements   MenuDailyStockMovement[]
   menuAvailabilityStocks    MenuAvailabilityStock[]
   menuAvailabilityMovements MenuAvailabilityMovement[]
-  guideImages HotelGuideImage[]
-  nfcGuestSessions NfcGuestSession[]
-
+  menuBundleComponents      MenuBundleComponent[]
+  guideImages               HotelGuideImage[]
+  nfcGuestSessions          NfcGuestSession[]
 }
 
 model HotelSettings {
-  id              String   @id @default(cuid())
-  hotelId         String   @unique
-  hotel           Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  currency        String   @default("PHP")
-  taxRate         Decimal  @default(0.00) @db.Decimal(6, 4)
-  serviceChargeRate Decimal @default(0.00) @db.Decimal(6, 4)
-  wifiName        String?
-  wifiPassword    String?
-  checkInTime     String   @default("2:00 PM")
-  checkOutTime    String   @default("12:00 PM")
-  poolHours       String   @default("7:00 AM - 9:00 PM")
-  poolRules       String?  @db.Text
-  policies        String?  @db.Text
-  guideText       String?  @db.Text
-  contactPhone    String?
-  contactEmail    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  hotelId           String   @unique
+  hotel             Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  currency          String   @default("PHP")
+  taxRate           Decimal  @default(0.00) @db.Decimal(6, 4)
+  serviceChargeRate Decimal  @default(0.00) @db.Decimal(6, 4)
+  wifiName          String?
+  wifiPassword      String?
+  checkInTime       String   @default("2:00 PM")
+  checkOutTime      String   @default("12:00 PM")
+  poolHours         String   @default("7:00 AM - 9:00 PM")
+  poolRules         String?  @db.Text
+  policies          String?  @db.Text
+  guideText         String?  @db.Text
+  contactPhone      String?
+  contactEmail      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Room {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   hotelId   String
-  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   name      String
   number    String
   floor     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  nfcTags NfcTag[]
-  orders  Order[]
-  serviceRequests ServiceRequest[]
+  nfcTags          NfcTag[]
+  orders           Order[]
+  serviceRequests  ServiceRequest[]
   nfcGuestSessions NfcGuestSession[]
 
   @@unique([hotelId, number])
@@ -189,50 +195,48 @@ model Room {
 }
 
 model Location {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   hotelId     String
-  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel       Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   name        String
   type        TagType
-  description String?  @db.Text
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt DateTime?
+  description String?   @db.Text
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
-  nfcTags NfcTag[]
-  orders  Order[]
-  serviceRequests ServiceRequest[]
+  nfcTags          NfcTag[]
+  orders           Order[]
+  serviceRequests  ServiceRequest[]
   nfcGuestSessions NfcGuestSession[]
 
   @@index([hotelId])
 }
 
-
-
 model NfcTag {
-  id         String    @id @default(cuid())
-  hotelId    String
-  hotel      Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  code       String    @unique
-  label      String
-  tagType    TagType
-  status     TagStatus @default(ACTIVE)
-  roomId     String?
-  room       Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  locationId String?
-  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  hotelId       String
+  hotel         Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  code          String    @unique
+  label         String
+  tagType       TagType
+  status        TagStatus @default(ACTIVE)
+  roomId        String?
+  room          Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  locationId    String?
+  location      Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   scanSecret    String?   @unique
   lastScannedAt DateTime?
   deletedAt     DateTime?
 
   accessSessions NfcAccessSession[]
 
-  orders Order[]
+  orders          Order[]
   serviceRequests ServiceRequest[]
-  guestSessions NfcGuestSession[]
+  guestSessions   NfcGuestSession[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -255,41 +259,74 @@ model MenuCategory {
 }
 
 model MenuProduct {
-  id          String   @id @default(cuid())
-  hotelId     String
-  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  categoryId  String
-  category    MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  name        String
-  description String?  @db.Text
-  priceCents  Int
-  imageUrl    String?
-  isAvailable Boolean @default(true)
-  prepTimeMinutes Int @default(10)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String       @id @default(cuid())
+  hotelId    String
+  hotel      Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  images ProductImage[]
-  recipes ProductInventoryRecipe[]
+  name            String
+  description     String? @db.Text
+  priceCents      Int
+  imageUrl        String?
+  isAvailable     Boolean @default(true)
+  prepTimeMinutes Int     @default(10)
+
+  productType MenuProductType @default(SINGLE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images     ProductImage[]
+  recipes    ProductInventoryRecipe[]
   orderItems OrderItem[]
+
   dailyStocks         MenuDailyStock[]
   dailyStockMovements MenuDailyStockMovement[]
+
   availabilityStocks    MenuAvailabilityStock[]
   availabilityMovements MenuAvailabilityMovement[]
 
+  bundleComponents MenuBundleComponent[] @relation("BundleProduct")
+  usedInBundles    MenuBundleComponent[] @relation("BundleComponentProduct")
+
+  orderBundleProducts          OrderItemBundleComponent[] @relation("OrderBundleProduct")
+  orderBundleComponentProducts OrderItemBundleComponent[] @relation("OrderBundleComponentProduct")
+
   @@index([hotelId])
   @@index([categoryId])
- 
+  @@index([productType])
+}
+
+model MenuBundleComponent {
+  id                 String @id @default(cuid())
+  hotelId            String
+  bundleProductId    String
+  componentProductId String
+  quantity           Int    @default(1)
+  sortOrder          Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel            Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  bundleProduct    MenuProduct @relation("BundleProduct", fields: [bundleProductId], references: [id], onDelete: Cascade)
+  componentProduct MenuProduct @relation("BundleComponentProduct", fields: [componentProductId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleProductId, componentProductId])
+  @@index([hotelId])
+  @@index([bundleProductId])
+  @@index([componentProductId])
 }
 
 model ProductImage {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   productId String
   product   MenuProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   alt       String?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
 }
 
 model InventoryItem {
@@ -306,26 +343,26 @@ model InventoryItem {
   updatedAt     DateTime @updatedAt
 
   movements InventoryMovement[]
-  recipes ProductInventoryRecipe[]
+  recipes   ProductInventoryRecipe[]
 
-  @@index([hotelId])
   @@unique([hotelId, name])
+  @@index([hotelId])
 }
 
 model InventoryMovement {
-  id        String   @id @default(cuid())
+  id        String                @id @default(cuid())
   hotelId   String
-  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel     Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   itemId    String
-  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item      InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
   type      InventoryMovementType
-  quantity  Decimal  @db.Decimal(12, 3)
+  quantity  Decimal               @db.Decimal(12, 3)
   reason    String?
   orderId   String?
-  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  order     Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
+  user      User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime              @default(now())
 
   @@index([hotelId])
   @@index([itemId])
@@ -333,154 +370,183 @@ model InventoryMovement {
 }
 
 model ProductInventoryRecipe {
-  id              String   @id @default(cuid())
+  id              String        @id @default(cuid())
   productId       String
-  product         MenuProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product         MenuProduct   @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryItemId String
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  quantity        Decimal @db.Decimal(12, 3)
+  quantity        Decimal       @db.Decimal(12, 3)
 
   @@unique([productId, inventoryItemId])
 }
 
 model Order {
-  id          String   @id @default(cuid())
-  hotelId     String
-  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  roomId      String?
-  room        Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  locationId  String?
-  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  tagId       String?
-  tag         NfcTag?  @relation(fields: [tagId], references: [id], onDelete: SetNull)
-  orderCode   String   @unique
-  guestName   String?
-  notes       String?  @db.Text
-  paymentMethod PaymentMethod @default(ROOM_CHARGE)
-  paymentStatus PaymentStatus @default(UNPAID)
-  status      OrderStatus @default(PENDING)
-  subtotalCents Int
-  serviceChargeCents Int @default(0)
-  taxCents     Int @default(0)
-  totalCents   Int
-  posSyncStatus PosSyncStatus @default(PENDING)
+  id                  String        @id @default(cuid())
+  hotelId             String
+  hotel               Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomId              String?
+  room                Room?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  locationId          String?
+  location            Location?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  tagId               String?
+  tag                 NfcTag?       @relation(fields: [tagId], references: [id], onDelete: SetNull)
+  orderCode           String        @unique
+  guestName           String?
+  notes               String?       @db.Text
+  paymentMethod       PaymentMethod @default(ROOM_CHARGE)
+  paymentStatus       PaymentStatus @default(UNPAID)
+  status              OrderStatus   @default(PENDING)
+  subtotalCents       Int
+  serviceChargeCents  Int           @default(0)
+  taxCents            Int           @default(0)
+  totalCents          Int
+  posSyncStatus       PosSyncStatus @default(PENDING)
   inventoryDeductedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  items OrderItem[]
-  statusHistory OrderStatusHistory[]
-  posLogs PosSyncLog[]
+  items              OrderItem[]
+  statusHistory      OrderStatusHistory[]
+  posLogs            PosSyncLog[]
   inventoryMovements InventoryMovement[]
-  guestSessionId String?
-  guestSession   NfcGuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  guestSessionId     String?
+  guestSession       NfcGuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
 
   @@index([guestSessionId])
-
   @@index([hotelId])
   @@index([status])
   @@index([createdAt])
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
   productId String?
   product   MenuProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
   productNameSnapshot String
-  quantity  Int
-  unitPriceCents Int
-  notes     String? @db.Text
+  quantity            Int
+  unitPriceCents      Int
+  notes               String? @db.Text
+
+  isBundleSnapshot Boolean @default(false)
+
   createdAt DateTime @default(now())
+
+  bundleComponents OrderItemBundleComponent[]
 
   @@index([orderId])
   @@index([productId])
+  @@index([isBundleSnapshot])
+}
+
+model OrderItemBundleComponent {
+  id          String @id @default(cuid())
+  orderItemId String
+
+  bundleProductId    String?
+  componentProductId String?
+
+  componentNameSnapshot String
+  quantity              Int
+
+  createdAt DateTime @default(now())
+
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  bundleProduct MenuProduct? @relation("OrderBundleProduct", fields: [bundleProductId], references: [id], onDelete: SetNull)
+
+  componentProduct MenuProduct? @relation("OrderBundleComponentProduct", fields: [componentProductId], references: [id], onDelete: SetNull)
+
+  @@index([orderItemId])
+  @@index([bundleProductId])
+  @@index([componentProductId])
 }
 
 model OrderStatusHistory {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   status    OrderStatus
   note      String?
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
 
   @@index([orderId])
 }
 
 model ServiceRequest {
-  id          String   @id @default(cuid())
-  hotelId     String
-  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  roomId      String?
-  room        Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  locationId  String?
-  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  tagId       String?
-  tag         NfcTag?  @relation(fields: [tagId], references: [id], onDelete: SetNull)
-  requestCode String   @unique
-  type        String
-  guestName   String?
-  notes       String? @db.Text
-  status      ServiceRequestStatus @default(NEW)
+  id           String               @id @default(cuid())
+  hotelId      String
+  hotel        Hotel                @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomId       String?
+  room         Room?                @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  locationId   String?
+  location     Location?            @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  tagId        String?
+  tag          NfcTag?              @relation(fields: [tagId], references: [id], onDelete: SetNull)
+  requestCode  String               @unique
+  type         String
+  guestName    String?
+  notes        String?              @db.Text
+  status       ServiceRequestStatus @default(NEW)
   assignedToId String?
-  assignedTo   User? @relation("AssignedRequests", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  assignedTo   User?                @relation("AssignedRequests", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
-  statusHistory ServiceRequestStatusHistory[]
+  statusHistory  ServiceRequestStatusHistory[]
   guestSessionId String?
-  guestSession   NfcGuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  guestSession   NfcGuestSession?              @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
 
   @@index([guestSessionId])
-
   @@index([hotelId])
   @@index([status])
 }
 
 model ServiceRequestStatusHistory {
-  id        String   @id @default(cuid())
+  id        String               @id @default(cuid())
   requestId String
-  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request   ServiceRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
   status    ServiceRequestStatus
   note      String?
   userId    String?
-  user      User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
+  user      User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime             @default(now())
 
   @@index([requestId])
 }
 
 model PosIntegration {
-  id            String   @id @default(cuid())
-  hotelId       String   @unique
-  hotel         Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  providerName  String   @default("Mock POS")
-  apiEndpoint   String?
+  id              String   @id @default(cuid())
+  hotelId         String   @unique
+  hotel           Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  providerName    String   @default("Mock POS")
+  apiEndpoint     String?
   apiKeyEncrypted String?
-  webhookSecret String?
-  enabled       Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  webhookSecret   String?
+  enabled         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   logs PosSyncLog[]
 }
 
 model PosSyncLog {
-  id            String   @id @default(cuid())
-  hotelId       String
-  orderId       String
-  integrationId String?
-  status        PosSyncStatus
-  requestPayload Json?
+  id              String        @id @default(cuid())
+  hotelId         String
+  orderId         String
+  integrationId   String?
+  status          PosSyncStatus
+  requestPayload  Json?
   responsePayload Json?
-  error         String? @db.Text
-  createdAt     DateTime @default(now())
+  error           String?       @db.Text
+  createdAt       DateTime      @default(now())
 
-  order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   integration PosIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
 
   @@index([hotelId])
@@ -497,7 +563,7 @@ model ActivityLog {
   action    String
   entity    String
   entityId  String?
-  message   String? @db.Text
+  message   String?  @db.Text
   createdAt DateTime @default(now())
 
   @@index([hotelId])
@@ -519,31 +585,32 @@ model SubscriptionPackage {
 }
 
 model HotelSubscription {
-  id        String   @id @default(cuid())
-  hotelId   String   @unique
-  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  id        String              @id @default(cuid())
+  hotelId   String              @unique
+  hotel     Hotel               @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   packageId String
   package   SubscriptionPackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
-  status    SubscriptionStatus @default(TRIALING)
-  startedAt DateTime @default(now())
+  status    SubscriptionStatus  @default(TRIALING)
+  startedAt DateTime            @default(now())
   endsAt    DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 }
+
 model NfcAccessSession {
-  id            String    @id @default(cuid())
+  id            String  @id @default(cuid())
   tagId         String
   hotelId       String
-  tokenHash     String    @unique
+  tokenHash     String  @unique
   userAgentHash String?
   ipHash        String?
 
   expiresAt     DateTime
   idleExpiresAt DateTime?
-  lastSeenAt     DateTime?
+  lastSeenAt    DateTime?
 
-  revokedAt     DateTime?
-  createdAt     DateTime  @default(now())
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   tag   NfcTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
   hotel Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
@@ -555,21 +622,21 @@ model NfcAccessSession {
 }
 
 model NfcGuestSession {
-  id          String   @id @default(cuid())
-  sessionKey  String   @unique
-  hotelId     String
-  tagId       String
-  roomId      String?
-  locationId  String?
+  id         String  @id @default(cuid())
+  sessionKey String  @unique
+  hotelId    String
+  tagId      String
+  roomId     String?
+  locationId String?
 
-  startedAt   DateTime @default(now())
-  lastSeenAt  DateTime @default(now())
-  endedAt     DateTime?
+  startedAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  endedAt    DateTime?
 
-  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  tag         NfcTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  room        Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hotel    Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  tag      NfcTag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  room     Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   orders          Order[]
   serviceRequests ServiceRequest[]
@@ -582,21 +649,21 @@ model NfcGuestSession {
 }
 
 model RoomAddOnCharge {
-  id               String   @id @default(cuid())
-  chargeCode       String   @unique
+  id               String @id @default(cuid())
+  chargeCode       String @unique
   hotelId          String
   roomId           String
-  serviceRequestId String   @unique
+  serviceRequestId String @unique
 
-  itemName         String
-  description      String?
-  quantity         Int      @default(1)
-  unitPrice        Decimal  @db.Decimal(10, 2)
-  totalAmount      Decimal  @db.Decimal(10, 2)
+  itemName    String
+  description String?
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
 
-  postedById       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  postedById String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([hotelId])
   @@index([roomId])
@@ -610,25 +677,25 @@ enum RoomAddOnPaymentStatus {
 }
 
 model ServiceCatalogItem {
-  id          String             @id @default(cuid())
+  id          String  @id @default(cuid())
   hotelId     String
   code        String
   name        String
   category    String
   description String?
-  iconKey     String             @default("ConciergeBell")
+  iconKey     String  @default("ConciergeBell")
 
   billingMode ServiceBillingMode @default(FREE)
   unitPrice   Decimal            @default(0) @db.Decimal(10, 2)
   unitLabel   String?
 
-  isActive    Boolean            @default(true)
-  sortOrder   Int                @default(0)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
 
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel        Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -649,23 +716,23 @@ enum HotelGuideItemType {
 }
 
 model HotelGuideSection {
-  id          String   @id @default(cuid())
-  hotelId     String
+  id      String @id @default(cuid())
+  hotelId String
 
   title       String
   subtitle    String?
   description String?
   imageUrl    String? @db.Text
-  iconKey     String   @default("Info")
+  iconKey     String  @default("Info")
 
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel        Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  items        HotelGuideItem[]
+  hotel         Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  items         HotelGuideItem[]
   galleryImages HotelGuideImage[]
 
   @@index([hotelId])
@@ -674,34 +741,34 @@ model HotelGuideSection {
 }
 
 model HotelGuideItem {
-  id          String             @id @default(cuid())
-  sectionId   String
-  hotelId     String
+  id        String @id @default(cuid())
+  sectionId String
+  hotelId   String
 
-  title       String
-  subtitle    String?
-  content     String?
-  itemType    HotelGuideItemType @default(INFORMATION)
+  title    String
+  subtitle String?
+  content  String?
+  itemType HotelGuideItemType @default(INFORMATION)
 
-  imageUrl    String? @db.Text
-  iconKey     String             @default("Info")
+  imageUrl String? @db.Text
+  iconKey  String  @default("Info")
 
-  hours       String?
-  location    String?
-  contact     String?
-  mapUrl      String?
+  hours    String?
+  location String?
+  contact  String?
+  mapUrl   String?
 
   buttonLabel String?
   buttonHref  String?
 
-  sortOrder   Int                @default(0)
-  isActive    Boolean            @default(true)
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
 
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel        Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  section      HotelGuideSection  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  hotel         Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  section       HotelGuideSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   galleryImages HotelGuideImage[]
 
   @@index([hotelId])
@@ -712,17 +779,17 @@ model HotelGuideItem {
 }
 
 model HotelGuideImage {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   hotelId   String
   sectionId String?
   itemId    String?
 
-  title     String?
-  caption   String?
-  imageUrl  String   @db.Text
+  title    String?
+  caption  String?
+  imageUrl String  @db.Text
 
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -749,23 +816,23 @@ enum MenuStockMovementType {
 }
 
 model MenuDailyStock {
-  id           String   @id @default(cuid())
-  hotelId      String
-  productId    String
-  stockDate    DateTime
+  id        String   @id @default(cuid())
+  hotelId   String
+  productId String
+  stockDate DateTime
 
-  openingQty   Int      @default(0)
-  availableQty Int      @default(0)
-  soldQty      Int      @default(0)
-  isSoldOut    Boolean  @default(false)
+  openingQty   Int     @default(0)
+  availableQty Int     @default(0)
+  soldQty      Int     @default(0)
+  isSoldOut    Boolean @default(false)
 
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel        Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  product      MenuProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  movements    MenuDailyStockMovement[]
+  hotel     Hotel                    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product   MenuProduct              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements MenuDailyStockMovement[]
 
   @@unique([hotelId, productId, stockDate])
   @@index([hotelId])
@@ -775,22 +842,22 @@ model MenuDailyStock {
 }
 
 model MenuDailyStockMovement {
-  id        String                @id @default(cuid())
+  id        String   @id @default(cuid())
   hotelId   String
   productId String
   stockId   String
   stockDate DateTime
 
-  type      MenuStockMovementType
-  quantity  Int
-  reason    String?
-  userId    String?
+  type     MenuStockMovementType
+  quantity Int
+  reason   String?
+  userId   String?
 
   createdAt DateTime @default(now())
 
-  hotel     Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  product   MenuProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  stock     MenuDailyStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  hotel   Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product MenuProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock   MenuDailyStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
 
   @@index([hotelId])
   @@index([productId])
@@ -807,24 +874,26 @@ enum MenuAvailabilityMovementType {
   REOPEN
   ORDER_DEDUCTION
   CANCEL_RESTORE
+  BUNDLE_ORDER_DEDUCTION
+  BUNDLE_CANCEL_RESTORE
 }
 
 model MenuAvailabilityStock {
-  id           String   @id @default(cuid())
-  hotelId      String
-  productId    String
+  id        String @id @default(cuid())
+  hotelId   String
+  productId String
 
-  availableQty Int      @default(0)
-  soldQty      Int      @default(0)
-  isSoldOut    Boolean  @default(false)
+  availableQty Int     @default(0)
+  soldQty      Int     @default(0)
+  isSoldOut    Boolean @default(false)
   notes        String?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel         Hotel       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  product       MenuProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  movements     MenuAvailabilityMovement[]
+  hotel     Hotel                      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product   MenuProduct                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements MenuAvailabilityMovement[]
 
   @@unique([hotelId, productId])
   @@index([hotelId])
@@ -833,10 +902,10 @@ model MenuAvailabilityStock {
 }
 
 model MenuAvailabilityMovement {
-  id           String                       @id @default(cuid())
-  hotelId      String
-  productId    String
-  stockId      String
+  id        String @id @default(cuid())
+  hotelId   String
+  productId String
+  stockId   String
 
   type         MenuAvailabilityMovementType
   quantity     Int
@@ -844,11 +913,11 @@ model MenuAvailabilityMovement {
   reason       String?
   userId       String?
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  hotel         Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  product       MenuProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
-  stock         MenuAvailabilityStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  hotel   Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  product MenuProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock   MenuAvailabilityStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
 
   @@index([hotelId])
   @@index([productId])

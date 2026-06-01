@@ -23,7 +23,6 @@ import {
   updateTagAction,
 } from './actions';
 
-
 type HotelOption = {
   id: string;
   name: string;
@@ -147,6 +146,51 @@ function successMessage(success?: string) {
   };
 
   return success ? messages[success] : null;
+}
+
+function getHttpsBaseOrigin() {
+  if (typeof window === 'undefined') {
+    return 'https://192.168.0.130:3000';
+  }
+
+  const { hostname, port } = window.location;
+  return `https://${hostname}${port ? `:${port}` : ''}`;
+}
+
+function toHttpsAppUrl(value: string) {
+  if (!value) {
+    return value;
+  }
+
+  try {
+    const httpsBaseOrigin = getHttpsBaseOrigin();
+
+    const currentHostname =
+      typeof window !== 'undefined' ? window.location.hostname : '192.168.0.130';
+
+    const url = new URL(value, httpsBaseOrigin);
+
+    const isLocalHost =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '0.0.0.0' ||
+      url.hostname.startsWith('192.168.');
+
+    if (isLocalHost) {
+      url.protocol = 'https:';
+      url.hostname = currentHostname;
+      url.port = url.port || '3000';
+      return url.toString();
+    }
+
+    if (url.protocol === 'http:') {
+      url.protocol = 'https:';
+    }
+
+    return url.toString();
+  } catch {
+    return value.replace(/^http:\/\//i, 'https://');
+  }
 }
 
 function CreateTagForm({
@@ -380,7 +424,8 @@ export function NfcTagsClient({
           <div>
             <h2 className="text-xl font-black">NFC Tags</h2>
             <p className="mt-1 text-sm text-neutral-500">
-              Search, filter, create, edit, rotate, and delete NFC guest access tags.
+              Search, filter, create, edit, rotate, and delete NFC guest access
+              tags.
             </p>
           </div>
 
@@ -472,10 +517,10 @@ export function NfcTagsClient({
             Showing {filteredTags.length} of {tags.length}
           </span>
 
-          {(search ||
-            hotelFilter !== 'ALL' ||
-            typeFilter !== 'ALL' ||
-            statusFilter !== 'ALL') ? (
+          {search ||
+          hotelFilter !== 'ALL' ||
+          typeFilter !== 'ALL' ||
+          statusFilter !== 'ALL' ? (
             <button
               type="button"
               onClick={() => {
@@ -493,138 +538,146 @@ export function NfcTagsClient({
       </div>
 
       <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
-        {filteredTags.map((tag) => (
-          <article
-            key={tag.id}
-            className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm"
-          >
-            <div className="border-b border-neutral-100 bg-neutral-50 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h3 className="truncate text-xl font-black">{tag.label}</h3>
-                  <p className="mt-1 text-sm font-semibold text-neutral-500">
-                    {tag.hotelName}
+        {filteredTags.map((tag) => {
+          const secureLaunchUrl = toHttpsAppUrl(tag.secureLaunchUrl);
+          const lockedDestinationUrl = toHttpsAppUrl(tag.lockedDestinationUrl);
+
+          return (
+            <article
+              key={tag.id}
+              className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm"
+            >
+              <div className="border-b border-neutral-100 bg-neutral-50 p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-xl font-black">
+                      {tag.label}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-neutral-500">
+                      {tag.hotelName}
+                    </p>
+                  </div>
+
+                  <StatusBadge status={tag.status} />
+                </div>
+              </div>
+
+              <div className="space-y-4 p-5">
+                <div className="rounded-2xl bg-neutral-50 p-4 text-sm">
+                  <p>
+                    <b>Unique Tag ID:</b> {tag.code}
+                  </p>
+                  <p className="mt-2">
+                    <b>Tag Type:</b> {tag.tagType}
+                  </p>
+                  <p className="mt-2">
+                    <b>Linked Destination:</b> {tag.linkedDestination}
+                  </p>
+                  <p className="mt-2">
+                    <b>Last Scanned:</b> {formatDate(tag.lastScannedAt)}
                   </p>
                 </div>
 
-                <StatusBadge status={tag.status} />
-              </div>
-            </div>
+                <div className="space-y-2 rounded-2xl bg-neutral-50 p-4 text-xs">
+                  <div>
+                    <p className="mb-1 font-black text-neutral-500">
+                      Secure NFC Launch URL
+                    </p>
+                    <a
+                      href={secureLaunchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="break-all font-bold text-blue-700 hover:underline"
+                    >
+                      {secureLaunchUrl}
+                    </a>
+                  </div>
 
-            <div className="space-y-4 p-5">
-              <div className="rounded-2xl bg-neutral-50 p-4 text-sm">
-                <p>
-                  <b>Unique Tag ID:</b> {tag.code}
-                </p>
-                <p className="mt-2">
-                  <b>Tag Type:</b> {tag.tagType}
-                </p>
-                <p className="mt-2">
-                  <b>Linked Destination:</b> {tag.linkedDestination}
-                </p>
-                <p className="mt-2">
-                  <b>Last Scanned:</b> {formatDate(tag.lastScannedAt)}
-                </p>
-              </div>
+                  <div>
+                    <p className="mb-1 font-black text-neutral-500">
+                      Protected Guest Destination
+                    </p>
+                    <a
+                      href={lockedDestinationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="break-all font-bold text-blue-700 hover:underline"
+                    >
+                      {lockedDestinationUrl}
+                    </a>
+                  </div>
+                </div>
 
-              <div className="space-y-2 rounded-2xl bg-neutral-50 p-4 text-xs">
-                <div>
-                  <p className="mb-1 font-black text-neutral-500">
-                    Secure NFC Launch URL
-                  </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <form action={toggleTagStatusAction}>
+                    <input type="hidden" name="tagId" value={tag.id} />
+                    <button
+                      type="submit"
+                      className={
+                        tag.status === 'ACTIVE'
+                          ? 'inline-flex h-10 w-full items-center justify-center rounded-2xl bg-neutral-900 text-sm font-black text-white hover:bg-neutral-800'
+                          : 'inline-flex h-10 w-full items-center justify-center rounded-2xl bg-emerald-600 text-sm font-black text-white hover:bg-emerald-700'
+                      }
+                    >
+                      {tag.status === 'ACTIVE' ? 'Set Inactive' : 'Set Active'}
+                    </button>
+                  </form>
+
                   <a
-                    href={tag.secureLaunchUrl}
+                    href={secureLaunchUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="break-all font-bold text-blue-700 hover:underline"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 text-sm font-black hover:bg-neutral-50"
                   >
-                    {tag.secureLaunchUrl}
+                    <QrCode className="size-4" />
+                    Open
                   </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingTag(tag)}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 text-sm font-black hover:bg-neutral-50"
+                  >
+                    <Pencil className="size-4" />
+                    Edit
+                  </button>
+
+                  <form action={rotateTagSecretAction}>
+                    <input type="hidden" name="tagId" value={tag.id} />
+                    <button
+                      type="submit"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 text-sm font-black text-white hover:bg-amber-600"
+                    >
+                      <RotateCcw className="size-4" />
+                      Rotate
+                    </button>
+                  </form>
+
+                  <form action={deleteTagAction}>
+                    <input type="hidden" name="tagId" value={tag.id} />
+                    <button
+                      type="submit"
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700"
+                    >
+                      <Trash2 className="size-4" />
+                      Delete
+                    </button>
+                  </form>
                 </div>
 
-                <div>
-                  <p className="mb-1 font-black text-neutral-500">
-                    Protected Guest Destination
-                  </p>
-                  <a
-                    href={tag.lockedDestinationUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="break-all font-bold text-blue-700 hover:underline"
-                  >
-                    {tag.lockedDestinationUrl}
-                  </a>
-                </div>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <form action={toggleTagStatusAction}>
-                            <input type="hidden" name="tagId" value={tag.id} />
-                            <button
-                                type="submit"
-                                className={
-                                tag.status === 'ACTIVE'
-                                    ? 'inline-flex h-10 w-full items-center justify-center rounded-2xl bg-neutral-900 text-sm font-black text-white hover:bg-neutral-800'
-                                    : 'inline-flex h-10 w-full items-center justify-center rounded-2xl bg-emerald-600 text-sm font-black text-white hover:bg-emerald-700'
-                                }
-                            >
-                                {tag.status === 'ACTIVE' ? 'Set Inactive' : 'Set Active'}
-                            </button>
-                            </form>
                 <a
-                  href={tag.secureLaunchUrl}
+                  href={lockedDestinationUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 text-sm font-black hover:bg-neutral-50"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800"
                 >
-                  <QrCode className="size-4" />
-                  Open
+                  <Link2 className="size-4" />
+                  View Guest Portal
                 </a>
-
-                <button
-                  type="button"
-                  onClick={() => setEditingTag(tag)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 text-sm font-black hover:bg-neutral-50"
-                >
-                  <Pencil className="size-4" />
-                  Edit
-                </button>
-
-                <form action={rotateTagSecretAction}>
-                  <input type="hidden" name="tagId" value={tag.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 text-sm font-black text-white hover:bg-amber-600"
-                  >
-                    <RotateCcw className="size-4" />
-                    Rotate
-                  </button>
-                </form>
-
-                <form action={deleteTagAction}>
-                  <input type="hidden" name="tagId" value={tag.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700"
-                  >
-                    <Trash2 className="size-4" />
-                    Delete
-                  </button>
-                </form>
               </div>
-
-              <a
-                href={tag.lockedDestinationUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800"
-              >
-                <Link2 className="size-4" />
-                View Guest Portal
-              </a>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
 
         {!filteredTags.length ? (
           <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">

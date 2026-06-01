@@ -1,6 +1,9 @@
 'use server';
 
-import { MenuAvailabilityMovementType } from '@prisma/client';
+import {
+  MenuAvailabilityMovementType,
+  MenuProductType,
+} from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireRole, requireUser } from '@/lib/auth';
@@ -43,6 +46,38 @@ function parseWholeNumber(value: FormDataEntryValue | null) {
   return parsed;
 }
 
+function revalidateInventoryPages() {
+  revalidatePath('/dashboard/inventory');
+  revalidatePath('/dashboard/menu');
+  revalidatePath('/dashboard/pos');
+  revalidatePath('/dashboard/kitchen');
+  revalidatePath('/t/[tagCode]/menu', 'page');
+}
+
+function getDefaultMovementReason(operation: MenuAvailabilityMovementType) {
+  if (operation === MenuAvailabilityMovementType.SET_STOCK) {
+    return 'Set exact available menu stock';
+  }
+
+  if (operation === MenuAvailabilityMovementType.ADD_STOCK) {
+    return 'Added menu stock';
+  }
+
+  if (operation === MenuAvailabilityMovementType.REMOVE_STOCK) {
+    return 'Removed menu stock';
+  }
+
+  if (operation === MenuAvailabilityMovementType.SOLD_OUT) {
+    return 'Marked menu item as sold out';
+  }
+
+  if (operation === MenuAvailabilityMovementType.REOPEN) {
+    return 'Reopened menu item stock';
+  }
+
+  return 'Updated menu stock';
+}
+
 export async function controlMenuStockAction(formData: FormData) {
   const user = await requireUser();
 
@@ -79,6 +114,7 @@ export async function controlMenuStockAction(formData: FormData) {
       id: true,
       hotelId: true,
       name: true,
+      productType: true,
     },
   });
 
@@ -89,6 +125,12 @@ export async function controlMenuStockAction(formData: FormData) {
   }
 
   assertHotelScope(user, product.hotelId);
+
+  if (product.productType === MenuProductType.BUNDLE) {
+    redirectToInventory({
+      error: 'bundle-stock-derived',
+    });
+  }
 
   const requiresPositiveQuantity =
     operation === MenuAvailabilityMovementType.ADD_STOCK ||
@@ -180,24 +222,13 @@ export async function controlMenuStockAction(formData: FormData) {
         type: operation,
         quantity: movementQty,
         balanceAfter: nextQty,
-        reason:
-          reason ||
-          (operation === MenuAvailabilityMovementType.SET_STOCK
-            ? 'Set exact available menu stock'
-            : operation === MenuAvailabilityMovementType.ADD_STOCK
-              ? 'Added menu stock'
-              : operation === MenuAvailabilityMovementType.REMOVE_STOCK
-                ? 'Removed menu stock'
-                : operation === MenuAvailabilityMovementType.SOLD_OUT
-                  ? 'Marked menu item as sold out'
-                  : 'Reopened menu item stock'),
+        reason: reason || getDefaultMovementReason(operation),
         userId: user.id,
       },
     });
   });
 
-  revalidatePath('/dashboard/inventory');
-  revalidatePath('/dashboard/menu');
+  revalidateInventoryPages();
 
   redirectToInventory({
     success: 'stock-updated',
@@ -209,13 +240,22 @@ export async function initializeMenuStocksAction() {
 
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
-  const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+  const where =
+    user.role === 'SUPER_ADMIN'
+      ? {
+          productType: MenuProductType.SINGLE,
+        }
+      : {
+          hotelId: user.hotelId!,
+          productType: MenuProductType.SINGLE,
+        };
 
   const products = await db.menuProduct.findMany({
     where,
     select: {
       id: true,
       hotelId: true,
+      productType: true,
     },
   });
 
@@ -241,7 +281,7 @@ export async function initializeMenuStocksAction() {
     )
   );
 
-  revalidatePath('/dashboard/inventory');
+  revalidateInventoryPages();
 
   redirectToInventory({
     success: 'stocks-initialized',

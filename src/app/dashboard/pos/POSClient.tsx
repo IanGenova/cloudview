@@ -26,6 +26,19 @@ type POSRoom = {
   name?: string | null;
 };
 
+type POSProductType = 'SINGLE' | 'BUNDLE';
+
+type POSBundleComponent = {
+  id: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  availableQty: number;
+  soldQty: number;
+  canSellQty: number;
+  isSoldOut: boolean;
+};
+
 type POSProduct = {
   id: string;
   name: string;
@@ -34,17 +47,33 @@ type POSProduct = {
   categoryName: string;
   priceCents: number;
 
+  productType: POSProductType;
+  isBundle: boolean;
+  isDerivedStock: boolean;
+
   stockId: string | null;
   availableQty: number;
   soldQty: number;
   isSoldOut: boolean;
   isMenuActive: boolean;
+
+  limitingComponentName: string | null;
+  normalBundlePriceCents: number;
+  bundleSavingsCents: number;
+  bundleComponents: POSBundleComponent[];
 };
 
 type CartItem = {
   productId: string;
   quantity: number;
 };
+
+type AvailabilityFilter =
+  | 'ALL'
+  | 'AVAILABLE'
+  | 'SOLD_OUT'
+  | 'NOT_SET'
+  | 'BUNDLE';
 
 function money(cents: number, currency = 'PHP') {
   return new Intl.NumberFormat('en-PH', {
@@ -53,9 +82,17 @@ function money(cents: number, currency = 'PHP') {
   }).format(cents / 100);
 }
 
+function isBundleProduct(product: POSProduct) {
+  return product.isBundle || product.productType === 'BUNDLE';
+}
+
 function getStockStatus(product: POSProduct) {
   if (!product.isMenuActive) {
     return 'MENU_HIDDEN';
+  }
+
+  if (product.isDerivedStock && product.bundleComponents.length === 0) {
+    return 'NOT_SET';
   }
 
   if (!product.stockId) {
@@ -73,15 +110,19 @@ function getStockLabel(product: POSProduct) {
   const status = getStockStatus(product);
 
   if (status === 'AVAILABLE') {
-    return `${product.availableQty} left`;
+    return product.isDerivedStock
+      ? `${product.availableQty} bundles`
+      : `${product.availableQty} left`;
   }
 
   if (status === 'SOLD_OUT') {
-    return 'Sold out';
+    return product.limitingComponentName
+      ? `Sold out: ${product.limitingComponentName}`
+      : 'Sold out';
   }
 
   if (status === 'NOT_SET') {
-    return 'Stock not set';
+    return product.isDerivedStock ? 'No components' : 'Stock not set';
   }
 
   return 'Menu hidden';
@@ -110,7 +151,99 @@ function canSellProduct(product: POSProduct) {
     product.isMenuActive &&
     Boolean(product.stockId) &&
     !product.isSoldOut &&
-    product.availableQty > 0
+    product.availableQty > 0 &&
+    (!product.isDerivedStock || product.bundleComponents.length > 0)
+  );
+}
+
+function BundleBadge({ product }: { product: POSProduct }) {
+  if (!isBundleProduct(product)) {
+    return null;
+  }
+
+  return (
+    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+      Bundle
+    </span>
+  );
+}
+
+function BundleIncludes({
+  product,
+  compact = false,
+}: {
+  product: POSProduct;
+  compact?: boolean;
+}) {
+  if (!isBundleProduct(product)) {
+    return null;
+  }
+
+  if (!product.bundleComponents.length) {
+    return (
+      <p className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-bold text-amber-800">
+        No bundle components yet.
+      </p>
+    );
+  }
+
+  const visibleComponents = product.bundleComponents.slice(
+    0,
+    compact ? 3 : 6
+  );
+
+  return (
+    <div className="mt-2 rounded-xl bg-amber-50 p-2">
+      <p className="text-[10px] font-black uppercase text-amber-700">
+        Includes
+      </p>
+
+      <div className="mt-1 space-y-0.5">
+        {visibleComponents.map((component) => (
+          <p key={component.id} className="text-xs font-bold text-amber-900">
+            {component.quantity}× {component.name}
+          </p>
+        ))}
+
+        {product.bundleComponents.length > visibleComponents.length ? (
+          <p className="text-xs font-bold text-amber-700">
+            +{product.bundleComponents.length - visibleComponents.length} more
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BundleSavings({
+  product,
+  currency,
+}: {
+  product: POSProduct;
+  currency: string;
+}) {
+  if (!isBundleProduct(product)) {
+    return null;
+  }
+
+  if (product.normalBundlePriceCents <= 0 && product.bundleSavingsCents <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black">
+      {product.normalBundlePriceCents > 0 ? (
+        <span className="rounded-full bg-neutral-100 px-2 py-1 text-neutral-500">
+          Normal: {money(product.normalBundlePriceCents, currency)}
+        </span>
+      ) : null}
+
+      {product.bundleSavingsCents > 0 ? (
+        <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700">
+          Save {money(product.bundleSavingsCents, currency)}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -133,9 +266,8 @@ export function POSClient({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-  const [availabilityFilter, setAvailabilityFilter] = useState<
-    'ALL' | 'AVAILABLE' | 'SOLD_OUT' | 'NOT_SET'
-  >('ALL');
+  const [availabilityFilter, setAvailabilityFilter] =
+    useState<AvailabilityFilter>('ALL');
 
   const [guestName, setGuestName] = useState('');
   const [roomId, setRoomId] = useState('');
@@ -174,11 +306,18 @@ export function POSClient({
         availabilityFilter === stockStatus ||
         (availabilityFilter === 'AVAILABLE' && stockStatus === 'AVAILABLE') ||
         (availabilityFilter === 'SOLD_OUT' && stockStatus === 'SOLD_OUT') ||
-        (availabilityFilter === 'NOT_SET' && stockStatus === 'NOT_SET');
+        (availabilityFilter === 'NOT_SET' && stockStatus === 'NOT_SET') ||
+        (availabilityFilter === 'BUNDLE' && product.isDerivedStock);
+
+      const componentText = product.bundleComponents
+        .map((component) => component.name)
+        .join(' ');
 
       const matchesSearch =
         !lowerQuery ||
-        `${product.name} ${product.description || ''} ${product.categoryName}`
+        `${product.name} ${product.description || ''} ${
+          product.categoryName
+        } ${componentText} ${product.limitingComponentName || ''}`
           .toLowerCase()
           .includes(lowerQuery);
 
@@ -419,7 +558,7 @@ export function POSClient({
                   <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search menu product..."
+                    placeholder="Search product, bundle, or component..."
                     className="w-full bg-transparent text-sm font-semibold outline-none"
                   />
                 </div>
@@ -433,7 +572,7 @@ export function POSClient({
                   value={availabilityFilter}
                   onChange={(event) =>
                     setAvailabilityFilter(
-                      event.target.value as typeof availabilityFilter
+                      event.target.value as AvailabilityFilter
                     )
                   }
                   className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
@@ -442,6 +581,7 @@ export function POSClient({
                   <option value="AVAILABLE">Available</option>
                   <option value="SOLD_OUT">Sold Out</option>
                   <option value="NOT_SET">Stock Not Set</option>
+                  <option value="BUNDLE">Bundles Only</option>
                 </select>
               </div>
             </div>
@@ -495,7 +635,7 @@ export function POSClient({
                     }}
                   >
                     <span
-                      className={`absolute left-3 top-3 rounded-full px-3 py-1 text-[10px] font-black ${getStockBadgeClass(
+                      className={`absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-3 py-1 text-[10px] font-black ${getStockBadgeClass(
                         product
                       )}`}
                     >
@@ -514,13 +654,19 @@ export function POSClient({
                   <div className="p-3 sm:p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="truncate text-base font-black sm:text-lg">
-                          {product.name}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate text-base font-black sm:text-lg">
+                            {product.name}
+                          </h3>
+                          <BundleBadge product={product} />
+                        </div>
 
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
                           {product.description || 'No description'}
                         </p>
+
+                        <BundleSavings product={product} currency={currency} />
+                        <BundleIncludes product={product} compact />
                       </div>
 
                       <span
@@ -636,13 +782,24 @@ export function POSClient({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="truncate font-black">{product.name}</h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate font-black">
+                              {product.name}
+                            </h3>
+                            <BundleBadge product={product} />
+                          </div>
+
                           <p className="mt-1 text-sm font-bold text-neutral-500">
                             {money(product.priceCents, currency)}
                           </p>
+
                           <p className="mt-1 text-xs font-bold text-neutral-400">
-                            Stock left: {product.availableQty}
+                            {product.isDerivedStock
+                              ? `Can sell: ${product.availableQty}`
+                              : `Stock left: ${product.availableQty}`}
                           </p>
+
+                          <BundleIncludes product={product} compact />
                         </div>
 
                         <button
@@ -729,7 +886,9 @@ export function POSClient({
                   <select
                     value={paymentMethod}
                     onChange={(event) =>
-                      setPaymentMethod(event.target.value as typeof paymentMethod)
+                      setPaymentMethod(
+                        event.target.value as typeof paymentMethod
+                      )
                     }
                     className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none"
                   >

@@ -1,6 +1,7 @@
 import { getCurrentUser } from '@/lib/auth';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { MobileNav } from '@/components/dashboard/MobileNav';
+import { RealtimeDashboardNotifications } from '@/components/dashboard/RealtimeDashboardNotifications';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -24,8 +25,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 {user.role.replaceAll('_', ' ')}
               </span>
             </p>
+            
           </div>
-
+            <RealtimeDashboardNotifications />
           <a
             href="/dashboard/logout"
             className="rounded-2xl border border-neutral-200 px-4 py-2 text-sm font-bold hover:bg-neutral-100"

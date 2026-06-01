@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { MenuProductType } from '@prisma/client';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -19,14 +20,34 @@ import {
   deleteCategoryAction,
   deleteProductAction,
   updateCategoryAction,
-  updateProductAction
+  updateProductAction,
 } from './actions';
+
+type BundleComponentOption = {
+  id: string;
+  hotelId: string;
+  name: string;
+  priceCents: number;
+  isAvailable: boolean;
+  productType: MenuProductType;
+  hotel: {
+    name: string;
+  };
+  category: {
+    name: string;
+  };
+};
+
+type BundleComponentValue = {
+  componentProductId: string;
+  quantity: number;
+};
 
 function FormField({
   label,
   helper,
   children,
-  className = ''
+  className = '',
 }: {
   label: string;
   helper?: string;
@@ -51,7 +72,7 @@ function Modal({
   title,
   description,
   children,
-  size = 'max-w-3xl'
+  size = 'max-w-3xl',
 }: {
   id: string;
   title: string;
@@ -82,9 +103,7 @@ function Modal({
         </form>
       </div>
 
-      <div className="max-h-[78vh] overflow-y-auto p-5">
-        {children}
-      </div>
+      <div className="max-h-[78vh] overflow-y-auto p-5">{children}</div>
     </dialog>
   );
 }
@@ -99,7 +118,7 @@ const fallbackFoodImages = {
   tea:
     'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=900&q=80',
   default:
-    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80'
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80',
 };
 
 function getProductImage(product: {
@@ -111,16 +130,142 @@ function getProductImage(product: {
 
   const text = `${product.name} ${product.category.name}`.toLowerCase();
 
-  if (text.includes('pancake') || text.includes('breakfast')) return fallbackFoodImages.breakfast;
-  if (text.includes('sandwich') || text.includes('club')) return fallbackFoodImages.sandwich;
-  if (text.includes('burger')) return fallbackFoodImages.burger;
-  if (text.includes('tea') || text.includes('drink')) return fallbackFoodImages.tea;
+  if (text.includes('pancake') || text.includes('breakfast')) {
+    return fallbackFoodImages.breakfast;
+  }
+
+  if (text.includes('sandwich') || text.includes('club')) {
+    return fallbackFoodImages.sandwich;
+  }
+
+  if (text.includes('burger')) {
+    return fallbackFoodImages.burger;
+  }
+
+  if (text.includes('tea') || text.includes('drink')) {
+    return fallbackFoodImages.tea;
+  }
 
   return fallbackFoodImages.default;
 }
 
+function productTypeLabel(productType: MenuProductType) {
+  return productType === MenuProductType.BUNDLE
+    ? 'Bundle / Combo'
+    : 'Single Item';
+}
+
+function getBundleNormalTotalCents(
+  components: Array<{
+    quantity: number;
+    componentProduct: {
+      priceCents: number;
+    };
+  }>
+) {
+  return components.reduce(
+    (sum, component) =>
+      sum + component.quantity * component.componentProduct.priceCents,
+    0
+  );
+}
+
+function BundleComponentFields({
+  componentOptions,
+  defaultComponents = [],
+  currentProductId,
+}: {
+  componentOptions: BundleComponentOption[];
+  defaultComponents?: BundleComponentValue[];
+  currentProductId?: string;
+}) {
+  const maxRows = Math.max(6, defaultComponents.length + 2);
+  const rows = Array.from({ length: maxRows }, (_, index) => {
+    return (
+      defaultComponents[index] ?? {
+        componentProductId: '',
+        quantity: 1,
+      }
+    );
+  });
+
+  const availableComponentOptions = componentOptions.filter(
+    (option) =>
+      option.productType === MenuProductType.SINGLE &&
+      option.id !== currentProductId
+  );
+
+  return (
+    <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 md:col-span-2">
+      <div className="mb-4">
+        <p className="text-sm font-black text-amber-900">Bundle Components</p>
+        <p className="mt-1 text-xs font-bold leading-relaxed text-amber-800">
+          Use this section only when Product Type is set to Bundle / Combo.
+          Select the single menu items included in the bundle and the quantity
+          required for each bundle sold.
+        </p>
+      </div>
+
+      {availableComponentOptions.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-amber-300 bg-white/70 p-4 text-sm font-bold text-amber-800">
+          Create single menu items first before creating a bundle.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((row, index) => (
+            <div
+              key={`bundle-component-row-${index}`}
+              className="grid gap-2 rounded-2xl bg-white/80 p-3 md:grid-cols-[1fr_140px]"
+            >
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase tracking-[0.12em] text-amber-700">
+                  Component Item {index + 1}
+                </span>
+                <select
+                  name="bundleComponentProductId"
+                  defaultValue={row.componentProductId}
+                  className="h-11 rounded-2xl border border-amber-200 bg-white px-4 text-sm font-bold outline-none"
+                >
+                  <option value="">No component</option>
+                  {availableComponentOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.hotel.name} · {option.category.name} ·{' '}
+                      {option.name} · {money(option.priceCents)}
+                      {!option.isAvailable ? ' (Hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-1">
+                <span className="text-xs font-black uppercase tracking-[0.12em] text-amber-700">
+                  Qty
+                </span>
+                <input
+                  name="bundleComponentQuantity"
+                  type="number"
+                  min="1"
+                  step="1"
+                  defaultValue={row.quantity}
+                  className="h-11 rounded-2xl border border-amber-200 bg-white px-4 text-sm font-bold outline-none"
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-4 rounded-2xl bg-white/70 p-3 text-xs font-bold leading-relaxed text-amber-900">
+        Example: Breakfast Combo can include 1 Breakfast Pancakes and 1 Iced
+        Tea. When a guest orders 2 combos, inventory should deduct 2 Pancakes
+        and 2 Iced Tea in the next inventory step.
+      </p>
+    </div>
+  );
+}
+
 export default async function MenuManagementPage({
-  searchParams
+  searchParams,
 }: {
   searchParams?: Promise<{ success?: string }>;
 }) {
@@ -128,12 +273,13 @@ export default async function MenuManagementPage({
   const user = await requireUser();
 
   const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
-  const itemWhere = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+  const itemWhere =
+    user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
   const [hotels, categories, products] = await Promise.all([
     db.hotel.findMany({
       where: hotelWhere,
-      orderBy: { name: 'asc' }
+      orderBy: { name: 'asc' },
     }),
 
     db.menuCategory.findMany({
@@ -142,15 +288,15 @@ export default async function MenuManagementPage({
         hotel: true,
         _count: {
           select: {
-            products: true
-          }
-        }
+            products: true,
+          },
+        },
       },
       orderBy: [
         { hotel: { name: 'asc' } },
         { sortOrder: 'asc' },
-        { name: 'asc' }
-      ]
+        { name: 'asc' },
+      ],
     }),
 
     db.menuProduct.findMany({
@@ -160,41 +306,55 @@ export default async function MenuManagementPage({
         category: true,
         images: {
           orderBy: { sortOrder: 'asc' },
-          take: 1
+          take: 1,
         },
         recipes: {
           include: {
-            inventoryItem: true
-          }
-        }
+            inventoryItem: true,
+          },
+        },
+        bundleComponents: {
+          include: {
+            componentProduct: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
-    })
+      orderBy: { createdAt: 'desc' },
+    }),
   ]);
+
+  const componentOptions = products.filter(
+    (product) => product.productType === MenuProductType.SINGLE
+  );
 
   return (
     <div>
       <PageHeader
         title="Menu Management"
-        description="Digital menu categories, products, images, pricing, availability, and recipe links."
+        description="Digital menu categories, products, images, pricing, availability, bundle menus, and recipe links."
       />
-        <DashboardSuccess
-            success={params?.success}
-            messages={{
-              'category-created': 'Category successfully added.',
-              'category-updated': 'Category successfully updated.',
-              'category-deleted': 'Category successfully deleted.',
-              'product-created': 'Product successfully added.',
-              'product-updated': 'Product successfully updated.',
-              'product-deleted': 'Product successfully deleted.'
-            }}
-          />
+
+      <DashboardSuccess
+        success={params?.success}
+        messages={{
+          'category-created': 'Category successfully added.',
+          'category-updated': 'Category successfully updated.',
+          'category-deleted': 'Category successfully deleted.',
+          'product-created': 'Product successfully added.',
+          'product-updated': 'Product successfully updated.',
+          'product-deleted': 'Product successfully deleted.',
+        }}
+      />
 
       <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-xl font-black">Products</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            These items appear in the Guest Portal and POS Terminal.
+            These items appear in the Guest Portal and POS Terminal. Products
+            can now be single items or fixed bundles.
           </p>
         </div>
 
@@ -221,6 +381,14 @@ export default async function MenuManagementPage({
         {products.map((product) => {
           const imageUrl = getProductImage(product);
           const editModalId = `edit-product-${product.id}`;
+          const isBundle = product.productType === MenuProductType.BUNDLE;
+          const bundleNormalTotalCents = getBundleNormalTotalCents(
+            product.bundleComponents
+          );
+          const bundleSavingsCents =
+            isBundle && bundleNormalTotalCents > product.priceCents
+              ? bundleNormalTotalCents - product.priceCents
+              : 0;
 
           return (
             <article
@@ -236,23 +404,78 @@ export default async function MenuManagementPage({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-lg font-black">{product.name}</h3>
-                      <StatusBadge status={product.isAvailable ? 'Available' : 'Hidden'} />
+                      <h3 className="truncate text-lg font-black">
+                        {product.name}
+                      </h3>
+                      <StatusBadge
+                        status={product.isAvailable ? 'Available' : 'Hidden'}
+                      />
+                      <span
+                        className={
+                          isBundle
+                            ? 'rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800'
+                            : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600'
+                        }
+                      >
+                        {productTypeLabel(product.productType)}
+                      </span>
                     </div>
 
                     <p className="mt-1 text-sm font-semibold text-neutral-500">
-                      {product.hotel.name} · {product.category.name} · {product.prepTimeMinutes} min
+                      {product.hotel.name} · {product.category.name} ·{' '}
+                      {product.prepTimeMinutes} min
                     </p>
                   </div>
 
-                  <p className="shrink-0 text-xl font-black">{money(product.priceCents)}</p>
+                  <p className="shrink-0 text-xl font-black">
+                    {money(product.priceCents)}
+                  </p>
                 </div>
 
                 <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
                   {product.description || 'No description provided.'}
                 </p>
 
-                {product.recipes.length > 0 ? (
+                {isBundle ? (
+                  <div className="mt-4 rounded-2xl bg-amber-50 p-3">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+                      Bundle / Combo Includes
+                    </p>
+
+                    {product.bundleComponents.length > 0 ? (
+                      <>
+                        <div className="mt-2 space-y-1">
+                          {product.bundleComponents.map((component) => (
+                            <p
+                              key={component.id}
+                              className="text-sm font-bold text-neutral-700"
+                            >
+                              {component.quantity}×{' '}
+                              {component.componentProduct.name}
+                            </p>
+                          ))}
+                        </div>
+
+                        {bundleNormalTotalCents > 0 ? (
+                          <div className="mt-3 rounded-xl bg-white/80 p-3 text-xs font-black text-amber-900">
+                            <p>
+                              Normal total: {money(bundleNormalTotalCents)}
+                            </p>
+                            {bundleSavingsCents > 0 ? (
+                              <p className="mt-1">
+                                Guest saves: {money(bundleSavingsCents)}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="mt-2 text-sm font-bold text-amber-800">
+                        No bundle components yet.
+                      </p>
+                    )}
+                  </div>
+                ) : product.recipes.length > 0 ? (
                   <div className="mt-4 rounded-2xl bg-gold/10 p-3">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
                       Recipe / Stock Deduction
@@ -262,7 +485,9 @@ export default async function MenuManagementPage({
                       {product.recipes
                         .map(
                           (recipe) =>
-                            `${Number(recipe.quantity)} ${recipe.inventoryItem.unit} ${recipe.inventoryItem.name}`
+                            `${Number(recipe.quantity)} ${
+                              recipe.inventoryItem.unit
+                            } ${recipe.inventoryItem.name}`
                         )
                         .join(', ')}
                     </p>
@@ -284,11 +509,11 @@ export default async function MenuManagementPage({
 
                   <form action={deleteProductAction}>
                     <input type="hidden" name="productId" value={product.id} />
-                                  <ConfirmSubmitButton
-                  label="Delete"
-                  message="Are you sure you want to delete this product?"
-                  className="bg-red-600 text-white hover:bg-red-700"
-                />
+                    <ConfirmSubmitButton
+                      label="Delete"
+                      message="Are you sure you want to delete this product?"
+                      className="bg-red-600 text-white hover:bg-red-700"
+                    />
                   </form>
                 </div>
               </div>
@@ -296,7 +521,7 @@ export default async function MenuManagementPage({
               <Modal
                 id={editModalId}
                 title={`Edit ${product.name}`}
-                description="Update product details, pricing, image, and availability."
+                description="Update product details, pricing, image, availability, and bundle components."
               >
                 <form
                   action={updateProductAction}
@@ -306,13 +531,35 @@ export default async function MenuManagementPage({
                   <input type="hidden" name="productId" value={product.id} />
 
                   <FormField label="Menu Category">
-                    <Select name="categoryId" required defaultValue={product.categoryId}>
+                    <Select
+                      name="categoryId"
+                      required
+                      defaultValue={product.categoryId}
+                    >
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.hotel.name} · {category.name}
                           {!category.isActive ? ' (Hidden)' : ''}
                         </option>
                       ))}
+                    </Select>
+                  </FormField>
+
+                  <FormField
+                    label="Product Type"
+                    helper="Use Single Item for normal products. Use Bundle / Combo for fixed sets."
+                  >
+                    <Select
+                      name="productType"
+                      required
+                      defaultValue={product.productType}
+                    >
+                      <option value={MenuProductType.SINGLE}>
+                        Single Item
+                      </option>
+                      <option value={MenuProductType.BUNDLE}>
+                        Bundle / Combo
+                      </option>
                     </Select>
                   </FormField>
 
@@ -371,6 +618,17 @@ export default async function MenuManagementPage({
                     />
                   </FormField>
 
+                  <BundleComponentFields
+                    componentOptions={componentOptions}
+                    currentProductId={product.id}
+                    defaultComponents={product.bundleComponents.map(
+                      (component) => ({
+                        componentProductId: component.componentProductId,
+                        quantity: component.quantity,
+                      })
+                    )}
+                  />
+
                   <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
                     <input
                       name="isAvailable"
@@ -379,7 +637,9 @@ export default async function MenuManagementPage({
                       className="size-4 accent-black"
                     />
                     <span>
-                      <span className="block text-sm font-black">Available</span>
+                      <span className="block text-sm font-black">
+                        Available
+                      </span>
                       <span className="text-xs font-medium text-neutral-500">
                         Show this product in the guest portal and POS.
                       </span>
@@ -399,14 +659,17 @@ export default async function MenuManagementPage({
       <Modal
         id="product-modal"
         title="Add Product"
-        description="Create a new menu item with image, price, description, and availability."
+        description="Create a single menu item or a fixed bundle/combo."
       >
         <form
           action={createProductAction}
           encType="multipart/form-data"
           className="grid gap-5 md:grid-cols-2"
         >
-          <FormField label="Menu Category" helper="Select where this product will appear.">
+          <FormField
+            label="Menu Category"
+            helper="Select where this product will appear."
+          >
             <Select name="categoryId" required>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -417,16 +680,38 @@ export default async function MenuManagementPage({
             </Select>
           </FormField>
 
+          <FormField
+            label="Product Type"
+            helper="Choose Single Item or Bundle / Combo."
+          >
+            <Select name="productType" required defaultValue={MenuProductType.SINGLE}>
+              <option value={MenuProductType.SINGLE}>Single Item</option>
+              <option value={MenuProductType.BUNDLE}>Bundle / Combo</option>
+            </Select>
+          </FormField>
+
           <FormField label="Product Name">
             <Input name="name" placeholder="Club Sandwich" required />
           </FormField>
 
           <FormField label="Price" helper="Example: 280 means ₱280.00.">
-            <Input name="price" type="number" min="0" step="0.01" placeholder="280" required />
+            <Input
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="280"
+              required
+            />
           </FormField>
 
           <FormField label="Preparation Time">
-            <Input name="prepTimeMinutes" type="number" min="0" defaultValue="15" />
+            <Input
+              name="prepTimeMinutes"
+              type="number"
+              min="0"
+              defaultValue="15"
+            />
           </FormField>
 
           <FormField label="Upload Product Image" className="md:col-span-2">
@@ -442,8 +727,13 @@ export default async function MenuManagementPage({
           </FormField>
 
           <FormField label="Description" className="md:col-span-2">
-            <Textarea name="description" placeholder="Short product description." />
+            <Textarea
+              name="description"
+              placeholder="Short product description."
+            />
           </FormField>
+
+          <BundleComponentFields componentOptions={componentOptions} />
 
           <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
             <input
@@ -467,167 +757,201 @@ export default async function MenuManagementPage({
       </Modal>
 
       <Modal
-  id="category-modal"
-  title="Add / Manage Categories"
-  description="Create, update, hide/show, or delete menu categories."
-  size="max-w-6xl"
->
-  <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-    <Card>
-      <CardHeader>
-        <CardTitle>Add category</CardTitle>
-        <p className="mt-2 text-sm text-neutral-500">
-          Add menu groups like Breakfast, Mains, Dinner, Drinks, Desserts, or Poolside Menu.
-        </p>
-      </CardHeader>
+        id="category-modal"
+        title="Add / Manage Categories"
+        description="Create, update, hide/show, or delete menu categories."
+        size="max-w-6xl"
+      >
+        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add category</CardTitle>
+              <p className="mt-2 text-sm text-neutral-500">
+                Add menu groups like Breakfast, Mains, Dinner, Drinks,
+                Desserts, or Poolside Menu.
+              </p>
+            </CardHeader>
 
-      <CardContent>
-        <form action={createCategoryAction} className="space-y-5">
-          {user.role === 'SUPER_ADMIN' ? (
-            <FormField label="Hotel / Property" helper="Choose which hotel this category belongs to.">
-              <Select name="hotelId" required>
-                {hotels.map((hotel) => (
-                  <option key={hotel.id} value={hotel.id}>
-                    {hotel.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          ) : (
-            <input type="hidden" name="hotelId" value={user.hotelId!} />
-          )}
-
-          <FormField label="Category Name" helper="Example: Breakfast, Mains, Dinner, Drinks.">
-            <Input name="name" placeholder="Breakfast" required />
-          </FormField>
-
-          <FormField label="Sort Order" helper="Lower numbers appear first. Use 0 if unsure.">
-            <Input name="sortOrder" type="number" min="0" defaultValue="0" />
-          </FormField>
-
-          <Button className="w-full">Create Category</Button>
-        </form>
-      </CardContent>
-    </Card>
-
-    <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white">
-      <div className="border-b border-neutral-100 bg-neutral-50 p-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-xl font-black">Existing Categories</h3>
-            <p className="mt-1 text-sm text-neutral-500">
-              Edit category name, sort order, availability, or delete unused categories.
-            </p>
-          </div>
-
-          <span className="rounded-full bg-black px-4 py-2 text-sm font-black text-white">
-            {categories.length} categories
-          </span>
-        </div>
-      </div>
-
-      {categories.length === 0 ? (
-        <div className="p-6">
-          <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center">
-            <h4 className="text-lg font-black text-neutral-700">No categories yet</h4>
-            <p className="mt-2 text-sm text-neutral-500">
-              Create your first category using the form on the left.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <div className="min-w-[820px]">
-            <div className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] gap-3 border-b border-neutral-100 bg-neutral-50 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
-              <div>Hotel</div>
-              <div>Category</div>
-              <div>Sort</div>
-              <div>Available</div>
-              <div>Products</div>
-              <div className="text-right">Actions</div>
-            </div>
-
-            <div className="divide-y divide-neutral-100">
-              {categories.map((category) => {
-                const updateFormId = `update-category-${category.id}`;
-
-                return (
-                  <div
-                    key={category.id}
-                    className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] items-center gap-3 px-5 py-4"
+            <CardContent>
+              <form action={createCategoryAction} className="space-y-5">
+                {user.role === 'SUPER_ADMIN' ? (
+                  <FormField
+                    label="Hotel / Property"
+                    helper="Choose which hotel this category belongs to."
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-black text-neutral-700">
-                        {category.hotel.name}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-neutral-400">
-                        Property
-                      </p>
-                    </div>
+                    <Select name="hotelId" required>
+                      {hotels.map((hotel) => (
+                        <option key={hotel.id} value={hotel.id}>
+                          {hotel.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                ) : (
+                  <input type="hidden" name="hotelId" value={user.hotelId!} />
+                )}
 
-                    <form id={updateFormId} action={updateCategoryAction} className="contents">
-                      <input type="hidden" name="categoryId" value={category.id} />
+                <FormField
+                  label="Category Name"
+                  helper="Example: Breakfast, Mains, Dinner, Drinks."
+                >
+                  <Input name="name" placeholder="Breakfast" required />
+                </FormField>
 
-                      <div>
-                        <Input name="name" defaultValue={category.name} required />
-                      </div>
+                <FormField
+                  label="Sort Order"
+                  helper="Lower numbers appear first. Use 0 if unsure."
+                >
+                  <Input
+                    name="sortOrder"
+                    type="number"
+                    min="0"
+                    defaultValue="0"
+                  />
+                </FormField>
 
-                      <div>
-                        <Input
-                          name="sortOrder"
-                          type="number"
-                          min="0"
-                          defaultValue={category.sortOrder}
-                        />
-                      </div>
+                <Button className="w-full">Create Category</Button>
+              </form>
+            </CardContent>
+          </Card>
 
-                      <div>
-                        <label className="inline-flex items-center gap-2 rounded-2xl bg-neutral-50 px-3 py-2 text-sm font-black">
-                          <input
-                            name="isActive"
-                            type="checkbox"
-                            defaultChecked={category.isActive}
-                            className="size-4 accent-black"
-                          />
-                          Active
-                        </label>
-                      </div>
-                    </form>
+          <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white">
+            <div className="border-b border-neutral-100 bg-neutral-50 p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-black">Existing Categories</h3>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Edit category name, sort order, availability, or delete
+                    unused categories.
+                  </p>
+                </div>
 
-                    <div>
-                      <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-black">
-                        {category._count.products}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="submit"
-                        form={updateFormId}
-                        className="rounded-xl bg-black px-4 py-2 text-xs font-black text-white hover:bg-neutral-800"
-                      >
-                        Save
-                      </button>
-
-                      <form action={deleteCategoryAction}>
-                        <input type="hidden" name="categoryId" value={category.id} />
-                          <ConfirmSubmitButton
-                          label="Delete"
-                          message="Are you sure you want to delete this category?"
-                          className="bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500"
-                        />
-                      </form>
-                    </div>
-                  </div>
-                );
-              })}
+                <span className="rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+                  {categories.length} categories
+                </span>
+              </div>
             </div>
-          </div>
+
+            {categories.length === 0 ? (
+              <div className="p-6">
+                <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center">
+                  <h4 className="text-lg font-black text-neutral-700">
+                    No categories yet
+                  </h4>
+                  <p className="mt-2 text-sm text-neutral-500">
+                    Create your first category using the form on the left.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[820px]">
+                  <div className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] gap-3 border-b border-neutral-100 bg-neutral-50 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                    <div>Hotel</div>
+                    <div>Category</div>
+                    <div>Sort</div>
+                    <div>Available</div>
+                    <div>Products</div>
+                    <div className="text-right">Actions</div>
+                  </div>
+
+                  <div className="divide-y divide-neutral-100">
+                    {categories.map((category) => {
+                      const updateFormId = `update-category-${category.id}`;
+
+                      return (
+                        <div
+                          key={category.id}
+                          className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] items-center gap-3 px-5 py-4"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-black text-neutral-700">
+                              {category.hotel.name}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-neutral-400">
+                              Property
+                            </p>
+                          </div>
+
+                          <form
+                            id={updateFormId}
+                            action={updateCategoryAction}
+                            className="contents"
+                          >
+                            <input
+                              type="hidden"
+                              name="categoryId"
+                              value={category.id}
+                            />
+
+                            <div>
+                              <Input
+                                name="name"
+                                defaultValue={category.name}
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Input
+                                name="sortOrder"
+                                type="number"
+                                min="0"
+                                defaultValue={category.sortOrder}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="inline-flex items-center gap-2 rounded-2xl bg-neutral-50 px-3 py-2 text-sm font-black">
+                                <input
+                                  name="isActive"
+                                  type="checkbox"
+                                  defaultChecked={category.isActive}
+                                  className="size-4 accent-black"
+                                />
+                                Active
+                              </label>
+                            </div>
+                          </form>
+
+                          <div>
+                            <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-black">
+                              {category._count.products}
+                            </span>
+                          </div>
+
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="submit"
+                              form={updateFormId}
+                              className="rounded-xl bg-black px-4 py-2 text-xs font-black text-white hover:bg-neutral-800"
+                            >
+                              Save
+                            </button>
+
+                            <form action={deleteCategoryAction}>
+                              <input
+                                type="hidden"
+                                name="categoryId"
+                                value={category.id}
+                              />
+                              <ConfirmSubmitButton
+                                label="Delete"
+                                message="Are you sure you want to delete this category?"
+                                className="bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500"
+                              />
+                            </form>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
-      )}
-    </section>
-  </div>
-</Modal>
+      </Modal>
     </div>
   );
 }

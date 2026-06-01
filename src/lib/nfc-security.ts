@@ -17,16 +17,84 @@ function appSecret() {
   return process.env.AUTH_SECRET || 'dev-change-this-secret';
 }
 
+function isPrivateLanHostname(hostname: string) {
+  return (
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+  );
+}
+
+function shouldForceHttpsForHost(hostname: string) {
+  if (process.env.NEXT_PUBLIC_FORCE_HTTPS === 'false') {
+    return false;
+  }
+
+  if (process.env.NEXT_PUBLIC_FORCE_HTTPS === 'true') {
+    return true;
+  }
+
+  return (
+    process.env.NODE_ENV === 'production' ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    isPrivateLanHostname(hostname)
+  );
+}
+
 export function getPublicAppUrl() {
-  const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000';
   const lanIp = process.env.NEXT_PUBLIC_LAN_IP;
 
   if (rawUrl.includes('0.0.0.0')) {
-    if (lanIp) return `http://${lanIp}:3000`;
-    return 'http://localhost:3000';
+    if (lanIp) {
+      return `https://${lanIp}:3000`;
+    }
+
+    return 'https://localhost:3000';
   }
 
-  return rawUrl.replace(/\/$/, '');
+  try {
+    const url = new URL(rawUrl);
+
+    if (lanIp && url.hostname === 'localhost') {
+      url.hostname = lanIp;
+    }
+
+    if (shouldForceHttpsForHost(url.hostname)) {
+      url.protocol = 'https:';
+    }
+
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    const cleanedUrl = rawUrl.replace(/\/$/, '');
+
+    if (cleanedUrl.startsWith('http://')) {
+      return cleanedUrl.replace(/^http:\/\//i, 'https://');
+    }
+
+    return cleanedUrl;
+  }
+}
+
+export function isHttpsPublicAppUrl() {
+  return getPublicAppUrl().startsWith('https://');
+}
+
+export async function shouldUseSecureNfcCookies() {
+  if (isHttpsPublicAppUrl()) {
+    return true;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return true;
+  }
+
+  const h = await headers();
+  const forwardedProto = h.get('x-forwarded-proto');
+
+  return forwardedProto === 'https';
 }
 
 export function randomSecret() {
@@ -44,7 +112,9 @@ function safeEqual(a: string, b: string) {
   const left = Buffer.from(a);
   const right = Buffer.from(b);
 
-  if (left.length !== right.length) return false;
+  if (left.length !== right.length) {
+    return false;
+  }
 
   return crypto.timingSafeEqual(left, right);
 }
@@ -71,19 +141,22 @@ async function getRequestFingerprint() {
 
   return {
     userAgentHash: hashValue(userAgent),
-    ipHash: hashValue(ip)
+    ipHash: hashValue(ip),
   };
 }
 
-async function expireSessionAndRedirect(sessionId: string | null, tagCode: string) {
+async function expireSessionAndRedirect(
+  sessionId: string | null,
+  tagCode: string
+) {
   if (sessionId) {
     await db.nfcAccessSession.update({
       where: {
-        id: sessionId
+        id: sessionId,
       },
       data: {
-        revokedAt: new Date()
-      }
+        revokedAt: new Date(),
+      },
     });
   }
 
@@ -121,15 +194,16 @@ export async function createNfcAccessSession(tag: {
       ipHash: fingerprint.ipHash,
       expiresAt: absoluteExpiresAt,
       idleExpiresAt,
-      lastSeenAt: now
-    }
+      lastSeenAt: now,
+    },
   });
 
   cookieStore.set(NFC_ACCESS_COOKIE, rawToken, {
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
-  path: '/'
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: await shouldUseSecureNfcCookies(),
+    path: '/',
+    maxAge: getAccessTtlMinutes() * 60,
   });
 }
 
@@ -147,17 +221,17 @@ export async function requireNfcGuestAccess(tagCode: string) {
 
   const tag = await db.nfcTag.findUnique({
     where: {
-      code: tagCode
+      code: tagCode,
     },
     include: {
       hotel: {
         include: {
-          settings: true
-        }
+          settings: true,
+        },
       },
       room: true,
-      location: true
-    }
+      location: true,
+    },
   });
 
   if (!tag || tag.status !== 'ACTIVE' || tag.deletedAt) {
@@ -172,8 +246,8 @@ export async function requireNfcGuestAccess(tagCode: string) {
     where: {
       tagId: tag.id,
       tokenHash,
-      revokedAt: null
-    }
+      revokedAt: null,
+    },
   });
 
   if (!session) {
@@ -192,7 +266,10 @@ export async function requireNfcGuestAccess(tagCode: string) {
     await expireSessionAndRedirect(session.id, tagCode);
   }
 
-  if (session.userAgentHash && session.userAgentHash !== fingerprint.userAgentHash) {
+  if (
+    session.userAgentHash &&
+    session.userAgentHash !== fingerprint.userAgentHash
+  ) {
     await expireSessionAndRedirect(session.id, tagCode);
   }
 
@@ -203,12 +280,12 @@ export async function requireNfcGuestAccess(tagCode: string) {
 
   await db.nfcAccessSession.update({
     where: {
-      id: session.id
+      id: session.id,
     },
     data: {
       lastSeenAt: now,
-      idleExpiresAt: nextIdleExpiresAt
-    }
+      idleExpiresAt: nextIdleExpiresAt,
+    },
   });
 
   return tag;
@@ -217,7 +294,9 @@ export async function requireNfcGuestAccess(tagCode: string) {
 export function secureNfcLaunchUrl(code: string, scanSecret?: string | null) {
   const baseUrl = getPublicAppUrl();
 
-  if (!scanSecret) return '';
+  if (!scanSecret) {
+    return '';
+  }
 
   return `${baseUrl}/n/${code}?k=${scanSecret}`;
 }

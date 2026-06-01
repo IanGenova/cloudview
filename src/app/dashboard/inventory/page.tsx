@@ -1,3 +1,4 @@
+import { MenuProductType, OrderStatus } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -24,6 +25,8 @@ function getMessage(error?: string, success?: string) {
       'product-not-found': 'Menu item was not found.',
       'invalid-quantity': 'Please enter a valid quantity.',
       'positive-quantity-required': 'Quantity must be greater than zero.',
+      'bundle-stock-derived':
+        'Bundle stock is derived from its component items. Update the component stock instead.',
     };
 
     return {
@@ -33,6 +36,26 @@ function getMessage(error?: string, success?: string) {
   }
 
   return null;
+}
+
+function getLatestDate(values: Array<Date | null | undefined>) {
+  const timestamps = values
+    .filter((value): value is Date => Boolean(value))
+    .map((value) => value.getTime());
+
+  if (!timestamps.length) {
+    return null;
+  }
+
+  return new Date(Math.max(...timestamps));
+}
+
+function safeRequiredQuantity(value: number) {
+  if (!Number.isInteger(value) || value <= 0) {
+    return 1;
+  }
+
+  return value;
 }
 
 export default async function InventoryPage({
@@ -58,6 +81,21 @@ export default async function InventoryPage({
             name: true,
           },
         },
+        bundleComponents: {
+          include: {
+            componentProduct: {
+              select: {
+                id: true,
+                name: true,
+                isAvailable: true,
+                productType: true,
+              },
+            },
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
       },
       orderBy: [
         {
@@ -78,6 +116,7 @@ export default async function InventoryPage({
           select: {
             name: true,
             isAvailable: true,
+            productType: true,
           },
         },
         hotel: {
@@ -121,45 +160,181 @@ export default async function InventoryPage({
     }),
   ]);
 
+  const productIds = products.map((product) => product.id);
+
+  const soldGroups = productIds.length
+    ? await db.orderItem.groupBy({
+        by: ['productId'],
+        where: {
+          productId: {
+            in: productIds,
+          },
+          order: {
+            status: {
+              not: OrderStatus.CANCELLED,
+            },
+          },
+        },
+        _sum: {
+          quantity: true,
+        },
+      })
+    : [];
+
+  const soldQtyByProductId = new Map<string, number>();
+
+  for (const group of soldGroups) {
+    if (group.productId) {
+      soldQtyByProductId.set(group.productId, group._sum.quantity ?? 0);
+    }
+  }
+
   const stockByProductId = new Map(
     stocks.map((stock) => [stock.productId, stock])
   );
 
   const menuItems = products.map((product) => {
     const stock = stockByProductId.get(product.id);
+    const isBundle = product.productType === MenuProductType.BUNDLE;
+
+    if (!isBundle) {
+      return {
+        id: product.id,
+        hotelId: product.hotelId,
+        hotelName: product.hotel.name,
+        name: product.name,
+        productType: product.productType,
+        isBundle: false,
+        isDerivedStock: false,
+        isMenuActive: product.isAvailable,
+        stockId: stock?.id ?? null,
+        availableQty: stock?.availableQty ?? 0,
+        soldQty: stock?.soldQty ?? soldQtyByProductId.get(product.id) ?? 0,
+        isSoldOut: stock?.isSoldOut ?? true,
+        notes: stock?.notes ?? '',
+        updatedAt: stock?.updatedAt?.toISOString() ?? null,
+        bundleComponents: [],
+        limitingComponentName: null,
+      };
+    }
+
+    const bundleComponents = product.bundleComponents.map((component) => {
+      const componentStock = stockByProductId.get(component.componentProductId);
+      const requiredQty = safeRequiredQuantity(component.quantity);
+
+      const componentAvailableQty = componentStock?.availableQty ?? 0;
+      const componentSoldQty = componentStock?.soldQty ?? 0;
+
+      const canSellQty =
+        component.componentProduct.isAvailable &&
+        componentStock &&
+        !componentStock.isSoldOut &&
+        componentAvailableQty > 0
+          ? Math.floor(componentAvailableQty / requiredQty)
+          : 0;
+
+      return {
+        id: component.id,
+        productId: component.componentProductId,
+        name: component.componentProduct.name,
+        quantity: requiredQty,
+        isMenuActive: component.componentProduct.isAvailable,
+        availableQty: componentAvailableQty,
+        soldQty: componentSoldQty,
+        isSoldOut:
+          !component.componentProduct.isAvailable ||
+          !componentStock ||
+          componentStock.isSoldOut ||
+          componentAvailableQty < requiredQty,
+        canSellQty,
+        updatedAt: componentStock?.updatedAt ?? null,
+      };
+    });
+
+    const limitingComponent =
+      bundleComponents.length > 0
+        ? bundleComponents.reduce((lowest, component) =>
+            component.canSellQty < lowest.canSellQty ? component : lowest
+          )
+        : null;
+
+    const derivedAvailableQty =
+      bundleComponents.length > 0
+        ? Math.min(...bundleComponents.map((component) => component.canSellQty))
+        : 0;
+
+    const latestComponentStockUpdatedAt = getLatestDate(
+      bundleComponents.map((component) => component.updatedAt)
+    );
+
+    const derivedSoldQty = soldQtyByProductId.get(product.id) ?? 0;
+
+    const derivedNotes =
+      bundleComponents.length > 0
+        ? `Derived from ${bundleComponents.length} component${
+            bundleComponents.length === 1 ? '' : 's'
+          }.${
+            limitingComponent
+              ? ` Limiting item: ${limitingComponent.name}.`
+              : ''
+          }`
+        : 'Bundle has no components yet. Add components in Menu Management.';
 
     return {
       id: product.id,
       hotelId: product.hotelId,
       hotelName: product.hotel.name,
       name: product.name,
+      productType: product.productType,
+      isBundle: true,
+      isDerivedStock: true,
       isMenuActive: product.isAvailable,
-      stockId: stock?.id ?? null,
-      availableQty: stock?.availableQty ?? 0,
-      soldQty: stock?.soldQty ?? 0,
-      isSoldOut: stock?.isSoldOut ?? true,
-      notes: stock?.notes ?? '',
-      updatedAt: stock?.updatedAt?.toISOString() ?? null,
+      stockId: `bundle-derived-${product.id}`,
+      availableQty: derivedAvailableQty,
+      soldQty: derivedSoldQty,
+      isSoldOut: derivedAvailableQty <= 0,
+      notes: derivedNotes,
+      updatedAt: latestComponentStockUpdatedAt?.toISOString() ?? null,
+      bundleComponents,
+      limitingComponentName: limitingComponent?.name ?? null,
     };
   });
 
+  const directStockItems = menuItems.filter(
+    (item) => item.productType !== MenuProductType.BUNDLE
+  );
+
   const totalMenuItems = menuItems.length;
+
   const activeMenuItems = menuItems.filter((item) => item.isMenuActive).length;
+
   const availableItems = menuItems.filter(
     (item) => item.isMenuActive && item.availableQty > 0 && !item.isSoldOut
   ).length;
+
   const soldOutItems = menuItems.filter(
     (item) => item.isSoldOut || item.availableQty <= 0
   ).length;
-  const totalAvailableQty = menuItems.reduce(
+
+  /**
+   * Keep these summary totals based on direct stock items only.
+   * Bundle available quantity is derived from component stock, so adding it here
+   * would double-count the same inventory.
+   */
+  const totalAvailableQty = directStockItems.reduce(
     (sum, item) => sum + item.availableQty,
     0
   );
-  const totalSoldQty = menuItems.reduce((sum, item) => sum + item.soldQty, 0);
+
+  const totalSoldQty = directStockItems.reduce(
+    (sum, item) => sum + item.soldQty,
+    0
+  );
 
   return (
     <div>
       <RealtimeInventoryRefresh />
+
       <PageHeader
         title="Menu Inventory Management"
         description="Manage menu item availability and live stock counts shown to guests."
