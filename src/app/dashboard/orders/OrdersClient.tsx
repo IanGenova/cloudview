@@ -2,100 +2,150 @@
 
 import { useMemo, useState } from 'react';
 import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  Eye,
-  PackageCheck,
-  Printer,
-  ReceiptText,
-  Search,
-  ShoppingBag,
-  X,
-  XCircle,
-} from 'lucide-react';
-import { markOrderPaidAction, updateOrderStatusAction } from './actions';
+  MenuAvailabilityMovementType,
+  MenuProductType,
+  ServiceAvailabilityMovementType,
+  ServiceBillingMode,
+} from '@prisma/client';
+import { Card, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import {
+  controlMenuStockAction,
+  controlServiceStockAction,
+  disableServiceInventoryAction,
+  enableServiceInventoryAction,
+  initializeMenuStocksAction,
+  initializeServiceStocksAction,
+} from './actions';
 
-type OrderStatusValue =
-  | 'PENDING'
-  | 'ACCEPTED'
-  | 'PREPARING'
-  | 'READY'
-  | 'DELIVERED'
-  | 'CANCELLED';
+type InventoryTab = 'menu' | 'services';
 
-type PaymentStatusValue = 'UNPAID' | 'PAID' | 'REFUNDED';
-type PaymentMethodValue = 'CASH' | 'POS' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER';
-
-type OrderItem = {
+type BundleComponent = {
   id: string;
+  productId: string;
+  name: string;
   quantity: number;
-  productNameSnapshot: string;
-  unitPriceCents: number;
-  notes: string;
+  isMenuActive: boolean;
+  availableQty: number;
+  soldQty: number;
+  isSoldOut: boolean;
+  canSellQty: number;
+  updatedAt: string | Date | null;
 };
 
-type StatusHistoryItem = {
+type MenuItem = {
   id: string;
-  status: OrderStatusValue;
-  note: string;
-  createdAt: string;
-  userName: string;
-};
-
-type OrderItemData = {
-  id: string;
-  orderCode: string;
+  hotelId: string;
   hotelName: string;
-  roomLabel: string;
-  guestName: string;
+  name: string;
+  productType: MenuProductType;
+  isBundle: boolean;
+  isDerivedStock: boolean;
+  isMenuActive: boolean;
+  stockId: string | null;
+  availableQty: number;
+  soldQty: number;
+  isSoldOut: boolean;
   notes: string;
-  status: OrderStatusValue;
-  paymentStatus: PaymentStatusValue;
-  paymentMethod: PaymentMethodValue;
-  totalCents: number;
-  subtotalCents: number;
-  serviceChargeCents: number;
-  taxCents: number;
-  createdAt: string;
-  updatedAt: string;
-  tagCode: string;
-  items: OrderItem[];
-  statusHistory: StatusHistoryItem[];
+  updatedAt: string | Date | null;
+  bundleComponents: BundleComponent[];
+  limitingComponentName: string | null;
 };
 
-type StatusFilter = 'ALL' | OrderStatusValue;
-type TabValue = 'LIVE' | 'ALL' | 'UNPAID' | 'HISTORY';
+type ServiceItem = {
+  id: string;
+  hotelId: string;
+  hotelName: string;
+  code: string;
+  name: string;
+  category: string;
+  description: string;
+  iconKey: string;
+  billingMode: ServiceBillingMode;
+  unitPrice: number;
+  unitLabel: string;
+  isActive: boolean;
+  inventoryTracked: boolean;
+  stockId: string | null;
+  availableQty: number;
+  usedQty: number;
+  isSoldOut: boolean;
+  notes: string;
+  updatedAt: string | Date | null;
+};
 
-const statusFilters: Array<{
-  value: StatusFilter;
-  label: string;
-}> = [
-  { value: 'ALL', label: 'All Orders' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'ACCEPTED', label: 'Accepted' },
-  { value: 'PREPARING', label: 'Preparing' },
-  { value: 'READY', label: 'Ready' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-];
+type MenuMovement = {
+  id: string;
+  hotelName: string;
+  productName: string;
+  type: MenuAvailabilityMovementType;
+  quantity: number;
+  balanceAfter: number;
+  reason: string;
+  createdAt: string;
+};
 
-const liveStatuses: OrderStatusValue[] = [
-  'PENDING',
-  'ACCEPTED',
-  'PREPARING',
-  'READY',
-];
+type ServiceMovement = {
+  id: string;
+  hotelName: string;
+  serviceName: string;
+  serviceCategory: string;
+  type: ServiceAvailabilityMovementType;
+  quantity: number;
+  balanceAfter: number;
+  reason: string;
+  createdAt: string;
+};
 
-function money(cents: number) {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-  }).format(cents / 100);
-}
+type Message =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
 
-function formatDateTime(value: string) {
+type MenuSummary = {
+  totalMenuItems: number;
+  activeMenuItems: number;
+  availableItems: number;
+  soldOutItems: number;
+  totalAvailableQty: number;
+  totalSoldQty: number;
+};
+
+type ServiceSummary = {
+  totalServices: number;
+  activeServices: number;
+  trackedServices: number;
+  serviceAvailableItems: number;
+  serviceSoldOutItems: number;
+  serviceTotalAvailableQty: number;
+  serviceTotalUsedQty: number;
+};
+
+type MenuFilterValue =
+  | 'ALL'
+  | 'AVAILABLE'
+  | 'SOLD_OUT'
+  | 'NOT_SET'
+  | 'MENU_HIDDEN'
+  | 'BUNDLE';
+
+type ServiceFilterValue =
+  | 'ALL'
+  | 'TRACKED'
+  | 'UNTRACKED'
+  | 'AVAILABLE'
+  | 'SOLD_OUT'
+  | 'HIDDEN';
+
+function formatDateTime(value: string | Date | null) {
+  if (!value) {
+    return 'Not updated yet';
+  }
+
   return new Intl.DateTimeFormat('en-PH', {
     month: 'short',
     day: 'numeric',
@@ -105,826 +155,1324 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value));
+function money(value: number) {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+  }).format(value);
 }
 
-function statusLabel(status: string) {
-  return status.replaceAll('_', ' ');
-}
-
-function getStatusClass(status: OrderStatusValue) {
-  switch (status) {
-    case 'PENDING':
-      return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200';
-    case 'ACCEPTED':
-      return 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200';
-    case 'PREPARING':
-      return 'bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-200';
-    case 'READY':
-      return 'bg-gold/20 text-ink dark:bg-gold/20 dark:text-gold';
-    case 'DELIVERED':
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
-    case 'CANCELLED':
-      return 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200';
-    default:
-      return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
-  }
-}
-
-function getPaymentClass(status: PaymentStatusValue) {
-  if (status === 'PAID') {
-    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
+function getMenuStatusLabel(item: MenuItem) {
+  if (!item.isMenuActive) {
+    return 'MENU HIDDEN';
   }
 
-  if (status === 'REFUNDED') {
-    return 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300';
+  if (item.isDerivedStock && item.bundleComponents.length === 0) {
+    return 'NOT SET';
   }
 
-  return 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200';
-}
-
-function getOrderSource(order: OrderItemData) {
-  if (order.tagCode) return 'Guest Portal';
-  if (order.roomLabel !== 'Guest location') return 'POS / Room Charge';
-  return 'POS / Walk-in';
-}
-
-function extractOrderType(notes: string) {
-  if (!notes) return '';
-
-  const line = notes
-    .split('\n')
-    .find((item) => item.toLowerCase().startsWith('order type:'));
-
-  if (!line) return '';
-
-  return line.replace(/^Order Type:\s*/i, '').trim();
-}
-
-function nextActionsForStatus(status: OrderStatusValue) {
-  switch (status) {
-    case 'PENDING':
-      return [
-        {
-          label: 'Accept Order',
-          status: 'ACCEPTED' as OrderStatusValue,
-          tone: 'primary' as const,
-        },
-        {
-          label: 'Reject',
-          status: 'CANCELLED' as OrderStatusValue,
-          tone: 'danger' as const,
-        },
-      ];
-
-    case 'ACCEPTED':
-      return [
-        {
-          label: 'Start Preparing',
-          status: 'PREPARING' as OrderStatusValue,
-          tone: 'primary' as const,
-        },
-        {
-          label: 'Cancel',
-          status: 'CANCELLED' as OrderStatusValue,
-          tone: 'danger' as const,
-        },
-      ];
-
-    case 'PREPARING':
-      return [
-        {
-          label: 'Mark Ready',
-          status: 'READY' as OrderStatusValue,
-          tone: 'primary' as const,
-        },
-        {
-          label: 'Cancel',
-          status: 'CANCELLED' as OrderStatusValue,
-          tone: 'danger' as const,
-        },
-      ];
-
-    case 'READY':
-      return [
-        {
-          label: 'Mark Delivered',
-          status: 'DELIVERED' as OrderStatusValue,
-          tone: 'primary' as const,
-        },
-      ];
-
-    default:
-      return [];
+  if (!item.isDerivedStock && !item.stockId) {
+    return 'NOT SET';
   }
+
+  if (item.isSoldOut || item.availableQty <= 0) {
+    return 'SOLD OUT';
+  }
+
+  return 'AVAILABLE';
 }
 
-function ActionButton({
-  orderId,
-  status,
-  label,
-  tone,
+function getServiceStatusLabel(item: ServiceItem) {
+  if (!item.isActive) {
+    return 'HIDDEN';
+  }
+
+  if (!item.inventoryTracked) {
+    return 'NOT TRACKED';
+  }
+
+  if (!item.stockId) {
+    return 'NOT SET';
+  }
+
+  if (item.isSoldOut || item.availableQty <= 0) {
+    return 'SOLD OUT';
+  }
+
+  return 'AVAILABLE';
+}
+
+function getStatusClass(status: string) {
+  if (status === 'AVAILABLE') {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  if (status === 'SOLD OUT') {
+    return 'bg-red-100 text-red-700';
+  }
+
+  if (status === 'MENU HIDDEN' || status === 'HIDDEN') {
+    return 'bg-neutral-200 text-neutral-600';
+  }
+
+  if (status === 'NOT TRACKED') {
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  return 'bg-amber-100 text-amber-700';
+}
+
+function getProductTypeLabel(item: MenuItem) {
+  return item.isDerivedStock ? 'Bundle / Derived Stock' : 'Single Item Stock';
+}
+
+function getProductTypeClass(item: MenuItem) {
+  return item.isDerivedStock
+    ? 'bg-amber-100 text-amber-800'
+    : 'bg-neutral-100 text-neutral-600';
+}
+
+function getBillingLabel(value: ServiceBillingMode) {
+  if (value === 'FREE') {
+    return 'Free';
+  }
+
+  if (value === 'FIXED_PRICE') {
+    return 'Paid Add-on';
+  }
+
+  return 'Confirm Price';
+}
+
+function getBillingClass(value: ServiceBillingMode) {
+  if (value === 'FREE') {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  if (value === 'FIXED_PRICE') {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  return 'bg-blue-100 text-blue-700';
+}
+
+function Modal({
+  title,
+  description,
+  children,
+  onClose,
+  maxWidth = 'max-w-xl',
 }: {
-  orderId: string;
-  status: OrderStatusValue;
-  label: string;
-  tone: 'primary' | 'danger';
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  maxWidth?: string;
 }) {
   return (
-    <form action={updateOrderStatusAction}>
-      <input type="hidden" name="orderId" value={orderId} />
-      <input type="hidden" name="status" value={status} />
-
-      <button
-        type="submit"
-        className={
-          tone === 'danger'
-            ? 'h-10 w-full rounded-2xl bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700'
-            : 'h-10 w-full rounded-2xl bg-black px-4 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
-        }
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
+      <div
+        className={`max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl`}
       >
-        {label}
-      </button>
-    </form>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black">{title}</h2>
+            {description ? (
+              <p className="mt-1 text-sm text-neutral-500">{description}</p>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            aria-label="Close modal"
+          >
+            ✕
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
   );
 }
 
-function MarkPaidButton({ orderId }: { orderId: string }) {
+function BundleDerivedStockModal({
+  item,
+  onClose,
+}: {
+  item: MenuItem;
+  onClose: () => void;
+}) {
   return (
-    <form action={markOrderPaidAction}>
-      <input type="hidden" name="orderId" value={orderId} />
+    <Modal
+      title="Bundle Derived Stock"
+      description="Bundle stock is calculated from component menu item stock."
+      onClose={onClose}
+      maxWidth="max-w-3xl"
+    >
+      <div className="mb-5 rounded-3xl bg-amber-50 p-4">
+        <p className="text-xs font-black uppercase text-amber-700">
+          Bundle Menu Item
+        </p>
+        <h3 className="mt-1 text-xl font-black text-neutral-950">
+          {item.name}
+        </h3>
+        <p className="mt-1 text-sm font-semibold text-amber-800">
+          {item.hotelName}
+        </p>
 
-      <button
-        type="submit"
-        className="h-10 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-800"
-      >
-        Mark Paid
-      </button>
-    </form>
+        <div className="mt-4 grid gap-2 text-center md:grid-cols-4">
+          <Metric label="Can Sell" value={item.availableQty} strong />
+          <Metric label="Sold" value={item.soldQty} />
+          <Metric label="Status" value={getMenuStatusLabel(item)} small />
+          <Metric
+            label="Limiting Item"
+            value={item.limitingComponentName || 'None'}
+            small
+          />
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-amber-200 bg-white p-4">
+        <p className="font-black text-neutral-950">Bundle Components</p>
+        <p className="mt-1 text-sm text-neutral-500">
+          Each bundle sold deducts stock from these component items.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {item.bundleComponents.map((component) => (
+            <div
+              key={component.id}
+              className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-black text-neutral-950">
+                    {component.name}
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Requires {component.quantity} per bundle
+                  </p>
+                </div>
+
+                <span
+                  className={
+                    component.isSoldOut
+                      ? 'rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700'
+                      : 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
+                  }
+                >
+                  {component.isSoldOut ? 'Limiting / Sold Out' : 'Available'}
+                </span>
+              </div>
+
+              <div className="mt-3 grid gap-2 text-center md:grid-cols-4">
+                <Metric
+                  label="Available"
+                  value={component.availableQty}
+                  strong
+                />
+                <Metric label="Sold" value={component.soldQty} />
+                <Metric label="Can Support" value={component.canSellQty} />
+                <Metric
+                  label="Updated"
+                  value={component.updatedAt ? 'Yes' : 'No'}
+                  small
+                />
+              </div>
+            </div>
+          ))}
+
+          {!item.bundleComponents.length ? (
+            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-6 text-center">
+              <p className="font-black text-amber-900">
+                No bundle components yet.
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                Add components in Menu Management before this bundle can be
+                sold.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function ControlMenuStockModal({
+  item,
+  onClose,
+}: {
+  item: MenuItem;
+  onClose: () => void;
+}) {
+  if (item.isDerivedStock) {
+    return <BundleDerivedStockModal item={item} onClose={onClose} />;
+  }
+
+  return (
+    <Modal
+      title="Control Menu Stock"
+      description="Set, add, remove, sell out, or reopen this menu item."
+      onClose={onClose}
+    >
+      <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
+        <p className="text-xs font-black uppercase text-neutral-400">
+          Menu Item
+        </p>
+        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
+        <p className="mt-1 text-sm text-neutral-500">{item.hotelName}</p>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <Metric label="Available" value={item.availableQty} strong />
+          <Metric label="Sold" value={item.soldQty} />
+          <Metric label="Status" value={getMenuStatusLabel(item)} small />
+        </div>
+      </div>
+
+      <form action={controlMenuStockAction} className="space-y-4">
+        <input type="hidden" name="productId" value={item.id} />
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Stock Operation
+          </label>
+          <Select
+            name="operation"
+            defaultValue={MenuAvailabilityMovementType.SET_STOCK}
+          >
+            <option value={MenuAvailabilityMovementType.SET_STOCK}>
+              Set exact available stock
+            </option>
+            <option value={MenuAvailabilityMovementType.ADD_STOCK}>
+              Add stock
+            </option>
+            <option value={MenuAvailabilityMovementType.REMOVE_STOCK}>
+              Remove stock
+            </option>
+            <option value={MenuAvailabilityMovementType.SOLD_OUT}>
+              Mark as sold out
+            </option>
+            <option value={MenuAvailabilityMovementType.REOPEN}>
+              Reopen and add stock
+            </option>
+          </Select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Quantity
+          </label>
+          <Input
+            name="quantity"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Example: 25"
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            For “Sold Out,” quantity can be left blank.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Reason / Note for Movement
+          </label>
+          <Input
+            name="reason"
+            placeholder="Example: Added 20 servings for dinner"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Internal Stock Note
+          </label>
+          <Input
+            name="notes"
+            defaultValue={item.notes}
+            placeholder="Optional note visible to staff"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+
+          <Button>Save Stock Control</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ControlServiceStockModal({
+  item,
+  onClose,
+}: {
+  item: ServiceItem;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Control Service Inventory"
+      description="Set, add, remove, sell out, or reopen inventory for this service request item."
+      onClose={onClose}
+    >
+      <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
+        <p className="text-xs font-black uppercase text-neutral-400">
+          Service Item
+        </p>
+        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
+        <p className="mt-1 text-sm text-neutral-500">
+          {item.hotelName} · {item.category}
+        </p>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <Metric label="Available" value={item.availableQty} strong />
+          <Metric label="Used" value={item.usedQty} />
+          <Metric label="Status" value={getServiceStatusLabel(item)} small />
+        </div>
+      </div>
+
+      <form action={controlServiceStockAction} className="space-y-4">
+        <input type="hidden" name="serviceId" value={item.id} />
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Stock Operation
+          </label>
+          <Select
+            name="operation"
+            defaultValue={ServiceAvailabilityMovementType.SET_STOCK}
+          >
+            <option value={ServiceAvailabilityMovementType.SET_STOCK}>
+              Set exact available stock
+            </option>
+            <option value={ServiceAvailabilityMovementType.ADD_STOCK}>
+              Add stock
+            </option>
+            <option value={ServiceAvailabilityMovementType.REMOVE_STOCK}>
+              Remove stock
+            </option>
+            <option value={ServiceAvailabilityMovementType.SOLD_OUT}>
+              Mark as sold out
+            </option>
+            <option value={ServiceAvailabilityMovementType.REOPEN}>
+              Reopen and add stock
+            </option>
+          </Select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Quantity
+          </label>
+          <Input
+            name="quantity"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Example: 10"
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            For “Sold Out,” quantity can be left blank.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Reason / Note for Movement
+          </label>
+          <Input
+            name="reason"
+            placeholder="Example: Added 10 extra towels"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Internal Stock Note
+          </label>
+          <Input
+            name="notes"
+            defaultValue={item.notes}
+            placeholder="Optional note visible to staff"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+
+          <Button>Save Service Stock</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function MenuMovementsModal({
+  movements,
+  onClose,
+}: {
+  movements: MenuMovement[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Recent Menu Stock Movements"
+      description="Audit trail of menu stock changes."
+      onClose={onClose}
+      maxWidth="max-w-3xl"
+    >
+      <div className="space-y-3">
+        {movements.map((movement) => (
+          <MovementCard
+            key={movement.id}
+            title={movement.type.replaceAll('_', ' ')}
+            subtitle={`${movement.hotelName} · ${movement.productName}`}
+            quantity={movement.quantity}
+            balanceAfter={movement.balanceAfter}
+            createdAt={movement.createdAt}
+            reason={movement.reason}
+          />
+        ))}
+
+        {!movements.length ? <EmptyMovementState /> : null}
+      </div>
+    </Modal>
+  );
+}
+
+function ServiceMovementsModal({
+  movements,
+  onClose,
+}: {
+  movements: ServiceMovement[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title="Recent Service Inventory Movements"
+      description="Audit trail of service request inventory changes."
+      onClose={onClose}
+      maxWidth="max-w-3xl"
+    >
+      <div className="space-y-3">
+        {movements.map((movement) => (
+          <MovementCard
+            key={movement.id}
+            title={movement.type.replaceAll('_', ' ')}
+            subtitle={`${movement.hotelName} · ${movement.serviceCategory} · ${movement.serviceName}`}
+            quantity={movement.quantity}
+            balanceAfter={movement.balanceAfter}
+            createdAt={movement.createdAt}
+            reason={movement.reason}
+          />
+        ))}
+
+        {!movements.length ? <EmptyMovementState /> : null}
+      </div>
+    </Modal>
+  );
+}
+
+function MovementCard({
+  title,
+  subtitle,
+  quantity,
+  balanceAfter,
+  createdAt,
+  reason,
+}: {
+  title: string;
+  subtitle: string;
+  quantity: number;
+  balanceAfter: number;
+  createdAt: string;
+  reason: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-neutral-200 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-black">{title}</p>
+          <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
+        </div>
+
+        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-700">
+          Balance: {balanceAfter}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        <MovementMetric label="Quantity" value={quantity} />
+        <MovementMetric label="Balance After" value={balanceAfter} />
+        <MovementMetric label="Created" value={formatDateTime(createdAt)} />
+      </div>
+
+      {reason ? (
+        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-sm text-neutral-600">
+          {reason}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function EmptyMovementState() {
+  return (
+    <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
+      <p className="font-black">No movements yet.</p>
+      <p className="mt-1 text-sm text-neutral-500">
+        Stock changes will appear here.
+      </p>
+    </div>
+  );
+}
+
+export function InventoryClient({
+  initialTab,
+  menuItems,
+  menuMovements,
+  serviceItems,
+  serviceMovements,
+  message,
+  menuSummary,
+  serviceSummary,
+}: {
+  initialTab: InventoryTab;
+  menuItems: MenuItem[];
+  menuMovements: MenuMovement[];
+  serviceItems: ServiceItem[];
+  serviceMovements: ServiceMovement[];
+  message: Message;
+  menuSummary: MenuSummary;
+  serviceSummary: ServiceSummary;
+}) {
+  const [activeTab] = useState<InventoryTab>(initialTab);
+
+  const [menuSearch, setMenuSearch] = useState('');
+  const [menuFilter, setMenuFilter] = useState<MenuFilterValue>('ALL');
+  const [controllingMenuItem, setControllingMenuItem] =
+    useState<MenuItem | null>(null);
+  const [showMenuMovements, setShowMenuMovements] = useState(false);
+
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceFilter, setServiceFilter] =
+    useState<ServiceFilterValue>('ALL');
+  const [controllingServiceItem, setControllingServiceItem] =
+    useState<ServiceItem | null>(null);
+  const [showServiceMovements, setShowServiceMovements] = useState(false);
+
+  const filteredMenuItems = useMemo(() => {
+    const searchText = menuSearch.trim().toLowerCase();
+
+    return menuItems.filter((item) => {
+      const matchesSearch =
+        !searchText ||
+        item.name.toLowerCase().includes(searchText) ||
+        item.hotelName.toLowerCase().includes(searchText) ||
+        item.bundleComponents.some((component) =>
+          component.name.toLowerCase().includes(searchText)
+        ) ||
+        String(item.limitingComponentName || '')
+          .toLowerCase()
+          .includes(searchText);
+
+      const status = getMenuStatusLabel(item);
+
+      const matchesFilter =
+        menuFilter === 'ALL' ||
+        (menuFilter === 'AVAILABLE' && status === 'AVAILABLE') ||
+        (menuFilter === 'SOLD_OUT' && status === 'SOLD OUT') ||
+        (menuFilter === 'NOT_SET' && status === 'NOT SET') ||
+        (menuFilter === 'MENU_HIDDEN' && status === 'MENU HIDDEN') ||
+        (menuFilter === 'BUNDLE' && item.isDerivedStock);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [menuItems, menuSearch, menuFilter]);
+
+  const filteredServiceItems = useMemo(() => {
+    const searchText = serviceSearch.trim().toLowerCase();
+
+    return serviceItems.filter((item) => {
+      const matchesSearch =
+        !searchText ||
+        item.name.toLowerCase().includes(searchText) ||
+        item.hotelName.toLowerCase().includes(searchText) ||
+        item.category.toLowerCase().includes(searchText) ||
+        item.description.toLowerCase().includes(searchText) ||
+        item.code.toLowerCase().includes(searchText);
+
+      const status = getServiceStatusLabel(item);
+
+      const matchesFilter =
+        serviceFilter === 'ALL' ||
+        (serviceFilter === 'TRACKED' && item.inventoryTracked) ||
+        (serviceFilter === 'UNTRACKED' && !item.inventoryTracked) ||
+        (serviceFilter === 'AVAILABLE' && status === 'AVAILABLE') ||
+        (serviceFilter === 'SOLD_OUT' && status === 'SOLD OUT') ||
+        (serviceFilter === 'HIDDEN' && status === 'HIDDEN');
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [serviceFilter, serviceItems, serviceSearch]);
+
+  return (
+    <>
+      {message ? (
+        <div
+          className={
+            message.type === 'success'
+              ? 'mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700'
+              : 'mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700'
+          }
+        >
+          {message.text}
+        </div>
+      ) : null}
+
+      <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-3 shadow-sm md:flex-row">
+        <a
+          href="/dashboard/inventory?tab=menu"
+          className={
+            activeTab === 'menu'
+              ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
+              : 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+          }
+        >
+          Food Menu Inventory
+        </a>
+
+        <a
+          href="/dashboard/inventory?tab=services"
+          className={
+            activeTab === 'services'
+              ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
+              : 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+          }
+        >
+          Service Request Inventory
+        </a>
+      </div>
+
+      {activeTab === 'menu' ? (
+        <>
+          <div className="mb-6 grid gap-3 md:grid-cols-6">
+            <SummaryCard label="Total Menu" value={menuSummary.totalMenuItems} />
+            <SummaryCard
+              label="Active Menu"
+              value={menuSummary.activeMenuItems}
+            />
+            <SummaryCard
+              label="Available"
+              value={menuSummary.availableItems}
+              tone="green"
+            />
+            <SummaryCard
+              label="Sold Out"
+              value={menuSummary.soldOutItems}
+              tone="red"
+            />
+            <SummaryCard
+              label="Available Qty"
+              value={menuSummary.totalAvailableQty}
+            />
+            <SummaryCard label="Sold Qty" value={menuSummary.totalSoldQty} />
+          </div>
+
+          <Card>
+            <CardContent>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-black">
+                    Food Menu Stock Availability
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Control stock for single menu items. Bundle stock is
+                    calculated from its component items.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <form action={initializeMenuStocksAction}>
+                    <button
+                      type="submit"
+                      className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                    >
+                      Initialize Missing Stocks
+                    </button>
+                  </form>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMenuMovements(true)}
+                    className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+                  >
+                    View Recent Movements
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    Search Menu
+                  </label>
+                  <Input
+                    value={menuSearch}
+                    onChange={(event) => setMenuSearch(event.target.value)}
+                    placeholder="Search by menu name, hotel, component, or limiting item"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    Filter Status
+                  </label>
+                  <select
+                    value={menuFilter}
+                    onChange={(event) =>
+                      setMenuFilter(event.target.value as MenuFilterValue)
+                    }
+                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+                  >
+                    <option value="ALL">All Items</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="SOLD_OUT">Sold Out</option>
+                    <option value="NOT_SET">Not Set</option>
+                    <option value="MENU_HIDDEN">Menu Hidden</option>
+                    <option value="BUNDLE">Bundles Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                {filteredMenuItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={
+                      item.isDerivedStock
+                        ? 'rounded-3xl border border-amber-200 bg-white p-4 shadow-sm'
+                        : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
+                    }
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-black text-neutral-950">
+                          {item.name}
+                        </p>
+                        <p className="mt-1 truncate text-xs font-bold text-neutral-500">
+                          {item.hotelName}
+                        </p>
+
+                        <span
+                          className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getProductTypeClass(
+                            item
+                          )}`}
+                        >
+                          {getProductTypeLabel(item)}
+                        </span>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
+                          getMenuStatusLabel(item)
+                        )}`}
+                      >
+                        {getMenuStatusLabel(item)}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                      <Metric
+                        label={item.isDerivedStock ? 'Can Sell' : 'Available'}
+                        value={item.availableQty}
+                        strong
+                      />
+                      <Metric label="Sold" value={item.soldQty} />
+                      <Metric
+                        label={item.isDerivedStock ? 'Components' : 'Updated'}
+                        value={
+                          item.isDerivedStock
+                            ? item.bundleComponents.length
+                            : item.updatedAt
+                              ? 'Yes'
+                              : 'No'
+                        }
+                        small
+                      />
+                    </div>
+
+                    {item.isDerivedStock ? (
+                      <div className="mt-3 rounded-2xl bg-amber-50 p-3">
+                        <p className="text-xs font-black uppercase text-amber-700">
+                          Bundle Components
+                        </p>
+
+                        {item.bundleComponents.length ? (
+                          <div className="mt-2 space-y-1">
+                            {item.bundleComponents
+                              .slice(0, 4)
+                              .map((component) => (
+                                <p
+                                  key={component.id}
+                                  className="text-xs font-bold text-amber-900"
+                                >
+                                  {component.quantity}× {component.name} ·{' '}
+                                  {component.availableQty} available
+                                </p>
+                              ))}
+
+                            {item.bundleComponents.length > 4 ? (
+                              <p className="text-xs font-bold text-amber-800">
+                                +{item.bundleComponents.length - 4} more
+                                component
+                                {item.bundleComponents.length - 4 === 1
+                                  ? ''
+                                  : 's'}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-xs font-bold text-amber-800">
+                            No components yet.
+                          </p>
+                        )}
+
+                        {item.limitingComponentName ? (
+                          <p className="mt-3 rounded-xl bg-white/80 p-2 text-xs font-black text-amber-900">
+                            Limiting item: {item.limitingComponentName}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : item.notes ? (
+                      <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
+                        {item.notes}
+                      </p>
+                    ) : (
+                      <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-400">
+                        No stock note.
+                      </p>
+                    )}
+
+                    <p className="mt-3 text-xs font-bold text-neutral-400">
+                      Last updated: {formatDateTime(item.updatedAt)}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => setControllingMenuItem(item)}
+                      className={
+                        item.isDerivedStock
+                          ? 'mt-4 h-10 w-full rounded-2xl bg-amber-500 text-sm font-black text-white hover:bg-amber-600'
+                          : 'mt-4 h-10 w-full rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800'
+                      }
+                    >
+                      {item.isDerivedStock ? 'View Components' : 'Control Stock'}
+                    </button>
+                  </div>
+                ))}
+
+                {!filteredMenuItems.length ? (
+                  <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
+                    <p className="font-black">No menu items found.</p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Try changing your search or filter.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+
+      {activeTab === 'services' ? (
+        <>
+          <div className="mb-6 grid gap-3 md:grid-cols-6">
+            <SummaryCard
+              label="Total Services"
+              value={serviceSummary.totalServices}
+            />
+            <SummaryCard
+              label="Active Services"
+              value={serviceSummary.activeServices}
+            />
+            <SummaryCard
+              label="Tracked"
+              value={serviceSummary.trackedServices}
+              tone="blue"
+            />
+            <SummaryCard
+              label="Available"
+              value={serviceSummary.serviceAvailableItems}
+              tone="green"
+            />
+            <SummaryCard
+              label="Sold Out"
+              value={serviceSummary.serviceSoldOutItems}
+              tone="red"
+            />
+            <SummaryCard
+              label="Available Qty"
+              value={serviceSummary.serviceTotalAvailableQty}
+            />
+          </div>
+
+          <Card>
+            <CardContent>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-black">
+                    Service Request Inventory
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Track inventory for physical service items such as towels,
+                    pillows, amenities, toiletries, baby cots, and water refill.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <form action={initializeServiceStocksAction}>
+                    <button
+                      type="submit"
+                      className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                    >
+                      Initialize Service Stocks
+                    </button>
+                  </form>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowServiceMovements(true)}
+                    className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+                  >
+                    View Service Movements
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    Search Services
+                  </label>
+                  <Input
+                    value={serviceSearch}
+                    onChange={(event) => setServiceSearch(event.target.value)}
+                    placeholder="Search by service name, category, code, or description"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    Filter Status
+                  </label>
+                  <select
+                    value={serviceFilter}
+                    onChange={(event) =>
+                      setServiceFilter(event.target.value as ServiceFilterValue)
+                    }
+                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+                  >
+                    <option value="ALL">All Services</option>
+                    <option value="TRACKED">Tracked Only</option>
+                    <option value="UNTRACKED">Untracked Only</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="SOLD_OUT">Sold Out</option>
+                    <option value="HIDDEN">Hidden</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                {filteredServiceItems.map((item) => {
+                  const status = getServiceStatusLabel(item);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={
+                        item.inventoryTracked
+                          ? 'rounded-3xl border border-blue-200 bg-white p-4 shadow-sm'
+                          : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-black text-neutral-950">
+                            {item.name}
+                          </p>
+                          <p className="mt-1 truncate text-xs font-bold text-neutral-500">
+                            {item.hotelName} · {item.category}
+                          </p>
+
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span
+                              className={
+                                item.inventoryTracked
+                                  ? 'rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700'
+                                  : 'rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600'
+                              }
+                            >
+                              {item.inventoryTracked
+                                ? 'Inventory Tracked'
+                                : 'Not Tracked'}
+                            </span>
+
+                            <span
+                              className={`rounded-full px-3 py-1 text-[10px] font-black ${getBillingClass(
+                                item.billingMode
+                              )}`}
+                            >
+                              {getBillingLabel(item.billingMode)}
+                              {item.billingMode === 'FIXED_PRICE'
+                                ? ` · ${money(item.unitPrice)}`
+                                : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
+                            status
+                          )}`}
+                        >
+                          {status}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                        <Metric
+                          label="Available"
+                          value={
+                            item.inventoryTracked ? item.availableQty : '—'
+                          }
+                          strong={item.inventoryTracked}
+                        />
+                        <Metric
+                          label="Used"
+                          value={item.inventoryTracked ? item.usedQty : '—'}
+                        />
+                        <Metric
+                          label="Updated"
+                          value={item.updatedAt ? 'Yes' : 'No'}
+                          small
+                        />
+                      </div>
+
+                      {item.description ? (
+                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
+                          {item.description}
+                        </p>
+                      ) : item.notes ? (
+                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
+                          {item.notes}
+                        </p>
+                      ) : (
+                        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-400">
+                          No description or stock note.
+                        </p>
+                      )}
+
+                      <p className="mt-3 text-xs font-bold text-neutral-400">
+                        Last updated: {formatDateTime(item.updatedAt)}
+                      </p>
+
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        {item.inventoryTracked ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setControllingServiceItem(item)}
+                              className="h-10 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800"
+                            >
+                              Control Stock
+                            </button>
+
+                            <form action={disableServiceInventoryAction}>
+                              <input
+                                type="hidden"
+                                name="serviceId"
+                                value={item.id}
+                              />
+                              <button
+                                type="submit"
+                                className="h-10 w-full rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-50"
+                              >
+                                Disable Tracking
+                              </button>
+                            </form>
+                          </>
+                        ) : (
+                          <form
+                            action={enableServiceInventoryAction}
+                            className="sm:col-span-2"
+                          >
+                            <input
+                              type="hidden"
+                              name="serviceId"
+                              value={item.id}
+                            />
+                            <button
+                              type="submit"
+                              className="h-10 w-full rounded-2xl bg-blue-600 text-sm font-black text-white hover:bg-blue-700"
+                            >
+                              Enable Inventory
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {!filteredServiceItems.length ? (
+                  <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
+                    <p className="font-black">No service items found.</p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Try changing your search or filter.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+
+      {controllingMenuItem ? (
+        <ControlMenuStockModal
+          item={controllingMenuItem}
+          onClose={() => setControllingMenuItem(null)}
+        />
+      ) : null}
+
+      {controllingServiceItem ? (
+        <ControlServiceStockModal
+          item={controllingServiceItem}
+          onClose={() => setControllingServiceItem(null)}
+        />
+      ) : null}
+
+      {showMenuMovements ? (
+        <MenuMovementsModal
+          movements={menuMovements}
+          onClose={() => setShowMenuMovements(false)}
+        />
+      ) : null}
+
+      {showServiceMovements ? (
+        <ServiceMovementsModal
+          movements={serviceMovements}
+          onClose={() => setShowServiceMovements(false)}
+        />
+      ) : null}
+    </>
   );
 }
 
 function SummaryCard({
   label,
   value,
-  icon: Icon,
   tone,
 }: {
   label: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  tone?: 'gold' | 'red' | 'green';
+  value: number;
+  tone?: 'green' | 'red' | 'blue';
 }) {
   return (
     <div
       className={
-        tone === 'red'
-          ? 'rounded-[2rem] border border-red-200 bg-red-50 p-5 dark:border-red-500/20 dark:bg-red-500/10'
-          : tone === 'green'
-            ? 'rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10'
-            : 'rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900'
+        tone === 'green'
+          ? 'rounded-3xl border border-emerald-200 bg-emerald-50 p-5'
+          : tone === 'red'
+            ? 'rounded-3xl border border-red-200 bg-red-50 p-5'
+            : tone === 'blue'
+              ? 'rounded-3xl border border-blue-200 bg-blue-50 p-5'
+              : 'rounded-3xl border border-neutral-200 bg-white p-5'
       }
     >
-      <div className="mb-4 grid size-11 place-items-center rounded-2xl bg-black text-white dark:bg-gold dark:text-black">
-        <Icon className="size-5" />
-      </div>
-
-      <p className="text-sm font-bold text-neutral-500 dark:text-neutral-400">
+      <p
+        className={
+          tone === 'green'
+            ? 'text-sm font-bold text-emerald-700'
+            : tone === 'red'
+              ? 'text-sm font-bold text-red-700'
+              : tone === 'blue'
+                ? 'text-sm font-bold text-blue-700'
+                : 'text-sm font-bold text-neutral-500'
+        }
+      >
         {label}
       </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
+  );
+}
 
-      <p className="mt-1 text-3xl font-black text-neutral-950 dark:text-white">
+function Metric({
+  label,
+  value,
+  strong,
+  small,
+}: {
+  label: string;
+  value: string | number;
+  strong?: boolean;
+  small?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl bg-neutral-50 p-3">
+      <p className="text-[10px] font-black uppercase text-neutral-400">
+        {label}
+      </p>
+      <p
+        className={
+          small
+            ? 'mt-1 text-sm font-black text-neutral-700'
+            : strong
+              ? 'mt-1 text-lg font-black text-neutral-950'
+              : 'mt-1 text-lg font-bold text-neutral-700'
+        }
+      >
         {value}
       </p>
     </div>
   );
 }
 
-function StatusPill({ status }: { status: OrderStatusValue }) {
-  return (
-    <span
-      className={`rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-        status
-      )}`}
-    >
-      {statusLabel(status)}
-    </span>
-  );
-}
-
-function PaymentPill({ status }: { status: PaymentStatusValue }) {
-  return (
-    <span
-      className={`rounded-full px-3 py-1 text-[10px] font-black ${getPaymentClass(
-        status
-      )}`}
-    >
-      {statusLabel(status)}
-    </span>
-  );
-}
-
-function CompactOrderCard({
-  order,
-  onOpen,
+function MovementMetric({
+  label,
+  value,
 }: {
-  order: OrderItemData;
-  onOpen: () => void;
-}) {
-  const firstItems = order.items
-    .slice(0, 2)
-    .map((item) => `${item.quantity}× ${item.productNameSnapshot}`)
-    .join(', ');
-
-  const actions = nextActionsForStatus(order.status);
-  const orderType = extractOrderType(order.notes);
-
-  return (
-    <article className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-lg font-black text-neutral-950 dark:text-white">
-              {order.orderCode}
-            </h3>
-
-            <StatusPill status={order.status} />
-            <PaymentPill status={order.paymentStatus} />
-          </div>
-
-          <p className="mt-1 text-xs font-bold text-neutral-500 dark:text-neutral-400">
-            {order.roomLabel} · {formatTime(order.createdAt)} ·{' '}
-            {getOrderSource(order)}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onOpen}
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
-          aria-label="View order details"
-        >
-          <Eye className="size-4" />
-        </button>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        {orderType ? (
-          <div className="rounded-2xl bg-neutral-50 p-3 text-sm dark:bg-neutral-950">
-            <p className="font-black text-neutral-950 dark:text-white">
-              {orderType}
-            </p>
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Order fulfillment type
-            </p>
-          </div>
-        ) : null}
-
-        <div className="rounded-2xl bg-neutral-50 p-3 text-sm dark:bg-neutral-950">
-          <p className="font-black text-neutral-950 dark:text-white">
-            {order.items.length} item{order.items.length === 1 ? '' : 's'}
-          </p>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            {firstItems || 'No items'}
-            {order.items.length > 2 ? '…' : ''}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-950">
-            <p className="text-xs font-black uppercase text-neutral-400">
-              Payment
-            </p>
-            <p className="mt-1 text-sm font-black text-neutral-950 dark:text-white">
-              {statusLabel(order.paymentMethod)}
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-950">
-            <p className="text-xs font-black uppercase text-neutral-400">
-              Total
-            </p>
-            <p className="mt-1 text-sm font-black text-neutral-950 dark:text-white">
-              {money(order.totalCents)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-2">
-        {actions.length ? (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {actions.map((action) => (
-              <ActionButton
-                key={`${order.id}-${action.status}`}
-                orderId={order.id}
-                status={action.status}
-                label={action.label}
-                tone={action.tone}
-              />
-            ))}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpen}
-            className="h-10 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-900 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-800"
-          >
-            View Details
-          </button>
-        )}
-
-        {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' ? (
-          <MarkPaidButton orderId={order.id} />
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-function LiveLane({
-  title,
-  description,
-  orders,
-  onOpen,
-}: {
-  title: string;
-  description: string;
-  orders: OrderItemData[];
-  onOpen: (order: OrderItemData) => void;
+  label: string;
+  value: string | number;
 }) {
   return (
-    <section className="rounded-[2rem] border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-black text-neutral-950 dark:text-white">
-            {title}
-          </h2>
-          <p className="text-xs font-bold text-neutral-500 dark:text-neutral-400">
-            {description}
-          </p>
-        </div>
-
-        <span className="grid size-9 place-items-center rounded-full bg-black text-sm font-black text-white dark:bg-gold dark:text-black">
-          {orders.length}
-        </span>
-      </div>
-
-      <div className="space-y-3">
-        {orders.map((order) => (
-          <CompactOrderCard
-            key={order.id}
-            order={order}
-            onOpen={() => onOpen(order)}
-          />
-        ))}
-
-        {!orders.length ? (
-          <div className="rounded-[1.5rem] border border-dashed border-neutral-300 bg-white p-6 text-center text-sm font-bold text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950">
-            No {title.toLowerCase()} orders.
-          </div>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function OrderDetailsModal({
-  order,
-  onClose,
-}: {
-  order: OrderItemData;
-  onClose: () => void;
-}) {
-  const actions = nextActionsForStatus(order.status);
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-neutral-950">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-black text-neutral-950 dark:text-white">
-                {order.orderCode}
-              </h2>
-              <StatusPill status={order.status} />
-              <PaymentPill status={order.paymentStatus} />
-            </div>
-
-            <p className="mt-1 text-sm font-bold text-neutral-500 dark:text-neutral-400">
-              {order.hotelName} · {order.roomLabel} ·{' '}
-              {formatDateTime(order.createdAt)}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
-          >
-            <X className="size-5" />
-          </button>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-          <main className="space-y-4">
-            <section className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <h3 className="mb-3 flex items-center gap-2 font-black text-neutral-950 dark:text-white">
-                <ReceiptText className="size-5 text-gold" />
-                Order Items
-              </h3>
-
-              <div className="space-y-2">
-                {order.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between gap-3 rounded-2xl bg-white p-3 text-sm dark:bg-neutral-950"
-                  >
-                    <div>
-                      <p className="font-black text-neutral-950 dark:text-white">
-                        {item.quantity}× {item.productNameSnapshot}
-                      </p>
-
-                      {item.notes ? (
-                        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                          Note: {item.notes}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <p className="font-black text-neutral-950 dark:text-white">
-                      {money(item.quantity * item.unitPriceCents)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {order.notes ? (
-              <section className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-                <p className="font-black">Guest Note</p>
-                <p className="mt-2 whitespace-pre-line leading-6">
-                  {order.notes}
-                </p>
-              </section>
-            ) : null}
-
-            <section className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <h3 className="mb-3 font-black text-neutral-950 dark:text-white">
-                Status History
-              </h3>
-
-              <div className="space-y-2">
-                {order.statusHistory.map((history) => (
-                  <div
-                    key={history.id}
-                    className="rounded-2xl bg-white p-3 text-sm dark:bg-neutral-950"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <StatusPill status={history.status} />
-                      <span className="text-xs font-bold text-neutral-400">
-                        {formatDateTime(history.createdAt)}
-                      </span>
-                    </div>
-
-                    {history.note ? (
-                      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                        {history.note}
-                      </p>
-                    ) : null}
-
-                    {history.userName ? (
-                      <p className="mt-1 text-xs font-bold text-neutral-400">
-                        By {history.userName}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </section>
-          </main>
-
-          <aside className="space-y-4">
-            <section className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <h3 className="mb-3 flex items-center gap-2 font-black text-neutral-950 dark:text-white">
-                <CreditCard className="size-5 text-gold" />
-                Payment
-              </h3>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-neutral-500 dark:text-neutral-400">
-                    Method
-                  </span>
-                  <b className="text-neutral-950 dark:text-white">
-                    {statusLabel(order.paymentMethod)}
-                  </b>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-neutral-500 dark:text-neutral-400">
-                    Subtotal
-                  </span>
-                  <b className="text-neutral-950 dark:text-white">
-                    {money(order.subtotalCents)}
-                  </b>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-neutral-500 dark:text-neutral-400">
-                    Service Charge
-                  </span>
-                  <b className="text-neutral-950 dark:text-white">
-                    {money(order.serviceChargeCents)}
-                  </b>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-neutral-500 dark:text-neutral-400">
-                    Tax
-                  </span>
-                  <b className="text-neutral-950 dark:text-white">
-                    {money(order.taxCents)}
-                  </b>
-                </div>
-
-                <div className="border-t border-neutral-200 pt-3 dark:border-neutral-800">
-                  <div className="flex justify-between text-lg">
-                    <span className="font-black text-neutral-950 dark:text-white">
-                      Total
-                    </span>
-                    <span className="font-black text-neutral-950 dark:text-white">
-                      {money(order.totalCents)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED' ? (
-                <div className="mt-4">
-                  <MarkPaidButton orderId={order.id} />
-                </div>
-              ) : null}
-            </section>
-
-            <section className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <h3 className="mb-3 flex items-center gap-2 font-black text-neutral-950 dark:text-white">
-                <PackageCheck className="size-5 text-gold" />
-                Actions
-              </h3>
-
-              <div className="grid gap-2">
-                {actions.map((action) => (
-                  <ActionButton
-                    key={`${order.id}-${action.status}`}
-                    orderId={order.id}
-                    status={action.status}
-                    label={action.label}
-                    tone={action.tone}
-                  />
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="h-10 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-800"
-                >
-                  <Printer className="mr-2 inline size-4" />
-                  Print Ticket
-                </button>
-              </div>
-            </section>
-          </aside>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function OrdersClient({
-  summary,
-  statusCounts,
-  orders,
-}: {
-  summary: {
-    activeOrders: number;
-    unpaidOrders: number;
-    cancelledOrders: number;
-    totalSalesCents: number;
-  };
-  statusCounts: Record<string, number>;
-  orders: OrderItemData[];
-}) {
-  const [activeTab, setActiveTab] = useState<TabValue>('LIVE');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [search, setSearch] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<OrderItemData | null>(null);
-
-  const filteredOrders = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return orders.filter((order) => {
-      const matchesTab =
-        activeTab === 'ALL' ||
-        (activeTab === 'LIVE' && liveStatuses.includes(order.status)) ||
-        (activeTab === 'UNPAID' && order.paymentStatus !== 'PAID') ||
-        (activeTab === 'HISTORY' &&
-          (order.status === 'DELIVERED' || order.status === 'CANCELLED'));
-
-      const matchesStatus =
-        statusFilter === 'ALL' || order.status === statusFilter;
-
-      const matchesSearch =
-        !query ||
-        [
-          order.orderCode,
-          order.hotelName,
-          order.roomLabel,
-          order.guestName,
-          order.paymentMethod,
-          order.paymentStatus,
-          ...order.items.map((item) => item.productNameSnapshot),
-        ]
-          .join(' ')
-          .toLowerCase()
-          .includes(query);
-
-      return matchesTab && matchesStatus && matchesSearch;
-    });
-  }, [activeTab, orders, search, statusFilter]);
-
-  const pendingOrders = orders.filter((order) => order.status === 'PENDING');
-
-  const preparingOrders = orders.filter(
-    (order) => order.status === 'ACCEPTED' || order.status === 'PREPARING'
-  );
-
-  const readyOrders = orders.filter((order) => order.status === 'READY');
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Active Orders"
-          value={summary.activeOrders}
-          icon={ShoppingBag}
-        />
-
-        <SummaryCard
-          label="Needs Payment"
-          value={summary.unpaidOrders}
-          icon={CreditCard}
-          tone="red"
-        />
-
-        <SummaryCard
-          label="Orders Total"
-          value={money(summary.totalSalesCents)}
-          icon={CheckCircle2}
-          tone="green"
-        />
-
-        <SummaryCard
-          label="Cancelled"
-          value={summary.cancelledOrders}
-          icon={AlertTriangle}
-          tone="red"
-        />
-      </div>
-
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h2 className="text-xl font-black text-neutral-950 dark:text-white">
-              Order Command Center
-            </h2>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              Use tabs for workflow, filters for searching, and cards for next
-              valid actions only.
-            </p>
-          </div>
-
-          <div className="flex min-w-0 flex-col gap-3 md:flex-row">
-            <label className="relative min-w-0 md:w-[360px]">
-              <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search order, room, guest, item..."
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold text-neutral-900 outline-none focus:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
-              />
-            </label>
-
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as StatusFilter)
-              }
-              className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold text-neutral-900 outline-none dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
-            >
-              {statusFilters.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label} ({statusCounts[filter.value] ?? 0})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-          {[
-            { value: 'LIVE', label: 'Live Orders', icon: Clock },
-            { value: 'ALL', label: 'All Orders', icon: ReceiptText },
-            { value: 'UNPAID', label: 'Unpaid', icon: CreditCard },
-            { value: 'HISTORY', label: 'History', icon: PackageCheck },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.value;
-
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setActiveTab(tab.value as TabValue)}
-                className={
-                  active
-                    ? 'inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white dark:bg-gold dark:text-black'
-                    : 'inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-800'
-                }
-              >
-                <Icon className="size-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {activeTab === 'LIVE' && statusFilter === 'ALL' && !search.trim() ? (
-        <div className="grid gap-5 xl:grid-cols-3">
-          <LiveLane
-            title="Pending"
-            description="Accept or reject new orders."
-            orders={pendingOrders}
-            onOpen={setSelectedOrder}
-          />
-
-          <LiveLane
-            title="Preparing"
-            description="Accepted and kitchen-active orders."
-            orders={preparingOrders}
-            onOpen={setSelectedOrder}
-          />
-
-          <LiveLane
-            title="Ready"
-            description="Ready for delivery."
-            orders={readyOrders}
-            onOpen={setSelectedOrder}
-          />
-        </div>
-      ) : (
-        <section className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black text-neutral-950 dark:text-white">
-                Filtered Orders
-              </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Showing {filteredOrders.length} order
-                {filteredOrders.length === 1 ? '' : 's'}.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-            {filteredOrders.map((order) => (
-              <CompactOrderCard
-                key={order.id}
-                order={order}
-                onOpen={() => setSelectedOrder(order)}
-              />
-            ))}
-
-            {!filteredOrders.length ? (
-              <div className="rounded-[1.5rem] border border-dashed border-neutral-300 p-8 text-center text-sm font-bold text-neutral-400 dark:border-neutral-800 xl:col-span-2 2xl:col-span-3">
-                No orders match your current filters.
-              </div>
-            ) : null}
-          </div>
-        </section>
-      )}
-
-      {selectedOrder ? (
-        <OrderDetailsModal
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-        />
-      ) : null}
+    <div className="rounded-2xl bg-neutral-50 p-3">
+      <p className="text-[10px] font-black uppercase text-neutral-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-neutral-800">{value}</p>
     </div>
   );
 }

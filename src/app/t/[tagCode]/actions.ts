@@ -5,6 +5,7 @@ import {
   MenuAvailabilityMovementType,
   MenuProductType,
   PaymentMethod,
+  ServiceAvailabilityMovementType,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -24,6 +25,23 @@ type StockRequirement = {
   singleQuantity: number;
   bundleQuantity: number;
 };
+
+type ServiceStockRequirement = {
+  serviceId: string;
+  serviceCode: string;
+  serviceName: string;
+  quantity: number;
+};
+
+class ServiceInventoryError extends Error {
+  code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'ServiceInventoryError';
+    this.code = code;
+  }
+}
 
 function addStockRequirement(
   requirements: Map<string, StockRequirement>,
@@ -55,6 +73,20 @@ function addStockRequirement(
     singleQuantity: input.source === 'SINGLE' ? input.quantity : 0,
     bundleQuantity: input.source === 'BUNDLE' ? input.quantity : 0,
   });
+}
+
+function addServiceStockRequirement(
+  requirements: Map<string, ServiceStockRequirement>,
+  input: ServiceStockRequirement
+) {
+  const current = requirements.get(input.serviceId);
+
+  if (current) {
+    current.quantity += input.quantity;
+    return;
+  }
+
+  requirements.set(input.serviceId, input);
 }
 
 export async function createGuestOrder(input: unknown) {
@@ -309,7 +341,9 @@ export async function createGuestOrder(input: unknown) {
       const stock = stockByProductId.get(requirement.productId);
 
       if (!stock) {
-        throw new Error(`${requirement.productName} inventory stock was not found.`);
+        throw new Error(
+          `${requirement.productName} inventory stock was not found.`
+        );
       }
 
       const updateResult = await tx.menuAvailabilityStock.updateMany({
@@ -346,7 +380,9 @@ export async function createGuestOrder(input: unknown) {
       });
 
       if (!updatedStock) {
-        throw new Error(`${requirement.productName} inventory stock was not found.`);
+        throw new Error(
+          `${requirement.productName} inventory stock was not found.`
+        );
       }
 
       if (updatedStock.availableQty <= 0) {
@@ -538,6 +574,7 @@ export async function createServiceRequestAction(formData: FormData) {
       description: true,
       billingMode: true,
       unitPrice: true,
+      inventoryTracked: true,
     },
   });
 
@@ -574,6 +611,21 @@ export async function createServiceRequestAction(formData: FormData) {
     quantity: number;
   }[];
 
+  const serviceStockRequirements = new Map<string, ServiceStockRequirement>();
+
+  for (const item of selectedServices) {
+    if (!item.service.inventoryTracked) {
+      continue;
+    }
+
+    addServiceStockRequirement(serviceStockRequirements, {
+      serviceId: item.service.id,
+      serviceCode: item.service.code,
+      serviceName: item.service.name,
+      quantity: item.quantity,
+    });
+  }
+
   const fixedPriceServices = selectedServices.filter(
     (item) => item.service.billingMode === 'FIXED_PRICE'
   );
@@ -603,6 +655,54 @@ export async function createServiceRequestAction(formData: FormData) {
 
   try {
     createdRequests = await db.$transaction(async (tx) => {
+      const serviceStockByServiceId = new Map<
+        string,
+        {
+          id: string;
+          availableQty: number;
+          isSoldOut: boolean;
+        }
+      >();
+
+      for (const requirement of serviceStockRequirements.values()) {
+        const stock = await tx.serviceAvailabilityStock.findUnique({
+          where: {
+            hotelId_serviceId: {
+              hotelId: tag.hotelId,
+              serviceId: requirement.serviceId,
+            },
+          },
+          select: {
+            id: true,
+            availableQty: true,
+            isSoldOut: true,
+          },
+        });
+
+        if (!stock) {
+          throw new ServiceInventoryError(
+            'service_stock_unavailable',
+            `${requirement.serviceName} has no service inventory stock record yet.`
+          );
+        }
+
+        if (stock.isSoldOut || stock.availableQty <= 0) {
+          throw new ServiceInventoryError(
+            'service_stock_unavailable',
+            `${requirement.serviceName} is currently unavailable.`
+          );
+        }
+
+        if (requirement.quantity > stock.availableQty) {
+          throw new ServiceInventoryError(
+            'service_stock_unavailable',
+            `${requirement.serviceName} only has ${stock.availableQty} available.`
+          );
+        }
+
+        serviceStockByServiceId.set(requirement.serviceId, stock);
+      }
+
       const requests: {
         id: string;
         requestCode: string;
@@ -622,6 +722,9 @@ export async function createServiceRequestAction(formData: FormData) {
             notes:
               [
                 notes || null,
+                item.service.inventoryTracked
+                  ? `Inventory-tracked service. Quantity: ${item.quantity}.`
+                  : null,
                 item.service.billingMode === 'FIXED_PRICE'
                   ? `Room add-on selected by guest. Quantity: ${item.quantity}.`
                   : null,
@@ -643,6 +746,83 @@ export async function createServiceRequestAction(formData: FormData) {
             requestCode: true,
           },
         });
+
+        if (item.service.inventoryTracked) {
+          const stock = serviceStockByServiceId.get(item.service.id);
+
+          if (!stock) {
+            throw new ServiceInventoryError(
+              'service_stock_unavailable',
+              `${item.service.name} inventory stock was not found.`
+            );
+          }
+
+          const updateResult = await tx.serviceAvailabilityStock.updateMany({
+            where: {
+              id: stock.id,
+              isSoldOut: false,
+              availableQty: {
+                gte: item.quantity,
+              },
+            },
+            data: {
+              availableQty: {
+                decrement: item.quantity,
+              },
+              usedQty: {
+                increment: item.quantity,
+              },
+            },
+          });
+
+          if (updateResult.count !== 1) {
+            throw new ServiceInventoryError(
+              'service_stock_unavailable',
+              `${item.service.name} stock changed while submitting. Please try again.`
+            );
+          }
+
+          const updatedStock = await tx.serviceAvailabilityStock.findUnique({
+            where: {
+              id: stock.id,
+            },
+            select: {
+              availableQty: true,
+            },
+          });
+
+          if (!updatedStock) {
+            throw new ServiceInventoryError(
+              'service_stock_unavailable',
+              `${item.service.name} inventory stock was not found.`
+            );
+          }
+
+          if (updatedStock.availableQty <= 0) {
+            await tx.serviceAvailabilityStock.update({
+              where: {
+                id: stock.id,
+              },
+              data: {
+                isSoldOut: true,
+              },
+            });
+          }
+
+          await tx.serviceAvailabilityMovement.create({
+            data: {
+              hotelId: tag.hotelId,
+              serviceId: item.service.id,
+              stockId: stock.id,
+              type: ServiceAvailabilityMovementType.REQUEST_DEDUCTION,
+              quantity: item.quantity,
+              balanceAfter: Math.max(updatedStock.availableQty, 0),
+              reason: `Guest service request ${request.requestCode}`,
+              userId: null,
+              serviceRequestId: request.id,
+            },
+          });
+        }
 
         if (item.service.billingMode === 'FIXED_PRICE') {
           const unitPrice = Number(item.service.unitPrice);
@@ -669,7 +849,13 @@ export async function createServiceRequestAction(formData: FormData) {
 
       return requests;
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof ServiceInventoryError) {
+      redirectToService(tagCode, {
+        error: error.code,
+      });
+    }
+
     redirectToService(tagCode, {
       error: 'request_failed',
     });
@@ -698,6 +884,14 @@ export async function createServiceRequestAction(formData: FormData) {
       })
     )
   );
+
+  if (serviceStockRequirements.size > 0) {
+    await triggerInventoryUpdated({
+      hotelId: tag.hotelId,
+      productIds: Array.from(serviceStockRequirements.keys()),
+      source: 'GUEST_PORTAL',
+    });
+  }
 
   const success =
     fixedPriceServices.length > 0 && confirmationServices.length > 0

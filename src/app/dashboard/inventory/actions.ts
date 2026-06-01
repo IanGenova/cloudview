@@ -3,6 +3,7 @@
 import {
   MenuAvailabilityMovementType,
   MenuProductType,
+  ServiceAvailabilityMovementType,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -11,7 +12,7 @@ import { assertHotelScope } from '@/lib/access';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 
-const MANUAL_OPERATIONS: readonly MenuAvailabilityMovementType[] = [
+const MENU_MANUAL_OPERATIONS: readonly MenuAvailabilityMovementType[] = [
   MenuAvailabilityMovementType.SET_STOCK,
   MenuAvailabilityMovementType.ADD_STOCK,
   MenuAvailabilityMovementType.REMOVE_STOCK,
@@ -19,11 +20,24 @@ const MANUAL_OPERATIONS: readonly MenuAvailabilityMovementType[] = [
   MenuAvailabilityMovementType.REOPEN,
 ];
 
+const SERVICE_MANUAL_OPERATIONS: readonly ServiceAvailabilityMovementType[] = [
+  ServiceAvailabilityMovementType.SET_STOCK,
+  ServiceAvailabilityMovementType.ADD_STOCK,
+  ServiceAvailabilityMovementType.REMOVE_STOCK,
+  ServiceAvailabilityMovementType.SOLD_OUT,
+  ServiceAvailabilityMovementType.REOPEN,
+];
+
+type InventoryTab = 'menu' | 'services';
+
 function redirectToInventory(params: {
   error?: string;
   success?: string;
-}) {
+  tab?: InventoryTab;
+}): never {
   const query = new URLSearchParams();
+
+  query.set('tab', params.tab ?? 'menu');
 
   if (params.error) {
     query.set('error', params.error);
@@ -51,10 +65,13 @@ function revalidateInventoryPages() {
   revalidatePath('/dashboard/menu');
   revalidatePath('/dashboard/pos');
   revalidatePath('/dashboard/kitchen');
+  revalidatePath('/dashboard/service-requests');
+  revalidatePath('/dashboard/services');
   revalidatePath('/t/[tagCode]/menu', 'page');
+  revalidatePath('/t/[tagCode]/service', 'page');
 }
 
-function getDefaultMovementReason(operation: MenuAvailabilityMovementType) {
+function getDefaultMenuMovementReason(operation: MenuAvailabilityMovementType) {
   if (operation === MenuAvailabilityMovementType.SET_STOCK) {
     return 'Set exact available menu stock';
   }
@@ -78,6 +95,32 @@ function getDefaultMovementReason(operation: MenuAvailabilityMovementType) {
   return 'Updated menu stock';
 }
 
+function getDefaultServiceMovementReason(
+  operation: ServiceAvailabilityMovementType
+) {
+  if (operation === ServiceAvailabilityMovementType.SET_STOCK) {
+    return 'Set exact available service stock';
+  }
+
+  if (operation === ServiceAvailabilityMovementType.ADD_STOCK) {
+    return 'Added service stock';
+  }
+
+  if (operation === ServiceAvailabilityMovementType.REMOVE_STOCK) {
+    return 'Removed service stock';
+  }
+
+  if (operation === ServiceAvailabilityMovementType.SOLD_OUT) {
+    return 'Marked service item as sold out';
+  }
+
+  if (operation === ServiceAvailabilityMovementType.REOPEN) {
+    return 'Reopened service item stock';
+  }
+
+  return 'Updated service stock';
+}
+
 export async function controlMenuStockAction(formData: FormData) {
   const user = await requireUser();
 
@@ -94,15 +137,17 @@ export async function controlMenuStockAction(formData: FormData) {
   if (!productId) {
     redirectToInventory({
       error: 'product-required',
+      tab: 'menu',
     });
   }
 
   if (
     !Object.values(MenuAvailabilityMovementType).includes(operation) ||
-    !MANUAL_OPERATIONS.includes(operation)
+    !MENU_MANUAL_OPERATIONS.includes(operation)
   ) {
     redirectToInventory({
       error: 'invalid-operation',
+      tab: 'menu',
     });
   }
 
@@ -121,6 +166,7 @@ export async function controlMenuStockAction(formData: FormData) {
   if (!product) {
     redirectToInventory({
       error: 'product-not-found',
+      tab: 'menu',
     });
   }
 
@@ -129,6 +175,7 @@ export async function controlMenuStockAction(formData: FormData) {
   if (product.productType === MenuProductType.BUNDLE) {
     redirectToInventory({
       error: 'bundle-stock-derived',
+      tab: 'menu',
     });
   }
 
@@ -144,12 +191,14 @@ export async function controlMenuStockAction(formData: FormData) {
   if (requiresQuantity && quantity === null) {
     redirectToInventory({
       error: 'invalid-quantity',
+      tab: 'menu',
     });
   }
 
   if (requiresPositiveQuantity && (!quantity || quantity <= 0)) {
     redirectToInventory({
       error: 'positive-quantity-required',
+      tab: 'menu',
     });
   }
 
@@ -222,7 +271,7 @@ export async function controlMenuStockAction(formData: FormData) {
         type: operation,
         quantity: movementQty,
         balanceAfter: nextQty,
-        reason: reason || getDefaultMovementReason(operation),
+        reason: reason || getDefaultMenuMovementReason(operation),
         userId: user.id,
       },
     });
@@ -232,6 +281,7 @@ export async function controlMenuStockAction(formData: FormData) {
 
   redirectToInventory({
     success: 'stock-updated',
+    tab: 'menu',
   });
 }
 
@@ -285,5 +335,347 @@ export async function initializeMenuStocksAction() {
 
   redirectToInventory({
     success: 'stocks-initialized',
+    tab: 'menu',
+  });
+}
+
+export async function enableServiceInventoryAction(formData: FormData) {
+  const user = await requireUser();
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
+  const serviceId = cleanText(formData.get('serviceId'));
+
+  if (!serviceId) {
+    redirectToInventory({
+      error: 'service-required',
+      tab: 'services',
+    });
+  }
+
+  const service = await db.serviceCatalogItem.findUnique({
+    where: {
+      id: serviceId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      name: true,
+      inventoryTracked: true,
+    },
+  });
+
+  if (!service) {
+    redirectToInventory({
+      error: 'service-not-found',
+      tab: 'services',
+    });
+  }
+
+  assertHotelScope(user, service.hotelId);
+
+  await db.$transaction(async (tx) => {
+    await tx.serviceCatalogItem.update({
+      where: {
+        id: service.id,
+      },
+      data: {
+        inventoryTracked: true,
+      },
+    });
+
+    await tx.serviceAvailabilityStock.upsert({
+      where: {
+        hotelId_serviceId: {
+          hotelId: service.hotelId,
+          serviceId: service.id,
+        },
+      },
+      update: {},
+      create: {
+        hotelId: service.hotelId,
+        serviceId: service.id,
+        availableQty: 0,
+        usedQty: 0,
+        isSoldOut: true,
+        notes: 'Initialized service inventory',
+      },
+    });
+  });
+
+  revalidateInventoryPages();
+
+  redirectToInventory({
+    success: 'service-stock-enabled',
+    tab: 'services',
+  });
+}
+
+export async function disableServiceInventoryAction(formData: FormData) {
+  const user = await requireUser();
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
+  const serviceId = cleanText(formData.get('serviceId'));
+
+  if (!serviceId) {
+    redirectToInventory({
+      error: 'service-required',
+      tab: 'services',
+    });
+  }
+
+  const service = await db.serviceCatalogItem.findUnique({
+    where: {
+      id: serviceId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+    },
+  });
+
+  if (!service) {
+    redirectToInventory({
+      error: 'service-not-found',
+      tab: 'services',
+    });
+  }
+
+  assertHotelScope(user, service.hotelId);
+
+  await db.serviceCatalogItem.update({
+    where: {
+      id: service.id,
+    },
+    data: {
+      inventoryTracked: false,
+    },
+  });
+
+  revalidateInventoryPages();
+
+  redirectToInventory({
+    success: 'service-stock-disabled',
+    tab: 'services',
+  });
+}
+
+export async function initializeServiceStocksAction() {
+  const user = await requireUser();
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
+  const where =
+    user.role === 'SUPER_ADMIN'
+      ? {
+          inventoryTracked: true,
+        }
+      : {
+          hotelId: user.hotelId!,
+          inventoryTracked: true,
+        };
+
+  const services = await db.serviceCatalogItem.findMany({
+    where,
+    select: {
+      id: true,
+      hotelId: true,
+    },
+  });
+
+  await Promise.all(
+    services.map((service) =>
+      db.serviceAvailabilityStock.upsert({
+        where: {
+          hotelId_serviceId: {
+            hotelId: service.hotelId,
+            serviceId: service.id,
+          },
+        },
+        update: {},
+        create: {
+          hotelId: service.hotelId,
+          serviceId: service.id,
+          availableQty: 0,
+          usedQty: 0,
+          isSoldOut: true,
+          notes: 'Initialized service inventory',
+        },
+      })
+    )
+  );
+
+  revalidateInventoryPages();
+
+  redirectToInventory({
+    success: 'service-stocks-initialized',
+    tab: 'services',
+  });
+}
+
+export async function controlServiceStockAction(formData: FormData) {
+  const user = await requireUser();
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
+  const serviceId = cleanText(formData.get('serviceId'));
+  const operation = formData.get(
+    'operation'
+  ) as ServiceAvailabilityMovementType;
+  const quantity = parseWholeNumber(formData.get('quantity'));
+  const reason = cleanText(formData.get('reason'), 300);
+  const notes = cleanText(formData.get('notes'), 300);
+
+  if (!serviceId) {
+    redirectToInventory({
+      error: 'service-required',
+      tab: 'services',
+    });
+  }
+
+  if (
+    !Object.values(ServiceAvailabilityMovementType).includes(operation) ||
+    !SERVICE_MANUAL_OPERATIONS.includes(operation)
+  ) {
+    redirectToInventory({
+      error: 'invalid-operation',
+      tab: 'services',
+    });
+  }
+
+  const service = await db.serviceCatalogItem.findUnique({
+    where: {
+      id: serviceId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      name: true,
+      inventoryTracked: true,
+    },
+  });
+
+  if (!service) {
+    redirectToInventory({
+      error: 'service-not-found',
+      tab: 'services',
+    });
+  }
+
+  assertHotelScope(user, service.hotelId);
+
+  const requiresPositiveQuantity =
+    operation === ServiceAvailabilityMovementType.ADD_STOCK ||
+    operation === ServiceAvailabilityMovementType.REMOVE_STOCK ||
+    operation === ServiceAvailabilityMovementType.REOPEN;
+
+  const requiresQuantity =
+    operation === ServiceAvailabilityMovementType.SET_STOCK ||
+    requiresPositiveQuantity;
+
+  if (requiresQuantity && quantity === null) {
+    redirectToInventory({
+      error: 'invalid-quantity',
+      tab: 'services',
+    });
+  }
+
+  if (requiresPositiveQuantity && (!quantity || quantity <= 0)) {
+    redirectToInventory({
+      error: 'positive-quantity-required',
+      tab: 'services',
+    });
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.serviceCatalogItem.update({
+      where: {
+        id: service.id,
+      },
+      data: {
+        inventoryTracked: true,
+      },
+    });
+
+    const existingStock = await tx.serviceAvailabilityStock.findUnique({
+      where: {
+        hotelId_serviceId: {
+          hotelId: service.hotelId,
+          serviceId: service.id,
+        },
+      },
+    });
+
+    const currentQty = existingStock?.availableQty ?? 0;
+    let nextQty = currentQty;
+    let movementQty = quantity ?? 0;
+
+    if (operation === ServiceAvailabilityMovementType.SET_STOCK) {
+      nextQty = quantity ?? 0;
+      movementQty = nextQty;
+    }
+
+    if (operation === ServiceAvailabilityMovementType.ADD_STOCK) {
+      nextQty = currentQty + quantity!;
+      movementQty = quantity!;
+    }
+
+    if (operation === ServiceAvailabilityMovementType.REMOVE_STOCK) {
+      movementQty = Math.min(quantity!, currentQty);
+      nextQty = Math.max(currentQty - quantity!, 0);
+    }
+
+    if (operation === ServiceAvailabilityMovementType.SOLD_OUT) {
+      movementQty = currentQty;
+      nextQty = 0;
+    }
+
+    if (operation === ServiceAvailabilityMovementType.REOPEN) {
+      nextQty = currentQty + quantity!;
+      movementQty = quantity!;
+    }
+
+    const stock = await tx.serviceAvailabilityStock.upsert({
+      where: {
+        hotelId_serviceId: {
+          hotelId: service.hotelId,
+          serviceId: service.id,
+        },
+      },
+      update: {
+        availableQty: nextQty,
+        isSoldOut: nextQty <= 0,
+        notes: notes || null,
+      },
+      create: {
+        hotelId: service.hotelId,
+        serviceId: service.id,
+        availableQty: nextQty,
+        usedQty: 0,
+        isSoldOut: nextQty <= 0,
+        notes: notes || null,
+      },
+    });
+
+    await tx.serviceAvailabilityMovement.create({
+      data: {
+        hotelId: service.hotelId,
+        serviceId: service.id,
+        stockId: stock.id,
+        type: operation,
+        quantity: movementQty,
+        balanceAfter: nextQty,
+        reason: reason || getDefaultServiceMovementReason(operation),
+        userId: user.id,
+      },
+    });
+  });
+
+  revalidateInventoryPages();
+
+  redirectToInventory({
+    success: 'service-stock-updated',
+    tab: 'services',
   });
 }

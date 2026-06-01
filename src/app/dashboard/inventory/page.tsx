@@ -5,11 +5,22 @@ import { requireUser } from '@/lib/auth';
 import { InventoryClient } from './InventoryClient';
 import { RealtimeInventoryRefresh } from '@/components/dashboard/RealtimeInventoryRefresh';
 
+type InventoryTab = 'menu' | 'services';
+
+function getActiveTab(tab?: string): InventoryTab {
+  return tab === 'services' ? 'services' : 'menu';
+}
+
 function getMessage(error?: string, success?: string) {
   if (success) {
     const messages: Record<string, string> = {
       'stock-updated': 'Menu stock availability was updated.',
       'stocks-initialized': 'Menu stock records were initialized.',
+      'service-stock-enabled': 'Service inventory tracking was enabled.',
+      'service-stock-disabled': 'Service inventory tracking was disabled.',
+      'service-stock-updated': 'Service request inventory was updated.',
+      'service-stocks-initialized':
+        'Service inventory records were initialized.',
     };
 
     return {
@@ -21,8 +32,10 @@ function getMessage(error?: string, success?: string) {
   if (error) {
     const messages: Record<string, string> = {
       'product-required': 'Menu item is required.',
+      'service-required': 'Service item is required.',
       'invalid-operation': 'Invalid stock control operation.',
       'product-not-found': 'Menu item was not found.',
+      'service-not-found': 'Service item was not found.',
       'invalid-quantity': 'Please enter a valid quantity.',
       'positive-quantity-required': 'Quantity must be greater than zero.',
       'bundle-stock-derived':
@@ -64,15 +77,23 @@ export default async function InventoryPage({
   searchParams: Promise<{
     error?: string;
     success?: string;
+    tab?: string;
   }>;
 }) {
-  const { error, success } = await searchParams;
+  const { error, success, tab } = await searchParams;
+  const activeTab = getActiveTab(tab);
 
   const user = await requireUser();
 
   const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
-  const [products, stocks, movements] = await Promise.all([
+  const [
+    products,
+    menuStocks,
+    menuMovements,
+    services,
+    serviceMovements,
+  ] = await Promise.all([
     db.menuProduct.findMany({
       where,
       include: {
@@ -158,6 +179,55 @@ export default async function InventoryPage({
       },
       take: 80,
     }),
+
+    db.serviceCatalogItem.findMany({
+      where,
+      include: {
+        hotel: {
+          select: {
+            name: true,
+          },
+        },
+        availabilityStock: true,
+      },
+      orderBy: [
+        {
+          hotel: {
+            name: 'asc',
+          },
+        },
+        {
+          category: 'asc',
+        },
+        {
+          sortOrder: 'asc',
+        },
+        {
+          name: 'asc',
+        },
+      ],
+    }),
+
+    db.serviceAvailabilityMovement.findMany({
+      where,
+      include: {
+        service: {
+          select: {
+            name: true,
+            category: true,
+          },
+        },
+        hotel: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 80,
+    }),
   ]);
 
   const productIds = products.map((product) => product.id);
@@ -190,7 +260,7 @@ export default async function InventoryPage({
   }
 
   const stockByProductId = new Map(
-    stocks.map((stock) => [stock.productId, stock])
+    menuStocks.map((stock) => [stock.productId, stock])
   );
 
   const menuItems = products.map((product) => {
@@ -316,11 +386,6 @@ export default async function InventoryPage({
     (item) => item.isSoldOut || item.availableQty <= 0
   ).length;
 
-  /**
-   * Keep these summary totals based on direct stock items only.
-   * Bundle available quantity is derived from component stock, so adding it here
-   * would double-count the same inventory.
-   */
   const totalAvailableQty = directStockItems.reduce(
     (sum, item) => sum + item.availableQty,
     0
@@ -331,18 +396,72 @@ export default async function InventoryPage({
     0
   );
 
+  const serviceItems = services.map((service) => {
+    const stock = service.availabilityStock;
+
+    return {
+      id: service.id,
+      hotelId: service.hotelId,
+      hotelName: service.hotel.name,
+      code: service.code,
+      name: service.name,
+      category: service.category,
+      description: service.description ?? '',
+      iconKey: service.iconKey,
+      billingMode: service.billingMode,
+      unitPrice: Number(service.unitPrice),
+      unitLabel: service.unitLabel ?? '',
+      isActive: service.isActive,
+      inventoryTracked: service.inventoryTracked,
+      stockId: stock?.id ?? null,
+      availableQty: stock?.availableQty ?? 0,
+      usedQty: stock?.usedQty ?? 0,
+      isSoldOut: stock?.isSoldOut ?? true,
+      notes: stock?.notes ?? '',
+      updatedAt: stock?.updatedAt?.toISOString() ?? null,
+    };
+  });
+
+  const totalServices = serviceItems.length;
+  const activeServices = serviceItems.filter((item) => item.isActive).length;
+  const trackedServices = serviceItems.filter(
+    (item) => item.inventoryTracked
+  ).length;
+
+  const serviceAvailableItems = serviceItems.filter(
+    (item) =>
+      item.inventoryTracked &&
+      item.isActive &&
+      item.availableQty > 0 &&
+      !item.isSoldOut
+  ).length;
+
+  const serviceSoldOutItems = serviceItems.filter(
+    (item) =>
+      item.inventoryTracked && (item.isSoldOut || item.availableQty <= 0)
+  ).length;
+
+  const serviceTotalAvailableQty = serviceItems
+    .filter((item) => item.inventoryTracked)
+    .reduce((sum, item) => sum + item.availableQty, 0);
+
+  const serviceTotalUsedQty = serviceItems
+    .filter((item) => item.inventoryTracked)
+    .reduce((sum, item) => sum + item.usedQty, 0);
+
   return (
     <div>
       <RealtimeInventoryRefresh />
 
       <PageHeader
-        title="Menu Inventory Management"
-        description="Manage menu item availability and live stock counts shown to guests."
+        title="Inventory Management"
+        description="Manage food menu stock and service request inventory shown to guests."
       />
 
       <InventoryClient
+        initialTab={activeTab}
         menuItems={menuItems}
-        movements={movements.map((movement) => ({
+        menuMovements={menuMovements.map((movement) => ({
           id: movement.id,
           hotelName: movement.hotel.name,
           productName: movement.product.name,
@@ -352,14 +471,35 @@ export default async function InventoryPage({
           reason: movement.reason ?? '',
           createdAt: movement.createdAt.toISOString(),
         }))}
+        serviceItems={serviceItems}
+        serviceMovements={serviceMovements.map((movement) => ({
+          id: movement.id,
+          hotelName: movement.hotel.name,
+          serviceName: movement.service.name,
+          serviceCategory: movement.service.category,
+          type: movement.type,
+          quantity: movement.quantity,
+          balanceAfter: movement.balanceAfter,
+          reason: movement.reason ?? '',
+          createdAt: movement.createdAt.toISOString(),
+        }))}
         message={getMessage(error, success)}
-        summary={{
+        menuSummary={{
           totalMenuItems,
           activeMenuItems,
           availableItems,
           soldOutItems,
           totalAvailableQty,
           totalSoldQty,
+        }}
+        serviceSummary={{
+          totalServices,
+          activeServices,
+          trackedServices,
+          serviceAvailableItems,
+          serviceSoldOutItems,
+          serviceTotalAvailableQty,
+          serviceTotalUsedQty,
         }}
       />
     </div>

@@ -1,24 +1,34 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
+  ArrowLeft,
   Baby,
   BedDouble,
   Car,
+  CheckCircle2,
   Clock,
   ConciergeBell,
   Droplets,
   Hammer,
+  Minus,
   PackagePlus,
+  Plus,
+  Search,
   Shirt,
+  ShoppingBag,
   Sparkles,
   SprayCan,
+  Trash2,
   Waves,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { cn } from '@/lib/utils';
 import { createServiceRequestAction } from '../actions';
 
 type GuestServiceBillingMode =
@@ -37,6 +47,11 @@ type GuestServiceItem = {
   unitPrice: number;
   unitLabel: string;
   sortOrder: number;
+};
+
+type ServiceCartItem = {
+  serviceCode: string;
+  quantity: number;
 };
 
 const iconMap: Record<string, LucideIcon> = {
@@ -59,6 +74,10 @@ const moneyFormatter = new Intl.NumberFormat('en-PH', {
   currency: 'PHP',
 });
 
+function money(value: number) {
+  return moneyFormatter.format(value);
+}
+
 function getBillingBadge(service: GuestServiceItem) {
   if (service.billingMode === 'FREE') {
     return {
@@ -75,7 +94,7 @@ function getBillingBadge(service: GuestServiceItem) {
   }
 
   return {
-    label: moneyFormatter.format(service.unitPrice),
+    label: money(service.unitPrice),
     className: 'bg-sand/15 text-sand border-sand/25',
   };
 }
@@ -91,16 +110,13 @@ function getErrorMessage(error?: string) {
     invalid_service: 'Please select at least one valid service.',
     room_required:
       'A paid add-on cannot be charged because no room is linked to this NFC tag.',
-    quantity_required: 'Please enter a valid quantity.',
     consent_required:
-      'Please confirm that the paid add-on will be charged to your room.',
-    request_failed: 'Unable to submit your requests. Please try again.',
-    payment_cancelled:
-      'Payment was cancelled. Your request was not marked as paid.',
-    payment_failed: 'Unable to start payment checkout. Please try again.',
+      'Please confirm the room add-on charge before submitting this request.',
+    quantity_required: 'Please choose a valid quantity for every selected item.',
+    request_failed: 'Unable to submit the request. Please try again.',
   };
 
-  return messages[error] ?? 'Unable to submit your requests. Please try again.';
+  return messages[error] ?? 'Unable to submit the request. Please try again.';
 }
 
 function getSuccessMessage(success?: string, count?: string) {
@@ -108,23 +124,66 @@ function getSuccessMessage(success?: string, count?: string) {
     return null;
   }
 
-  const requestCount = Number(count || 0);
-  const label =
-    requestCount > 1 ? `${requestCount} requests were` : 'Your request was';
+  const requestCount = Number(count || 1);
 
   if (success === 'charged') {
-    return `${label} submitted and paid add-ons were added to your room bill.`;
+    return `${requestCount} paid room add-on request${
+      requestCount === 1 ? '' : 's'
+    } sent successfully.`;
   }
 
   if (success === 'confirmation') {
-    return `${label} submitted. Staff will confirm the price/details shortly.`;
+    return `${requestCount} request${requestCount === 1 ? '' : 's'} sent for staff price confirmation.`;
   }
 
   if (success === 'mixed') {
-    return `${label} submitted. Some items were added to your room bill, while others require staff confirmation.`;
+    return `${requestCount} request${requestCount === 1 ? '' : 's'} sent. Some items may require staff confirmation.`;
   }
 
-  return `${label} submitted successfully.`;
+  return `${requestCount} service request${requestCount === 1 ? '' : 's'} sent successfully.`;
+}
+
+function getServiceIcon(service: GuestServiceItem) {
+  return iconMap[service.iconKey] ?? ConciergeBell;
+}
+
+function getServicePriceText(service: GuestServiceItem) {
+  if (service.billingMode === 'FREE') {
+    return 'Free';
+  }
+
+  if (service.billingMode === 'PRICE_ON_CONFIRMATION') {
+    return 'Price on confirmation';
+  }
+
+  return `${money(service.unitPrice)}${service.unitLabel ? ` / ${service.unitLabel}` : ''}`;
+}
+
+function getCartItemTotal(service: GuestServiceItem, quantity: number) {
+  if (service.billingMode !== 'FIXED_PRICE') {
+    return 0;
+  }
+
+  return service.unitPrice * quantity;
+}
+
+function SubmitButton({
+  disabled,
+}: {
+  disabled: boolean;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      disabled={disabled || pending}
+      size="lg"
+      className="mt-5 w-full bg-ink text-white disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {pending ? 'Submitting...' : 'Submit Requests'}
+    </Button>
+  );
 }
 
 export function GuestServiceOrderForm({
@@ -142,423 +201,565 @@ export function GuestServiceOrderForm({
   success?: string;
   count?: string;
 }) {
-  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
-  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>(
-    {}
+  const [screen, setScreen] = useState<'services' | 'cart'>('services');
+  const [cart, setCart] = useState<ServiceCartItem[]>([]);
+  const [guestName, setGuestName] = useState('');
+  const [notes, setNotes] = useState('');
+  const [chargeConsent, setChargeConsent] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const serviceMap = useMemo(
+    () => new Map(services.map((service) => [service.code, service])),
+    [services]
   );
-  const [confirmed, setConfirmed] = useState(false);
 
-  function normalizeQuantity(rawValue?: string) {
-    const quantity = Number(rawValue);
+  const categories = useMemo(
+    () => ['All', ...Array.from(new Set(services.map((service) => service.category)))],
+    [services]
+  );
 
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      return 1;
-    }
+  const filteredServices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
-    return Math.min(quantity, 20);
+    return services.filter((service) => {
+      const matchesCategory =
+        activeCategory === 'All' || service.category === activeCategory;
+
+      const matchesSearch =
+        !query ||
+        `${service.name} ${service.description} ${service.category}`
+          .toLowerCase()
+          .includes(query);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, searchQuery, services]);
+
+  const selectedServices = useMemo(() => {
+    return cart
+      .map((item) => {
+        const service = serviceMap.get(item.serviceCode);
+
+        if (!service) {
+          return null;
+        }
+
+        return {
+          service,
+          quantity: item.quantity,
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          service: GuestServiceItem;
+          quantity: number;
+        } => Boolean(item)
+      );
+  }, [cart, serviceMap]);
+
+  const selectedCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const fixedPriceTotal = selectedServices.reduce(
+    (sum, item) => sum + getCartItemTotal(item.service, item.quantity),
+    0
+  );
+
+  const hasFixedPriceItem = selectedServices.some(
+    (item) => item.service.billingMode === 'FIXED_PRICE'
+  );
+
+  const hasConfirmationItem = selectedServices.some(
+    (item) => item.service.billingMode === 'PRICE_ON_CONFIRMATION'
+  );
+
+  const actionError = getErrorMessage(error);
+  const successMessage = getSuccessMessage(success, count);
+  const visibleError = localError || actionError;
+
+  function getCartQuantity(serviceCode: string) {
+    return cart.find((item) => item.serviceCode === serviceCode)?.quantity ?? 0;
   }
 
-  function getQuantity(code: string) {
-    return normalizeQuantity(quantityInputs[code] ?? '1');
-  }
+  function addService(serviceCode: string) {
+    setLocalError(null);
 
-  function updateQuantityInput(code: string, rawValue: string) {
-    const digitsOnly = rawValue.replace(/[^\d]/g, '');
+    const service = serviceMap.get(serviceCode);
 
-    setConfirmed(false);
-
-    if (!digitsOnly) {
-      setQuantityInputs((current) => ({
-        ...current,
-        [code]: '',
-      }));
-
+    if (!service) {
+      setLocalError('This service is no longer available.');
       return;
     }
 
-    const nextQuantity = Math.min(Number(digitsOnly), 20);
+    setCart((current) => {
+      const existing = current.find((item) => item.serviceCode === serviceCode);
 
-    setQuantityInputs((current) => ({
-      ...current,
-      [code]: String(nextQuantity),
-    }));
-  }
-
-  function normalizeQuantityOnBlur(code: string) {
-    setQuantityInputs((current) => ({
-      ...current,
-      [code]: String(normalizeQuantity(current[code])),
-    }));
-  }
-
-  function toggleService(code: string) {
-    setSelectedCodes((currentCodes) => {
-      const isSelected = currentCodes.includes(code);
-
-      if (isSelected) {
-        setQuantityInputs((currentQuantities) => {
-          const nextQuantities = { ...currentQuantities };
-
-          delete nextQuantities[code];
-
-          return nextQuantities;
-        });
-
-        return currentCodes.filter((currentCode) => currentCode !== code);
+      if (existing) {
+        return current.map((item) =>
+          item.serviceCode === serviceCode
+            ? {
+                ...item,
+                quantity: Math.min(item.quantity + 1, 20),
+              }
+            : item
+        );
       }
 
-      setQuantityInputs((currentQuantities) => ({
-        ...currentQuantities,
-        [code]: '1',
-      }));
-
-      return [...currentCodes, code];
+      return [
+        ...current,
+        {
+          serviceCode,
+          quantity: 1,
+        },
+      ];
     });
-
-    setConfirmed(false);
   }
 
-  const groupedServices = useMemo(() => {
-    const groups = new Map<string, GuestServiceItem[]>();
+  function updateQuantity(serviceCode: string, quantity: number) {
+    setLocalError(null);
 
-    for (const service of services) {
-      const existingItems = groups.get(service.category) ?? [];
+    setCart((current) =>
+      current
+        .map((item) =>
+          item.serviceCode === serviceCode
+            ? {
+                ...item,
+                quantity: Math.min(Math.max(quantity, 0), 20),
+              }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  }
 
-      existingItems.push(service);
-      groups.set(service.category, existingItems);
+  function clearCart() {
+    setCart([]);
+    setNotes('');
+    setChargeConsent(false);
+    setLocalError(null);
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    setLocalError(null);
+
+    if (!cart.length) {
+      event.preventDefault();
+      setLocalError('Please add at least one service request.');
+      return;
     }
 
-    return Array.from(groups.entries()).map(([category, items]) => ({
-      category,
-      items: items.sort((a, b) => {
-        if (a.sortOrder !== b.sortOrder) {
-          return a.sortOrder - b.sortOrder;
-        }
+    if (hasFixedPriceItem && !chargeConsent) {
+      event.preventDefault();
+      setLocalError('Please confirm the room add-on charge before submitting.');
+    }
+  }
 
-        return a.name.localeCompare(b.name);
-      }),
-    }));
-  }, [services]);
+  if (screen === 'cart') {
+    return (
+      <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#f8f3ec] px-5 pb-28 pt-2 text-ink">
+        <div className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">
+          <button
+            type="button"
+            onClick={() => setScreen('services')}
+            className="grid size-10 place-items-center rounded-full hover:bg-black/5"
+            aria-label="Back to services"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
 
-  const selectedServices = useMemo(
-    () => services.filter((service) => selectedCodes.includes(service.code)),
-    [services, selectedCodes]
-  );
-
-  const fixedPriceServices = selectedServices.filter(
-    (service) => service.billingMode === 'FIXED_PRICE'
-  );
-
-  const confirmationServices = selectedServices.filter(
-    (service) => service.billingMode === 'PRICE_ON_CONFIRMATION'
-  );
-
-  const freeServices = selectedServices.filter(
-    (service) => service.billingMode === 'FREE'
-  );
-
-  const hasFixedPrice = fixedPriceServices.length > 0;
-
-  const total = fixedPriceServices.reduce((sum, service) => {
-    const quantity = getQuantity(service.code);
-
-    return sum + service.unitPrice * quantity;
-  }, 0);
-
-  const errorMessage = getErrorMessage(error);
-  const successMessage = getSuccessMessage(success, count);
-
-  return (
-    <form
-      action={createServiceRequestAction}
-      className="-mx-5 -mt-4 min-h-screen space-y-6 bg-[radial-gradient(circle_at_top,_rgba(184,137,56,0.20),_transparent_35%),linear-gradient(180deg,#050505,#0b0b0b_45%,#050505)] px-5 pb-32 pt-5 text-white"
-    >
-      <input type="hidden" name="tagCode" value={tagCode} />
-
-      {selectedServices.map((service) => (
-        <div key={service.code}>
-          <input type="hidden" name="serviceCodes" value={service.code} />
-          <input
-            type="hidden"
-            name={`quantity_${service.code}`}
-            value={getQuantity(service.code)}
-          />
-        </div>
-      ))}
-
-      {errorMessage ? (
-        <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
-          {errorMessage}
-        </div>
-      ) : null}
-
-      {successMessage ? (
-        <div className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-200">
-          {successMessage}
-        </div>
-      ) : null}
-
-      <div>
-  <label className="mb-2 block text-xs font-black uppercase tracking-wide text-sand">
-    Guest Name
-  </label>
-
-  <Input
-    name="guestName"
-    placeholder="Guest name optional"
-    className="h-12 rounded-2xl border border-gold/20 bg-white text-ink placeholder:text-neutral-400 focus:border-gold focus:ring-gold"
-  />
-</div>
-
-      {services.length ? (
-        groupedServices.map((group) => (
-          <section key={group.category}>
-            <h2 className="mb-3 text-sm font-black uppercase tracking-wide text-sand">
-              {group.category}
-            </h2>
-
-            <div className="grid grid-cols-3 gap-3">
-              {group.items.map((service) => {
-                const Icon = iconMap[service.iconKey] ?? ConciergeBell;
-                const badge = getBillingBadge(service);
-                const isSelected = selectedCodes.includes(service.code);
-
-                return (
-                  <button
-                    key={service.id}
-                    type="button"
-                    onClick={() => toggleService(service.code)}
-                    className={
-                      isSelected
-                        ? 'relative grid min-h-[112px] place-items-center rounded-2xl border border-gold bg-gold/15 p-3 text-center text-xs font-black text-white shadow-[0_0_30px_rgba(184,137,56,0.25)] ring-1 ring-gold'
-                        : 'relative grid min-h-[112px] place-items-center rounded-2xl border border-white/10 bg-white/8 p-3 text-center text-xs font-black text-white shadow-sm transition hover:border-gold/70 hover:bg-gold/10'
-                    }
-                  >
-                    <span
-                      className={`absolute right-2 top-2 rounded-full border px-2 py-1 text-[9px] font-black ${badge.className}`}
-                    >
-                      {badge.label}
-                    </span>
-
-                    <span>
-                      <Icon
-                        className={
-                          isSelected
-                            ? 'mx-auto mb-2 size-6 text-gold'
-                            : 'mx-auto mb-2 size-6 text-white/85'
-                        }
-                      />
-                      {service.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))
-      ) : (
-        <div className="rounded-3xl border border-gold/20 bg-gold/10 p-5 text-sm font-bold text-sand">
-          No services are available yet. Please contact the front desk.
-        </div>
-      )}
-
-      <div className="rounded-[2rem] border border-white/10 bg-white/8 p-5 shadow-2xl backdrop-blur">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-gold">
-              Selected Requests
-            </p>
-
-            <h3 className="mt-1 text-xl font-black text-white">
-              {selectedServices.length
-                ? `${selectedServices.length} selected`
-                : 'No service selected'}
-            </h3>
-
-            <p className="mt-1 text-sm text-white/45">
-              You may select multiple services before submitting.
+          <div className="text-center">
+            <h2 className="font-black">Selected Requests</h2>
+            <p className="text-xs text-neutral-500">
+              Review services before submitting
             </p>
           </div>
 
-          {selectedServices.length ? (
-            <span className="rounded-full bg-gold px-3 py-1 text-xs font-black text-black">
-              {selectedServices.length}
-            </span>
-          ) : null}
+          <div />
         </div>
 
-        {selectedServices.length ? (
-          <div className="mt-5 space-y-3">
-            {selectedServices.map((service) => {
-              const isFixedPrice = service.billingMode === 'FIXED_PRICE';
-              const isFree = service.billingMode === 'FREE';
-              const needsConfirmation =
-                service.billingMode === 'PRICE_ON_CONFIRMATION';
+        {cart.length === 0 ? (
+          <div className="grid min-h-[65vh] place-items-center rounded-[2rem] bg-white p-6 text-center shadow-soft">
+            <div>
+              <div className="mx-auto grid size-16 place-items-center rounded-full bg-neutral-100">
+                <ShoppingBag className="size-7" />
+              </div>
 
-              const quantity = getQuantity(service.code);
-              const quantityInputValue = quantityInputs[service.code] ?? '1';
-              const lineTotal = service.unitPrice * quantity;
+              <h3 className="mt-4 text-xl font-black">No requests selected</h3>
+              <p className="mt-1 text-sm text-neutral-500">
+                Add service requests first.
+              </p>
 
-              return (
-                <div
-                  key={service.code}
-                  className="rounded-2xl border border-white/10 bg-black/30 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-black text-white">{service.name}</p>
-
-                      {service.description ? (
-                        <p className="mt-1 text-xs text-white/45">
-                          {service.description}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <span
-                      className={
-                        isFree
-                          ? 'rounded-full border border-emerald-400/20 bg-emerald-400/15 px-3 py-1 text-[10px] font-black text-emerald-300'
-                          : needsConfirmation
-                            ? 'rounded-full border border-gold/25 bg-gold/15 px-3 py-1 text-[10px] font-black text-gold'
-                            : 'rounded-full border border-sand/25 bg-sand/15 px-3 py-1 text-[10px] font-black text-sand'
-                      }
-                    >
-                      {isFree
-                        ? 'FREE'
-                        : needsConfirmation
-                          ? 'CONFIRM PRICE'
-                          : `${moneyFormatter.format(service.unitPrice)} ${
-                              service.unitLabel || ''
-                            }`}
-                    </span>
-                  </div>
-
-                  {isFixedPrice ? (
-                    <div className="mt-4 grid grid-cols-[120px_1fr] gap-3">
-                      <div>
-                        <label className="mb-1 block text-xs font-black uppercase text-white/45">
-                          Qty
-                        </label>
-
-                        <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={quantityInputValue}
-                              onFocus={(event) => {
-                                event.currentTarget.select();
-                              }}
-                              onMouseUp={(event) => {
-                                event.preventDefault();
-                              }}
-                              onChange={(event) => {
-                                updateQuantityInput(service.code, event.target.value);
-                              }}
-                              onBlur={() => {
-                                normalizeQuantityOnBlur(service.code);
-                              }}
-                              className="h-11 w-full rounded-2xl border border-gold/40 bg-white px-4 text-base font-black text-black caret-black outline-none selection:bg-gold selection:text-black focus:border-gold focus:ring-2 focus:ring-gold/30"
-                            />
-                      </div>
-
-                      <div>
-                        <label className="mb-1 block text-xs font-black uppercase text-white/45">
-                          Line Total
-                        </label>
-
-                        <div className="flex h-11 items-center rounded-2xl border border-white/10 bg-white/8 px-4 text-sm font-black text-sand">
-                          {moneyFormatter.format(lineTotal)}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+              <Button
+                type="button"
+                onClick={() => setScreen('services')}
+                className="mt-5"
+              >
+                Back to Services
+              </Button>
+            </div>
           </div>
         ) : (
-          <div className="mt-5 rounded-2xl bg-white/5 p-4 text-sm font-bold text-white/45">
-            Select one or more services above.
-          </div>
-        )}
+          <form action={createServiceRequestAction} onSubmit={handleSubmit}>
+            <input type="hidden" name="tagCode" value={tagCode} />
 
-        {hasFixedPrice ? (
-          <div className="mt-5 rounded-2xl border border-gold/30 bg-gold/10 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-black text-white">
-                Total Room Add-ons
-              </p>
+            {selectedServices.map((item) => (
+              <div key={`hidden-${item.service.code}`}>
+                <input
+                  type="hidden"
+                  name="serviceCodes"
+                  value={item.service.code}
+                />
+                <input
+                  type="hidden"
+                  name={`quantity_${item.service.code}`}
+                  value={item.quantity}
+                />
+              </div>
+            ))}
 
-              <p className="text-xl font-black text-sand">
-                {moneyFormatter.format(total)}
-              </p>
+            <div className="rounded-[2rem] bg-white p-4 shadow-soft">
+              <div className="space-y-4">
+                {selectedServices.map(({ service, quantity }) => {
+                  const Icon = getServiceIcon(service);
+
+                  return (
+                    <div
+                      key={service.code}
+                      className="grid grid-cols-[64px_1fr_36px] gap-3 border-b border-neutral-100 pb-4 last:border-b-0"
+                    >
+                      <div className="grid size-16 place-items-center rounded-2xl bg-neutral-100 text-neutral-700">
+                        <Icon className="size-7" />
+                      </div>
+
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-black leading-tight">
+                            {service.name}
+                          </h3>
+
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                              getBillingBadge(service).className
+                            }`}
+                          >
+                            {getBillingBadge(service).label}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-sm font-bold text-neutral-700">
+                          {getServicePriceText(service)}
+                        </p>
+
+                        {service.description ? (
+                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
+                            {service.description}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-3 inline-flex items-center gap-3 rounded-full bg-neutral-50 px-2 py-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateQuantity(service.code, quantity - 1)
+                            }
+                            className="grid size-8 place-items-center rounded-full hover:bg-white active:scale-95"
+                            aria-label={`Decrease ${service.name}`}
+                          >
+                            <Minus className="size-3" />
+                          </button>
+
+                          <span className="min-w-4 text-center text-sm font-black">
+                            {quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateQuantity(service.code, quantity + 1)
+                            }
+                            className="grid size-8 place-items-center rounded-full hover:bg-white active:scale-95"
+                            aria-label={`Increase ${service.name}`}
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(service.code, 0)}
+                        className="grid size-10 place-items-center rounded-full text-neutral-400 hover:bg-neutral-100"
+                        aria-label={`Remove ${service.name}`}
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <label className="mt-4 flex items-start gap-3 text-sm font-bold text-sand">
-              <input
-                type="checkbox"
-                name="chargeConsent"
-                value="true"
-                required
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-                className="mt-1 size-4 accent-[#B88938]"
+            <div className="mt-5 rounded-[2rem] bg-white p-4 shadow-soft">
+              <h3 className="mb-3 font-black">Request Details</h3>
+
+              <div className="space-y-3">
+                <Input
+                  name="guestName"
+                  placeholder="Guest name optional"
+                  value={guestName}
+                  onChange={(event) => setGuestName(event.target.value)}
+                />
+
+                <Textarea
+                  name="notes"
+                  placeholder="Special instructions / notes"
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+
+                {hasFixedPriceItem ? (
+                  <label className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
+                    <input
+                      name="chargeConsent"
+                      value="true"
+                      type="checkbox"
+                      checked={chargeConsent}
+                      onChange={(event) =>
+                        setChargeConsent(event.target.checked)
+                      }
+                      className="mt-1 size-4"
+                    />
+
+                    <span>
+                      I confirm the selected paid room add-ons may be charged to
+                      this room. Total paid add-ons:{' '}
+                      <b>{money(fixedPriceTotal)}</b>.
+                    </span>
+                  </label>
+                ) : null}
+
+                {hasConfirmationItem ? (
+                  <div className="rounded-2xl bg-gold/10 p-4 text-sm font-bold text-amber-800">
+                    Some selected services require staff confirmation before
+                    pricing or completion.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-[2rem] bg-white p-4 shadow-soft">
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Selected requests</span>
+                  <b>{selectedCount}</b>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Paid add-ons</span>
+                  <b>{money(fixedPriceTotal)}</b>
+                </div>
+
+                <div className="border-t border-neutral-100 pt-4 text-base">
+                  <div className="flex justify-between">
+                    <span className="font-black">Room / Location</span>
+                    <span className="font-black">{roomLabel}</span>
+                  </div>
+                </div>
+              </div>
+
+              {visibleError ? (
+                <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
+                  {visibleError}
+                </p>
+              ) : null}
+
+              <SubmitButton
+                disabled={cart.length === 0 || (hasFixedPriceItem && !chargeConsent)}
               />
+            </div>
+          </form>
+        )}
+      </div>
+    );
+  }
 
-              <span>
-                I understand that {moneyFormatter.format(total)} will be
-                charged to {roomLabel}.
-              </span>
-            </label>
+  return (
+    <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-black px-5 pb-28 pt-2 text-white">
+      {successMessage ? (
+        <div className="mb-4 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-200">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
+            <p>{successMessage}</p>
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-        {confirmationServices.length ? (
-          <div className="mt-5 rounded-2xl border border-gold/20 bg-gold/10 p-4 text-sm font-bold text-sand">
-            Some selected services require staff confirmation before billing.
-          </div>
-        ) : null}
+      {visibleError ? (
+        <div className="mb-4 rounded-[1.5rem] border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+          {visibleError}
+        </div>
+      ) : null}
 
-        {freeServices.length &&
-        !hasFixedPrice &&
-        !confirmationServices.length ? (
-          <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-200">
-            Selected services are complimentary and will not be added to your
-            room bill.
+      <div className="mb-4">
+        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-sand">
+          Guest Name
+        </label>
+
+        <Input
+          placeholder="Guest name optional"
+          value={guestName}
+          onChange={(event) => setGuestName(event.target.value)}
+          className="h-14 rounded-2xl border-white/10 bg-white text-ink"
+        />
+      </div>
+
+      <div className="mb-4 flex h-12 items-center gap-3 rounded-2xl bg-white/10 px-4">
+        <Search className="size-5 text-white/40" />
+
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search services..."
+          className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/40"
+        />
+      </div>
+
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+        {categories.map((category) => {
+          const active = category === activeCategory;
+
+          return (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategory(category)}
+              className={cn(
+                'shrink-0 rounded-full px-5 py-3 text-sm font-black',
+                active ? 'bg-sand text-ink' : 'bg-white/5 text-white'
+              )}
+            >
+              {category}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-6">
+        {categories
+          .filter((category) => category !== 'All')
+          .filter(
+            (category) =>
+              activeCategory === 'All' || activeCategory === category
+          )
+          .map((category) => {
+            const categoryServices = filteredServices.filter(
+              (service) => service.category === category
+            );
+
+            if (!categoryServices.length) {
+              return null;
+            }
+
+            return (
+              <section key={category}>
+                <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-sand">
+                  {category}
+                </h3>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {categoryServices.map((service) => {
+                    const Icon = getServiceIcon(service);
+                    const badge = getBillingBadge(service);
+                    const quantity = getCartQuantity(service.code);
+
+                    return (
+                      <button
+                        key={service.code}
+                        type="button"
+                        onClick={() => addService(service.code)}
+                        className={cn(
+                          'relative min-h-36 rounded-[1.35rem] border p-4 text-left transition active:scale-[0.98]',
+                          quantity > 0
+                            ? 'border-gold bg-gold/10'
+                            : 'border-white/10 bg-white/5 hover:bg-white/10'
+                        )}
+                      >
+                        <span
+                          className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-black ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+
+                        {quantity > 0 ? (
+                          <span className="absolute left-3 top-3 grid size-6 place-items-center rounded-full bg-gold text-xs font-black text-black">
+                            {quantity}
+                          </span>
+                        ) : null}
+
+                        <div className="mt-7 grid place-items-center text-white/85">
+                          <Icon className="size-8" />
+                        </div>
+
+                        <p className="mt-3 text-center text-sm font-black leading-tight">
+                          {service.name}
+                        </p>
+
+                        {service.description ? (
+                          <p className="mt-2 line-clamp-2 text-center text-[11px] leading-4 text-white/40">
+                            {service.description}
+                          </p>
+                        ) : null}
+
+                        <div className="mt-3 flex justify-center">
+                          <span className="grid size-9 place-items-center rounded-full bg-white text-black">
+                            <Plus className="size-4" />
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+
+        {!filteredServices.length ? (
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center">
+            <ConciergeBell className="mx-auto size-8 text-white/40" />
+            <h3 className="mt-3 font-black">No services found</h3>
+            <p className="mt-1 text-sm text-white/45">
+              Try another category or search term.
+            </p>
           </div>
         ) : null}
       </div>
 
-              <div>
-          <label className="mb-2 block text-xs font-black uppercase tracking-wide text-sand">
-            Request Notes
-          </label>
+      {selectedCount > 0 ? (
+        <button
+          type="button"
+          onClick={() => setScreen('cart')}
+          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between rounded-2xl bg-gold px-5 py-4 font-black text-ink shadow-xl"
+        >
+          <span>View Requests ({selectedCount})</span>
+          <span>
+            {fixedPriceTotal > 0 ? money(fixedPriceTotal) : 'Review'}
+          </span>
+        </button>
+      ) : null}
 
-          <Textarea
-            name="notes"
-            placeholder="Add notes, exact need, or urgency"
-            className="min-h-28 rounded-2xl border border-gold/20 bg-white text-ink placeholder:text-neutral-400 focus:border-gold focus:ring-gold"
-          />
-        </div>
-
-      <Button
-        size="lg"
-        disabled={!selectedServices.length}
-        className="w-full rounded-2xl bg-gold text-black shadow-[0_12px_35px_rgba(184,137,56,0.28)] hover:bg-sand disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35 disabled:shadow-none"
-      >
-        {selectedServices.length
-          ? hasFixedPrice
-            ? `Submit & Charge ${moneyFormatter.format(total)}`
-            : confirmationServices.length
-              ? `Submit ${selectedServices.length} Request${
-                  selectedServices.length > 1 ? 's' : ''
-                }`
-              : `Submit ${selectedServices.length} Free Request${
-                  selectedServices.length > 1 ? 's' : ''
-                }`
-          : 'Select Services'}
-      </Button>
-    </form>
+      {selectedCount > 0 ? (
+        <button
+          type="button"
+          onClick={clearCart}
+          className="fixed bottom-44 right-5 z-30 grid size-11 place-items-center rounded-full bg-red-600 text-white shadow-xl"
+          aria-label="Clear selected requests"
+        >
+          <Trash2 className="size-5" />
+        </button>
+      ) : null}
+    </div>
   );
 }

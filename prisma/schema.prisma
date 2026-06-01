@@ -125,31 +125,34 @@ model Hotel {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  settings                  HotelSettings?
-  users                     User[]
-  rooms                     Room[]
-  locations                 Location[]
-  nfcTags                   NfcTag[]
-  menuCategories            MenuCategory[]
-  menuProducts              MenuProduct[]
-  inventoryItems            InventoryItem[]
-  inventoryMovements        InventoryMovement[]
-  orders                    Order[]
-  serviceRequests           ServiceRequest[]
-  posIntegration            PosIntegration?
-  activityLogs              ActivityLog[]
-  nfcAccessSessions         NfcAccessSession[]
-  subscription              HotelSubscription?
-  serviceCatalogItems       ServiceCatalogItem[]
-  guideSections             HotelGuideSection[]
-  guideItems                HotelGuideItem[]
-  menuDailyStocks           MenuDailyStock[]
-  menuDailyStockMovements   MenuDailyStockMovement[]
-  menuAvailabilityStocks    MenuAvailabilityStock[]
-  menuAvailabilityMovements MenuAvailabilityMovement[]
-  menuBundleComponents      MenuBundleComponent[]
-  guideImages               HotelGuideImage[]
-  nfcGuestSessions          NfcGuestSession[]
+  settings                     HotelSettings?
+  users                        User[]
+  rooms                        Room[]
+  locations                    Location[]
+  nfcTags                      NfcTag[]
+  menuCategories               MenuCategory[]
+  menuProducts                 MenuProduct[]
+  inventoryItems               InventoryItem[]
+  inventoryMovements           InventoryMovement[]
+  orders                       Order[]
+  serviceRequests              ServiceRequest[]
+  posIntegration               PosIntegration?
+  activityLogs                 ActivityLog[]
+  nfcAccessSessions            NfcAccessSession[]
+  subscription                 HotelSubscription?
+  serviceCatalogItems          ServiceCatalogItem[]
+  guideSections                HotelGuideSection[]
+  guideItems                   HotelGuideItem[]
+  menuDailyStocks              MenuDailyStock[]
+  menuDailyStockMovements      MenuDailyStockMovement[]
+  menuAvailabilityStocks       MenuAvailabilityStock[]
+  menuAvailabilityMovements    MenuAvailabilityMovement[]
+  menuBundleComponents         MenuBundleComponent[]
+  serviceAvailabilityStocks    ServiceAvailabilityStock[]
+  serviceAvailabilityMovements ServiceAvailabilityMovement[]
+
+  guideImages      HotelGuideImage[]
+  nfcGuestSessions NfcGuestSession[]
 }
 
 model HotelSettings {
@@ -367,6 +370,16 @@ model InventoryMovement {
   @@index([hotelId])
   @@index([itemId])
   @@index([orderId])
+}
+
+enum ServiceAvailabilityMovementType {
+  SET_STOCK
+  ADD_STOCK
+  REMOVE_STOCK
+  SOLD_OUT
+  REOPEN
+  REQUEST_DEDUCTION
+  CANCEL_RESTORE
 }
 
 model ProductInventoryRecipe {
@@ -689,6 +702,8 @@ model ServiceCatalogItem {
   unitPrice   Decimal            @default(0) @db.Decimal(10, 2)
   unitLabel   String?
 
+  inventoryTracked Boolean @default(false)
+
   isActive  Boolean @default(true)
   sortOrder Int     @default(0)
 
@@ -696,6 +711,9 @@ model ServiceCatalogItem {
   updatedAt DateTime @updatedAt
 
   hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  availabilityStock     ServiceAvailabilityStock?
+  availabilityMovements ServiceAvailabilityMovement[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -923,4 +941,53 @@ model MenuAvailabilityMovement {
   @@index([productId])
   @@index([stockId])
   @@index([type])
+}
+
+model ServiceAvailabilityStock {
+  id        String @id @default(cuid())
+  hotelId   String
+  serviceId String @unique
+
+  availableQty Int     @default(0)
+  usedQty      Int     @default(0)
+  isSoldOut    Boolean @default(false)
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel     Hotel                         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  service   ServiceCatalogItem            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  movements ServiceAvailabilityMovement[]
+
+  @@unique([hotelId, serviceId])
+  @@index([hotelId])
+  @@index([serviceId])
+  @@index([isSoldOut])
+}
+
+model ServiceAvailabilityMovement {
+  id        String @id @default(cuid())
+  hotelId   String
+  serviceId String
+  stockId   String
+
+  type             ServiceAvailabilityMovementType
+  quantity         Int
+  balanceAfter     Int
+  reason           String?
+  userId           String?
+  serviceRequestId String?
+
+  createdAt DateTime @default(now())
+
+  hotel   Hotel                    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  service ServiceCatalogItem       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  stock   ServiceAvailabilityStock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([serviceId])
+  @@index([stockId])
+  @@index([type])
+  @@index([serviceRequestId])
 }
