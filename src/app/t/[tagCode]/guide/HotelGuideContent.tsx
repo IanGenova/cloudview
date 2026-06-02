@@ -1,16 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type TouchEvent } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BedDouble,
   Car,
+  ChevronLeft,
   ChevronRight,
   Clock,
   HelpCircle,
   Hotel,
   Info,
   MapPin,
+  Maximize2,
   Phone,
   Search,
   Shield,
@@ -20,6 +23,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+
 
 const fallbackImage =
   'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=800&q=80';
@@ -131,7 +135,207 @@ function staticCardMatches(card: StaticInfoCard, query: string) {
   return includesSearch(`${card.title} ${card.body}`, query);
 }
 
+function getImageTitle(image: GuideImage) {
+  return image.title || 'Hotel Guide Image';
+}
+
+function getPreviousIndex(currentIndex: number, total: number) {
+  return currentIndex === 0 ? total - 1 : currentIndex - 1;
+}
+
+function getNextIndex(currentIndex: number, total: number) {
+  return currentIndex === total - 1 ? 0 : currentIndex + 1;
+}
+
+function FullscreenGalleryModal({
+  images,
+  selectedIndex,
+  onSelect,
+  onClose,
+}: {
+  images: GuideImage[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  onClose: () => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const selectedImage = images[selectedIndex];
+  const hasMultipleImages = images.length > 1;
+
+  function goPrevious() {
+    if (!hasMultipleImages) {
+      return;
+    }
+
+    onSelect(getPreviousIndex(selectedIndex, images.length));
+  }
+
+  function goNext() {
+    if (!hasMultipleImages) {
+      return;
+    }
+
+    onSelect(getNextIndex(selectedIndex, images.length));
+  }
+
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    setTouchStartX(event.touches[0]?.clientX ?? null);
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    if (touchStartX === null) {
+      return;
+    }
+
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const deltaX = endX - touchStartX;
+    const swipeThreshold = 45;
+
+    if (Math.abs(deltaX) >= swipeThreshold) {
+      if (deltaX > 0) {
+        goPrevious();
+      } else {
+        goNext();
+      }
+    }
+
+    setTouchStartX(null);
+  }
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+
+      if (event.key === 'ArrowLeft') {
+        goPrevious();
+      }
+
+      if (event.key === 'ArrowRight') {
+        goNext();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedIndex, images.length]);
+
+  if (!mounted || !selectedImage) {
+    return null;
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-[100dvh] w-screen overflow-hidden bg-black text-white">
+      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-4 bg-gradient-to-b from-black/90 via-black/55 to-transparent px-4 pb-10 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black">
+            {getImageTitle(selectedImage)}
+          </p>
+          <p className="mt-1 text-xs font-bold text-white/60">
+            {selectedIndex + 1} of {images.length}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid size-12 shrink-0 place-items-center rounded-full bg-white/15 text-white backdrop-blur-md active:scale-95"
+          aria-label="Close fullscreen image"
+        >
+          <X className="size-6" />
+        </button>
+      </div>
+
+      <div
+        className="flex h-[100dvh] w-screen touch-pan-y select-none items-center justify-center"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <img
+          src={selectedImage.imageUrl}
+          alt={getImageTitle(selectedImage)}
+          className="h-full max-h-[100dvh] w-full max-w-screen object-contain"
+          draggable={false}
+        />
+      </div>
+
+      {hasMultipleImages ? (
+        <>
+          <button
+            type="button"
+            onClick={goPrevious}
+            className="absolute left-3 top-1/2 z-30 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white backdrop-blur-md active:scale-95"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="size-8" />
+          </button>
+
+          <button
+            type="button"
+            onClick={goNext}
+            className="absolute right-3 top-1/2 z-30 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white backdrop-blur-md active:scale-95"
+            aria-label="Next image"
+          >
+            <ChevronRight className="size-8" />
+          </button>
+        </>
+      ) : null}
+
+      <div className="absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-20">
+        {selectedImage.caption ? (
+          <p className="mx-auto max-w-md text-center text-sm leading-6 text-white/75">
+            {selectedImage.caption}
+          </p>
+        ) : null}
+
+        {hasMultipleImages ? (
+          <div className="mt-4 flex items-center justify-center gap-2">
+            {images.map((image, index) => (
+              <button
+                key={image.id}
+                type="button"
+                onClick={() => onSelect(index)}
+                className={
+                  index === selectedIndex
+                    ? 'h-2.5 w-8 rounded-full bg-gold'
+                    : 'size-2.5 rounded-full bg-white/35'
+                }
+                aria-label={`Open image ${index + 1}`}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        <p className="mt-3 text-center text-[11px] font-bold text-white/40">
+          Swipe left or right to browse images
+        </p>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function BrochureGallery({ images }: { images: GuideImage[] }) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
   const activeImages = images
     .filter((image) => image.isActive)
     .sort((a, b) => {
@@ -153,23 +357,39 @@ function BrochureGallery({ images }: { images: GuideImage[] }) {
       </p>
 
       <div className="flex gap-3 overflow-x-auto pb-2">
-        {activeImages.map((image) => (
-          <div
+        {activeImages.map((image, index) => (
+          <button
             key={image.id}
-            className="w-56 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/8 shadow-sm"
+            type="button"
+            onClick={() => setSelectedIndex(index)}
+            className="w-56 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/8 text-left shadow-sm transition hover:border-gold/60 hover:bg-gold/10"
           >
             <div
-              className="h-36 bg-neutral-900 bg-cover bg-center"
+              className="relative h-36 bg-neutral-900 bg-cover bg-center"
               style={{
                 backgroundImage: `url(${image.imageUrl})`,
               }}
-            />
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60" />
+
+              <div className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
+                <Maximize2 className="size-4" />
+              </div>
+
+              <div className="absolute bottom-2 left-2 rounded-full bg-black/55 px-3 py-1 text-[10px] font-black text-white backdrop-blur">
+                Tap to view
+              </div>
+            </div>
 
             <div className="p-3">
               {image.title ? (
-                <p className="font-black text-white">{image.title}</p>
+                <p className="line-clamp-1 font-black text-white">
+                  {image.title}
+                </p>
               ) : (
-                <p className="font-black text-white">Hotel Guide Image</p>
+                <p className="line-clamp-1 font-black text-white">
+                  Hotel Guide Image
+                </p>
               )}
 
               {image.caption ? (
@@ -178,9 +398,18 @@ function BrochureGallery({ images }: { images: GuideImage[] }) {
                 </p>
               ) : null}
             </div>
-          </div>
+          </button>
         ))}
       </div>
+
+      {selectedIndex !== null ? (
+        <FullscreenGalleryModal
+          images={activeImages}
+          selectedIndex={selectedIndex}
+          onSelect={setSelectedIndex}
+          onClose={() => setSelectedIndex(null)}
+        />
+      ) : null}
     </div>
   );
 }

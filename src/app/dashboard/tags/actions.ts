@@ -1,13 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { TagStatus, TagType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { randomSecret } from '@/lib/nfc-security';
-import { redirect } from 'next/navigation';
 import { cleanText } from '@/lib/sanitize';
+
+const TAG_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const TAG_CODE_LENGTH = 8;
 
 const tagSchema = z.object({
   hotelId: z.string().min(1),
@@ -16,26 +19,80 @@ const tagSchema = z.object({
   tagType: z.nativeEnum(TagType),
   roomId: z.string().optional().nullable(),
   locationId: z.string().optional().nullable(),
-  status: z.nativeEnum(TagStatus).default(TagStatus.ACTIVE)
+  status: z.nativeEnum(TagStatus).default(TagStatus.ACTIVE),
 });
 
 const updateTagSchema = tagSchema.extend({
-  tagId: z.string().min(1)
+  tagId: z.string().min(1),
 });
+
+function generateShortTagCode() {
+  let code = '';
+
+  for (let index = 0; index < TAG_CODE_LENGTH; index += 1) {
+    code += TAG_CODE_ALPHABET[
+      Math.floor(Math.random() * TAG_CODE_ALPHABET.length)
+    ];
+  }
+
+  return code;
+}
 
 function cleanCode(value: FormDataEntryValue | null) {
   return String(value || '')
     .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-|-$/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]+/g, '')
     .slice(0, 160);
 }
 
+async function getAvailableTagCode(preferredCode?: string, excludeTagId?: string) {
+  const preferred = cleanCode(preferredCode ?? '');
+
+  if (preferred) {
+    const existing = await db.nfcTag.findUnique({
+      where: {
+        code: preferred,
+      },
+      select: {
+        id: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!existing || existing.id === excludeTagId || existing.deletedAt) {
+      return preferred;
+    }
+  }
+
+  let nextCode = generateShortTagCode();
+  let attempts = 0;
+
+  while (attempts < 50) {
+    const existing = await db.nfcTag.findUnique({
+      where: {
+        code: nextCode,
+      },
+      select: {
+        id: true,
+        deletedAt: true,
+      },
+    });
+
+    if (!existing || existing.deletedAt) {
+      return nextCode;
+    }
+
+    nextCode = generateShortTagCode();
+    attempts += 1;
+  }
+
+  return `${generateShortTagCode()}${Date.now().toString(36).toUpperCase()}`
+    .slice(0, 160);
+}
 
 function redirectTags(success: string) {
   revalidatePath('/dashboard/tags');
-
   redirect(`/dashboard/tags?success=${success}`);
 }
 
@@ -48,6 +105,7 @@ async function assertHotelAccess(hotelId: string) {
 
   return user;
 }
+
 export async function toggleTagStatusAction(formData: FormData) {
   const user = await requireUser();
 
@@ -76,7 +134,9 @@ export async function toggleTagStatusAction(formData: FormData) {
     throw new Error('You are not allowed to update this NFC tag.');
   }
 
-  const nextStatus = tag.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+  const nextStatus = tag.status === TagStatus.ACTIVE
+    ? TagStatus.INACTIVE
+    : TagStatus.ACTIVE;
 
   await db.nfcTag.update({
     where: {
@@ -87,40 +147,38 @@ export async function toggleTagStatusAction(formData: FormData) {
     },
   });
 
-  revalidatePath('/dashboard/tags');
+  redirectTags('tag-updated');
 }
 
 export async function createTagAction(formData: FormData) {
   const user = await requireUser();
 
+  const availableCode = await getAvailableTagCode(
+    cleanCode(formData.get('code'))
+  );
+
   const parsed = tagSchema.parse({
     hotelId: formData.get('hotelId') || user.hotelId,
     label: cleanText(formData.get('label')),
-    code: cleanCode(formData.get('code')),
+    code: availableCode,
     tagType: formData.get('tagType'),
     roomId: formData.get('roomId') || null,
     locationId: formData.get('locationId') || null,
-    status: TagStatus.ACTIVE
+    status: TagStatus.ACTIVE,
   });
 
   await assertHotelAccess(parsed.hotelId);
 
-  const existingTag = await db.nfcTag.findUnique({
+  const existingDeletedTag = await db.nfcTag.findUnique({
     where: {
-      code: parsed.code
-    }
+      code: parsed.code,
+    },
   });
 
-  if (existingTag && !existingTag.deletedAt) {
-    throw new Error(
-      `The Unique Tag ID "${parsed.code}" already exists. Please use another tag code, for example "${parsed.code}-2".`
-    );
-  }
-
-  if (existingTag && existingTag.deletedAt) {
+  if (existingDeletedTag?.deletedAt) {
     await db.nfcTag.update({
       where: {
-        id: existingTag.id
+        id: existingDeletedTag.id,
       },
       data: {
         hotelId: parsed.hotelId,
@@ -132,12 +190,11 @@ export async function createTagAction(formData: FormData) {
         status: TagStatus.ACTIVE,
         deletedAt: null,
         scanSecret: randomSecret(),
-        lastScannedAt: null
-      }
+        lastScannedAt: null,
+      },
     });
 
-    revalidatePath('/dashboard/tags');
-    return;
+    redirectTags('tag-created');
   }
 
   await db.nfcTag.create({
@@ -149,8 +206,8 @@ export async function createTagAction(formData: FormData) {
       roomId: parsed.roomId || null,
       locationId: parsed.locationId || null,
       status: parsed.status,
-      scanSecret: randomSecret()
-    }
+      scanSecret: randomSecret(),
+    },
   });
 
   redirectTags('tag-created');
@@ -159,23 +216,28 @@ export async function createTagAction(formData: FormData) {
 export async function updateTagAction(formData: FormData) {
   const existing = await db.nfcTag.findUnique({
     where: {
-      id: String(formData.get('tagId') || '')
-    }
+      id: String(formData.get('tagId') || ''),
+    },
   });
 
   if (!existing) {
     throw new Error('NFC tag not found.');
   }
 
+  const nextCode = await getAvailableTagCode(
+    cleanCode(formData.get('code')),
+    existing.id
+  );
+
   const parsed = updateTagSchema.parse({
     tagId: formData.get('tagId'),
     hotelId: formData.get('hotelId') || existing.hotelId,
     label: cleanText(formData.get('label')),
-    code: cleanCode(formData.get('code')),
+    code: nextCode,
     tagType: formData.get('tagType'),
     roomId: formData.get('roomId') || null,
     locationId: formData.get('locationId') || null,
-    status: formData.get('status')
+    status: formData.get('status'),
   });
 
   await assertHotelAccess(existing.hotelId);
@@ -183,22 +245,23 @@ export async function updateTagAction(formData: FormData) {
 
   const duplicateCode = await db.nfcTag.findUnique({
     where: {
-      code: parsed.code
-    }
+      code: parsed.code,
+    },
   });
 
   if (duplicateCode && duplicateCode.id !== parsed.tagId) {
     if (duplicateCode.deletedAt) {
-      const archivedCode = `${duplicateCode.code}-archived-${Date.now()}`.slice(0, 190);
+      const archivedCode = `${duplicateCode.code}-ARCHIVED-${Date.now()}`
+        .slice(0, 190);
 
       await db.nfcTag.update({
         where: {
-          id: duplicateCode.id
+          id: duplicateCode.id,
         },
         data: {
           code: archivedCode,
-          scanSecret: randomSecret()
-        }
+          scanSecret: randomSecret(),
+        },
       });
     } else {
       throw new Error(
@@ -209,7 +272,7 @@ export async function updateTagAction(formData: FormData) {
 
   await db.nfcTag.update({
     where: {
-      id: parsed.tagId
+      id: parsed.tagId,
     },
     data: {
       hotelId: parsed.hotelId,
@@ -218,8 +281,8 @@ export async function updateTagAction(formData: FormData) {
       tagType: parsed.tagType,
       roomId: parsed.roomId || null,
       locationId: parsed.locationId || null,
-      status: parsed.status
-    }
+      status: parsed.status,
+    },
   });
 
   redirectTags('tag-updated');
@@ -230,8 +293,8 @@ export async function deleteTagAction(formData: FormData) {
 
   const tag = await db.nfcTag.findUnique({
     where: {
-      id: tagId
-    }
+      id: tagId,
+    },
   });
 
   if (!tag) {
@@ -240,29 +303,29 @@ export async function deleteTagAction(formData: FormData) {
 
   await assertHotelAccess(tag.hotelId);
 
-  const archivedCode = `${tag.code}-deleted-${Date.now()}`.slice(0, 190);
+  const archivedCode = `${tag.code}-DELETED-${Date.now()}`.slice(0, 190);
 
   await db.$transaction([
     db.nfcAccessSession.updateMany({
       where: {
-        tagId
+        tagId,
       },
       data: {
-        revokedAt: new Date()
-      }
+        revokedAt: new Date(),
+      },
     }),
 
     db.nfcTag.update({
       where: {
-        id: tagId
+        id: tagId,
       },
       data: {
         code: archivedCode,
         status: TagStatus.INACTIVE,
         deletedAt: new Date(),
-        scanSecret: randomSecret()
-      }
-    })
+        scanSecret: randomSecret(),
+      },
+    }),
   ]);
 
   redirectTags('tag-deleted');
@@ -273,8 +336,8 @@ export async function rotateTagSecretAction(formData: FormData) {
 
   const tag = await db.nfcTag.findUnique({
     where: {
-      id: tagId
-    }
+      id: tagId,
+    },
   });
 
   if (!tag) {
@@ -286,21 +349,21 @@ export async function rotateTagSecretAction(formData: FormData) {
   await db.$transaction([
     db.nfcAccessSession.updateMany({
       where: {
-        tagId
+        tagId,
       },
       data: {
-        revokedAt: new Date()
-      }
+        revokedAt: new Date(),
+      },
     }),
 
     db.nfcTag.update({
       where: {
-        id: tagId
+        id: tagId,
       },
       data: {
-        scanSecret: randomSecret()
-      }
-    })
+        scanSecret: randomSecret(),
+      },
+    }),
   ]);
 
   redirectTags('tag-rotated');

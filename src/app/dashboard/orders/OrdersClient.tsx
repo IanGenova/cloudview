@@ -1,103 +1,119 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import {
-  MenuAvailabilityMovementType,
-  MenuProductType,
-  ServiceAvailabilityMovementType,
-  ServiceBillingMode,
-} from '@prisma/client';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+  Ban,
+  CheckCircle2,
+  ChefHat,
+  Clock,
+  CreditCard,
+  PackageCheck,
+  Printer,
+  ReceiptText,
+  RotateCcw,
+  Search,
+  Truck,
+  Utensils,
+  X,
+} from 'lucide-react';
 import {
-  controlMenuStockAction,
-  controlServiceStockAction,
-  disableServiceInventoryAction,
-  enableServiceInventoryAction,
-  initializeMenuStocksAction,
-  initializeServiceStocksAction,
+  cancelOrderItemAction,
+  markOrderPaidAction,
+  updateOrderStatusAction,
 } from './actions';
 
-type InventoryTab = 'menu' | 'services';
+type OrderStatus =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'PREPARING'
+  | 'READY'
+  | 'DELIVERED'
+  | 'CANCELLED';
 
-type BundleComponent = {
+type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
+
+type PaymentMethod = 'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS';
+
+type OrderItemStatus = 'ACTIVE' | 'PARTIALLY_CANCELLED' | 'CANCELLED';
+
+type OrderItem = {
   id: string;
-  productId: string;
-  name: string;
   quantity: number;
-  isMenuActive: boolean;
-  availableQty: number;
-  soldQty: number;
-  isSoldOut: boolean;
-  canSellQty: number;
-  updatedAt: string | Date | null;
-};
-
-type MenuItem = {
-  id: string;
-  hotelId: string;
-  hotelName: string;
-  name: string;
-  productType: MenuProductType;
-  isBundle: boolean;
-  isDerivedStock: boolean;
-  isMenuActive: boolean;
-  stockId: string | null;
-  availableQty: number;
-  soldQty: number;
-  isSoldOut: boolean;
+  productNameSnapshot: string;
+  unitPriceCents: number;
   notes: string;
-  updatedAt: string | Date | null;
-  bundleComponents: BundleComponent[];
-  limitingComponentName: string | null;
+  isBundleSnapshot?: boolean;
+  status?: OrderItemStatus;
+  cancelledQty?: number;
+  cancelledAt?: string;
+  cancelReason?: string;
+  bundleComponents?: {
+    id: string;
+    componentNameSnapshot: string;
+    quantity: number;
+  }[];
 };
 
-type ServiceItem = {
+type OrderStatusHistory = {
   id: string;
-  hotelId: string;
-  hotelName: string;
-  code: string;
-  name: string;
-  category: string;
-  description: string;
-  iconKey: string;
-  billingMode: ServiceBillingMode;
-  unitPrice: number;
-  unitLabel: string;
-  isActive: boolean;
-  inventoryTracked: boolean;
-  stockId: string | null;
-  availableQty: number;
-  usedQty: number;
-  isSoldOut: boolean;
-  notes: string;
-  updatedAt: string | Date | null;
+  status: OrderStatus;
+  note: string;
+  createdAt: string;
+  userName: string;
 };
 
-type MenuMovement = {
+type RestoreMovement = {
   id: string;
-  hotelName: string;
   productName: string;
-  type: MenuAvailabilityMovementType;
+  type: string;
   quantity: number;
   balanceAfter: number;
   reason: string;
   createdAt: string;
 };
 
-type ServiceMovement = {
+type DashboardOrder = {
   id: string;
+  orderCode: string;
   hotelName: string;
-  serviceName: string;
-  serviceCategory: string;
-  type: ServiceAvailabilityMovementType;
-  quantity: number;
-  balanceAfter: number;
-  reason: string;
+  roomLabel: string;
+  guestName: string;
+  notes: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  totalCents: number;
+  subtotalCents: number;
+  serviceChargeCents: number;
+  taxCents: number;
   createdAt: string;
+  updatedAt: string;
+  tagCode: string;
+  items: OrderItem[];
+  statusHistory: OrderStatusHistory[];
+  restoreMovements?: RestoreMovement[];
 };
+
+type StatusCounts = {
+  ALL: number;
+  PENDING: number;
+  ACCEPTED: number;
+  PREPARING: number;
+  READY: number;
+  DELIVERED: number;
+  CANCELLED: number;
+};
+
+type Summary = {
+  activeOrders: number;
+  unpaidOrders: number;
+  cancelledOrders: number;
+  totalSalesCents: number;
+};
+
+type StatusFilter = 'ALL' | OrderStatus;
+type PaymentFilter = 'ALL' | 'PAID' | 'UNPAID';
 
 type Message =
   | {
@@ -106,44 +122,43 @@ type Message =
     }
   | null;
 
-type MenuSummary = {
-  totalMenuItems: number;
-  activeMenuItems: number;
-  availableItems: number;
-  soldOutItems: number;
-  totalAvailableQty: number;
-  totalSoldQty: number;
-};
 
-type ServiceSummary = {
-  totalServices: number;
-  activeServices: number;
-  trackedServices: number;
-  serviceAvailableItems: number;
-  serviceSoldOutItems: number;
-  serviceTotalAvailableQty: number;
-  serviceTotalUsedQty: number;
-};
+const statusOptions: StatusFilter[] = [
+  'ALL',
+  'PENDING',
+  'ACCEPTED',
+  'PREPARING',
+  'READY',
+  'DELIVERED',
+  'CANCELLED',
+];
 
-type MenuFilterValue =
-  | 'ALL'
-  | 'AVAILABLE'
-  | 'SOLD_OUT'
-  | 'NOT_SET'
-  | 'MENU_HIDDEN'
-  | 'BUNDLE';
+const activeOrderStatuses: OrderStatus[] = [
+  'PENDING',
+  'ACCEPTED',
+  'PREPARING',
+  'READY',
+];
 
-type ServiceFilterValue =
-  | 'ALL'
-  | 'TRACKED'
-  | 'UNTRACKED'
-  | 'AVAILABLE'
-  | 'SOLD_OUT'
-  | 'HIDDEN';
+const cancelReasons = [
+  'Item unavailable',
+  'Guest cancelled this item',
+  'Duplicate item',
+  'Wrong item selected',
+  'Kitchen cannot fulfill this item',
+  'Other',
+];
 
-function formatDateTime(value: string | Date | null) {
+function money(cents: number) {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+  }).format(cents / 100);
+}
+
+function formatDateTime(value: string) {
   if (!value) {
-    return 'Not updated yet';
+    return 'Not available';
   }
 
   return new Intl.DateTimeFormat('en-PH', {
@@ -155,1239 +170,376 @@ function formatDateTime(value: string | Date | null) {
   }).format(new Date(value));
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-  }).format(value);
+function label(value: string) {
+  return value.replaceAll('_', ' ');
 }
 
-function getMenuStatusLabel(item: MenuItem) {
-  if (!item.isMenuActive) {
-    return 'MENU HIDDEN';
-  }
-
-  if (item.isDerivedStock && item.bundleComponents.length === 0) {
-    return 'NOT SET';
-  }
-
-  if (!item.isDerivedStock && !item.stockId) {
-    return 'NOT SET';
-  }
-
-  if (item.isSoldOut || item.availableQty <= 0) {
-    return 'SOLD OUT';
-  }
-
-  return 'AVAILABLE';
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
-function getServiceStatusLabel(item: ServiceItem) {
-  if (!item.isActive) {
-    return 'HIDDEN';
-  }
-
-  if (!item.inventoryTracked) {
-    return 'NOT TRACKED';
-  }
-
-  if (!item.stockId) {
-    return 'NOT SET';
-  }
-
-  if (item.isSoldOut || item.availableQty <= 0) {
-    return 'SOLD OUT';
-  }
-
-  return 'AVAILABLE';
-}
-
-function getStatusClass(status: string) {
-  if (status === 'AVAILABLE') {
+function getStatusClass(status: OrderStatus) {
+  if (status === 'DELIVERED') {
     return 'bg-emerald-100 text-emerald-700';
   }
 
-  if (status === 'SOLD OUT') {
+  if (status === 'CANCELLED') {
     return 'bg-red-100 text-red-700';
   }
 
-  if (status === 'MENU HIDDEN' || status === 'HIDDEN') {
-    return 'bg-neutral-200 text-neutral-600';
+  if (status === 'PREPARING' || status === 'READY') {
+    return 'bg-amber-100 text-amber-800';
   }
 
-  if (status === 'NOT TRACKED') {
+  if (status === 'ACCEPTED') {
     return 'bg-blue-100 text-blue-700';
   }
 
-  return 'bg-amber-100 text-amber-700';
+  return 'bg-neutral-100 text-neutral-700';
 }
 
-function getProductTypeLabel(item: MenuItem) {
-  return item.isDerivedStock ? 'Bundle / Derived Stock' : 'Single Item Stock';
-}
-
-function getProductTypeClass(item: MenuItem) {
-  return item.isDerivedStock
-    ? 'bg-amber-100 text-amber-800'
-    : 'bg-neutral-100 text-neutral-600';
-}
-
-function getBillingLabel(value: ServiceBillingMode) {
-  if (value === 'FREE') {
-    return 'Free';
+function getItemStatusClass(status?: OrderItemStatus) {
+  if (status === 'CANCELLED') {
+    return 'bg-red-100 text-red-700';
   }
 
-  if (value === 'FIXED_PRICE') {
-    return 'Paid Add-on';
+  if (status === 'PARTIALLY_CANCELLED') {
+    return 'bg-amber-100 text-amber-800';
   }
 
-  return 'Confirm Price';
+  return 'bg-emerald-100 text-emerald-700';
 }
 
-function getBillingClass(value: ServiceBillingMode) {
-  if (value === 'FREE') {
+function getPaymentClass(status: PaymentStatus) {
+  if (status === 'PAID') {
     return 'bg-emerald-100 text-emerald-700';
   }
 
-  if (value === 'FIXED_PRICE') {
+  if (status === 'REFUNDED') {
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  return 'bg-red-100 text-red-700';
+}
+
+function getNextActions(status: OrderStatus) {
+  if (status === 'PENDING') {
+    return [
+      {
+        status: 'ACCEPTED' as OrderStatus,
+        label: 'Accept',
+        className: 'bg-blue-600 text-white hover:bg-blue-700',
+      },
+      {
+        status: 'CANCELLED' as OrderStatus,
+        label: 'Reject',
+        className: 'bg-red-600 text-white hover:bg-red-700',
+      },
+    ];
+  }
+
+  if (status === 'ACCEPTED') {
+    return [
+      {
+        status: 'PREPARING' as OrderStatus,
+        label: 'Start',
+        className: 'bg-amber-500 text-white hover:bg-amber-600',
+      },
+      {
+        status: 'CANCELLED' as OrderStatus,
+        label: 'Cancel',
+        className: 'bg-red-600 text-white hover:bg-red-700',
+      },
+    ];
+  }
+
+  if (status === 'PREPARING') {
+    return [
+      {
+        status: 'READY' as OrderStatus,
+        label: 'Ready',
+        className: 'bg-amber-500 text-white hover:bg-amber-600',
+      },
+      {
+        status: 'CANCELLED' as OrderStatus,
+        label: 'Cancel',
+        className: 'bg-red-600 text-white hover:bg-red-700',
+      },
+    ];
+  }
+
+  if (status === 'READY') {
+    return [
+      {
+        status: 'DELIVERED' as OrderStatus,
+        label: 'Delivered',
+        className: 'bg-emerald-600 text-white hover:bg-emerald-700',
+      },
+      {
+        status: 'CANCELLED' as OrderStatus,
+        label: 'Cancel',
+        className: 'bg-red-600 text-white hover:bg-red-700',
+      },
+    ];
+  }
+
+  return [];
+}
+
+function getActiveItemQuantity(item: OrderItem) {
+  return Math.max(item.quantity - (item.cancelledQty ?? 0), 0);
+}
+
+function getItemCount(items: OrderItem[]) {
+  return items.reduce((sum, item) => sum + getActiveItemQuantity(item), 0);
+}
+
+function getOrderPreview(items: OrderItem[]) {
+  const activeItems = items.filter((item) => getActiveItemQuantity(item) > 0);
+
+  if (!activeItems.length) {
+    return 'All items cancelled';
+  }
+
+  const preview = activeItems
+    .slice(0, 2)
+    .map((item) => `${getActiveItemQuantity(item)}× ${item.productNameSnapshot}`)
+    .join(', ');
+
+  return `${preview}${
+    activeItems.length > 2 ? ` +${activeItems.length - 2} more` : ''
+  }`;
+}
+
+function getCurrentStatusStartedAt(order: DashboardOrder) {
+  const history = [...order.statusHistory]
+    .reverse()
+    .find((item) => item.status === order.status);
+
+  return history?.createdAt ?? order.createdAt;
+}
+
+function formatDuration(milliseconds: number) {
+  const totalMinutes = Math.max(0, Math.floor(milliseconds / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${minutes}m`;
+}
+
+function getOrderAgeLabel(order: DashboardOrder, now: number) {
+  const startAt = getCurrentStatusStartedAt(order);
+  const endAt = activeOrderStatuses.includes(order.status)
+    ? now
+    : new Date(order.updatedAt).getTime();
+
+  return formatDuration(endAt - new Date(startAt).getTime());
+}
+
+function getOrderAgeClass(order: DashboardOrder, now: number) {
+  if (!activeOrderStatuses.includes(order.status)) {
+    return 'bg-neutral-100 text-neutral-600';
+  }
+
+  const startAt = getCurrentStatusStartedAt(order);
+  const minutes = Math.floor((now - new Date(startAt).getTime()) / 60000);
+
+  if (minutes >= 45) {
+    return 'bg-red-100 text-red-700';
+  }
+
+  if (minutes >= 20) {
     return 'bg-amber-100 text-amber-800';
   }
 
   return 'bg-blue-100 text-blue-700';
 }
 
-function Modal({
-  title,
-  description,
-  children,
-  onClose,
-  maxWidth = 'max-w-xl',
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-  onClose: () => void;
-  maxWidth?: string;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div
-        className={`max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl`}
-      >
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-black">{title}</h2>
-            {description ? (
-              <p className="mt-1 text-sm text-neutral-500">{description}</p>
-            ) : null}
+function buildPrintableReceiptHtml(order: DashboardOrder) {
+  const itemRows = order.items
+    .map((item) => {
+      const activeQty = getActiveItemQuantity(item);
+      const isCancelled = activeQty <= 0 || item.status === 'CANCELLED';
+
+      const bundleRows = item.isBundleSnapshot
+        ? `
+          <div style="margin:6px 0 0 16px;font-size:12px;color:#555;">
+            <strong>Includes:</strong>
+            ${(item.bundleComponents ?? [])
+              .map(
+                (component) =>
+                  `<div>${escapeHtml(component.quantity)}× ${escapeHtml(
+                    component.componentNameSnapshot
+                  )}</div>`
+              )
+              .join('')}
           </div>
+        `
+        : '';
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
-            aria-label="Close modal"
-          >
-            ✕
-          </button>
+      return `
+        <div style="border-bottom:1px solid #eee;padding:8px 0;opacity:${
+          isCancelled ? 0.55 : 1
+        };">
+          <div style="display:flex;justify-content:space-between;gap:12px;">
+            <div>
+              <strong>${escapeHtml(activeQty)}× ${escapeHtml(
+                item.productNameSnapshot
+              )}</strong>
+              ${
+                item.isBundleSnapshot
+                  ? '<span style="margin-left:6px;font-size:10px;background:#fef3c7;padding:2px 6px;border-radius:999px;">Bundle</span>'
+                  : ''
+              }
+              ${
+                isCancelled
+                  ? '<span style="margin-left:6px;font-size:10px;background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:999px;">Cancelled</span>'
+                  : ''
+              }
+              ${
+                item.notes
+                  ? `<div style="font-size:12px;color:#555;margin-top:3px;">Note: ${escapeHtml(
+                      item.notes
+                    )}</div>`
+                  : ''
+              }
+              ${
+                item.cancelReason
+                  ? `<div style="font-size:12px;color:#991b1b;margin-top:3px;">Cancel reason: ${escapeHtml(
+                      item.cancelReason
+                    )}</div>`
+                  : ''
+              }
+              ${bundleRows}
+            </div>
+            <strong>${escapeHtml(money(activeQty * item.unitPriceCents))}</strong>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <title>Receipt ${escapeHtml(order.orderCode)}</title>
+        <meta charset="utf-8" />
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 24px;
+            color: #111;
+          }
+          .header {
+            border-bottom: 2px solid #111;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+          }
+          .muted {
+            color: #666;
+            font-size: 13px;
+          }
+          .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 6px 0;
+          }
+          .total {
+            border-top: 2px solid #111;
+            padding-top: 8px;
+            margin-top: 8px;
+            font-size: 18px;
+            font-weight: 800;
+          }
+          @media print {
+            button {
+              display: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <button onclick="window.print()" style="margin-bottom:16px;padding:10px 14px;border-radius:10px;border:1px solid #ddd;background:#111;color:#fff;font-weight:700;">
+          Print
+        </button>
+
+        <div class="header">
+          <h1 style="margin:0;">CloudView Order Receipt</h1>
+          <div class="muted">Order Code: ${escapeHtml(order.orderCode)}</div>
+          <div class="muted">Hotel: ${escapeHtml(order.hotelName)}</div>
+          <div class="muted">Room / Location: ${escapeHtml(order.roomLabel)}</div>
+          <div class="muted">Ordered: ${escapeHtml(formatDateTime(order.createdAt))}</div>
         </div>
 
-        {children}
-      </div>
-    </div>
-  );
+        <div>
+          <div><strong>Status:</strong> ${escapeHtml(label(order.status))}</div>
+          <div><strong>Payment:</strong> ${escapeHtml(
+            label(order.paymentMethod)
+          )} · ${escapeHtml(label(order.paymentStatus))}</div>
+          ${
+            order.guestName
+              ? `<div><strong>Guest:</strong> ${escapeHtml(order.guestName)}</div>`
+              : ''
+          }
+          ${
+            order.notes
+              ? `<div style="margin-top:8px;"><strong>Notes:</strong><br/>${escapeHtml(
+                  order.notes
+                ).replaceAll('\n', '<br/>')}</div>`
+              : ''
+          }
+        </div>
+
+        <h3 style="margin-top:20px;">Items</h3>
+        ${itemRows}
+
+        <div style="margin-top:16px;">
+          <div class="row"><span>Subtotal</span><strong>${escapeHtml(
+            money(order.subtotalCents)
+          )}</strong></div>
+          <div class="row"><span>Service Charge</span><strong>${escapeHtml(
+            money(order.serviceChargeCents)
+          )}</strong></div>
+          <div class="row"><span>Tax</span><strong>${escapeHtml(
+            money(order.taxCents)
+          )}</strong></div>
+          <div class="row total"><span>Total</span><span>${escapeHtml(
+            money(order.totalCents)
+          )}</span></div>
+        </div>
+      </body>
+    </html>
+  `;
 }
 
-function BundleDerivedStockModal({
-  item,
-  onClose,
-}: {
-  item: MenuItem;
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      title="Bundle Derived Stock"
-      description="Bundle stock is calculated from component menu item stock."
-      onClose={onClose}
-      maxWidth="max-w-3xl"
-    >
-      <div className="mb-5 rounded-3xl bg-amber-50 p-4">
-        <p className="text-xs font-black uppercase text-amber-700">
-          Bundle Menu Item
-        </p>
-        <h3 className="mt-1 text-xl font-black text-neutral-950">
-          {item.name}
-        </h3>
-        <p className="mt-1 text-sm font-semibold text-amber-800">
-          {item.hotelName}
-        </p>
+function printOrder(order: DashboardOrder) {
+  const printWindow = window.open('', '_blank', 'width=820,height=720');
 
-        <div className="mt-4 grid gap-2 text-center md:grid-cols-4">
-          <Metric label="Can Sell" value={item.availableQty} strong />
-          <Metric label="Sold" value={item.soldQty} />
-          <Metric label="Status" value={getMenuStatusLabel(item)} small />
-          <Metric
-            label="Limiting Item"
-            value={item.limitingComponentName || 'None'}
-            small
-          />
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-amber-200 bg-white p-4">
-        <p className="font-black text-neutral-950">Bundle Components</p>
-        <p className="mt-1 text-sm text-neutral-500">
-          Each bundle sold deducts stock from these component items.
-        </p>
-
-        <div className="mt-4 space-y-3">
-          {item.bundleComponents.map((component) => (
-            <div
-              key={component.id}
-              className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-black text-neutral-950">
-                    {component.name}
-                  </p>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Requires {component.quantity} per bundle
-                  </p>
-                </div>
-
-                <span
-                  className={
-                    component.isSoldOut
-                      ? 'rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700'
-                      : 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
-                  }
-                >
-                  {component.isSoldOut ? 'Limiting / Sold Out' : 'Available'}
-                </span>
-              </div>
-
-              <div className="mt-3 grid gap-2 text-center md:grid-cols-4">
-                <Metric
-                  label="Available"
-                  value={component.availableQty}
-                  strong
-                />
-                <Metric label="Sold" value={component.soldQty} />
-                <Metric label="Can Support" value={component.canSellQty} />
-                <Metric
-                  label="Updated"
-                  value={component.updatedAt ? 'Yes' : 'No'}
-                  small
-                />
-              </div>
-            </div>
-          ))}
-
-          {!item.bundleComponents.length ? (
-            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-6 text-center">
-              <p className="font-black text-amber-900">
-                No bundle components yet.
-              </p>
-              <p className="mt-1 text-sm text-amber-800">
-                Add components in Menu Management before this bundle can be
-                sold.
-              </p>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function ControlMenuStockModal({
-  item,
-  onClose,
-}: {
-  item: MenuItem;
-  onClose: () => void;
-}) {
-  if (item.isDerivedStock) {
-    return <BundleDerivedStockModal item={item} onClose={onClose} />;
+  if (!printWindow) {
+    window.print();
+    return;
   }
 
-  return (
-    <Modal
-      title="Control Menu Stock"
-      description="Set, add, remove, sell out, or reopen this menu item."
-      onClose={onClose}
-    >
-      <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
-        <p className="text-xs font-black uppercase text-neutral-400">
-          Menu Item
-        </p>
-        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
-        <p className="mt-1 text-sm text-neutral-500">{item.hotelName}</p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <Metric label="Available" value={item.availableQty} strong />
-          <Metric label="Sold" value={item.soldQty} />
-          <Metric label="Status" value={getMenuStatusLabel(item)} small />
-        </div>
-      </div>
-
-      <form action={controlMenuStockAction} className="space-y-4">
-        <input type="hidden" name="productId" value={item.id} />
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Stock Operation
-          </label>
-          <Select
-            name="operation"
-            defaultValue={MenuAvailabilityMovementType.SET_STOCK}
-          >
-            <option value={MenuAvailabilityMovementType.SET_STOCK}>
-              Set exact available stock
-            </option>
-            <option value={MenuAvailabilityMovementType.ADD_STOCK}>
-              Add stock
-            </option>
-            <option value={MenuAvailabilityMovementType.REMOVE_STOCK}>
-              Remove stock
-            </option>
-            <option value={MenuAvailabilityMovementType.SOLD_OUT}>
-              Mark as sold out
-            </option>
-            <option value={MenuAvailabilityMovementType.REOPEN}>
-              Reopen and add stock
-            </option>
-          </Select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Quantity
-          </label>
-          <Input
-            name="quantity"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Example: 25"
-          />
-          <p className="mt-1 text-xs text-neutral-500">
-            For “Sold Out,” quantity can be left blank.
-          </p>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Reason / Note for Movement
-          </label>
-          <Input
-            name="reason"
-            placeholder="Example: Added 20 servings for dinner"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Internal Stock Note
-          </label>
-          <Input
-            name="notes"
-            defaultValue={item.notes}
-            placeholder="Optional note visible to staff"
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-          >
-            Cancel
-          </button>
-
-          <Button>Save Stock Control</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function ControlServiceStockModal({
-  item,
-  onClose,
-}: {
-  item: ServiceItem;
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      title="Control Service Inventory"
-      description="Set, add, remove, sell out, or reopen inventory for this service request item."
-      onClose={onClose}
-    >
-      <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
-        <p className="text-xs font-black uppercase text-neutral-400">
-          Service Item
-        </p>
-        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
-        <p className="mt-1 text-sm text-neutral-500">
-          {item.hotelName} · {item.category}
-        </p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <Metric label="Available" value={item.availableQty} strong />
-          <Metric label="Used" value={item.usedQty} />
-          <Metric label="Status" value={getServiceStatusLabel(item)} small />
-        </div>
-      </div>
-
-      <form action={controlServiceStockAction} className="space-y-4">
-        <input type="hidden" name="serviceId" value={item.id} />
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Stock Operation
-          </label>
-          <Select
-            name="operation"
-            defaultValue={ServiceAvailabilityMovementType.SET_STOCK}
-          >
-            <option value={ServiceAvailabilityMovementType.SET_STOCK}>
-              Set exact available stock
-            </option>
-            <option value={ServiceAvailabilityMovementType.ADD_STOCK}>
-              Add stock
-            </option>
-            <option value={ServiceAvailabilityMovementType.REMOVE_STOCK}>
-              Remove stock
-            </option>
-            <option value={ServiceAvailabilityMovementType.SOLD_OUT}>
-              Mark as sold out
-            </option>
-            <option value={ServiceAvailabilityMovementType.REOPEN}>
-              Reopen and add stock
-            </option>
-          </Select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Quantity
-          </label>
-          <Input
-            name="quantity"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Example: 10"
-          />
-          <p className="mt-1 text-xs text-neutral-500">
-            For “Sold Out,” quantity can be left blank.
-          </p>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Reason / Note for Movement
-          </label>
-          <Input
-            name="reason"
-            placeholder="Example: Added 10 extra towels"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Internal Stock Note
-          </label>
-          <Input
-            name="notes"
-            defaultValue={item.notes}
-            placeholder="Optional note visible to staff"
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-          >
-            Cancel
-          </button>
-
-          <Button>Save Service Stock</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function MenuMovementsModal({
-  movements,
-  onClose,
-}: {
-  movements: MenuMovement[];
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      title="Recent Menu Stock Movements"
-      description="Audit trail of menu stock changes."
-      onClose={onClose}
-      maxWidth="max-w-3xl"
-    >
-      <div className="space-y-3">
-        {movements.map((movement) => (
-          <MovementCard
-            key={movement.id}
-            title={movement.type.replaceAll('_', ' ')}
-            subtitle={`${movement.hotelName} · ${movement.productName}`}
-            quantity={movement.quantity}
-            balanceAfter={movement.balanceAfter}
-            createdAt={movement.createdAt}
-            reason={movement.reason}
-          />
-        ))}
-
-        {!movements.length ? <EmptyMovementState /> : null}
-      </div>
-    </Modal>
-  );
-}
-
-function ServiceMovementsModal({
-  movements,
-  onClose,
-}: {
-  movements: ServiceMovement[];
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      title="Recent Service Inventory Movements"
-      description="Audit trail of service request inventory changes."
-      onClose={onClose}
-      maxWidth="max-w-3xl"
-    >
-      <div className="space-y-3">
-        {movements.map((movement) => (
-          <MovementCard
-            key={movement.id}
-            title={movement.type.replaceAll('_', ' ')}
-            subtitle={`${movement.hotelName} · ${movement.serviceCategory} · ${movement.serviceName}`}
-            quantity={movement.quantity}
-            balanceAfter={movement.balanceAfter}
-            createdAt={movement.createdAt}
-            reason={movement.reason}
-          />
-        ))}
-
-        {!movements.length ? <EmptyMovementState /> : null}
-      </div>
-    </Modal>
-  );
-}
-
-function MovementCard({
-  title,
-  subtitle,
-  quantity,
-  balanceAfter,
-  createdAt,
-  reason,
-}: {
-  title: string;
-  subtitle: string;
-  quantity: number;
-  balanceAfter: number;
-  createdAt: string;
-  reason: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-neutral-200 bg-white p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-black">{title}</p>
-          <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
-        </div>
-
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-700">
-          Balance: {balanceAfter}
-        </span>
-      </div>
-
-      <div className="mt-3 grid gap-2 md:grid-cols-3">
-        <MovementMetric label="Quantity" value={quantity} />
-        <MovementMetric label="Balance After" value={balanceAfter} />
-        <MovementMetric label="Created" value={formatDateTime(createdAt)} />
-      </div>
-
-      {reason ? (
-        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-sm text-neutral-600">
-          {reason}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function EmptyMovementState() {
-  return (
-    <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-      <p className="font-black">No movements yet.</p>
-      <p className="mt-1 text-sm text-neutral-500">
-        Stock changes will appear here.
-      </p>
-    </div>
-  );
-}
-
-export function InventoryClient({
-  initialTab,
-  menuItems,
-  menuMovements,
-  serviceItems,
-  serviceMovements,
-  message,
-  menuSummary,
-  serviceSummary,
-}: {
-  initialTab: InventoryTab;
-  menuItems: MenuItem[];
-  menuMovements: MenuMovement[];
-  serviceItems: ServiceItem[];
-  serviceMovements: ServiceMovement[];
-  message: Message;
-  menuSummary: MenuSummary;
-  serviceSummary: ServiceSummary;
-}) {
-  const [activeTab] = useState<InventoryTab>(initialTab);
-
-  const [menuSearch, setMenuSearch] = useState('');
-  const [menuFilter, setMenuFilter] = useState<MenuFilterValue>('ALL');
-  const [controllingMenuItem, setControllingMenuItem] =
-    useState<MenuItem | null>(null);
-  const [showMenuMovements, setShowMenuMovements] = useState(false);
-
-  const [serviceSearch, setServiceSearch] = useState('');
-  const [serviceFilter, setServiceFilter] =
-    useState<ServiceFilterValue>('ALL');
-  const [controllingServiceItem, setControllingServiceItem] =
-    useState<ServiceItem | null>(null);
-  const [showServiceMovements, setShowServiceMovements] = useState(false);
-
-  const filteredMenuItems = useMemo(() => {
-    const searchText = menuSearch.trim().toLowerCase();
-
-    return menuItems.filter((item) => {
-      const matchesSearch =
-        !searchText ||
-        item.name.toLowerCase().includes(searchText) ||
-        item.hotelName.toLowerCase().includes(searchText) ||
-        item.bundleComponents.some((component) =>
-          component.name.toLowerCase().includes(searchText)
-        ) ||
-        String(item.limitingComponentName || '')
-          .toLowerCase()
-          .includes(searchText);
-
-      const status = getMenuStatusLabel(item);
-
-      const matchesFilter =
-        menuFilter === 'ALL' ||
-        (menuFilter === 'AVAILABLE' && status === 'AVAILABLE') ||
-        (menuFilter === 'SOLD_OUT' && status === 'SOLD OUT') ||
-        (menuFilter === 'NOT_SET' && status === 'NOT SET') ||
-        (menuFilter === 'MENU_HIDDEN' && status === 'MENU HIDDEN') ||
-        (menuFilter === 'BUNDLE' && item.isDerivedStock);
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [menuItems, menuSearch, menuFilter]);
-
-  const filteredServiceItems = useMemo(() => {
-    const searchText = serviceSearch.trim().toLowerCase();
-
-    return serviceItems.filter((item) => {
-      const matchesSearch =
-        !searchText ||
-        item.name.toLowerCase().includes(searchText) ||
-        item.hotelName.toLowerCase().includes(searchText) ||
-        item.category.toLowerCase().includes(searchText) ||
-        item.description.toLowerCase().includes(searchText) ||
-        item.code.toLowerCase().includes(searchText);
-
-      const status = getServiceStatusLabel(item);
-
-      const matchesFilter =
-        serviceFilter === 'ALL' ||
-        (serviceFilter === 'TRACKED' && item.inventoryTracked) ||
-        (serviceFilter === 'UNTRACKED' && !item.inventoryTracked) ||
-        (serviceFilter === 'AVAILABLE' && status === 'AVAILABLE') ||
-        (serviceFilter === 'SOLD_OUT' && status === 'SOLD OUT') ||
-        (serviceFilter === 'HIDDEN' && status === 'HIDDEN');
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [serviceFilter, serviceItems, serviceSearch]);
-
-  return (
-    <>
-      {message ? (
-        <div
-          className={
-            message.type === 'success'
-              ? 'mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700'
-              : 'mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700'
-          }
-        >
-          {message.text}
-        </div>
-      ) : null}
-
-      <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-3 shadow-sm md:flex-row">
-        <a
-          href="/dashboard/inventory?tab=menu"
-          className={
-            activeTab === 'menu'
-              ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
-              : 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50'
-          }
-        >
-          Food Menu Inventory
-        </a>
-
-        <a
-          href="/dashboard/inventory?tab=services"
-          className={
-            activeTab === 'services'
-              ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
-              : 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50'
-          }
-        >
-          Service Request Inventory
-        </a>
-      </div>
-
-      {activeTab === 'menu' ? (
-        <>
-          <div className="mb-6 grid gap-3 md:grid-cols-6">
-            <SummaryCard label="Total Menu" value={menuSummary.totalMenuItems} />
-            <SummaryCard
-              label="Active Menu"
-              value={menuSummary.activeMenuItems}
-            />
-            <SummaryCard
-              label="Available"
-              value={menuSummary.availableItems}
-              tone="green"
-            />
-            <SummaryCard
-              label="Sold Out"
-              value={menuSummary.soldOutItems}
-              tone="red"
-            />
-            <SummaryCard
-              label="Available Qty"
-              value={menuSummary.totalAvailableQty}
-            />
-            <SummaryCard label="Sold Qty" value={menuSummary.totalSoldQty} />
-          </div>
-
-          <Card>
-            <CardContent>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-black">
-                    Food Menu Stock Availability
-                  </h2>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Control stock for single menu items. Bundle stock is
-                    calculated from its component items.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <form action={initializeMenuStocksAction}>
-                    <button
-                      type="submit"
-                      className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-                    >
-                      Initialize Missing Stocks
-                    </button>
-                  </form>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowMenuMovements(true)}
-                    className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
-                  >
-                    View Recent Movements
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                    Search Menu
-                  </label>
-                  <Input
-                    value={menuSearch}
-                    onChange={(event) => setMenuSearch(event.target.value)}
-                    placeholder="Search by menu name, hotel, component, or limiting item"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                    Filter Status
-                  </label>
-                  <select
-                    value={menuFilter}
-                    onChange={(event) =>
-                      setMenuFilter(event.target.value as MenuFilterValue)
-                    }
-                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-                  >
-                    <option value="ALL">All Items</option>
-                    <option value="AVAILABLE">Available</option>
-                    <option value="SOLD_OUT">Sold Out</option>
-                    <option value="NOT_SET">Not Set</option>
-                    <option value="MENU_HIDDEN">Menu Hidden</option>
-                    <option value="BUNDLE">Bundles Only</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                {filteredMenuItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={
-                      item.isDerivedStock
-                        ? 'rounded-3xl border border-amber-200 bg-white p-4 shadow-sm'
-                        : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
-                    }
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-black text-neutral-950">
-                          {item.name}
-                        </p>
-                        <p className="mt-1 truncate text-xs font-bold text-neutral-500">
-                          {item.hotelName}
-                        </p>
-
-                        <span
-                          className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getProductTypeClass(
-                            item
-                          )}`}
-                        >
-                          {getProductTypeLabel(item)}
-                        </span>
-                      </div>
-
-                      <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                          getMenuStatusLabel(item)
-                        )}`}
-                      >
-                        {getMenuStatusLabel(item)}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                      <Metric
-                        label={item.isDerivedStock ? 'Can Sell' : 'Available'}
-                        value={item.availableQty}
-                        strong
-                      />
-                      <Metric label="Sold" value={item.soldQty} />
-                      <Metric
-                        label={item.isDerivedStock ? 'Components' : 'Updated'}
-                        value={
-                          item.isDerivedStock
-                            ? item.bundleComponents.length
-                            : item.updatedAt
-                              ? 'Yes'
-                              : 'No'
-                        }
-                        small
-                      />
-                    </div>
-
-                    {item.isDerivedStock ? (
-                      <div className="mt-3 rounded-2xl bg-amber-50 p-3">
-                        <p className="text-xs font-black uppercase text-amber-700">
-                          Bundle Components
-                        </p>
-
-                        {item.bundleComponents.length ? (
-                          <div className="mt-2 space-y-1">
-                            {item.bundleComponents
-                              .slice(0, 4)
-                              .map((component) => (
-                                <p
-                                  key={component.id}
-                                  className="text-xs font-bold text-amber-900"
-                                >
-                                  {component.quantity}× {component.name} ·{' '}
-                                  {component.availableQty} available
-                                </p>
-                              ))}
-
-                            {item.bundleComponents.length > 4 ? (
-                              <p className="text-xs font-bold text-amber-800">
-                                +{item.bundleComponents.length - 4} more
-                                component
-                                {item.bundleComponents.length - 4 === 1
-                                  ? ''
-                                  : 's'}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <p className="mt-2 text-xs font-bold text-amber-800">
-                            No components yet.
-                          </p>
-                        )}
-
-                        {item.limitingComponentName ? (
-                          <p className="mt-3 rounded-xl bg-white/80 p-2 text-xs font-black text-amber-900">
-                            Limiting item: {item.limitingComponentName}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : item.notes ? (
-                      <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
-                        {item.notes}
-                      </p>
-                    ) : (
-                      <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-400">
-                        No stock note.
-                      </p>
-                    )}
-
-                    <p className="mt-3 text-xs font-bold text-neutral-400">
-                      Last updated: {formatDateTime(item.updatedAt)}
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={() => setControllingMenuItem(item)}
-                      className={
-                        item.isDerivedStock
-                          ? 'mt-4 h-10 w-full rounded-2xl bg-amber-500 text-sm font-black text-white hover:bg-amber-600'
-                          : 'mt-4 h-10 w-full rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800'
-                      }
-                    >
-                      {item.isDerivedStock ? 'View Components' : 'Control Stock'}
-                    </button>
-                  </div>
-                ))}
-
-                {!filteredMenuItems.length ? (
-                  <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-                    <p className="font-black">No menu items found.</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Try changing your search or filter.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {activeTab === 'services' ? (
-        <>
-          <div className="mb-6 grid gap-3 md:grid-cols-6">
-            <SummaryCard
-              label="Total Services"
-              value={serviceSummary.totalServices}
-            />
-            <SummaryCard
-              label="Active Services"
-              value={serviceSummary.activeServices}
-            />
-            <SummaryCard
-              label="Tracked"
-              value={serviceSummary.trackedServices}
-              tone="blue"
-            />
-            <SummaryCard
-              label="Available"
-              value={serviceSummary.serviceAvailableItems}
-              tone="green"
-            />
-            <SummaryCard
-              label="Sold Out"
-              value={serviceSummary.serviceSoldOutItems}
-              tone="red"
-            />
-            <SummaryCard
-              label="Available Qty"
-              value={serviceSummary.serviceTotalAvailableQty}
-            />
-          </div>
-
-          <Card>
-            <CardContent>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-black">
-                    Service Request Inventory
-                  </h2>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Track inventory for physical service items such as towels,
-                    pillows, amenities, toiletries, baby cots, and water refill.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <form action={initializeServiceStocksAction}>
-                    <button
-                      type="submit"
-                      className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-                    >
-                      Initialize Service Stocks
-                    </button>
-                  </form>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowServiceMovements(true)}
-                    className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
-                  >
-                    View Service Movements
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                    Search Services
-                  </label>
-                  <Input
-                    value={serviceSearch}
-                    onChange={(event) => setServiceSearch(event.target.value)}
-                    placeholder="Search by service name, category, code, or description"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                    Filter Status
-                  </label>
-                  <select
-                    value={serviceFilter}
-                    onChange={(event) =>
-                      setServiceFilter(event.target.value as ServiceFilterValue)
-                    }
-                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-                  >
-                    <option value="ALL">All Services</option>
-                    <option value="TRACKED">Tracked Only</option>
-                    <option value="UNTRACKED">Untracked Only</option>
-                    <option value="AVAILABLE">Available</option>
-                    <option value="SOLD_OUT">Sold Out</option>
-                    <option value="HIDDEN">Hidden</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                {filteredServiceItems.map((item) => {
-                  const status = getServiceStatusLabel(item);
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={
-                        item.inventoryTracked
-                          ? 'rounded-3xl border border-blue-200 bg-white p-4 shadow-sm'
-                          : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-black text-neutral-950">
-                            {item.name}
-                          </p>
-                          <p className="mt-1 truncate text-xs font-bold text-neutral-500">
-                            {item.hotelName} · {item.category}
-                          </p>
-
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <span
-                              className={
-                                item.inventoryTracked
-                                  ? 'rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700'
-                                  : 'rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600'
-                              }
-                            >
-                              {item.inventoryTracked
-                                ? 'Inventory Tracked'
-                                : 'Not Tracked'}
-                            </span>
-
-                            <span
-                              className={`rounded-full px-3 py-1 text-[10px] font-black ${getBillingClass(
-                                item.billingMode
-                              )}`}
-                            >
-                              {getBillingLabel(item.billingMode)}
-                              {item.billingMode === 'FIXED_PRICE'
-                                ? ` · ${money(item.unitPrice)}`
-                                : ''}
-                            </span>
-                          </div>
-                        </div>
-
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                            status
-                          )}`}
-                        >
-                          {status}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                        <Metric
-                          label="Available"
-                          value={
-                            item.inventoryTracked ? item.availableQty : '—'
-                          }
-                          strong={item.inventoryTracked}
-                        />
-                        <Metric
-                          label="Used"
-                          value={item.inventoryTracked ? item.usedQty : '—'}
-                        />
-                        <Metric
-                          label="Updated"
-                          value={item.updatedAt ? 'Yes' : 'No'}
-                          small
-                        />
-                      </div>
-
-                      {item.description ? (
-                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
-                          {item.description}
-                        </p>
-                      ) : item.notes ? (
-                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
-                          {item.notes}
-                        </p>
-                      ) : (
-                        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-400">
-                          No description or stock note.
-                        </p>
-                      )}
-
-                      <p className="mt-3 text-xs font-bold text-neutral-400">
-                        Last updated: {formatDateTime(item.updatedAt)}
-                      </p>
-
-                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {item.inventoryTracked ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setControllingServiceItem(item)}
-                              className="h-10 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800"
-                            >
-                              Control Stock
-                            </button>
-
-                            <form action={disableServiceInventoryAction}>
-                              <input
-                                type="hidden"
-                                name="serviceId"
-                                value={item.id}
-                              />
-                              <button
-                                type="submit"
-                                className="h-10 w-full rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-50"
-                              >
-                                Disable Tracking
-                              </button>
-                            </form>
-                          </>
-                        ) : (
-                          <form
-                            action={enableServiceInventoryAction}
-                            className="sm:col-span-2"
-                          >
-                            <input
-                              type="hidden"
-                              name="serviceId"
-                              value={item.id}
-                            />
-                            <button
-                              type="submit"
-                              className="h-10 w-full rounded-2xl bg-blue-600 text-sm font-black text-white hover:bg-blue-700"
-                            >
-                              Enable Inventory
-                            </button>
-                          </form>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {!filteredServiceItems.length ? (
-                  <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-                    <p className="font-black">No service items found.</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Try changing your search or filter.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
-
-      {controllingMenuItem ? (
-        <ControlMenuStockModal
-          item={controllingMenuItem}
-          onClose={() => setControllingMenuItem(null)}
-        />
-      ) : null}
-
-      {controllingServiceItem ? (
-        <ControlServiceStockModal
-          item={controllingServiceItem}
-          onClose={() => setControllingServiceItem(null)}
-        />
-      ) : null}
-
-      {showMenuMovements ? (
-        <MenuMovementsModal
-          movements={menuMovements}
-          onClose={() => setShowMenuMovements(false)}
-        />
-      ) : null}
-
-      {showServiceMovements ? (
-        <ServiceMovementsModal
-          movements={serviceMovements}
-          onClose={() => setShowServiceMovements(false)}
-        />
-      ) : null}
-    </>
-  );
+  printWindow.document.open();
+  printWindow.document.write(buildPrintableReceiptHtml(order));
+  printWindow.document.close();
+  printWindow.focus();
 }
 
 function SummaryCard({
@@ -1396,7 +548,7 @@ function SummaryCard({
   tone,
 }: {
   label: string;
-  value: number;
+  value: string | number;
   tone?: 'green' | 'red' | 'blue';
 }) {
   return (
@@ -1429,50 +581,956 @@ function SummaryCard({
   );
 }
 
-function Metric({
-  label,
-  value,
-  strong,
-  small,
+function OrderItemsList({
+  order,
+  onCancelItem,
 }: {
-  label: string;
-  value: string | number;
-  strong?: boolean;
-  small?: boolean;
+  order: DashboardOrder;
+  onCancelItem: (item: OrderItem) => void;
 }) {
   return (
-    <div className="rounded-2xl bg-neutral-50 p-3">
-      <p className="text-[10px] font-black uppercase text-neutral-400">
-        {label}
-      </p>
-      <p
-        className={
-          small
-            ? 'mt-1 text-sm font-black text-neutral-700'
-            : strong
-              ? 'mt-1 text-lg font-black text-neutral-950'
-              : 'mt-1 text-lg font-bold text-neutral-700'
-        }
-      >
-        {value}
-      </p>
+    <div className="space-y-2">
+      {order.items.map((item) => {
+        const activeQty = getActiveItemQuantity(item);
+        const isCancelled = activeQty <= 0 || item.status === 'CANCELLED';
+        const canCancel =
+          order.status === 'PENDING' && !isCancelled && activeQty > 0;
+
+        return (
+          <div
+            key={item.id}
+            className={
+              isCancelled
+                ? 'rounded-2xl bg-red-50 p-3 text-sm opacity-80'
+                : 'rounded-2xl bg-neutral-50 p-3 text-sm'
+            }
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-black text-neutral-950">
+                    {activeQty}× {item.productNameSnapshot}
+                  </p>
+
+                  {item.isBundleSnapshot ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                      Bundle
+                    </span>
+                  ) : null}
+
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getItemStatusClass(
+                      item.status
+                    )}`}
+                  >
+                    {label(item.status ?? 'ACTIVE')}
+                  </span>
+                </div>
+
+                {item.cancelledQty ? (
+                  <p className="mt-1 text-xs font-bold text-red-700">
+                    Cancelled quantity: {item.cancelledQty}
+                  </p>
+                ) : null}
+
+                {item.cancelReason ? (
+                  <p className="mt-1 text-xs font-medium text-red-700">
+                    Reason: {item.cancelReason}
+                  </p>
+                ) : null}
+
+                {item.notes ? (
+                  <p className="mt-1 text-xs font-medium text-neutral-500">
+                    Note: {item.notes}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <p className="font-black">
+                  {money(activeQty * item.unitPriceCents)}
+                </p>
+
+                {canCancel ? (
+                  <button
+                    type="button"
+                    onClick={() => onCancelItem(item)}
+                    className="inline-flex h-8 items-center gap-1 rounded-full bg-red-600 px-3 text-[10px] font-black text-white hover:bg-red-700"
+                  >
+                    <Ban className="size-3" />
+                    Cancel Item
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {item.isBundleSnapshot ? (
+              <div className="mt-3 rounded-xl bg-amber-50 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+                  Includes
+                </p>
+
+                {item.bundleComponents?.length ? (
+                  <div className="mt-2 space-y-1">
+                    {item.bundleComponents.map((component) => (
+                      <p
+                        key={component.id}
+                        className="text-xs font-bold text-amber-900"
+                      >
+                        {component.quantity}× {component.componentNameSnapshot}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs font-bold text-amber-800">
+                    No bundle component snapshot.
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function MovementMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function OrderTimeline({ history }: { history: OrderStatusHistory[] }) {
+  if (!history.length) {
+    return null;
+  }
+
   return (
     <div className="rounded-2xl bg-neutral-50 p-3">
-      <p className="text-[10px] font-black uppercase text-neutral-400">
-        {label}
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-neutral-400">
+        Status History
       </p>
-      <p className="mt-1 text-sm font-black text-neutral-800">{value}</p>
+
+      <div className="space-y-2">
+        {history.map((item) => (
+          <div key={item.id} className="text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-black text-neutral-800">
+                {label(item.status)}
+              </p>
+              <p className="font-semibold text-neutral-400">
+                {formatDateTime(item.createdAt)}
+              </p>
+            </div>
+
+            {item.userName || item.note ? (
+              <p className="mt-1 text-neutral-500">
+                {item.userName ? `By ${item.userName}` : ''}
+                {item.userName && item.note ? ' · ' : ''}
+                {item.note}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
     </div>
+  );
+}
+
+function RestoreAudit({ movements }: { movements: RestoreMovement[] }) {
+  if (!movements.length) {
+    return (
+      <div className="rounded-2xl bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
+        No stock restore movement was recorded for this cancelled order yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <RotateCcw className="size-4 text-emerald-700" />
+        <p className="text-sm font-black text-emerald-800">
+          Stock Restore Audit
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {movements.map((movement) => (
+          <div
+            key={movement.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/75 p-3 text-sm"
+          >
+            <div>
+              <p className="font-black text-neutral-900">
+                +{movement.quantity} {movement.productName}
+              </p>
+              <p className="mt-0.5 text-xs font-semibold text-neutral-500">
+                {movement.type.replaceAll('_', ' ')} ·{' '}
+                {formatDateTime(movement.createdAt)}
+              </p>
+            </div>
+
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+              Balance: {movement.balanceAfter}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CancelSubmitButton({
+  label = 'Confirm Cancel',
+}: {
+  label?: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="h-11 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {pending ? 'Cancelling...' : label}
+    </button>
+  );
+}
+
+function CancelOrderItemModal({
+  order,
+  item,
+  onClose,
+}: {
+  order: DashboardOrder;
+  item: OrderItem;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState(cancelReasons[0]);
+  const [customReason, setCustomReason] = useState('');
+
+  const finalReason =
+    reason === 'Other' ? customReason.trim() || 'Other' : reason;
+
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-4">
+      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black">Cancel Food Item</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Cancel <b>{item.productNameSnapshot}</b> from order{' '}
+              <b>{order.orderCode}</b>.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-9 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            aria-label="Close cancel item modal"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <form action={cancelOrderItemAction} className="space-y-4">
+          <input type="hidden" name="orderId" value={order.id} />
+          <input type="hidden" name="orderItemId" value={item.id} />
+          <input type="hidden" name="reason" value={finalReason} />
+
+          <label className="grid gap-2">
+            <span className="text-sm font-black text-neutral-800">
+              Cancellation Reason
+            </span>
+            <select
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+            >
+              {cancelReasons.map((itemReason) => (
+                <option key={itemReason} value={itemReason}>
+                  {itemReason}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {reason === 'Other' ? (
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-neutral-800">
+                Custom Reason
+              </span>
+              <textarea
+                value={customReason}
+                onChange={(event) => setCustomReason(event.target.value)}
+                placeholder="Type reason..."
+                className="min-h-24 resize-none rounded-2xl border border-neutral-200 bg-white p-4 text-sm font-semibold outline-none"
+              />
+            </label>
+          ) : null}
+
+          <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
+            This will cancel only this food item. Other food items in this
+            order will remain active. Stock will be restored automatically.
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
+            >
+              Close
+            </button>
+
+            <CancelSubmitButton />
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CancelOrderModal({
+  order,
+  onClose,
+}: {
+  order: DashboardOrder;
+  onClose: () => void;
+}) {
+  const wholeOrderReasons = [
+    'Item unavailable',
+    'Guest cancelled',
+    'Duplicate order',
+    'Payment issue',
+    'Kitchen cannot fulfill',
+    'Wrong room or location',
+    'Other',
+  ];
+
+  const [reason, setReason] = useState(wholeOrderReasons[0]);
+  const [customReason, setCustomReason] = useState('');
+
+  const finalReason =
+    reason === 'Other' ? customReason.trim() || 'Other' : reason;
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 px-4">
+      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black">Cancel / Reject Order</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Please provide a reason for cancelling {order.orderCode}.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-9 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            aria-label="Close modal"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <form action={updateOrderStatusAction} className="space-y-4">
+          <input type="hidden" name="orderId" value={order.id} />
+          <input type="hidden" name="status" value="CANCELLED" />
+          <input
+            type="hidden"
+            name="note"
+            value={`Cancelled reason: ${finalReason}`}
+          />
+
+          <label className="grid gap-2">
+            <span className="text-sm font-black text-neutral-800">
+              Cancellation Reason
+            </span>
+            <select
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+            >
+              {wholeOrderReasons.map((itemReason) => (
+                <option key={itemReason} value={itemReason}>
+                  {itemReason}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {reason === 'Other' ? (
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-neutral-800">
+                Custom Reason
+              </span>
+              <textarea
+                value={customReason}
+                onChange={(event) => setCustomReason(event.target.value)}
+                placeholder="Type cancellation reason..."
+                className="min-h-24 resize-none rounded-2xl border border-neutral-200 p-4 text-sm font-bold outline-none"
+              />
+            </label>
+          ) : null}
+
+          <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
+            Cancelling this order will restore deducted stock when restore
+            movements are available.
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
+            >
+              Close
+            </button>
+
+           <CancelSubmitButton />
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function OrderDetailsModal({
+  order,
+  now,
+  onClose,
+  onCancel,
+}: {
+  order: DashboardOrder;
+  now: number;
+  onClose: () => void;
+  onCancel: (order: DashboardOrder) => void;
+}) {
+  const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
+  const nextActions = getNextActions(order.status);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] grid place-items-center bg-black/50 px-4">
+        <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
+          <div className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-2xl font-black">{order.orderCode}</h2>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-black ${getStatusClass(
+                      order.status
+                    )}`}
+                  >
+                    {label(order.status)}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-black ${getPaymentClass(
+                      order.paymentStatus
+                    )}`}
+                  >
+                    {label(order.paymentStatus)}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-black ${getOrderAgeClass(
+                      order,
+                      now
+                    )}`}
+                  >
+                    {activeOrderStatuses.includes(order.status)
+                      ? `Waiting ${getOrderAgeLabel(order, now)}`
+                      : `Duration ${getOrderAgeLabel(order, now)}`}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-sm font-semibold text-neutral-500">
+                  {order.hotelName} · {order.roomLabel} ·{' '}
+                  {order.tagCode ? 'Guest Portal' : 'POS Terminal'}
+                </p>
+
+                <p className="mt-1 text-xs font-bold text-neutral-400">
+                  Ordered {formatDateTime(order.createdAt)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+                aria-label="Close details"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="space-y-4">
+              <div>
+                <p className="mb-2 text-sm font-black text-neutral-950">
+                  Ordered Items
+                </p>
+                <OrderItemsList order={order} onCancelItem={setCancelItem} />
+              </div>
+
+              {order.guestName || order.notes ? (
+                <div className="rounded-2xl bg-neutral-50 p-4 text-sm">
+                  {order.guestName ? (
+                    <p>
+                      <b>Guest:</b> {order.guestName}
+                    </p>
+                  ) : null}
+
+                  {order.notes ? (
+                    <p className="mt-2 whitespace-pre-line">
+                      <b>Notes:</b> {order.notes}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {order.restoreMovements?.length || order.status === 'CANCELLED' ? (
+                <RestoreAudit movements={order.restoreMovements ?? []} />
+              ) : null}
+
+              <OrderTimeline history={order.statusHistory} />
+            </div>
+
+            <aside className="space-y-3">
+              <div className="rounded-2xl bg-neutral-50 p-4">
+                <p className="text-sm font-black text-neutral-950">
+                  Price Breakdown
+                </p>
+
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">Subtotal</span>
+                    <b>{money(order.subtotalCents)}</b>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">Service Charge</span>
+                    <b>{money(order.serviceChargeCents)}</b>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">Tax</span>
+                    <b>{money(order.taxCents)}</b>
+                  </div>
+
+                  <div className="border-t border-neutral-200 pt-2">
+                    <div className="flex justify-between text-base">
+                      <span className="font-black">Total</span>
+                      <span className="font-black">
+                        {money(order.totalCents)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => printOrder(order)}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
+              >
+                <Printer className="size-4" />
+                Print Receipt
+              </button>
+
+              {order.paymentStatus !== 'PAID' ? (
+                <form action={markOrderPaidAction}>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <button
+                    type="submit"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-black text-white hover:bg-emerald-700"
+                  >
+                    <CreditCard className="size-4" />
+                    Mark Paid
+                  </button>
+                </form>
+              ) : null}
+
+              {nextActions.length ? (
+                <div className="grid gap-2">
+                  {nextActions.map((action) =>
+                    action.status === 'CANCELLED' ? (
+                      <button
+                        key={`${order.id}-${action.status}`}
+                        type="button"
+                        onClick={() => onCancel(order)}
+                        className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black ${action.className}`}
+                      >
+                        <Ban className="size-4" />
+                        {action.label}
+                      </button>
+                    ) : (
+                      <form
+                        key={`${order.id}-${action.status}`}
+                        action={updateOrderStatusAction}
+                      >
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <input
+                          type="hidden"
+                          name="status"
+                          value={action.status}
+                        />
+                        <input
+                          type="hidden"
+                          name="note"
+                          value={`Dashboard status changed to ${label(
+                            action.status
+                          )}`}
+                        />
+
+                        <button
+                          type="submit"
+                          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black ${action.className}`}
+                        >
+                          {action.status === 'ACCEPTED' ? (
+                            <CheckCircle2 className="size-4" />
+                          ) : action.status === 'PREPARING' ? (
+                            <ChefHat className="size-4" />
+                          ) : action.status === 'READY' ? (
+                            <PackageCheck className="size-4" />
+                          ) : action.status === 'DELIVERED' ? (
+                            <Truck className="size-4" />
+                          ) : (
+                            <Utensils className="size-4" />
+                          )}
+                          {action.label}
+                        </button>
+                      </form>
+                    )
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
+                  This order is already {label(order.status).toLowerCase()}.
+                </div>
+              )}
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      {cancelItem ? (
+        <CancelOrderItemModal
+          order={order}
+          item={cancelItem}
+          onClose={() => setCancelItem(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+export function OrdersClient({
+  message,
+  summary,
+  statusCounts,
+  orders,
+}: {
+  message?: Message;
+  summary: Summary;
+  statusCounts: StatusCounts;
+  orders: DashboardOrder[];
+}) {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
+  const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(
+    null
+  );
+  const [cancelOrder, setCancelOrder] = useState<DashboardOrder | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const filteredOrders = useMemo(() => {
+    const searchText = search.trim().toLowerCase();
+
+    return orders.filter((order) => {
+      const orderText = [
+        order.orderCode,
+        order.hotelName,
+        order.roomLabel,
+        order.guestName,
+        order.notes,
+        order.status,
+        order.paymentStatus,
+        order.paymentMethod,
+        ...order.items.map((item) => item.productNameSnapshot),
+        ...order.items.flatMap((item) =>
+          (item.bundleComponents ?? []).map(
+            (component) => component.componentNameSnapshot
+          )
+        ),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      const matchesSearch = !searchText || orderText.includes(searchText);
+
+      const matchesStatus =
+        statusFilter === 'ALL' || order.status === statusFilter;
+
+      const matchesPayment =
+        paymentFilter === 'ALL' ||
+        (paymentFilter === 'PAID' && order.paymentStatus === 'PAID') ||
+        (paymentFilter === 'UNPAID' && order.paymentStatus !== 'PAID');
+
+      return matchesSearch && matchesStatus && matchesPayment;
+    });
+  }, [orders, paymentFilter, search, statusFilter]);
+
+  return (
+    <>
+     {message ? (
+      <div
+        className={
+          message.type === 'success'
+            ? 'mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700'
+            : 'mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700'
+        }
+      >
+        {message.text}
+      </div>
+    ) : null}
+      <div className="mb-6 grid gap-3 md:grid-cols-4">
+        <SummaryCard
+          label="Active Orders"
+          value={summary.activeOrders}
+          tone="blue"
+        />
+        <SummaryCard
+          label="Unpaid Orders"
+          value={summary.unpaidOrders}
+          tone="red"
+        />
+        <SummaryCard
+          label="Cancelled"
+          value={summary.cancelledOrders}
+          tone="red"
+        />
+        <SummaryCard
+          label="Total Sales"
+          value={money(summary.totalSalesCents)}
+          tone="green"
+        />
+      </div>
+
+      <div className="mb-5 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h2 className="text-xl font-black">Order Management</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Small order cards. Details open in a modal.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={
+                  statusFilter === status
+                    ? 'rounded-full bg-black px-4 py-2 text-xs font-black text-white'
+                    : 'rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50'
+                }
+              >
+                {status === 'ALL' ? 'All' : label(status)}{' '}
+                <span className="opacity-70">
+                  {status === 'ALL'
+                    ? statusCounts.ALL
+                    : statusCounts[status]}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_200px]">
+          <label className="grid gap-1">
+            <span className="text-xs font-black uppercase text-neutral-500">
+              Search Orders
+            </span>
+            <div className="flex h-11 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+              <Search className="size-4 shrink-0 text-neutral-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search order code, room, guest, item, bundle component..."
+                className="w-full bg-transparent text-sm font-bold outline-none"
+              />
+            </div>
+          </label>
+
+          <label className="grid gap-1">
+            <span className="text-xs font-black uppercase text-neutral-500">
+              Payment Filter
+            </span>
+            <select
+              value={paymentFilter}
+              onChange={(event) =>
+                setPaymentFilter(event.target.value as PaymentFilter)
+              }
+              className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+            >
+              <option value="ALL">All Payments</option>
+              <option value="PAID">Paid</option>
+              <option value="UNPAID">Unpaid</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        {filteredOrders.map((order) => {
+          const itemCount = getItemCount(order.items);
+          const preview = getOrderPreview(order.items);
+          const sourceLabel = order.tagCode ? 'Guest Portal' : 'POS Terminal';
+          const waitingLabel = getOrderAgeLabel(order, now);
+
+          return (
+            <article
+              key={order.id}
+              className="rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-lg font-black">
+                    {order.orderCode}
+                  </h3>
+                  <p className="mt-1 truncate text-xs font-bold text-neutral-500">
+                    {order.hotelName} · {order.roomLabel}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-neutral-400">
+                    {sourceLabel}
+                  </p>
+                </div>
+
+                <span
+                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
+                    order.status
+                  )}`}
+                >
+                  {label(order.status)}
+                </span>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-[10px] font-black ${getPaymentClass(
+                    order.paymentStatus
+                  )}`}
+                >
+                  {label(order.paymentStatus)}
+                </span>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-[10px] font-black ${getOrderAgeClass(
+                    order,
+                    now
+                  )}`}
+                >
+                  {activeOrderStatuses.includes(order.status)
+                    ? `Waiting ${waitingLabel}`
+                    : `Duration ${waitingLabel}`}
+                </span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-neutral-50 p-3">
+                  <p className="text-[10px] font-black uppercase text-neutral-400">
+                    Total
+                  </p>
+                  <p className="mt-1 text-sm font-black">
+                    {money(order.totalCents)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-neutral-50 p-3">
+                  <p className="text-[10px] font-black uppercase text-neutral-400">
+                    Payment
+                  </p>
+                  <p className="mt-1 text-sm font-black">
+                    {label(order.paymentMethod)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-2xl bg-neutral-50 p-3">
+                <p className="text-[10px] font-black uppercase text-neutral-400">
+                  Active Items
+                </p>
+                <p className="mt-1 line-clamp-2 text-xs font-bold text-neutral-600">
+                  {itemCount} item{itemCount === 1 ? '' : 's'} · {preview}
+                </p>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(order)}
+                  className="h-10 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+                >
+                  View Details
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => printOrder(order)}
+                  className="flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-xs font-black hover:bg-neutral-50"
+                >
+                  <Printer className="size-4" />
+                  Print
+                </button>
+              </div>
+            </article>
+          );
+        })}
+
+        {!filteredOrders.length ? (
+          <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
+            <p className="font-black">No orders found.</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Try changing your search or filters.
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      {selectedOrder ? (
+        <OrderDetailsModal
+          order={selectedOrder}
+          now={now}
+          onClose={() => setSelectedOrder(null)}
+          onCancel={(order) => {
+            setSelectedOrder(null);
+            setCancelOrder(order);
+          }}
+        />
+      ) : null}
+
+      {cancelOrder ? (
+        <CancelOrderModal
+          order={cancelOrder}
+          onClose={() => setCancelOrder(null)}
+        />
+      ) : null}
+    </>
   );
 }

@@ -2,11 +2,13 @@
 
 import {
   MenuAvailabilityMovementType,
+  OrderItemStatus,
   OrderStatus,
   PaymentStatus,
   Prisma,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
@@ -23,6 +25,32 @@ import {
 } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 
+type RestoreOrderItem = {
+  id: string;
+  productId: string | null;
+  quantity: number;
+  productNameSnapshot: string;
+  isBundleSnapshot: boolean;
+  status?: OrderItemStatus;
+  cancelledQty?: number;
+  bundleComponents: {
+    id: string;
+    componentProductId: string | null;
+    componentNameSnapshot: string;
+    quantity: number;
+  }[];
+};
+
+type RestoreRequirement = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  deductionType: MenuAvailabilityMovementType;
+  restoreType: MenuAvailabilityMovementType;
+  reason: string;
+  duplicateGuardText: string;
+};
+
 function revalidateOrderPaths(order: {
   orderCode: string;
   tag: {
@@ -36,151 +64,115 @@ function revalidateOrderPaths(order: {
 
   if (order.tag?.code) {
     revalidatePath(`/t/${order.tag.code}/track/${order.orderCode}`);
+    revalidatePath(`/t/${order.tag.code}/orders`);
+    revalidatePath(`/t/${order.tag.code}/menu`);
   }
 }
 
-async function restoreMenuStockForCancelledOrder({
+function getRemainingOrderItemQuantity(item: {
+  quantity: number;
+  cancelledQty?: number | null;
+}) {
+  return Math.max(item.quantity - (item.cancelledQty ?? 0), 0);
+}
+
+function getBundleComponentRestoreQuantity({
+  componentQuantity,
+  itemQuantity,
+  cancelQuantity,
+}: {
+  componentQuantity: number;
+  itemQuantity: number;
+  cancelQuantity: number;
+}) {
+  if (itemQuantity <= 0 || cancelQuantity <= 0 || componentQuantity <= 0) {
+    return 0;
+  }
+
+  /**
+   * OrderItemBundleComponent.quantity is stored as the total component quantity
+   * for the original ordered bundle quantity.
+   *
+   * Example:
+   * 2x Breakfast Combo
+   * each combo has 1x Iced Tea
+   * saved component quantity = 2
+   *
+   * If cancelling 1 of 2 combos, restore 1 Iced Tea.
+   */
+  return Math.max(
+    Math.round((componentQuantity / itemQuantity) * cancelQuantity),
+    0
+  );
+}
+
+function addRestoreRequirement(
+  requirements: Map<string, RestoreRequirement>,
+  input: RestoreRequirement
+) {
+  const key = `${input.productId}:${input.deductionType}:${input.restoreType}:${input.duplicateGuardText}`;
+  const existing = requirements.get(key);
+
+  if (existing) {
+    existing.quantity += input.quantity;
+    return;
+  }
+
+  requirements.set(key, input);
+}
+
+function redirectToOrdersWithMessage({
+  success,
+  error,
+}: {
+  success?: string;
+  error?: string;
+}): never {
+  const params = new URLSearchParams();
+
+  if (success) {
+    params.set('success', success);
+  }
+
+  if (error) {
+    params.set('error', error);
+  }
+
+  redirect(
+    params.toString()
+      ? `/dashboard/orders?${params.toString()}`
+      : '/dashboard/orders'
+  );
+}
+
+async function applyRestoreRequirements({
   tx,
-  order,
+  hotelId,
+  requirements,
   userId,
 }: {
   tx: Prisma.TransactionClient;
+  hotelId: string;
+  requirements: Map<string, RestoreRequirement>;
   userId: string;
-  order: {
-    id: string;
-    hotelId: string;
-    orderCode: string;
-    items: {
-      id: string;
-      productId: string | null;
-      quantity: number;
-      productNameSnapshot: string;
-      isBundleSnapshot: boolean;
-      bundleComponents: {
-        id: string;
-        componentProductId: string | null;
-        componentNameSnapshot: string;
-        quantity: number;
-      }[];
-    }[];
-  };
 }) {
-  type RestoreRequirement = {
-    productId: string;
-    productName: string;
-    quantity: number;
-    deductionType: MenuAvailabilityMovementType;
-    restoreType: MenuAvailabilityMovementType;
-    reason: string;
-  };
-
-  const restoreRequirements = new Map<string, RestoreRequirement>();
-
-  function addRestoreRequirement(input: RestoreRequirement) {
-    const key = `${input.productId}:${input.deductionType}:${input.restoreType}`;
-    const existing = restoreRequirements.get(key);
-
-    if (existing) {
-      existing.quantity += input.quantity;
-      return;
-    }
-
-    restoreRequirements.set(key, input);
-  }
-
-  for (const item of order.items) {
-    /**
-     * Bundle order item:
-     * Restore component products, not the bundle product.
-     */
-    if (item.isBundleSnapshot) {
-      if (item.bundleComponents.length > 0) {
-        for (const component of item.bundleComponents) {
-          if (!component.componentProductId) {
-            continue;
-          }
-
-          addRestoreRequirement({
-            productId: component.componentProductId,
-            productName: component.componentNameSnapshot,
-            quantity: component.quantity,
-            deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
-            restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
-            reason: `Cancelled bundle order ${order.orderCode} stock restored`,
-          });
-        }
-
-        continue;
-      }
-
-      /**
-       * Fallback for older bundle orders created before
-       * OrderItemBundleComponent snapshots existed.
-       *
-       * This uses the current bundle setup. It is less perfect than snapshots,
-       * but it prevents old bundle cancellations from failing silently.
-       */
-      if (item.productId) {
-        const currentBundleComponents = await tx.menuBundleComponent.findMany({
-          where: {
-            bundleProductId: item.productId,
-          },
-          include: {
-            componentProduct: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        });
-
-        for (const component of currentBundleComponents) {
-          addRestoreRequirement({
-            productId: component.componentProductId,
-            productName: component.componentProduct.name,
-            quantity: component.quantity * item.quantity,
-            deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
-            restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
-            reason: `Cancelled bundle order ${order.orderCode} stock restored`,
-          });
-        }
-      }
-
-      continue;
-    }
-
-    /**
-     * Normal single menu item:
-     * Restore the product itself.
-     */
-    if (!item.productId) {
-      continue;
-    }
-
-    addRestoreRequirement({
-      productId: item.productId,
-      productName: item.productNameSnapshot,
-      quantity: item.quantity,
-      deductionType: MenuAvailabilityMovementType.ORDER_DEDUCTION,
-      restoreType: MenuAvailabilityMovementType.CANCEL_RESTORE,
-      reason: `Cancelled order ${order.orderCode} stock restored`,
-    });
-  }
-
   const restoredProductIds: string[] = [];
 
-  for (const requirement of restoreRequirements.values()) {
+  for (const requirement of requirements.values()) {
+    if (requirement.quantity <= 0) {
+      continue;
+    }
+
     /**
-     * Prevent double restoration.
+     * Prevent double restoration for the same order/item/product/restore type.
      */
     const existingRestore = await tx.menuAvailabilityMovement.findFirst({
       where: {
-        hotelId: order.hotelId,
+        hotelId,
         productId: requirement.productId,
         type: requirement.restoreType,
         reason: {
-          contains: order.orderCode,
+          contains: requirement.duplicateGuardText,
         },
       },
       select: {
@@ -193,15 +185,15 @@ async function restoreMenuStockForCancelledOrder({
     }
 
     /**
-     * Restore only what was actually deducted.
+     * Restore only if this product was actually deducted for this order.
      */
     const deductionMovements = await tx.menuAvailabilityMovement.findMany({
       where: {
-        hotelId: order.hotelId,
+        hotelId,
         productId: requirement.productId,
         type: requirement.deductionType,
         reason: {
-          contains: order.orderCode,
+          contains: requirement.duplicateGuardText.split(':')[0],
         },
       },
       select: {
@@ -227,7 +219,7 @@ async function restoreMenuStockForCancelledOrder({
     const stock = await tx.menuAvailabilityStock.findUnique({
       where: {
         hotelId_productId: {
-          hotelId: order.hotelId,
+          hotelId,
           productId: requirement.productId,
         },
       },
@@ -261,7 +253,7 @@ async function restoreMenuStockForCancelledOrder({
 
     await tx.menuAvailabilityMovement.create({
       data: {
-        hotelId: order.hotelId,
+        hotelId,
         productId: requirement.productId,
         stockId: stock.id,
         type: requirement.restoreType,
@@ -276,6 +268,442 @@ async function restoreMenuStockForCancelledOrder({
   }
 
   return Array.from(new Set(restoredProductIds));
+}
+
+async function buildRestoreRequirementsForOrderItem({
+  tx,
+  order,
+  item,
+  quantityToRestore,
+}: {
+  tx: Prisma.TransactionClient;
+  order: {
+    hotelId: string;
+    orderCode: string;
+  };
+  item: RestoreOrderItem;
+  quantityToRestore: number;
+}) {
+  const restoreRequirements = new Map<string, RestoreRequirement>();
+  const itemGuard = `${order.orderCode}:${item.id}`;
+
+  if (quantityToRestore <= 0) {
+    return restoreRequirements;
+  }
+
+  /**
+   * Bundle item:
+   * Restore component products, not the bundle product.
+   */
+  if (item.isBundleSnapshot) {
+    if (item.bundleComponents.length > 0) {
+      for (const component of item.bundleComponents) {
+        if (!component.componentProductId) {
+          continue;
+        }
+
+        const componentRestoreQty = getBundleComponentRestoreQuantity({
+          componentQuantity: component.quantity,
+          itemQuantity: item.quantity,
+          cancelQuantity: quantityToRestore,
+        });
+
+        addRestoreRequirement(restoreRequirements, {
+          productId: component.componentProductId,
+          productName: component.componentNameSnapshot,
+          quantity: componentRestoreQty,
+          deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+          restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+          reason: `Cancelled bundle item ${item.productNameSnapshot} (${item.id}) from order ${order.orderCode} stock restored`,
+          duplicateGuardText: itemGuard,
+        });
+      }
+
+      return restoreRequirements;
+    }
+
+    /**
+     * Fallback for older bundle orders created before bundle component snapshots.
+     */
+    if (item.productId) {
+      const currentBundleComponents = await tx.menuBundleComponent.findMany({
+        where: {
+          bundleProductId: item.productId,
+        },
+        include: {
+          componentProduct: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      for (const component of currentBundleComponents) {
+        addRestoreRequirement(restoreRequirements, {
+          productId: component.componentProductId,
+          productName: component.componentProduct.name,
+          quantity: component.quantity * quantityToRestore,
+          deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+          restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+          reason: `Cancelled bundle item ${item.productNameSnapshot} (${item.id}) from order ${order.orderCode} stock restored`,
+          duplicateGuardText: itemGuard,
+        });
+      }
+    }
+
+    return restoreRequirements;
+  }
+
+  /**
+   * Normal single menu item.
+   */
+  if (!item.productId) {
+    return restoreRequirements;
+  }
+
+  addRestoreRequirement(restoreRequirements, {
+    productId: item.productId,
+    productName: item.productNameSnapshot,
+    quantity: quantityToRestore,
+    deductionType: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+    restoreType: MenuAvailabilityMovementType.CANCEL_RESTORE,
+    reason: `Cancelled item ${item.productNameSnapshot} (${item.id}) from order ${order.orderCode} stock restored`,
+    duplicateGuardText: itemGuard,
+  });
+
+  return restoreRequirements;
+}
+
+async function restoreMenuStockForCancelledOrder({
+  tx,
+  order,
+  userId,
+}: {
+  tx: Prisma.TransactionClient;
+  userId: string;
+  order: {
+    id: string;
+    hotelId: string;
+    orderCode: string;
+    items: RestoreOrderItem[];
+  };
+}) {
+  const restoreRequirements = new Map<string, RestoreRequirement>();
+
+  for (const item of order.items) {
+    const remainingQuantity = getRemainingOrderItemQuantity(item);
+
+    if (remainingQuantity <= 0) {
+      continue;
+    }
+
+    const itemRequirements = await buildRestoreRequirementsForOrderItem({
+      tx,
+      order,
+      item,
+      quantityToRestore: remainingQuantity,
+    });
+
+    for (const requirement of itemRequirements.values()) {
+      addRestoreRequirement(restoreRequirements, {
+        ...requirement,
+        /**
+         * Whole-order cancellation uses the order code as duplicate guard, so it
+         * does not conflict with item-level cancellation guards.
+         */
+        duplicateGuardText: `${order.orderCode}:whole-order:${requirement.productId}:${requirement.restoreType}`,
+        reason: item.isBundleSnapshot
+          ? `Cancelled bundle order ${order.orderCode} stock restored`
+          : `Cancelled order ${order.orderCode} stock restored`,
+      });
+    }
+  }
+
+  return applyRestoreRequirements({
+    tx,
+    hotelId: order.hotelId,
+    requirements: restoreRequirements,
+    userId,
+  });
+}
+
+function recalculateOrderTotalsAfterItemCancellation({
+  order,
+  cancelledItemId,
+}: {
+  order: {
+    subtotalCents: number;
+    serviceChargeCents: number;
+    taxCents: number;
+    items: {
+      id: string;
+      quantity: number;
+      unitPriceCents: number;
+      cancelledQty: number;
+    }[];
+  };
+  cancelledItemId: string;
+}) {
+  const serviceChargeRate =
+    order.subtotalCents > 0
+      ? order.serviceChargeCents / order.subtotalCents
+      : 0;
+
+  const taxRate =
+    order.subtotalCents > 0 ? order.taxCents / order.subtotalCents : 0;
+
+  const nextSubtotalCents = order.items.reduce((sum, item) => {
+    const cancelledQty =
+      item.id === cancelledItemId ? item.quantity : item.cancelledQty;
+
+    const activeQty = Math.max(item.quantity - cancelledQty, 0);
+
+    return sum + activeQty * item.unitPriceCents;
+  }, 0);
+
+  const nextServiceChargeCents = Math.round(
+    nextSubtotalCents * serviceChargeRate
+  );
+  const nextTaxCents = Math.round(nextSubtotalCents * taxRate);
+
+  return {
+    subtotalCents: nextSubtotalCents,
+    serviceChargeCents: nextServiceChargeCents,
+    taxCents: nextTaxCents,
+    totalCents:
+      nextSubtotalCents + nextServiceChargeCents + nextTaxCents,
+  };
+}
+
+export async function cancelOrderItemAction(formData: FormData) {
+  const user = await requireUser();
+
+  const orderId = cleanText(formData.get('orderId'));
+  const orderItemId = cleanText(formData.get('orderItemId'));
+  const reason = cleanText(formData.get('reason'), 300);
+
+  if (!orderId || !orderItemId) {
+    redirectToOrdersWithMessage({
+      error: 'order-item-required',
+    });
+  }
+
+  const order = await db.order.findUnique({
+    where: {
+      id: orderId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      status: true,
+      orderCode: true,
+      subtotalCents: true,
+      serviceChargeCents: true,
+      taxCents: true,
+      tag: {
+        select: {
+          code: true,
+        },
+      },
+      items: {
+        select: {
+          id: true,
+          productId: true,
+          quantity: true,
+          unitPriceCents: true,
+          productNameSnapshot: true,
+          isBundleSnapshot: true,
+          status: true,
+          cancelledQty: true,
+          bundleComponents: {
+            select: {
+              id: true,
+              componentProductId: true,
+              componentNameSnapshot: true,
+              quantity: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    redirectToOrdersWithMessage({
+      error: 'order-not-found',
+    });
+  }
+
+  assertHotelScope(user, order.hotelId);
+
+  if (order.status !== OrderStatus.PENDING) {
+    redirectToOrdersWithMessage({
+      error: 'order-not-pending',
+    });
+  }
+
+  const item = order.items.find((orderItem) => orderItem.id === orderItemId);
+
+  if (!item) {
+    redirectToOrdersWithMessage({
+      error: 'order-item-not-found',
+    });
+  }
+
+  const remainingQuantity = getRemainingOrderItemQuantity(item);
+
+  /**
+   * Important fix:
+   * Do not throw a 500 error if the user double-clicks, refreshes a stale modal,
+   * or submits an already-cancelled item. Redirect with a safe message instead.
+   */
+  if (remainingQuantity <= 0 || item.status === OrderItemStatus.CANCELLED) {
+    revalidateOrderPaths(order);
+
+    redirectToOrdersWithMessage({
+      error: 'item-already-cancelled',
+    });
+  }
+
+  let restoredProductIds: string[] = [];
+  let finalOrderStatus = order.status;
+  let statusUpdatedAt = new Date();
+
+  const totals = recalculateOrderTotalsAfterItemCancellation({
+    order,
+    cancelledItemId: item.id,
+  });
+
+  const allItemsCancelled = order.items.every((orderItem) => {
+    if (orderItem.id === item.id) {
+      return true;
+    }
+
+    return (
+      orderItem.status === OrderItemStatus.CANCELLED ||
+      getRemainingOrderItemQuantity(orderItem) <= 0
+    );
+  });
+
+  await db.$transaction(async (tx) => {
+    const restoreRequirements = await buildRestoreRequirementsForOrderItem({
+      tx,
+      order,
+      item,
+      quantityToRestore: remainingQuantity,
+    });
+
+    restoredProductIds = await applyRestoreRequirements({
+      tx,
+      hotelId: order.hotelId,
+      requirements: restoreRequirements,
+      userId: user.id,
+    });
+
+    await tx.orderItem.update({
+      where: {
+        id: item.id,
+      },
+      data: {
+        status: OrderItemStatus.CANCELLED,
+        cancelledQty: item.quantity,
+        cancelledAt: new Date(),
+        cancelReason: reason || 'Cancelled from dashboard',
+        cancelledById: user.id,
+      },
+    });
+
+    if (allItemsCancelled) {
+      finalOrderStatus = OrderStatus.CANCELLED;
+
+      await tx.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          subtotalCents: 0,
+          serviceChargeCents: 0,
+          taxCents: 0,
+          totalCents: 0,
+        },
+      });
+
+      const history = await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          status: OrderStatus.CANCELLED,
+          userId: user.id,
+          note:
+            reason ||
+            `All order items were cancelled from dashboard. Last item: ${item.productNameSnapshot}.`,
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
+      statusUpdatedAt = history.createdAt;
+      return;
+    }
+
+    await tx.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        subtotalCents: totals.subtotalCents,
+        serviceChargeCents: totals.serviceChargeCents,
+        taxCents: totals.taxCents,
+        totalCents: totals.totalCents,
+      },
+    });
+
+    const history = await tx.orderStatusHistory.create({
+      data: {
+        orderId: order.id,
+        status: order.status,
+        userId: user.id,
+        note:
+          reason ||
+          `Cancelled item ${item.productNameSnapshot} from dashboard.`,
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    statusUpdatedAt = history.createdAt;
+  });
+
+  revalidateOrderPaths(order);
+
+  await triggerOrderStatusUpdate({
+    orderCode: order.orderCode,
+    status: finalOrderStatus,
+    updatedAt: statusUpdatedAt.toISOString(),
+  });
+
+  await triggerKitchenOrderUpdated({
+    hotelId: order.hotelId,
+    orderCode: order.orderCode,
+    status: finalOrderStatus,
+    source: 'DASHBOARD',
+  });
+
+  if (restoredProductIds.length > 0) {
+    await triggerInventoryUpdated({
+      hotelId: order.hotelId,
+      productIds: restoredProductIds,
+      source: 'DASHBOARD',
+    });
+  }
+
+  redirectToOrdersWithMessage({
+    success: allItemsCancelled ? 'order-cancelled' : 'item-cancelled',
+  });
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
@@ -300,22 +728,24 @@ export async function updateOrderStatusAction(formData: FormData) {
       orderCode: true,
       inventoryDeductedAt: true,
       items: {
-  select: {
-    id: true,
-    productId: true,
-    quantity: true,
-    productNameSnapshot: true,
-    isBundleSnapshot: true,
-    bundleComponents: {
-      select: {
-        id: true,
-        componentProductId: true,
-        componentNameSnapshot: true,
-        quantity: true,
+        select: {
+          id: true,
+          productId: true,
+          quantity: true,
+          productNameSnapshot: true,
+          isBundleSnapshot: true,
+          status: true,
+          cancelledQty: true,
+          bundleComponents: {
+            select: {
+              id: true,
+              componentProductId: true,
+              componentNameSnapshot: true,
+              quantity: true,
+            },
+          },
+        },
       },
-    },
-  },
-},
       tag: {
         select: {
           code: true,
@@ -406,6 +836,11 @@ export async function updateOrderStatusAction(formData: FormData) {
       source: 'DASHBOARD',
     });
   }
+  if (status === OrderStatus.CANCELLED) {
+  redirectToOrdersWithMessage({
+    success: 'order-cancelled',
+  });
+}
 }
 
 export async function markOrderPaidAction(formData: FormData) {

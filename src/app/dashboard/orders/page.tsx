@@ -1,4 +1,8 @@
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import {
+  MenuAvailabilityMovementType,
+  OrderStatus,
+  PaymentStatus,
+} from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { RealtimeKitchenRefresh } from '@/components/dashboard/RealtimeKitchenRefresh';
 import { db } from '@/lib/db';
@@ -14,8 +18,52 @@ const activeStatuses = [
   OrderStatus.READY,
 ];
 
-export default async function OrdersPage() {
+function getOrdersMessage(success?: string, error?: string) {
+  if (success) {
+    const messages: Record<string, string> = {
+      'item-cancelled':
+        'Food item was cancelled successfully. Stock restoration was processed.',
+      'order-cancelled':
+        'Order was cancelled successfully. Stock restoration was processed.',
+    };
+
+    return {
+      type: 'success' as const,
+      text: messages[success] ?? 'Action completed successfully.',
+    };
+  }
+
+  if (error) {
+    const messages: Record<string, string> = {
+      'order-item-required': 'Order item details are missing.',
+      'order-not-found': 'Order was not found.',
+      'order-not-pending':
+        'Only pending orders can have individual items cancelled.',
+      'order-item-not-found': 'Order item was not found.',
+      'item-already-cancelled':
+        'This item was already cancelled. The order list has been refreshed.',
+    };
+
+    return {
+      type: 'error' as const,
+      text: messages[error] ?? 'Something went wrong.',
+    };
+  }
+
+  return null;
+}
+
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+  }>;
+}) {
   const user = await requireUser();
+  const params = await searchParams;
+  const message = getOrdersMessage(params?.success, params?.error);
 
   const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
@@ -52,6 +100,21 @@ export default async function OrdersPage() {
           productNameSnapshot: true,
           unitPriceCents: true,
           notes: true,
+          isBundleSnapshot: true,
+          status: true,
+          cancelledQty: true,
+          cancelledAt: true,
+          cancelReason: true,
+          bundleComponents: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+            select: {
+              id: true,
+              componentNameSnapshot: true,
+              quantity: true,
+            },
+          },
         },
       },
       statusHistory: {
@@ -77,6 +140,37 @@ export default async function OrdersPage() {
     },
     take: 150,
   });
+
+  const orderCodes = orders.map((order) => order.orderCode);
+
+  const restoreMovements = orderCodes.length
+    ? await db.menuAvailabilityMovement.findMany({
+        where: {
+          ...(user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! }),
+          type: {
+            in: [
+              MenuAvailabilityMovementType.CANCEL_RESTORE,
+              MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+            ],
+          },
+          OR: orderCodes.map((orderCode) => ({
+            reason: {
+              contains: orderCode,
+            },
+          })),
+        },
+        include: {
+          product: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+    : [];
 
   const activeOrders = orders.filter((order) =>
     activeStatuses.includes(order.status)
@@ -119,6 +213,7 @@ export default async function OrdersPage() {
       />
 
       <OrdersClient
+        message={message}
         summary={{
           activeOrders: activeOrders.length,
           unpaidOrders: unpaidOrders.length,
@@ -151,6 +246,16 @@ export default async function OrdersPage() {
             productNameSnapshot: item.productNameSnapshot,
             unitPriceCents: item.unitPriceCents,
             notes: item.notes ?? '',
+            isBundleSnapshot: item.isBundleSnapshot,
+            status: item.status,
+            cancelledQty: item.cancelledQty,
+            cancelledAt: item.cancelledAt?.toISOString() ?? '',
+            cancelReason: item.cancelReason ?? '',
+            bundleComponents: item.bundleComponents.map((component) => ({
+              id: component.id,
+              componentNameSnapshot: component.componentNameSnapshot,
+              quantity: component.quantity,
+            })),
           })),
           statusHistory: order.statusHistory.map((history) => ({
             id: history.id,
@@ -159,6 +264,19 @@ export default async function OrdersPage() {
             createdAt: history.createdAt.toISOString(),
             userName: history.user?.name ?? history.user?.email ?? '',
           })),
+          restoreMovements: restoreMovements
+            .filter((movement) =>
+              Boolean(movement.reason?.includes(order.orderCode))
+            )
+            .map((movement) => ({
+              id: movement.id,
+              productName: movement.product.name,
+              type: movement.type,
+              quantity: movement.quantity,
+              balanceAfter: movement.balanceAfter,
+              reason: movement.reason ?? '',
+              createdAt: movement.createdAt.toISOString(),
+            })),
         }))}
       />
     </div>

@@ -7,8 +7,89 @@ import { ServiceRequestsClient } from './ServiceRequestsClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ServiceRequestsPage() {
+const liveStatuses = [
+  ServiceRequestStatus.NEW,
+  ServiceRequestStatus.IN_PROGRESS,
+];
+function getServiceRequestsMessage(success?: string, error?: string) {
+  if (success) {
+    const messages: Record<string, string> = {
+      'request-updated': 'Service request order was updated successfully.',
+      'request-started': 'Service request order moved to In Progress.',
+      'request-completed': 'Service request order was marked as completed.',
+      'request-cancelled':
+        'Service request order was cancelled successfully.',
+      'request-item-cancelled':
+        'Service request item was cancelled successfully. Inventory and charges were updated.',
+      'charge-updated': 'Room add-on charge was added or updated successfully.',
+      'request-created': 'Service request was added successfully.',
+    };
+
+    return {
+      type: 'success' as const,
+      text: messages[success] ?? 'Action completed successfully.',
+    };
+  }
+
+  if (error) {
+    const messages: Record<string, string> = {
+      'invalid-request-update': 'Invalid service request update.',
+      'request-not-found': 'Service request was not found.',
+      'invalid-charge-request': 'Invalid charge request item.',
+      'no-room': 'A room is required before posting a room add-on charge.',
+      'item-required': 'Charge item name is required.',
+      'quantity-required': 'Charge quantity is required.',
+      'unit-price-required': 'Charge unit price is required.',
+      'request-required': 'Service request item is required.',
+      'request-item-not-cancellable':
+        'Only NEW service request items can be cancelled.',
+    };
+
+    return {
+      type: 'error' as const,
+      text: messages[error] ?? 'Something went wrong.',
+    };
+  }
+
+  return null;
+}
+
+function getGroupStatus(statuses: ServiceRequestStatus[]) {
+  if (statuses.includes(ServiceRequestStatus.NEW)) {
+    return ServiceRequestStatus.NEW;
+  }
+
+  if (statuses.includes(ServiceRequestStatus.IN_PROGRESS)) {
+    return ServiceRequestStatus.IN_PROGRESS;
+  }
+
+  if (statuses.every((status) => status === ServiceRequestStatus.COMPLETED)) {
+    return ServiceRequestStatus.COMPLETED;
+  }
+
+  if (statuses.every((status) => status === ServiceRequestStatus.CANCELLED)) {
+    return ServiceRequestStatus.CANCELLED;
+  }
+
+  if (statuses.includes(ServiceRequestStatus.COMPLETED)) {
+    return ServiceRequestStatus.COMPLETED;
+  }
+
+  return statuses[0] ?? ServiceRequestStatus.NEW;
+}
+
+export default async function ServiceRequestsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+  }>;
+}) {
+
   const user = await requireUser();
+  const params = await searchParams;
+  const message = getServiceRequestsMessage(params?.success, params?.error);
 
   const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
@@ -38,11 +119,28 @@ export default async function ServiceRequestsPage() {
             email: true,
           },
         },
+        statusHistory: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+          select: {
+            id: true,
+            status: true,
+            note: true,
+            createdAt: true,
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
-      take: 120,
+      take: 250,
     }),
 
     db.user.findMany({
@@ -89,59 +187,90 @@ export default async function ServiceRequestsPage() {
     charges.map((charge) => [charge.serviceRequestId, charge])
   );
 
-  const totalBilledAmount = charges.reduce(
-    (sum, charge) => sum + Number(charge.totalAmount),
-    0
-  );
+  const groupedRequestsMap = new Map<string, typeof requests>();
 
-  const billedCount = requests.filter((request) =>
-    chargesByRequestId.has(request.id)
-  ).length;
+  for (const request of requests) {
+    const groupKey = `${request.hotelId}:${request.requestCode}`;
+    const group = groupedRequestsMap.get(groupKey) ?? [];
 
-  const notBilledCount = requests.length - billedCount;
+    group.push(request);
+    groupedRequestsMap.set(groupKey, group);
+  }
 
-  const liveStatuses = [
-    ServiceRequestStatus.NEW,
-    ServiceRequestStatus.IN_PROGRESS,
-  ];
+  const groupedRequests = Array.from(groupedRequestsMap.entries()).map(
+    ([groupKey, group]) => {
+      const sortedGroup = [...group].sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+      );
 
-  const liveCount = requests.filter((request) =>
-    liveStatuses.includes(request.status)
-  ).length;
+      const first = sortedGroup[0];
+      const statuses = sortedGroup.map((request) => request.status);
+      const groupStatus = getGroupStatus(statuses);
 
-  return (
-    <div>
-      <RealtimeServiceRequestsRefresh />
+      const groupCharges = sortedGroup
+        .map((request) => chargesByRequestId.get(request.id))
+        .filter(Boolean);
 
-      <PageHeader
-        title="Service Requests & Room Add-ons"
-        description="Manage guest requests, staff assignment, and billable room add-ons in realtime."
-      />
+      const totalChargeAmount = groupCharges.reduce(
+        (sum, charge) => sum + Number(charge?.totalAmount ?? 0),
+        0
+      );
 
-      <ServiceRequestsClient
-        statuses={Object.values(ServiceRequestStatus)}
-        staff={staff.map((staffMember) => ({
-          id: staffMember.id,
-          name: staffMember.name ?? staffMember.email,
-        }))}
-        summary={{
-          totalRequests: requests.length,
-          liveRequests: liveCount,
-          billedRequests: billedCount,
-          notBilledRequests: notBilledCount,
-          totalBilledAmount,
-        }}
-        requests={requests.map((request) => {
+      const assignedNames = Array.from(
+        new Set(
+          sortedGroup
+            .map(
+              (request) =>
+                request.assignedTo?.name ?? request.assignedTo?.email ?? ''
+            )
+            .filter(Boolean)
+        )
+      );
+
+      const assignedIds = Array.from(
+        new Set(
+          sortedGroup
+            .map((request) => request.assignedToId ?? '')
+            .filter(Boolean)
+        )
+      );
+
+      return {
+        id: groupKey,
+        hotelId: first.hotelId,
+        requestCode: first.requestCode,
+        hotelName: first.hotel.name,
+        roomLabel: first.room
+          ? `Room ${first.room.number}`
+          : first.location?.name ?? 'Guest location',
+        guestName: first.guestName ?? '',
+        status: groupStatus,
+        assignedToId: assignedIds.length === 1 ? assignedIds[0] : '',
+        assignedToName:
+          assignedNames.length === 1
+            ? assignedNames[0]
+            : assignedNames.length > 1
+              ? 'Multiple staff'
+              : '',
+        createdAt: first.createdAt.toISOString(),
+        updatedAt: sortedGroup
+          .reduce(
+            (latest, request) =>
+              request.updatedAt.getTime() > latest.getTime()
+                ? request.updatedAt
+                : latest,
+            first.updatedAt
+          )
+          .toISOString(),
+        itemCount: sortedGroup.length,
+        billedCount: groupCharges.length,
+        totalChargeAmount,
+        items: sortedGroup.map((request) => {
           const charge = chargesByRequestId.get(request.id);
 
           return {
             id: request.id,
             requestCode: request.requestCode,
-            hotelName: request.hotel.name,
-            roomLabel: request.room
-              ? `Room ${request.room.number}`
-              : request.location?.name ?? 'Guest location',
-            guestName: request.guestName ?? '',
             type: request.type,
             notes: request.notes ?? '',
             status: request.status,
@@ -161,8 +290,58 @@ export default async function ServiceRequestsPage() {
                   paymentStatus: charge.paymentStatus,
                 }
               : null,
+            statusHistory: request.statusHistory.map((history) => ({
+              id: history.id,
+              status: history.status,
+              note: history.note ?? '',
+              createdAt: history.createdAt.toISOString(),
+              userName: history.user?.name ?? history.user?.email ?? '',
+            })),
           };
-        })}
+        }),
+      };
+    }
+  );
+
+  const totalBilledAmount = charges.reduce(
+    (sum, charge) => sum + Number(charge.totalAmount),
+    0
+  );
+
+  const billedCount = groupedRequests.filter(
+    (request) => request.billedCount > 0
+  ).length;
+
+  const notBilledCount = groupedRequests.length - billedCount;
+
+  const liveCount = groupedRequests.filter((request) =>
+    liveStatuses.includes(request.status)
+  ).length;
+
+  return (
+    <div>
+      <RealtimeServiceRequestsRefresh />
+
+      <PageHeader
+        title="Service Requests & Room Add-ons"
+        description="Manage grouped guest service orders, staff assignment, and billable room add-ons in realtime."
+      />
+
+      <ServiceRequestsClient
+         message={message}
+         statuses={Object.values(ServiceRequestStatus)}
+        staff={staff.map((staffMember) => ({
+          id: staffMember.id,
+          name: staffMember.name ?? staffMember.email,
+        }))}
+        summary={{
+          totalRequests: groupedRequests.length,
+          liveRequests: liveCount,
+          billedRequests: billedCount,
+          notBilledRequests: notBilledCount,
+          totalBilledAmount,
+        }}
+        requests={groupedRequests}
       />
     </div>
   );

@@ -1,11 +1,12 @@
 'use client';
 
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   Link2,
   Pencil,
   Plus,
   QrCode,
+  RefreshCw,
   RotateCcw,
   Search,
   Trash2,
@@ -62,6 +63,10 @@ type NfcTagItem = {
   lockedDestinationUrl: string;
 };
 
+const TAG_CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const TAG_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const TAG_CODE_LENGTH = 8;
+
 function FormField({
   label,
   helper,
@@ -96,13 +101,15 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-100 bg-white p-5">
-          <div>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 py-4">
+      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-white p-5">
+          <div className="min-w-0">
             <h2 className="text-2xl font-black">{title}</h2>
             {description ? (
-              <p className="mt-1 text-sm text-neutral-500">{description}</p>
+              <p className="mt-1 text-sm leading-6 text-neutral-500">
+                {description}
+              </p>
             ) : null}
           </div>
 
@@ -116,7 +123,7 @@ function Modal({
           </button>
         </div>
 
-        <div className="p-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
       </div>
     </div>
   );
@@ -154,6 +161,7 @@ function getHttpsBaseOrigin() {
   }
 
   const { hostname, port } = window.location;
+
   return `https://${hostname}${port ? `:${port}` : ''}`;
 }
 
@@ -166,7 +174,9 @@ function toHttpsAppUrl(value: string) {
     const httpsBaseOrigin = getHttpsBaseOrigin();
 
     const currentHostname =
-      typeof window !== 'undefined' ? window.location.hostname : '192.168.0.130';
+      typeof window !== 'undefined'
+        ? window.location.hostname
+        : '192.168.0.130';
 
     const url = new URL(value, httpsBaseOrigin);
 
@@ -180,6 +190,7 @@ function toHttpsAppUrl(value: string) {
       url.protocol = 'https:';
       url.hostname = currentHostname;
       url.port = url.port || '3000';
+
       return url.toString();
     }
 
@@ -193,6 +204,105 @@ function toHttpsAppUrl(value: string) {
   }
 }
 
+function getRandomIndex(length: number) {
+  if (typeof window !== 'undefined' && window.crypto) {
+    const values = new Uint32Array(1);
+    window.crypto.getRandomValues(values);
+
+    return values[0] % length;
+  }
+
+  return Math.floor(Math.random() * length);
+}
+
+function generateShortTagCode() {
+  let code = TAG_CODE_LETTERS[getRandomIndex(TAG_CODE_LETTERS.length)];
+
+  for (let index = 1; index < TAG_CODE_LENGTH; index += 1) {
+    code += TAG_CODE_ALPHABET[getRandomIndex(TAG_CODE_ALPHABET.length)];
+  }
+
+  return code;
+}
+
+function getUniqueShortTagCode(
+  existingCodes: string[],
+  currentCodeToIgnore?: string
+) {
+  const ignoredCode = currentCodeToIgnore?.trim().toUpperCase() ?? '';
+
+  const existing = new Set(
+    existingCodes
+      .map((code) => code.trim().toUpperCase())
+      .filter((code) => Boolean(code) && code !== ignoredCode)
+  );
+
+  let nextCode = generateShortTagCode();
+  let attempts = 0;
+
+  while (existing.has(nextCode) && attempts < 80) {
+    nextCode = generateShortTagCode();
+    attempts += 1;
+  }
+
+  return nextCode;
+}
+
+function buildAutoLabel({
+  tagType,
+  room,
+  location,
+}: {
+  tagType: string;
+  room?: RoomOption;
+  location?: LocationOption;
+}) {
+  if (tagType === 'ROOM' && room?.number) {
+    return room.name
+      ? `Room ${room.number} ${room.name}`
+      : `Room ${room.number}`;
+  }
+
+  if (tagType !== 'ROOM' && location?.name) {
+    return location.name;
+  }
+
+  return '';
+}
+
+function GeneratedCodeInput({
+  code,
+  helper,
+  onRegenerate,
+}: {
+  code: string;
+  helper: string;
+  onRegenerate: () => void;
+}) {
+  return (
+    <FormField label="Generated Unique Tag ID" helper={helper}>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+        <Input
+          name="code"
+          value={code}
+          readOnly
+          required
+          className="bg-neutral-50 font-black uppercase tracking-[0.18em] text-neutral-700"
+        />
+
+        <button
+          type="button"
+          onClick={onRegenerate}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 px-4 text-sm font-black hover:bg-neutral-50"
+        >
+          <RefreshCw className="size-4" />
+          Regenerate
+        </button>
+      </div>
+    </FormField>
+  );
+}
+
 function CreateTagForm({
   hotels,
   rooms,
@@ -200,6 +310,7 @@ function CreateTagForm({
   tagTypes,
   canChangeHotel,
   currentHotelId,
+  existingCodes,
 }: {
   hotels: HotelOption[];
   rooms: RoomOption[];
@@ -207,15 +318,106 @@ function CreateTagForm({
   tagTypes: string[];
   canChangeHotel: boolean;
   currentHotelId: string;
+  existingCodes: string[];
 }) {
+  const defaultTagType = tagTypes.includes('ROOM') ? 'ROOM' : tagTypes[0] ?? '';
+
+  const [selectedHotelId, setSelectedHotelId] = useState(currentHotelId);
+  const [tagType, setTagType] = useState(defaultTagType);
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [label, setLabel] = useState('');
+  const [generatedCode, setGeneratedCode] = useState(() =>
+    getUniqueShortTagCode(existingCodes)
+  );
+
+  const filteredRooms = useMemo(
+    () => rooms.filter((room) => room.hotelId === selectedHotelId),
+    [rooms, selectedHotelId]
+  );
+
+  const filteredLocations = useMemo(
+    () => locations.filter((location) => location.hotelId === selectedHotelId),
+    [locations, selectedHotelId]
+  );
+
+  const selectedRoom = filteredRooms.find((room) => room.id === selectedRoomId);
+
+  const selectedLocation = filteredLocations.find(
+    (location) => location.id === selectedLocationId
+  );
+
+  function regenerateCode() {
+    setGeneratedCode(getUniqueShortTagCode(existingCodes));
+  }
+
+  function handleHotelChange(value: string) {
+    setSelectedHotelId(value);
+    setSelectedRoomId('');
+    setSelectedLocationId('');
+    setLabel('');
+    setGeneratedCode(getUniqueShortTagCode(existingCodes));
+  }
+
+  function handleTagTypeChange(value: string) {
+    setTagType(value);
+    setSelectedRoomId('');
+    setSelectedLocationId('');
+    setLabel('');
+    setGeneratedCode(getUniqueShortTagCode(existingCodes));
+  }
+
+  function handleRoomChange(value: string) {
+    setSelectedRoomId(value);
+    setSelectedLocationId('');
+    setGeneratedCode(getUniqueShortTagCode(existingCodes));
+
+    const room = filteredRooms.find((item) => item.id === value);
+
+    if (room) {
+      setLabel(
+        room.name ? `Room ${room.number} ${room.name}` : `Room ${room.number}`
+      );
+    }
+  }
+
+  function handleLocationChange(value: string) {
+    setSelectedLocationId(value);
+    setSelectedRoomId('');
+    setGeneratedCode(getUniqueShortTagCode(existingCodes));
+
+    const location = filteredLocations.find((item) => item.id === value);
+
+    if (location) {
+      setLabel(location.name);
+    }
+  }
+
+  useEffect(() => {
+    const autoLabel = buildAutoLabel({
+      tagType,
+      room: selectedRoom,
+      location: selectedLocation,
+    });
+
+    if (autoLabel && !label.trim()) {
+      setLabel(autoLabel);
+    }
+  }, [label, selectedLocation, selectedRoom, tagType]);
+
   return (
-    <form action={createTagAction} className="grid gap-5 md:grid-cols-3">
+    <form action={createTagAction} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {canChangeHotel ? (
         <FormField
           label="Hotel / Property"
           helper="Select which hotel this NFC tag belongs to."
         >
-          <Select name="hotelId" defaultValue={currentHotelId} required>
+          <Select
+            name="hotelId"
+            value={selectedHotelId}
+            onChange={(event) => handleHotelChange(event.target.value)}
+            required
+          >
             {hotels.map((hotel) => (
               <option key={hotel.id} value={hotel.id}>
                 {hotel.name}
@@ -231,32 +433,48 @@ function CreateTagForm({
         label="NFC Name"
         helper="Friendly staff label. Example: Room 305 Main Panel."
       >
-        <Input name="label" placeholder="Room 305 Main Panel" required />
+        <Input
+          name="label"
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+          placeholder="Room 305 Main Panel"
+          required
+        />
       </FormField>
 
-      <FormField
-        label="Unique Tag ID"
-        helper="This becomes the internal tag code. Use lowercase letters, numbers, and hyphens."
-      >
-        <Input name="code" placeholder="room-305-main-panel" required />
-      </FormField>
+      <GeneratedCodeInput
+        code={generatedCode}
+        onRegenerate={regenerateCode}
+        helper="Automatically generated secure short code. Example: A24FGSGH."
+      />
 
       <FormField label="Tag Type" helper="Choose where the NFC panel is placed.">
-        <Select name="tagType" required>
-          {tagTypes.map((tagType) => (
-            <option key={tagType} value={tagType}>
-              {tagType}
+        <Select
+          name="tagType"
+          value={tagType}
+          onChange={(event) => handleTagTypeChange(event.target.value)}
+          required
+        >
+          {tagTypes.map((item) => (
+            <option key={item} value={item}>
+              {item.replaceAll('_', ' ')}
             </option>
           ))}
         </Select>
       </FormField>
 
       <FormField label="Assigned Room" helper="Use this for room panels.">
-        <Select name="roomId">
+        <Select
+          name="roomId"
+          value={selectedRoomId}
+          onChange={(event) => handleRoomChange(event.target.value)}
+          disabled={tagType !== 'ROOM'}
+        >
           <option value="">No room</option>
-          {rooms.map((room) => (
+          {filteredRooms.map((room) => (
             <option key={room.id} value={room.id}>
               {room.hotelName} · Room {room.number}
+              {room.name ? ` - ${room.name}` : ''}
             </option>
           ))}
         </Select>
@@ -266,9 +484,14 @@ function CreateTagForm({
         label="Assigned Location"
         helper="Use this for pool, lobby, restaurant, or amenity panels."
       >
-        <Select name="locationId">
+        <Select
+          name="locationId"
+          value={selectedLocationId}
+          onChange={(event) => handleLocationChange(event.target.value)}
+          disabled={tagType === 'ROOM'}
+        >
           <option value="">No location</option>
-          {locations.map((location) => (
+          {filteredLocations.map((location) => (
             <option key={location.id} value={location.id}>
               {location.hotelName} · {location.name}
             </option>
@@ -276,7 +499,7 @@ function CreateTagForm({
         </Select>
       </FormField>
 
-      <div className="md:col-span-3">
+      <div className="md:col-span-2 xl:col-span-3">
         <Button className="w-full md:w-auto">Create Secure NFC Tag</Button>
       </div>
     </form>
@@ -289,34 +512,58 @@ function EditTagForm({
   locations,
   tagTypes,
   tagStatuses,
+  existingCodes,
 }: {
   tag: NfcTagItem;
   rooms: RoomOption[];
   locations: LocationOption[];
   tagTypes: string[];
   tagStatuses: string[];
+  existingCodes: string[];
 }) {
+  const [tagType, setTagType] = useState(tag.tagType);
+  const [roomId, setRoomId] = useState(tag.roomId ?? '');
+  const [locationId, setLocationId] = useState(tag.locationId ?? '');
+  const [code, setCode] = useState(tag.code.toUpperCase());
+
+  const availableRooms = useMemo(
+    () => rooms.filter((room) => room.hotelId === tag.hotelId),
+    [rooms, tag.hotelId]
+  );
+
+  const availableLocations = useMemo(
+    () => locations.filter((location) => location.hotelId === tag.hotelId),
+    [locations, tag.hotelId]
+  );
+
+  function regenerateCode() {
+    setCode(getUniqueShortTagCode(existingCodes, tag.code));
+  }
+
+  function handleTagTypeChange(value: string) {
+    setTagType(value);
+
+    if (value === 'ROOM') {
+      setLocationId('');
+    } else {
+      setRoomId('');
+    }
+  }
+
   return (
-    <form action={updateTagAction} className="grid gap-5 md:grid-cols-2">
+    <form action={updateTagAction} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <input type="hidden" name="tagId" value={tag.id} />
+      <input type="hidden" name="hotelId" value={tag.hotelId} />
 
       <FormField label="NFC Name">
         <Input name="label" defaultValue={tag.label} required />
       </FormField>
 
-      <FormField label="Unique Tag ID">
-        <Input name="code" defaultValue={tag.code} required />
-      </FormField>
-
-      <FormField label="Tag Type">
-        <Select name="tagType" defaultValue={tag.tagType} required>
-          {tagTypes.map((tagType) => (
-            <option key={tagType} value={tagType}>
-              {tagType}
-            </option>
-          ))}
-        </Select>
-      </FormField>
+      <GeneratedCodeInput
+        code={code}
+        onRegenerate={regenerateCode}
+        helper="Click Regenerate to update this tag ID. Reprint or rewrite the NFC card after saving."
+      />
 
       <FormField label="Status">
         <Select name="status" defaultValue={tag.status} required>
@@ -328,21 +575,47 @@ function EditTagForm({
         </Select>
       </FormField>
 
+      <FormField label="Tag Type">
+        <Select
+          name="tagType"
+          value={tagType}
+          onChange={(event) => handleTagTypeChange(event.target.value)}
+          required
+        >
+          {tagTypes.map((item) => (
+            <option key={item} value={item}>
+              {item.replaceAll('_', ' ')}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+
       <FormField label="Assigned Room">
-        <Select name="roomId" defaultValue={tag.roomId ?? ''}>
+        <Select
+          name="roomId"
+          value={roomId}
+          onChange={(event) => setRoomId(event.target.value)}
+          disabled={tagType !== 'ROOM'}
+        >
           <option value="">No room</option>
-          {rooms.map((room) => (
+          {availableRooms.map((room) => (
             <option key={room.id} value={room.id}>
               {room.hotelName} · Room {room.number}
+              {room.name ? ` - ${room.name}` : ''}
             </option>
           ))}
         </Select>
       </FormField>
 
       <FormField label="Assigned Location">
-        <Select name="locationId" defaultValue={tag.locationId ?? ''}>
+        <Select
+          name="locationId"
+          value={locationId}
+          onChange={(event) => setLocationId(event.target.value)}
+          disabled={tagType === 'ROOM'}
+        >
           <option value="">No location</option>
-          {locations.map((location) => (
+          {availableLocations.map((location) => (
             <option key={location.id} value={location.id}>
               {location.hotelName} · {location.name}
             </option>
@@ -350,7 +623,12 @@ function EditTagForm({
         </Select>
       </FormField>
 
-      <div className="md:col-span-2">
+      <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800 md:col-span-2 xl:col-span-3">
+        Updating the Unique Tag ID changes the NFC guest URL. After saving,
+        reprint the QR/NFC launch link or rewrite the physical NFC card.
+      </div>
+
+      <div className="md:col-span-2 xl:col-span-3">
         <Button className="w-full md:w-auto">Save NFC Tag Changes</Button>
       </div>
     </form>
@@ -692,7 +970,7 @@ export function NfcTagsClient({
       {creating ? (
         <Modal
           title="Create NFC Tag"
-          description="Create a secure NFC launch URL for a room, pool, restaurant, or hotel location."
+          description="Create a secure NFC launch URL with an automatically generated Unique Tag ID."
           onClose={() => setCreating(false)}
         >
           <CreateTagForm
@@ -702,6 +980,7 @@ export function NfcTagsClient({
             tagTypes={tagTypes}
             canChangeHotel={canChangeHotel}
             currentHotelId={currentHotelId}
+            existingCodes={tags.map((tag) => tag.code)}
           />
         </Modal>
       ) : null}
@@ -709,7 +988,7 @@ export function NfcTagsClient({
       {editingTag ? (
         <Modal
           title="Edit NFC Tag"
-          description="Update the NFC tag label, assignment, type, and status."
+          description="Update assignment, status, and regenerate the Unique Tag ID when needed."
           onClose={() => setEditingTag(null)}
         >
           <EditTagForm
@@ -718,6 +997,7 @@ export function NfcTagsClient({
             locations={locations}
             tagTypes={tagTypes}
             tagStatuses={tagStatuses}
+            existingCodes={tags.map((tag) => tag.code)}
           />
         </Modal>
       ) : null}

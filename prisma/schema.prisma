@@ -93,6 +93,12 @@ enum MenuProductType {
   BUNDLE
 }
 
+enum OrderItemStatus {
+  ACTIVE
+  PARTIALLY_CANCELLED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -449,6 +455,11 @@ model OrderItem {
   createdAt DateTime @default(now())
 
   bundleComponents OrderItemBundleComponent[]
+  status           OrderItemStatus            @default(ACTIVE)
+  cancelledQty     Int                        @default(0)
+  cancelledAt      DateTime?
+  cancelReason     String?
+  cancelledById    String?
 
   @@index([orderId])
   @@index([productId])
@@ -492,24 +503,30 @@ model OrderStatusHistory {
 }
 
 model ServiceRequest {
-  id           String               @id @default(cuid())
-  hotelId      String
-  hotel        Hotel                @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  roomId       String?
-  room         Room?                @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  locationId   String?
-  location     Location?            @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  tagId        String?
-  tag          NfcTag?              @relation(fields: [tagId], references: [id], onDelete: SetNull)
-  requestCode  String               @unique
-  type         String
-  guestName    String?
-  notes        String?              @db.Text
-  status       ServiceRequestStatus @default(NEW)
-  assignedToId String?
-  assignedTo   User?                @relation("AssignedRequests", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id            String               @id @default(cuid())
+  hotelId       String
+  hotel         Hotel                @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomId        String?
+  room          Room?                @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  locationId    String?
+  location      Location?            @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  tagId         String?
+  tag           NfcTag?              @relation(fields: [tagId], references: [id], onDelete: SetNull)
+  requestCode   String
+  type          String
+  guestName     String?
+  notes         String?              @db.Text
+  status        ServiceRequestStatus @default(NEW)
+  assignedToId  String?
+  assignedTo    User?                @relation("AssignedRequests", fields: [assignedToId], references: [id], onDelete: SetNull)
+  quantity      Int                  @default(1)
+  cancelledQty  Int                  @default(0)
+  cancelledAt   DateTime?
+  cancelReason  String?
+  cancelledById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   statusHistory  ServiceRequestStatusHistory[]
   guestSessionId String?
@@ -518,6 +535,8 @@ model ServiceRequest {
   @@index([guestSessionId])
   @@index([hotelId])
   @@index([status])
+  @@index([requestCode])
+  @@index([hotelId, requestCode])
 }
 
 model ServiceRequestStatusHistory {

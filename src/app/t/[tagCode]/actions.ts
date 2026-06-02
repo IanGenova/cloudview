@@ -648,6 +648,14 @@ export async function createServiceRequestAction(formData: FormData) {
     });
   }
 
+  /**
+   * Critical grouped-request update:
+   * Every service item selected in this one guest submission shares the same
+   * requestCode, so dashboard Service Requests can display them under one
+   * Service Request Order ID.
+   */
+  const groupedRequestCode = randomCode('REQ');
+
   let createdRequests: {
     id: string;
     requestCode: string;
@@ -716,11 +724,12 @@ export async function createServiceRequestAction(formData: FormData) {
             locationId: tag.locationId,
             tagId: tag.id,
             guestSessionId: guestSession.id,
-            requestCode: randomCode('REQ'),
+            requestCode: groupedRequestCode,
             type: item.service.name,
             guestName: guestName || null,
             notes:
               [
+                `Grouped service request order ${groupedRequestCode}.`,
                 notes || null,
                 item.service.inventoryTracked
                   ? `Inventory-tracked service. Quantity: ${item.quantity}.`
@@ -737,7 +746,7 @@ export async function createServiceRequestAction(formData: FormData) {
             statusHistory: {
               create: {
                 status: 'NEW',
-                note: 'Guest submitted request from NFC portal',
+                note: `Guest submitted grouped service request order ${groupedRequestCode} from NFC portal`,
               },
             },
           },
@@ -817,7 +826,7 @@ export async function createServiceRequestAction(formData: FormData) {
               type: ServiceAvailabilityMovementType.REQUEST_DEDUCTION,
               quantity: item.quantity,
               balanceAfter: Math.max(updatedStock.availableQty, 0),
-              reason: `Guest service request ${request.requestCode}`,
+              reason: `Guest grouped service request ${groupedRequestCode}`,
               userId: null,
               serviceRequestId: request.id,
             },
@@ -869,7 +878,7 @@ export async function createServiceRequestAction(formData: FormData) {
         action: 'CREATE',
         entity: 'ServiceRequest',
         entityId: request.id,
-        message: `New service request ${request.requestCode}`,
+        message: `New grouped service request ${request.requestCode}`,
       })
     )
   );

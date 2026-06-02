@@ -1,6 +1,12 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { OrderStatus } from '@prisma/client';
+import { notFound, redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
+import {
+  MenuAvailabilityMovementType,
+  OrderItemStatus,
+  OrderStatus,
+  Prisma,
+} from '@prisma/client';
 import {
   AlertTriangle,
   Check,
@@ -22,6 +28,10 @@ import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { GuestBottomNav, GuestLogo } from '@/components/guest/GuestShell';
 import { LiveElapsedTimer } from '@/components/guest/LiveElapsedTimer';
 import { RealtimeOrderRefresh } from '@/components/guest/RealtimeOrderRefresh';
+import { cleanText } from '@/lib/sanitize';
+import { triggerOrderStatusUpdate } from '@/lib/realtime/order-events';
+import { triggerKitchenOrderUpdated } from '@/lib/realtime/kitchen-events';
+import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,18 +68,44 @@ const trackingSteps = [
   },
 ] as const;
 
+const cancelReasons = [
+  'Guest changed their mind',
+  'Wrong item selected',
+  'Duplicate item',
+  'Delivery taking too long',
+  'Need to update order',
+  'Other',
+];
+
 type TrackingOrderItem = {
   id: string;
+  productId: string | null;
   productNameSnapshot: string;
   quantity: number;
   unitPriceCents: number;
   notes: string | null;
   isBundleSnapshot: boolean;
+  status: OrderItemStatus;
+  cancelledQty: number;
+  cancelledAt: Date | null;
+  cancelReason: string | null;
   bundleComponents: {
     id: string;
+    componentProductId: string | null;
     componentNameSnapshot: string;
     quantity: number;
   }[];
+};
+
+type RestoreRequirement = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  deductionType: MenuAvailabilityMovementType;
+  restoreType: MenuAvailabilityMovementType;
+  reason: string;
+  duplicateGuardText: string;
+  orderCode: string;
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -99,6 +135,46 @@ function formatDateTime(date: Date) {
 
 function paymentLabel(value: string) {
   return value.replaceAll('_', ' ');
+}
+
+function getActiveItemQuantity(item: {
+  quantity: number;
+  cancelledQty?: number | null;
+}) {
+  return Math.max(item.quantity - (item.cancelledQty ?? 0), 0);
+}
+
+function getBundleComponentRestoreQuantity({
+  componentQuantity,
+  itemQuantity,
+  cancelQuantity,
+}: {
+  componentQuantity: number;
+  itemQuantity: number;
+  cancelQuantity: number;
+}) {
+  if (itemQuantity <= 0 || cancelQuantity <= 0 || componentQuantity <= 0) {
+    return 0;
+  }
+
+  return Math.max(
+    Math.round((componentQuantity / itemQuantity) * cancelQuantity),
+    0
+  );
+}
+
+function getItemStatusClass(item: TrackingOrderItem) {
+  const activeQty = getActiveItemQuantity(item);
+
+  if (item.status === OrderItemStatus.CANCELLED || activeQty <= 0) {
+    return 'bg-red-500/15 text-red-200';
+  }
+
+  if (item.status === OrderItemStatus.PARTIALLY_CANCELLED) {
+    return 'bg-amber-500/15 text-amber-200';
+  }
+
+  return 'bg-emerald-500/15 text-emerald-200';
 }
 
 function getStatusContent(status: OrderStatus) {
@@ -229,16 +305,553 @@ function getTimerEnd(order: {
   return currentStatusHistory?.createdAt ?? null;
 }
 
-function OrderItemLine({ item }: { item: TrackingOrderItem }) {
-  const itemTotal = item.quantity * item.unitPriceCents;
+function addRestoreRequirement(
+  requirements: Map<string, RestoreRequirement>,
+  input: RestoreRequirement
+) {
+  const key = `${input.productId}:${input.restoreType}:${input.duplicateGuardText}`;
+  const existing = requirements.get(key);
+
+  if (existing) {
+    existing.quantity += input.quantity;
+    return;
+  }
+
+  requirements.set(key, input);
+}
+
+async function applyRestoreRequirements({
+  tx,
+  hotelId,
+  requirements,
+}: {
+  tx: Prisma.TransactionClient;
+  hotelId: string;
+  requirements: Map<string, RestoreRequirement>;
+}) {
+  const restoredProductIds: string[] = [];
+
+  for (const requirement of requirements.values()) {
+    if (requirement.quantity <= 0) {
+      continue;
+    }
+
+    const existingRestore = await tx.menuAvailabilityMovement.findFirst({
+      where: {
+        hotelId,
+        productId: requirement.productId,
+        type: requirement.restoreType,
+        reason: {
+          contains: requirement.duplicateGuardText,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingRestore) {
+      continue;
+    }
+
+    const deductionMovements = await tx.menuAvailabilityMovement.findMany({
+      where: {
+        hotelId,
+        productId: requirement.productId,
+        type: requirement.deductionType,
+        reason: {
+          contains: requirement.orderCode,
+        },
+      },
+      select: {
+        quantity: true,
+      },
+    });
+
+    const deductedQuantity = deductionMovements.reduce(
+      (sum, movement) => sum + movement.quantity,
+      0
+    );
+
+    if (deductedQuantity <= 0) {
+      continue;
+    }
+
+    const restoreQuantity = Math.min(requirement.quantity, deductedQuantity);
+
+    if (restoreQuantity <= 0) {
+      continue;
+    }
+
+    const stock = await tx.menuAvailabilityStock.findUnique({
+      where: {
+        hotelId_productId: {
+          hotelId,
+          productId: requirement.productId,
+        },
+      },
+      select: {
+        id: true,
+        availableQty: true,
+        soldQty: true,
+      },
+    });
+
+    if (!stock) {
+      continue;
+    }
+
+    const updatedStock = await tx.menuAvailabilityStock.update({
+      where: {
+        id: stock.id,
+      },
+      data: {
+        availableQty: {
+          increment: restoreQuantity,
+        },
+        soldQty: {
+          decrement: Math.min(stock.soldQty, restoreQuantity),
+        },
+        isSoldOut: false,
+      },
+      select: {
+        availableQty: true,
+      },
+    });
+
+    await tx.menuAvailabilityMovement.create({
+      data: {
+        hotelId,
+        productId: requirement.productId,
+        stockId: stock.id,
+        type: requirement.restoreType,
+        quantity: restoreQuantity,
+        balanceAfter: updatedStock.availableQty,
+        reason: requirement.reason,
+        userId: null,
+      },
+    });
+
+    restoredProductIds.push(requirement.productId);
+  }
+
+  return Array.from(new Set(restoredProductIds));
+}
+
+async function buildRestoreRequirementsForOrderItem({
+  tx,
+  order,
+  item,
+  quantityToRestore,
+}: {
+  tx: Prisma.TransactionClient;
+  order: {
+    hotelId: string;
+    orderCode: string;
+  };
+  item: TrackingOrderItem;
+  quantityToRestore: number;
+}) {
+  const restoreRequirements = new Map<string, RestoreRequirement>();
+  const itemGuard = `${order.orderCode}:${item.id}`;
+
+  if (quantityToRestore <= 0) {
+    return restoreRequirements;
+  }
+
+  if (item.isBundleSnapshot) {
+    if (item.bundleComponents.length > 0) {
+      for (const component of item.bundleComponents) {
+        if (!component.componentProductId) {
+          continue;
+        }
+
+        const componentRestoreQty = getBundleComponentRestoreQuantity({
+          componentQuantity: component.quantity,
+          itemQuantity: item.quantity,
+          cancelQuantity: quantityToRestore,
+        });
+
+        addRestoreRequirement(restoreRequirements, {
+          productId: component.componentProductId,
+          productName: component.componentNameSnapshot,
+          quantity: componentRestoreQty,
+          deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+          restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+          reason: `Guest cancelled bundle item ${item.productNameSnapshot} from order ${order.orderCode}. Restore guard: ${itemGuard}`,
+          duplicateGuardText: itemGuard,
+          orderCode: order.orderCode,
+        });
+      }
+
+      return restoreRequirements;
+    }
+
+    if (item.productId) {
+      const currentBundleComponents = await tx.menuBundleComponent.findMany({
+        where: {
+          bundleProductId: item.productId,
+        },
+        include: {
+          componentProduct: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      for (const component of currentBundleComponents) {
+        addRestoreRequirement(restoreRequirements, {
+          productId: component.componentProductId,
+          productName: component.componentProduct.name,
+          quantity: component.quantity * quantityToRestore,
+          deductionType: MenuAvailabilityMovementType.BUNDLE_ORDER_DEDUCTION,
+          restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
+          reason: `Guest cancelled bundle item ${item.productNameSnapshot} from order ${order.orderCode}. Restore guard: ${itemGuard}`,
+          duplicateGuardText: itemGuard,
+          orderCode: order.orderCode,
+        });
+      }
+    }
+
+    return restoreRequirements;
+  }
+
+  if (!item.productId) {
+    return restoreRequirements;
+  }
+
+  addRestoreRequirement(restoreRequirements, {
+    productId: item.productId,
+    productName: item.productNameSnapshot,
+    quantity: quantityToRestore,
+    deductionType: MenuAvailabilityMovementType.ORDER_DEDUCTION,
+    restoreType: MenuAvailabilityMovementType.CANCEL_RESTORE,
+    reason: `Guest cancelled item ${item.productNameSnapshot} from order ${order.orderCode}. Restore guard: ${itemGuard}`,
+    duplicateGuardText: itemGuard,
+    orderCode: order.orderCode,
+  });
+
+  return restoreRequirements;
+}
+
+function recalculateOrderTotalsAfterItemCancellation({
+  order,
+  cancelledItemId,
+}: {
+  order: {
+    subtotalCents: number;
+    serviceChargeCents: number;
+    taxCents: number;
+    items: {
+      id: string;
+      quantity: number;
+      unitPriceCents: number;
+      cancelledQty: number;
+    }[];
+  };
+  cancelledItemId: string;
+}) {
+  const serviceChargeRate =
+    order.subtotalCents > 0
+      ? order.serviceChargeCents / order.subtotalCents
+      : 0;
+
+  const taxRate =
+    order.subtotalCents > 0 ? order.taxCents / order.subtotalCents : 0;
+
+  const nextSubtotalCents = order.items.reduce((sum, item) => {
+    const cancelledQty =
+      item.id === cancelledItemId ? item.quantity : item.cancelledQty;
+
+    const activeQty = Math.max(item.quantity - cancelledQty, 0);
+
+    return sum + activeQty * item.unitPriceCents;
+  }, 0);
+
+  const nextServiceChargeCents = Math.round(
+    nextSubtotalCents * serviceChargeRate
+  );
+  const nextTaxCents = Math.round(nextSubtotalCents * taxRate);
+
+  return {
+    subtotalCents: nextSubtotalCents,
+    serviceChargeCents: nextServiceChargeCents,
+    taxCents: nextTaxCents,
+    totalCents:
+      nextSubtotalCents + nextServiceChargeCents + nextTaxCents,
+  };
+}
+
+async function cancelGuestOrderItemAction(formData: FormData) {
+  'use server';
+
+  const tagCode = cleanText(formData.get('tagCode'), 160);
+  const orderCode = cleanText(formData.get('orderCode'), 120);
+  const orderItemId = cleanText(formData.get('orderItemId'), 120);
+  const reason = cleanText(formData.get('reason'), 300);
+
+  if (!tagCode || !orderCode || !orderItemId) {
+    throw new Error('Order item cancellation details are incomplete.');
+  }
+
+  const tag = await requireNfcGuestAccess(tagCode);
+
+  if (!tag || tag.status !== 'ACTIVE') {
+    notFound();
+  }
+
+  const guestSession = await getCurrentNfcGuestSession(tagCode);
+
+  if (!guestSession) {
+    notFound();
+  }
+
+  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+    notFound();
+  }
+
+  const order = await db.order.findFirst({
+    where: {
+      orderCode,
+      tagId: tag.id,
+      hotelId: tag.hotelId,
+      guestSessionId: guestSession.id,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      status: true,
+      orderCode: true,
+      subtotalCents: true,
+      serviceChargeCents: true,
+      taxCents: true,
+      items: {
+        select: {
+          id: true,
+          productId: true,
+          productNameSnapshot: true,
+          quantity: true,
+          unitPriceCents: true,
+          notes: true,
+          isBundleSnapshot: true,
+          status: true,
+          cancelledQty: true,
+          cancelledAt: true,
+          cancelReason: true,
+          bundleComponents: {
+            select: {
+              id: true,
+              componentProductId: true,
+              componentNameSnapshot: true,
+              quantity: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    notFound();
+  }
+
+  if (order.status !== OrderStatus.PENDING) {
+    throw new Error('Only pending orders can have items cancelled.');
+  }
+
+  const item = order.items.find((orderItem) => orderItem.id === orderItemId);
+
+  if (!item) {
+    throw new Error('Order item not found.');
+  }
+
+  const activeQty = getActiveItemQuantity(item);
+
+  if (activeQty <= 0 || item.status === OrderItemStatus.CANCELLED) {
+    throw new Error('This item is already cancelled.');
+  }
+
+  let finalOrderStatus = order.status;
+  let statusUpdatedAt = new Date();
+  let restoredProductIds: string[] = [];
+
+  const allItemsCancelled = order.items.every((orderItem) => {
+    if (orderItem.id === item.id) {
+      return true;
+    }
+
+    return (
+      orderItem.status === OrderItemStatus.CANCELLED ||
+      getActiveItemQuantity(orderItem) <= 0
+    );
+  });
+
+  const totals = recalculateOrderTotalsAfterItemCancellation({
+    order,
+    cancelledItemId: item.id,
+  });
+
+  await db.$transaction(async (tx) => {
+    const restoreRequirements = await buildRestoreRequirementsForOrderItem({
+      tx,
+      order,
+      item,
+      quantityToRestore: activeQty,
+    });
+
+    restoredProductIds = await applyRestoreRequirements({
+      tx,
+      hotelId: order.hotelId,
+      requirements: restoreRequirements,
+    });
+
+    await tx.orderItem.update({
+      where: {
+        id: item.id,
+      },
+      data: {
+        status: OrderItemStatus.CANCELLED,
+        cancelledQty: item.quantity,
+        cancelledAt: new Date(),
+        cancelReason: reason || 'Guest cancelled this item',
+        cancelledById: null,
+      },
+    });
+
+    if (allItemsCancelled) {
+      finalOrderStatus = OrderStatus.CANCELLED;
+
+      await tx.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          subtotalCents: 0,
+          serviceChargeCents: 0,
+          taxCents: 0,
+          totalCents: 0,
+        },
+      });
+
+      const history = await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          status: OrderStatus.CANCELLED,
+          note:
+            reason ||
+            `Guest cancelled all remaining items. Last item: ${item.productNameSnapshot}.`,
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
+      statusUpdatedAt = history.createdAt;
+      return;
+    }
+
+    await tx.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        subtotalCents: totals.subtotalCents,
+        serviceChargeCents: totals.serviceChargeCents,
+        taxCents: totals.taxCents,
+        totalCents: totals.totalCents,
+      },
+    });
+
+    const history = await tx.orderStatusHistory.create({
+      data: {
+        orderId: order.id,
+        status: order.status,
+        note:
+          reason ||
+          `Guest cancelled item ${item.productNameSnapshot}.`,
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    statusUpdatedAt = history.createdAt;
+  });
+
+  revalidatePath('/dashboard/orders');
+  revalidatePath('/dashboard/kitchen');
+  revalidatePath('/dashboard/inventory');
+  revalidatePath('/dashboard/menu');
+  revalidatePath(`/t/${tagCode}/track/${order.orderCode}`);
+  revalidatePath(`/t/${tagCode}/orders`);
+  revalidatePath(`/t/${tagCode}/menu`);
+
+  await triggerOrderStatusUpdate({
+    orderCode: order.orderCode,
+    status: finalOrderStatus,
+    updatedAt: statusUpdatedAt.toISOString(),
+  });
+
+  await triggerKitchenOrderUpdated({
+    hotelId: order.hotelId,
+    orderCode: order.orderCode,
+    status: finalOrderStatus,
+    source: 'DASHBOARD',
+  });
+
+  if (restoredProductIds.length > 0) {
+    await triggerInventoryUpdated({
+      hotelId: order.hotelId,
+      productIds: restoredProductIds,
+      source: 'GUEST_PORTAL',
+    });
+  }
+
+  redirect(`/t/${tagCode}/track/${order.orderCode}`);
+}
+
+function OrderItemLine({
+  item,
+  orderStatus,
+  tagCode,
+  orderCode,
+}: {
+  item: TrackingOrderItem;
+  orderStatus: OrderStatus;
+  tagCode: string;
+  orderCode: string;
+}) {
+  const activeQty = getActiveItemQuantity(item);
+  const isCancelled = activeQty <= 0 || item.status === OrderItemStatus.CANCELLED;
+  const itemTotal = activeQty * item.unitPriceCents;
+
+  const canCancel =
+    orderStatus === OrderStatus.PENDING && !isCancelled && activeQty > 0;
 
   return (
-    <div className="rounded-2xl bg-white/5 p-3 text-sm">
+    <div
+      className={
+        isCancelled
+          ? 'rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm'
+          : 'rounded-2xl bg-white/5 p-3 text-sm'
+      }
+    >
       <div className="flex justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-bold text-white">
-              {item.quantity}× {item.productNameSnapshot}
+            <p
+              className={
+                isCancelled
+                  ? 'font-bold text-red-100 line-through decoration-red-300'
+                  : 'font-bold text-white'
+              }
+            >
+              {isCancelled ? item.quantity : activeQty}×{' '}
+              {item.productNameSnapshot}
             </p>
 
             {item.isBundleSnapshot ? (
@@ -246,7 +859,27 @@ function OrderItemLine({ item }: { item: TrackingOrderItem }) {
                 Bundle
               </span>
             ) : null}
+
+            <span
+              className={`rounded-full px-3 py-1 text-[10px] font-black ${getItemStatusClass(
+                item
+              )}`}
+            >
+              {item.status.replaceAll('_', ' ')}
+            </span>
           </div>
+
+          {item.cancelledQty > 0 ? (
+            <p className="mt-1 text-xs font-bold text-red-200">
+              Cancelled quantity: {item.cancelledQty}
+            </p>
+          ) : null}
+
+          {item.cancelReason ? (
+            <p className="mt-1 text-xs font-bold text-red-200">
+              Reason: {item.cancelReason}
+            </p>
+          ) : null}
 
           {item.notes ? (
             <p className="mt-1 whitespace-pre-line text-xs text-white/40">
@@ -281,6 +914,49 @@ function OrderItemLine({ item }: { item: TrackingOrderItem }) {
             </p>
           )}
         </div>
+      ) : null}
+
+      {canCancel ? (
+        <details className="mt-3 rounded-xl bg-red-500/10 p-3">
+          <summary className="cursor-pointer text-xs font-black text-red-100">
+            Cancel this item
+          </summary>
+
+          <form action={cancelGuestOrderItemAction} className="mt-3 space-y-3">
+            <input type="hidden" name="tagCode" value={tagCode} />
+            <input type="hidden" name="orderCode" value={orderCode} />
+            <input type="hidden" name="orderItemId" value={item.id} />
+
+            <label className="grid gap-1">
+              <span className="text-[11px] font-black uppercase text-red-100">
+                Reason
+              </span>
+              <select
+                name="reason"
+                defaultValue={cancelReasons[0]}
+                className="h-10 rounded-xl border border-white/10 bg-black px-3 text-xs font-bold text-white outline-none"
+              >
+                {cancelReasons.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reason}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="submit"
+              className="h-10 w-full rounded-xl bg-red-600 text-xs font-black text-white"
+            >
+              Confirm Cancel Item
+            </button>
+
+            <p className="text-[11px] leading-5 text-red-100/70">
+              This will cancel only this item and restore its stock. Other items
+              in this order will remain active.
+            </p>
+          </form>
+        </details>
       ) : null}
     </div>
   );
@@ -550,7 +1226,7 @@ export default async function OrderTrackingPage({
                     <div>
                       <p className="font-black text-red-200">Order Cancelled</p>
                       <p className="mt-1 text-xs text-white/45">
-                        This order was cancelled by staff.
+                        This order was cancelled.
                       </p>
                     </div>
 
@@ -576,7 +1252,13 @@ export default async function OrderTrackingPage({
 
           <div className="space-y-2">
             {order.items.map((item) => (
-              <OrderItemLine key={item.id} item={item} />
+              <OrderItemLine
+                key={item.id}
+                item={item}
+                orderStatus={order.status}
+                tagCode={tagCode}
+                orderCode={order.orderCode}
+              />
             ))}
           </div>
 

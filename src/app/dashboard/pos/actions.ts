@@ -369,6 +369,16 @@ export async function createPOSOrder(input: POSOrderInput) {
 
   const orderCode = normalizedItems.length ? randomCode('ORD') : null;
 
+  /**
+   * Grouped POS service request order:
+   * Every service item submitted in this POS sale uses the same requestCode.
+   * This allows the Service Requests dashboard to show one request order card
+   * containing multiple service items.
+   */
+  const groupedServiceRequestCode = normalizedServices.length
+    ? randomCode('REQ')
+    : null;
+
   const result = await db.$transaction(async (tx) => {
     const foodStockByProductId = new Map<
       string,
@@ -395,9 +405,7 @@ export async function createPOSOrder(input: POSOrderInput) {
       });
 
       if (!stock) {
-        throw new Error(
-          `${requirement.productName} has no stock record yet.`
-        );
+        throw new Error(`${requirement.productName} has no stock record yet.`);
       }
 
       if (stock.isSoldOut || stock.availableQty <= 0) {
@@ -477,6 +485,9 @@ export async function createPOSOrder(input: POSOrderInput) {
               notes || null,
               serviceSubtotal > 0
                 ? `POS also included service add-ons totaling ${serviceSubtotal / 100}.`
+                : null,
+              groupedServiceRequestCode
+                ? `Related service request order: ${groupedServiceRequestCode}.`
                 : null,
             ]
               .filter(Boolean)
@@ -640,11 +651,12 @@ export async function createPOSOrder(input: POSOrderInput) {
           roomId: roomId || null,
           locationId: null,
           tagId: null,
-          requestCode: randomCode('REQ'),
+          requestCode: groupedServiceRequestCode!,
           type: service.name,
           guestName: guestName || null,
           notes:
             [
+              `Grouped POS service request order ${groupedServiceRequestCode}.`,
               notes || null,
               `POS service request. Quantity: ${item.quantity}.`,
               `Payment method: ${paymentMethod.replaceAll('_', ' ')}.`,
@@ -663,7 +675,7 @@ export async function createPOSOrder(input: POSOrderInput) {
           statusHistory: {
             create: {
               status: ServiceRequestStatus.NEW,
-              note: 'POS service request created from dashboard',
+              note: `POS grouped service request order ${groupedServiceRequestCode} created from dashboard`,
               userId: user.id,
             },
           },
@@ -739,17 +751,14 @@ export async function createPOSOrder(input: POSOrderInput) {
             type: ServiceAvailabilityMovementType.REQUEST_DEDUCTION,
             quantity: item.quantity,
             balanceAfter: Math.max(updatedStock.availableQty, 0),
-            reason: `POS service request ${request.requestCode}`,
+            reason: `POS grouped service request ${request.requestCode}`,
             userId: user.id,
             serviceRequestId: request.id,
           },
         });
       }
 
-      if (
-        service.billingMode === ServiceBillingMode.FIXED_PRICE &&
-        roomId
-      ) {
+      if (service.billingMode === ServiceBillingMode.FIXED_PRICE && roomId) {
         await tx.roomAddOnCharge.create({
           data: {
             chargeCode: randomCode('ADD'),
@@ -799,7 +808,7 @@ export async function createPOSOrder(input: POSOrderInput) {
         action: 'CREATE',
         entity: 'ServiceRequest',
         entityId: request.id,
-        message: `POS service request ${request.requestCode} created`,
+        message: `POS grouped service request ${request.requestCode} created`,
       })
     )
   );
@@ -833,8 +842,8 @@ export async function createPOSOrder(input: POSOrderInput) {
   return {
     ok: true,
     orderCode: result.order?.orderCode ?? null,
-    serviceRequestCodes: result.serviceRequests.map(
-      (request) => request.requestCode
+    serviceRequestCodes: Array.from(
+      new Set(result.serviceRequests.map((request) => request.requestCode))
     ),
   };
 }

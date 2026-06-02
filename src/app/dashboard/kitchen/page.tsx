@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { OrderStatus } from '@prisma/client';
+import { OrderItemStatus, OrderStatus } from '@prisma/client';
 import { Clock, History, RefreshCcw } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
@@ -11,6 +11,37 @@ import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
+
+type KitchenOrderItem = {
+  id: string;
+  quantity: number;
+  productNameSnapshot: string;
+  notes: string | null;
+  isBundleSnapshot: boolean;
+  status: OrderItemStatus;
+  cancelledQty: number;
+  cancelledAt: Date | null;
+  cancelReason: string | null;
+  bundleComponents: {
+    id: string;
+    componentNameSnapshot: string;
+    quantity: number;
+  }[];
+};
+
+type KitchenOrder = {
+  id: string;
+  orderCode: string;
+  status: OrderStatus;
+  guestName: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  totalCents: number;
+  room: { number: string } | null;
+  location: { name: string } | null;
+  items: KitchenOrderItem[];
+};
 
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat('en-PH', {
@@ -35,6 +66,40 @@ function roomOrLocation(order: {
   if (order.room) return `Room ${order.room.number}`;
   if (order.location) return order.location.name;
   return 'Guest location';
+}
+
+function getActiveItemQuantity(item: {
+  quantity: number;
+  cancelledQty?: number | null;
+}) {
+  return Math.max(item.quantity - (item.cancelledQty ?? 0), 0);
+}
+
+function isCancelledKitchenItem(item: KitchenOrderItem) {
+  return (
+    item.status === OrderItemStatus.CANCELLED ||
+    getActiveItemQuantity(item) <= 0
+  );
+}
+
+function getItemStatusClass(item: KitchenOrderItem) {
+  if (isCancelledKitchenItem(item)) {
+    return 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200';
+  }
+
+  if (item.status === OrderItemStatus.PARTIALLY_CANCELLED) {
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200';
+  }
+
+  return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
+}
+
+function getActiveItemCount(items: KitchenOrderItem[]) {
+  return items.reduce((sum, item) => sum + getActiveItemQuantity(item), 0);
+}
+
+function getCancelledItemCount(items: KitchenOrderItem[]) {
+  return items.filter((item) => isCancelledKitchenItem(item)).length;
 }
 
 function OrderActionButton({
@@ -73,29 +138,121 @@ function OrderActionButton({
   );
 }
 
+function KitchenOrderItemLine({ item }: { item: KitchenOrderItem }) {
+  const activeQty = getActiveItemQuantity(item);
+  const isCancelled = isCancelledKitchenItem(item);
+
+  return (
+    <div
+      className={
+        isCancelled
+          ? 'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
+          : 'rounded-xl bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-950'
+      }
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <b
+              className={
+                isCancelled
+                  ? 'text-red-700 line-through decoration-red-400 dark:text-red-200'
+                  : 'text-neutral-950 dark:text-white'
+              }
+            >
+              {isCancelled ? item.quantity : activeQty}×{' '}
+              {item.productNameSnapshot}
+            </b>
+
+            {item.isBundleSnapshot ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                Bundle
+              </span>
+            ) : null}
+
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getItemStatusClass(
+                item
+              )}`}
+            >
+              {item.status.replaceAll('_', ' ')}
+            </span>
+          </div>
+
+          {item.cancelledQty > 0 ? (
+            <p className="mt-1 text-[11px] font-black text-red-700 dark:text-red-200">
+              Cancelled qty: {item.cancelledQty}
+            </p>
+          ) : null}
+
+          {item.cancelReason ? (
+            <p className="mt-1 text-[11px] font-medium text-red-700 dark:text-red-200">
+              Reason: {item.cancelReason}
+            </p>
+          ) : null}
+
+          {item.notes ? (
+            <p className="mt-1 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+              Note: {item.notes}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {item.isBundleSnapshot ? (
+        <div
+          className={
+            isCancelled
+              ? 'mt-2 rounded-lg bg-red-100/80 p-2 dark:bg-red-500/10'
+              : 'mt-2 rounded-lg bg-amber-50 p-2 dark:bg-amber-500/10'
+          }
+        >
+          <p
+            className={
+              isCancelled
+                ? 'text-[10px] font-black uppercase tracking-[0.14em] text-red-700 dark:text-red-200'
+                : 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-700 dark:text-amber-200'
+            }
+          >
+            Includes
+          </p>
+
+          {item.bundleComponents.length ? (
+            <div className="mt-1 space-y-0.5">
+              {item.bundleComponents.map((component) => (
+                <p
+                  key={component.id}
+                  className={
+                    isCancelled
+                      ? 'text-[11px] font-bold text-red-800 dark:text-red-200'
+                      : 'text-[11px] font-bold text-amber-900 dark:text-amber-100'
+                  }
+                >
+                  {component.quantity}× {component.componentNameSnapshot}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 text-[11px] font-bold text-neutral-500">
+              No bundle component snapshot.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function KitchenOrderCard({
   order,
   type,
 }: {
-  order: {
-    id: string;
-    orderCode: string;
-    status: OrderStatus;
-    guestName: string | null;
-    notes: string | null;
-    createdAt: Date;
-    room: { number: string } | null;
-    location: { name: string } | null;
-    items: {
-      id: string;
-      quantity: number;
-      productNameSnapshot: string;
-      notes: string | null;
-    }[];
-  };
+  order: KitchenOrder;
   type: 'pending' | 'preparing' | 'ready';
 }) {
   const guestName = order.guestName?.trim() || 'Guest name not provided';
+  const activeItemCount = getActiveItemCount(order.items);
+  const cancelledItemCount = getCancelledItemCount(order.items);
 
   const displayStatus =
     order.status === OrderStatus.ACCEPTED
@@ -103,7 +260,7 @@ function KitchenOrderCard({
       : order.status;
 
   return (
-    <article className="flex h-[340px] w-[82vw] max-w-[310px] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:w-[300px] md:w-[310px]">
+    <article className="flex h-[370px] w-[82vw] max-w-[320px] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:w-[310px] md:w-[320px]">
       <div className="shrink-0 border-b border-neutral-100 p-3 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -140,25 +297,24 @@ function KitchenOrderCard({
               {formatTime(order.createdAt)}
             </span>
           </p>
+
+          <div className="mt-1 flex flex-wrap gap-1">
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+              {activeItemCount} active item{activeItemCount === 1 ? '' : 's'}
+            </span>
+
+            {cancelledItemCount > 0 ? (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200">
+                {cancelledItemCount} cancelled
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
         {order.items.map((item) => (
-          <div
-            key={item.id}
-            className="rounded-xl bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-950"
-          >
-            <b className="text-neutral-950 dark:text-white">
-              {item.quantity}× {item.productNameSnapshot}
-            </b>
-
-            {item.notes ? (
-              <p className="mt-1 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
-                Note: {item.notes}
-              </p>
-            ) : null}
-          </div>
+          <KitchenOrderItemLine key={item.id} item={item} />
         ))}
 
         {order.notes ? (
@@ -217,22 +373,7 @@ function KitchenLane({
 }: {
   title: string;
   description: string;
-  orders: {
-    id: string;
-    orderCode: string;
-    status: OrderStatus;
-    guestName: string | null;
-    notes: string | null;
-    createdAt: Date;
-    room: { number: string } | null;
-    location: { name: string } | null;
-    items: {
-      id: string;
-      quantity: number;
-      productNameSnapshot: string;
-      notes: string | null;
-    }[];
-  }[];
+  orders: KitchenOrder[];
   type: 'pending' | 'preparing' | 'ready';
 }) {
   return (
@@ -272,6 +413,51 @@ function KitchenLane({
   );
 }
 
+function KitchenHistoryItemLine({ item }: { item: KitchenOrderItem }) {
+  const activeQty = getActiveItemQuantity(item);
+  const isCancelled = isCancelledKitchenItem(item);
+
+  return (
+    <div
+      className={
+        isCancelled
+          ? 'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
+          : 'rounded-xl bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-900'
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <p
+          className={
+            isCancelled
+              ? 'font-bold text-red-700 line-through decoration-red-400 dark:text-red-200'
+              : 'font-bold text-neutral-950 dark:text-white'
+          }
+        >
+          {isCancelled ? item.quantity : activeQty}× {item.productNameSnapshot}
+        </p>
+
+        {item.isBundleSnapshot ? (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+            Bundle
+          </span>
+        ) : null}
+
+        {isCancelled ? (
+          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200">
+            Cancelled
+          </span>
+        ) : null}
+      </div>
+
+      {item.cancelReason ? (
+        <p className="mt-1 text-[11px] font-medium text-red-700 dark:text-red-200">
+          Reason: {item.cancelReason}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default async function KitchenDisplayPage({
   searchParams,
 }: {
@@ -300,7 +486,18 @@ export default async function KitchenDisplayPage({
       include: {
         room: true,
         location: true,
-        items: true,
+        items: {
+          include: {
+            bundleComponents: {
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
       },
       orderBy: {
         createdAt: 'asc',
@@ -317,7 +514,18 @@ export default async function KitchenDisplayPage({
       include: {
         room: true,
         location: true,
-        items: true,
+        items: {
+          include: {
+            bundleComponents: {
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
       },
       orderBy: {
         updatedAt: 'desc',
@@ -353,7 +561,7 @@ export default async function KitchenDisplayPage({
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <PageHeader
           title="Kitchen Display"
-          description="Live kitchen workflow for pending, preparing, and ready orders."
+          description="Live kitchen workflow for pending, preparing, ready, and item-level cancellation updates."
         />
 
         <div className="flex flex-wrap gap-2">
@@ -479,12 +687,7 @@ export default async function KitchenDisplayPage({
 
                       <div className="mt-3 space-y-1">
                         {order.items.map((item) => (
-                          <p
-                            key={item.id}
-                            className="rounded-xl bg-neutral-50 px-3 py-2 text-xs font-bold text-neutral-950 dark:bg-neutral-900 dark:text-white"
-                          >
-                            {item.quantity}× {item.productNameSnapshot}
-                          </p>
+                          <KitchenHistoryItemLine key={item.id} item={item} />
                         ))}
                       </div>
 
