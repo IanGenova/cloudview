@@ -30,7 +30,7 @@ function getAllowedRoles(currentUserRole: Role) {
 }
 
 function normalizeEmail(value: FormDataEntryValue | null) {
-  return cleanText(value, 160).toLowerCase();
+  return (cleanText(value, 160) ?? '').toLowerCase();
 }
 
 function validateEmail(email: string) {
@@ -85,7 +85,7 @@ export async function createUserAccountAction(
 
     const name = cleanText(formData.get('name'), 120);
     const email = normalizeEmail(formData.get('email'));
-    const password = cleanText(formData.get('password'), 120);
+    const password = cleanText(formData.get('password'), 160) ?? '';
     const role = formData.get('role') as Role;
     const hotelIdFromForm = cleanText(formData.get('hotelId'));
 
@@ -240,7 +240,7 @@ export async function resetUserPasswordAction(
     requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
     const userId = cleanText(formData.get('userId'));
-    const password = cleanText(formData.get('password'), 120);
+    const password = cleanText(formData.get('password'), 160) ?? '';
     const confirmPassword = cleanText(formData.get('confirmPassword'), 120);
 
     if (!userId) {

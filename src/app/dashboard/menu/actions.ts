@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { MenuProductType } from '@prisma/client';
+import { MenuProductType, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -56,13 +56,99 @@ function slugify(value: string) {
     .slice(0, 80);
 }
 
-function redirectMenu(success: string) {
+function redirectMenu(params: { success?: string; error?: string }): never {
   revalidatePath('/dashboard/menu');
   revalidatePath('/dashboard/inventory');
   revalidatePath('/dashboard/pos');
   revalidatePath('/t/[tagCode]/menu', 'page');
 
-  redirect(`/dashboard/menu?success=${success}`);
+  const query = new URLSearchParams();
+
+  if (params.success) {
+    query.set('success', params.success);
+  }
+
+  if (params.error) {
+    query.set('error', params.error);
+  }
+
+  redirect(
+    query.toString()
+      ? `/dashboard/menu?${query.toString()}`
+      : '/dashboard/menu'
+  );
+}
+
+function redirectMenuError(error: string): never {
+  redirectMenu({ error });
+}
+
+function parseCategoryForm(formData: FormData) {
+  const parsed = categorySchema.safeParse({
+    hotelId: formData.get('hotelId'),
+    name: cleanText(formData.get('name'), 120),
+    sortOrder: formData.get('sortOrder') || 0,
+  });
+
+  if (!parsed.success) {
+    redirectMenuError('category-required');
+  }
+
+  return parsed.data;
+}
+
+function parseUpdateCategoryForm(formData: FormData) {
+  const parsed = updateCategorySchema.safeParse({
+    categoryId: formData.get('categoryId'),
+    name: cleanText(formData.get('name'), 120),
+    sortOrder: formData.get('sortOrder') || 0,
+    isActive: formData.get('isActive') === 'on',
+  });
+
+  if (!parsed.success) {
+    redirectMenuError('category-required');
+  }
+
+  return parsed.data;
+}
+
+function parseProductForm(formData: FormData) {
+  const parsed = productSchema.safeParse({
+    categoryId: formData.get('categoryId'),
+    productType: formData.get('productType') || MenuProductType.SINGLE,
+    name: cleanText(formData.get('name'), 160),
+    price: formData.get('price') || 0,
+    imageUrl: cleanText(formData.get('imageUrl'), 500),
+    prepTimeMinutes: formData.get('prepTimeMinutes') || 15,
+    description: cleanText(formData.get('description'), 1000),
+    isAvailable: formData.get('isAvailable') === 'on',
+  });
+
+  if (!parsed.success) {
+    redirectMenuError('product-required');
+  }
+
+  return parsed.data;
+}
+
+function parseUpdateProductForm(formData: FormData) {
+  const parsed = updateProductSchema.safeParse({
+    productId: formData.get('productId'),
+    categoryId: formData.get('categoryId'),
+    productType: formData.get('productType') || MenuProductType.SINGLE,
+    name: cleanText(formData.get('name'), 160),
+    price: formData.get('price') || 0,
+    imageUrl: cleanText(formData.get('imageUrl'), 500),
+    prepTimeMinutes: formData.get('prepTimeMinutes') || 15,
+    description: cleanText(formData.get('description'), 1000),
+    isAvailable: formData.get('isAvailable') === 'on',
+  });
+
+  if (!parsed.success) {
+    redirectMenuError('product-required');
+  }
+
+  return parsed.data;
 }
 
 async function saveProductImage(file: File | null, productName: string) {
@@ -73,13 +159,13 @@ async function saveProductImage(file: File | null, productName: string) {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
   if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid image type. Please upload JPG, PNG, WEBP, or GIF.');
+    redirectMenuError('invalid-image-type');
   }
 
   const maxSize = 5 * 1024 * 1024;
 
   if (file.size > maxSize) {
-    throw new Error('Image is too large. Maximum upload size is 5MB.');
+    redirectMenuError('image-too-large');
   }
 
   const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -101,7 +187,7 @@ async function assertHotelAccess(hotelId: string) {
   const user = await requireUser();
 
   if (user.role !== 'SUPER_ADMIN' && user.hotelId !== hotelId) {
-    throw new Error('You are not allowed to manage this hotel.');
+    redirectMenuError('unauthorized');
   }
 
   return user;
@@ -124,7 +210,7 @@ function readBundleComponentsFromFormData(formData: FormData) {
     const quantity = Number(rawQuantity || 1);
 
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      throw new Error('Bundle component quantity must be greater than zero.');
+      redirectMenuError('bundle-components-required');
     }
 
     const existing = componentMap.get(componentProductId);
@@ -151,7 +237,7 @@ async function validateBundleComponents({
   productType,
   components,
 }: {
-  tx: typeof db;
+  tx: Prisma.TransactionClient;
   hotelId: string;
   bundleProductId?: string;
   productType: MenuProductType;
@@ -162,7 +248,7 @@ async function validateBundleComponents({
   }
 
   if (!components.length) {
-    throw new Error('Bundle products must have at least one component item.');
+    redirectMenuError('bundle-components-required');
   }
 
   const componentProductIds = components.map(
@@ -170,7 +256,7 @@ async function validateBundleComponents({
   );
 
   if (bundleProductId && componentProductIds.includes(bundleProductId)) {
-    throw new Error('A bundle cannot include itself as a component.');
+    redirectMenuError('bundle-self-component');
   }
 
   const componentProducts = await tx.menuProduct.findMany({
@@ -189,9 +275,7 @@ async function validateBundleComponents({
   });
 
   if (componentProducts.length !== componentProductIds.length) {
-    throw new Error(
-      'One or more selected bundle components were not found in the same hotel.'
-    );
+    redirectMenuError('product-not-found');
   }
 
   const nestedBundle = componentProducts.find(
@@ -199,9 +283,7 @@ async function validateBundleComponents({
   );
 
   if (nestedBundle) {
-    throw new Error(
-      `Nested bundles are not supported yet. "${nestedBundle.name}" is already a bundle.`
-    );
+    redirectMenuError('nested-bundle-not-supported');
   }
 
   return components;
@@ -215,18 +297,12 @@ async function preventBundleProductFromBeingUsedAsComponent(productId: string) {
   });
 
   if (usedAsComponentCount > 0) {
-    throw new Error(
-      'This product is already used as a bundle component. It cannot be changed into a bundle.'
-    );
+    redirectMenuError('nested-bundle-not-supported');
   }
 }
 
 export async function createCategoryAction(formData: FormData) {
-  const parsed = categorySchema.parse({
-    hotelId: formData.get('hotelId'),
-    name: cleanText(formData.get('name'), 120),
-    sortOrder: formData.get('sortOrder') || 0,
-  });
+  const parsed = parseCategoryForm(formData);
 
   await assertHotelAccess(parsed.hotelId);
 
@@ -239,16 +315,11 @@ export async function createCategoryAction(formData: FormData) {
     },
   });
 
-  redirectMenu('category-created');
+  redirectMenu({ success: 'category-created' });
 }
 
 export async function updateCategoryAction(formData: FormData) {
-  const parsed = updateCategorySchema.parse({
-    categoryId: formData.get('categoryId'),
-    name: cleanText(formData.get('name'), 120),
-    sortOrder: formData.get('sortOrder') || 0,
-    isActive: formData.get('isActive') === 'on',
-  });
+  const parsed = parseUpdateCategoryForm(formData);
 
   const category = await db.menuCategory.findUnique({
     where: {
@@ -257,7 +328,7 @@ export async function updateCategoryAction(formData: FormData) {
   });
 
   if (!category) {
-    throw new Error('Category not found.');
+    redirectMenuError('category-not-found');
   }
 
   await assertHotelAccess(category.hotelId);
@@ -273,11 +344,15 @@ export async function updateCategoryAction(formData: FormData) {
     },
   });
 
-  redirectMenu('category-updated');
+  redirectMenu({ success: 'category-updated' });
 }
 
 export async function deleteCategoryAction(formData: FormData) {
   const categoryId = String(formData.get('categoryId') || '');
+
+  if (!categoryId) {
+    redirectMenuError('category-required');
+  }
 
   const category = await db.menuCategory.findUnique({
     where: {
@@ -293,15 +368,13 @@ export async function deleteCategoryAction(formData: FormData) {
   });
 
   if (!category) {
-    throw new Error('Category not found.');
+    redirectMenuError('category-not-found');
   }
 
   await assertHotelAccess(category.hotelId);
 
   if (category._count.products > 0) {
-    throw new Error(
-      'Cannot delete category with products. Move/delete products first or mark the category inactive.'
-    );
+    redirectMenuError('category-has-products');
   }
 
   await db.menuCategory.delete({
@@ -310,20 +383,11 @@ export async function deleteCategoryAction(formData: FormData) {
     },
   });
 
-  redirectMenu('category-deleted');
+  redirectMenu({ success: 'category-deleted' });
 }
 
 export async function createProductAction(formData: FormData) {
-  const parsed = productSchema.parse({
-    categoryId: formData.get('categoryId'),
-    productType: formData.get('productType') || MenuProductType.SINGLE,
-    name: cleanText(formData.get('name'), 160),
-    price: formData.get('price') || 0,
-    imageUrl: cleanText(formData.get('imageUrl'), 500),
-    prepTimeMinutes: formData.get('prepTimeMinutes') || 15,
-    description: cleanText(formData.get('description'), 1000),
-    isAvailable: formData.get('isAvailable') === 'on',
-  });
+  const parsed = parseProductForm(formData);
 
   const category = await db.menuCategory.findUnique({
     where: {
@@ -332,7 +396,7 @@ export async function createProductAction(formData: FormData) {
   });
 
   if (!category) {
-    throw new Error('Selected category was not found.');
+    redirectMenuError('category-not-found');
   }
 
   await assertHotelAccess(category.hotelId);
@@ -391,21 +455,11 @@ export async function createProductAction(formData: FormData) {
     }
   });
 
-  redirectMenu('product-created');
+  redirectMenu({ success: 'product-created' });
 }
 
 export async function updateProductAction(formData: FormData) {
-  const parsed = updateProductSchema.parse({
-    productId: formData.get('productId'),
-    categoryId: formData.get('categoryId'),
-    productType: formData.get('productType') || MenuProductType.SINGLE,
-    name: cleanText(formData.get('name'), 160),
-    price: formData.get('price') || 0,
-    imageUrl: cleanText(formData.get('imageUrl'), 500),
-    prepTimeMinutes: formData.get('prepTimeMinutes') || 15,
-    description: cleanText(formData.get('description'), 1000),
-    isAvailable: formData.get('isAvailable') === 'on',
-  });
+  const parsed = parseUpdateProductForm(formData);
 
   const product = await db.menuProduct.findUnique({
     where: {
@@ -414,7 +468,7 @@ export async function updateProductAction(formData: FormData) {
   });
 
   if (!product) {
-    throw new Error('Product not found.');
+    redirectMenuError('product-not-found');
   }
 
   const category = await db.menuCategory.findUnique({
@@ -424,7 +478,7 @@ export async function updateProductAction(formData: FormData) {
   });
 
   if (!category) {
-    throw new Error('Selected category was not found.');
+    redirectMenuError('category-not-found');
   }
 
   await assertHotelAccess(product.hotelId);
@@ -510,11 +564,15 @@ export async function updateProductAction(formData: FormData) {
     }
   });
 
-  redirectMenu('product-updated');
+  redirectMenu({ success: 'product-updated' });
 }
 
 export async function deleteProductAction(formData: FormData) {
   const productId = String(formData.get('productId') || '');
+
+  if (!productId) {
+    redirectMenuError('product-required');
+  }
 
   const product = await db.menuProduct.findUnique({
     where: {
@@ -528,7 +586,7 @@ export async function deleteProductAction(formData: FormData) {
   });
 
   if (!product) {
-    throw new Error('Product not found.');
+    redirectMenuError('product-not-found');
   }
 
   await assertHotelAccess(product.hotelId);
@@ -549,7 +607,7 @@ export async function deleteProductAction(formData: FormData) {
       },
     });
 
-    redirectMenu('product-deleted');
+    redirectMenu({ success: 'product-deleted' });
   }
 
   try {
@@ -589,5 +647,5 @@ export async function deleteProductAction(formData: FormData) {
     });
   }
 
-  redirectMenu('product-deleted');
+  redirectMenu({ success: 'product-deleted' });
 }

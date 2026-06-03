@@ -7,7 +7,7 @@ import { ServiceRequestsClient } from './ServiceRequestsClient';
 
 export const dynamic = 'force-dynamic';
 
-const liveStatuses = [
+const liveStatuses: ServiceRequestStatus[] = [
   ServiceRequestStatus.NEW,
   ServiceRequestStatus.IN_PROGRESS,
 ];
@@ -279,17 +279,17 @@ export default async function ServiceRequestsPage({
               request.assignedTo?.name ?? request.assignedTo?.email ?? '',
             createdAt: request.createdAt.toISOString(),
             charge: charge
-              ? {
-                  id: charge.id,
-                  chargeCode: charge.chargeCode,
-                  itemName: charge.itemName,
-                  description: charge.description ?? '',
-                  quantity: charge.quantity,
-                  unitPrice: Number(charge.unitPrice),
-                  totalAmount: Number(charge.totalAmount),
-                  paymentStatus: charge.paymentStatus,
-                }
-              : null,
+  ? {
+            id: charge.id,
+            chargeCode: charge.chargeCode,
+            itemName: charge.itemName,
+            description: charge.description ?? '',
+            quantity: charge.quantity,
+            unitPrice: Number(charge.unitPrice),
+            totalAmount: Number(charge.totalAmount),
+            paymentStatus: 'POSTED',
+          }
+        : null,
             statusHistory: request.statusHistory.map((history) => ({
               id: history.id,
               status: history.status,

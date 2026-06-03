@@ -542,6 +542,71 @@ function printOrder(order: DashboardOrder) {
   printWindow.focus();
 }
 
+function Toast({ message }: { message?: Message }) {
+  const [visible, setVisible] = useState(Boolean(message));
+
+  useEffect(() => {
+    if (!message) {
+      setVisible(false);
+      return;
+    }
+
+    setVisible(true);
+
+    const timeout = window.setTimeout(() => {
+      setVisible(false);
+    }, 4500);
+
+    return () => window.clearTimeout(timeout);
+  }, [message?.text, message?.type]);
+
+  if (!message || !visible) {
+    return null;
+  }
+
+  return (
+    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+      <div
+        className={
+          message.type === 'success'
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+        }
+      >
+        <div
+          className={
+            message.type === 'success'
+              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+          }
+        >
+          {message.type === 'success' ? (
+            <CheckCircle2 className="size-5" />
+          ) : (
+            <X className="size-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black">
+            {message.type === 'success' ? 'Success' : 'Action failed'}
+          </p>
+          <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setVisible(false)}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SummaryCard({
   label,
   value,
@@ -935,6 +1000,7 @@ function CancelOrderModal({
 
         <form action={updateOrderStatusAction} className="space-y-4">
           <input type="hidden" name="orderId" value={order.id} />
+          <input type="hidden" name="redirectTo" value="orders" />
           <input type="hidden" name="status" value="CANCELLED" />
           <input
             type="hidden"
@@ -1145,6 +1211,7 @@ function OrderDetailsModal({
               {order.paymentStatus !== 'PAID' ? (
                 <form action={markOrderPaidAction}>
                   <input type="hidden" name="orderId" value={order.id} />
+                  <input type="hidden" name="redirectTo" value="orders" />  
                   <button
                     type="submit"
                     className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-black text-white hover:bg-emerald-700"
@@ -1174,6 +1241,7 @@ function OrderDetailsModal({
                         action={updateOrderStatusAction}
                       >
                         <input type="hidden" name="orderId" value={order.id} />
+                        <input type="hidden" name="redirectTo" value="orders" />
                         <input
                           type="hidden"
                           name="status"
@@ -1296,17 +1364,7 @@ export function OrdersClient({
 
   return (
     <>
-     {message ? (
-      <div
-        className={
-          message.type === 'success'
-            ? 'mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700'
-            : 'mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700'
-        }
-      >
-        {message.text}
-      </div>
-    ) : null}
+     <Toast message={message} />
       <div className="mb-6 grid gap-3 md:grid-cols-4">
         <SummaryCard
           label="Active Orders"

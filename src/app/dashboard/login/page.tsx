@@ -8,7 +8,9 @@ export default async function LoginPage() {
 
   // If already logged in and user presses browser Back to /dashboard/login,
   // redirect back to dashboard instead of showing login inside the dashboard shell.
-  if (user) redirect(dashboardHomeForRole(user.role));
+  if (user) {
+    redirect(dashboardHomeForRole(user.role));
+  }
 
   return (
     <main className="grid min-h-screen place-items-center bg-cream px-5 py-10">
@@ -17,7 +19,11 @@ export default async function LoginPage() {
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-gold">
             Cloud View
           </p>
-          <h1 className="mt-4 text-3xl font-black">Hotel Staff Dashboard</h1>
+
+          <h1 className="mt-4 text-3xl font-black">
+            Hotel Staff Dashboard
+          </h1>
+
           <p className="mt-2 text-sm text-white/70">
             Manage orders, services, inventory, NFC tags, and POS sync.
           </p>

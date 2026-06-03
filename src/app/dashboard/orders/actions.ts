@@ -145,6 +145,30 @@ function redirectToOrdersWithMessage({
   );
 }
 
+function getOrderStatusSuccessCode(status: OrderStatus) {
+  if (status === OrderStatus.ACCEPTED) {
+    return 'order-accepted';
+  }
+
+  if (status === OrderStatus.PREPARING) {
+    return 'order-started';
+  }
+
+  if (status === OrderStatus.READY) {
+    return 'order-ready';
+  }
+
+  if (status === OrderStatus.DELIVERED) {
+    return 'order-delivered';
+  }
+
+  if (status === OrderStatus.CANCELLED) {
+    return 'order-cancelled';
+  }
+
+  return 'order-updated';
+}
+
 async function applyRestoreRequirements({
   tx,
   hotelId,
@@ -472,8 +496,7 @@ function recalculateOrderTotalsAfterItemCancellation({
     subtotalCents: nextSubtotalCents,
     serviceChargeCents: nextServiceChargeCents,
     taxCents: nextTaxCents,
-    totalCents:
-      nextSubtotalCents + nextServiceChargeCents + nextTaxCents,
+    totalCents: nextSubtotalCents + nextServiceChargeCents + nextTaxCents,
   };
 }
 
@@ -568,7 +591,7 @@ export async function cancelOrderItemAction(formData: FormData) {
   }
 
   let restoredProductIds: string[] = [];
-  let finalOrderStatus = order.status;
+  let finalOrderStatus: OrderStatus = order.status;
   let statusUpdatedAt = new Date();
 
   const totals = recalculateOrderTotalsAfterItemCancellation({
@@ -667,8 +690,7 @@ export async function cancelOrderItemAction(formData: FormData) {
         status: order.status,
         userId: user.id,
         note:
-          reason ||
-          `Cancelled item ${item.productNameSnapshot} from dashboard.`,
+          reason || `Cancelled item ${item.productNameSnapshot} from dashboard.`,
       },
       select: {
         createdAt: true,
@@ -712,6 +734,7 @@ export async function updateOrderStatusAction(formData: FormData) {
   const orderId = cleanText(formData.get('orderId'));
   const status = formData.get('status') as OrderStatus;
   const note = cleanText(formData.get('note'), 300);
+  const redirectTarget = cleanText(formData.get('redirectTo'));
 
   if (!orderId || !Object.values(OrderStatus).includes(status)) {
     throw new Error('Invalid status update');
@@ -836,17 +859,19 @@ export async function updateOrderStatusAction(formData: FormData) {
       source: 'DASHBOARD',
     });
   }
-  if (status === OrderStatus.CANCELLED) {
-  redirectToOrdersWithMessage({
-    success: 'order-cancelled',
-  });
-}
+
+  if (redirectTarget === 'orders') {
+    redirectToOrdersWithMessage({
+      success: getOrderStatusSuccessCode(status),
+    });
+  }
 }
 
 export async function markOrderPaidAction(formData: FormData) {
   const user = await requireUser();
 
   const orderId = cleanText(formData.get('orderId'));
+  const redirectTarget = cleanText(formData.get('redirectTo'));
 
   if (!orderId) {
     throw new Error('Order required');
@@ -896,4 +921,10 @@ export async function markOrderPaidAction(formData: FormData) {
     orderCode: order.orderCode,
     paymentStatus: PaymentStatus.PAID,
   });
+
+  if (redirectTarget === 'orders') {
+    redirectToOrdersWithMessage({
+      success: 'order-paid',
+    });
+  }
 }

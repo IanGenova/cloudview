@@ -143,13 +143,25 @@ const DEFAULT_SERVICES = [
   },
 ];
 
-function redirectToServices(params: { error?: string; success?: string }) {
+function redirectToServices(params: {
+  success?: string;
+  error?: string;
+}): never {
   const query = new URLSearchParams();
 
-  if (params.error) query.set('error', params.error);
-  if (params.success) query.set('success', params.success);
+  if (params.success) {
+    query.set('success', params.success);
+  }
 
-  redirect(`/dashboard/services?${query.toString()}`);
+  if (params.error) {
+    query.set('error', params.error);
+  }
+
+  redirect(
+    query.toString()
+      ? `/dashboard/services?${query.toString()}`
+      : '/dashboard/services'
+  );
 }
 
 function normalizeCode(value: string) {
@@ -261,11 +273,15 @@ export async function updateServiceCatalogItemAction(formData: FormData) {
   if (!name) redirectToServices({ error: 'name-required' });
   if (!category) redirectToServices({ error: 'category-required' });
   if (!billingMode) redirectToServices({ error: 'billing-mode-required' });
-  if (unitPrice === null) redirectToServices({ error: 'unit-price-invalid' });
+  if (unitPrice === null) {
+  redirectToServices({ error: 'unit-price-invalid' });
+}
 
-  if (billingMode === ServiceBillingMode.FIXED_PRICE && unitPrice <= 0) {
-    redirectToServices({ error: 'unit-price-required' });
-  }
+const validUnitPrice = unitPrice;
+
+if (billingMode === ServiceBillingMode.FIXED_PRICE && validUnitPrice <= 0) {
+  redirectToServices({ error: 'unit-price-required' });
+}
 
   const item = await db.serviceCatalogItem.findUnique({
     where: { id: itemId },

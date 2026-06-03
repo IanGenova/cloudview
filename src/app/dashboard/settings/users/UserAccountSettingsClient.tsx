@@ -3,6 +3,7 @@
 import type { Role } from '@prisma/client';
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import {
   createUserAccountAction,
   deleteUserAccountAction,
@@ -28,6 +29,13 @@ type UserAccount = {
   } | null;
 };
 
+type ToastMessage =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
+
 const roleLabels: Record<Role, string> = {
   SUPER_ADMIN: 'Super Admin',
   HOTEL_ADMIN: 'Hotel Admin',
@@ -38,6 +46,83 @@ const roleLabels: Record<Role, string> = {
 const initialState: ActionState = {
   ok: false,
 };
+
+function Toast({
+  message,
+  onClose,
+}: {
+  message: ToastMessage;
+  onClose: () => void;
+}) {
+  const [visible, setVisible] = useState(Boolean(message));
+
+  useEffect(() => {
+    if (!message) {
+      setVisible(false);
+      return;
+    }
+
+    setVisible(true);
+
+    const timeout = window.setTimeout(() => {
+      setVisible(false);
+      onClose();
+    }, 4500);
+
+    return () => window.clearTimeout(timeout);
+  }, [message, onClose]);
+
+  if (!message || !visible) {
+    return null;
+  }
+
+  const isSuccess = message.type === 'success';
+
+  return (
+    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+      <div
+        className={
+          isSuccess
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+        }
+      >
+        <div
+          className={
+            isSuccess
+              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+          }
+        >
+          {isSuccess ? (
+            <CheckCircle2 className="size-5" />
+          ) : (
+            <AlertTriangle className="size-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black">
+            {isSuccess ? 'Success' : 'Action failed'}
+          </p>
+          <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setVisible(false);
+            onClose();
+          }}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function SubmitButton({
   children,
@@ -114,12 +199,14 @@ function EditUserModal({
   allowedRoles,
   currentUserRole,
   onClose,
+  onToast,
 }: {
   account: UserAccount;
   hotels: HotelOption[];
   allowedRoles: Role[];
   currentUserRole: Role;
   onClose: () => void;
+  onToast: (message: ToastMessage) => void;
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -128,11 +215,20 @@ function EditUserModal({
   );
 
   useEffect(() => {
+    if (!state.message) {
+      return;
+    }
+
+    onToast({
+      type: state.ok ? 'success' : 'error',
+      text: state.message,
+    });
+
     if (state.ok) {
       router.refresh();
       onClose();
     }
-  }, [state.ok, router, onClose]);
+  }, [state, router, onClose, onToast]);
 
   return (
     <Modal title="Edit User Account" onClose={onClose}>
@@ -223,9 +319,11 @@ function EditUserModal({
 function ResetPasswordModal({
   account,
   onClose,
+  onToast,
 }: {
   account: UserAccount;
   onClose: () => void;
+  onToast: (message: ToastMessage) => void;
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -234,11 +332,20 @@ function ResetPasswordModal({
   );
 
   useEffect(() => {
+    if (!state.message) {
+      return;
+    }
+
+    onToast({
+      type: state.ok ? 'success' : 'error',
+      text: state.message,
+    });
+
     if (state.ok) {
       router.refresh();
       onClose();
     }
-  }, [state.ok, router, onClose]);
+  }, [state, router, onClose, onToast]);
 
   return (
     <Modal title="Reset Password" onClose={onClose}>
@@ -303,9 +410,11 @@ function ResetPasswordModal({
 function DeleteUserModal({
   account,
   onClose,
+  onToast,
 }: {
   account: UserAccount;
   onClose: () => void;
+  onToast: (message: ToastMessage) => void;
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -314,11 +423,20 @@ function DeleteUserModal({
   );
 
   useEffect(() => {
+    if (!state.message) {
+      return;
+    }
+
+    onToast({
+      type: state.ok ? 'success' : 'error',
+      text: state.message,
+    });
+
     if (state.ok) {
       router.refresh();
       onClose();
     }
-  }, [state.ok, router, onClose]);
+  }, [state, router, onClose, onToast]);
 
   return (
     <Modal title="Delete User Account" onClose={onClose}>
@@ -362,6 +480,8 @@ export function UserAccountSettingsClient({
   currentUserRole: Role;
 }) {
   const router = useRouter();
+  const [toast, setToast] = useState<ToastMessage>(null);
+
   const [createState, createFormAction] = useActionState(
     createUserAccountAction,
     initialState
@@ -373,13 +493,24 @@ export function UserAccountSettingsClient({
   const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
 
   useEffect(() => {
+    if (!createState.message) {
+      return;
+    }
+
+    setToast({
+      type: createState.ok ? 'success' : 'error',
+      text: createState.message,
+    });
+
     if (createState.ok) {
       router.refresh();
     }
-  }, [createState.ok, router]);
+  }, [createState, router]);
 
   return (
     <>
+      <Toast message={toast} onClose={() => setToast(null)} />
+
       <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
         <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-black">Create New User</h2>
@@ -561,6 +692,7 @@ export function UserAccountSettingsClient({
           allowedRoles={allowedRoles}
           currentUserRole={currentUserRole}
           onClose={() => setEditingUser(null)}
+          onToast={setToast}
         />
       ) : null}
 
@@ -568,6 +700,7 @@ export function UserAccountSettingsClient({
         <ResetPasswordModal
           account={resetPasswordUser}
           onClose={() => setResetPasswordUser(null)}
+          onToast={setToast}
         />
       ) : null}
 
@@ -575,6 +708,7 @@ export function UserAccountSettingsClient({
         <DeleteUserModal
           account={deletingUser}
           onClose={() => setDeletingUser(null)}
+          onToast={setToast}
         />
       ) : null}
     </>

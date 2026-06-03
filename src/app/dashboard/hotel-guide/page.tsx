@@ -1,7 +1,7 @@
 import { Role } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
-import { db } from '@/lib/db';
 import { requireRole, requireUser } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { HotelGuideClient } from './HotelGuideClient';
 
 function getMessage(error?: string, success?: string) {
@@ -50,12 +50,14 @@ function getMessage(error?: string, success?: string) {
 export default async function HotelGuideModulePage({
   searchParams,
 }: {
-  searchParams: Promise<{
+  searchParams?: Promise<{
     error?: string;
     success?: string;
   }>;
 }) {
-  const { error, success } = await searchParams;
+  const params = await searchParams;
+  const error = params?.error;
+  const success = params?.success;
 
   const user = await requireUser();
   requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);

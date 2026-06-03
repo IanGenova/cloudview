@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { MenuProductType } from '@prisma/client';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X ,CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,7 @@ import { ModalOpenButton } from '@/components/dashboard/ModalOpenButton';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/money';
-import { DashboardSuccess } from '@/components/dashboard/DashboardSuccess';
+
 import { ConfirmSubmitButton } from '@/components/dashboard/ConfirmSubmitButton';
 import {
   createCategoryAction,
@@ -42,6 +42,103 @@ type BundleComponentValue = {
   componentProductId: string;
   quantity: number;
 };
+
+type Message =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
+
+function getMenuMessage(success?: string, error?: string): Message {
+  if (success) {
+    const messages: Record<string, string> = {
+      'category-created': 'Menu category was created successfully.',
+      'category-updated': 'Menu category was updated successfully.',
+      'category-deleted': 'Menu category was deleted successfully.',
+      'product-created': 'Menu item was created successfully.',
+      'product-updated': 'Menu item was updated successfully.',
+      'product-deleted': 'Menu item was deleted successfully.',
+    };
+
+    return {
+      type: 'success',
+      text: messages[success] ?? 'Action completed successfully.',
+    };
+  }
+
+  if (error) {
+    const messages: Record<string, string> = {
+      'category-required': 'Menu category is required.',
+      'category-not-found': 'Menu category was not found.',
+      'product-required': 'Menu item is required.',
+      'product-not-found': 'Menu item was not found.',
+      'bundle-components-required':
+        'Bundle menu items must have at least one component item.',
+      'bundle-self-component':
+        'A bundle cannot include itself as a component.',
+      'nested-bundle-not-supported':
+        'Nested bundles are not supported. Use single menu items as bundle components.',
+      'invalid-image-type':
+        'Invalid image type. Please upload JPG, PNG, WEBP, or GIF.',
+      'image-too-large': 'Image is too large. Maximum upload size is 5MB.',
+    };
+
+    return {
+      type: 'error',
+      text: messages[error] ?? 'Something went wrong.',
+    };
+  }
+
+  return null;
+}
+
+function Toast({ message }: { message: Message }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+      <div
+        className={
+          message.type === 'success'
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+        }
+      >
+        <div
+          className={
+            message.type === 'success'
+              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+          }
+        >
+          {message.type === 'success' ? (
+            <CheckCircle2 className="size-5" />
+          ) : (
+            <X className="size-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black">
+            {message.type === 'success' ? 'Success' : 'Action failed'}
+          </p>
+          <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
+        </div>
+
+        <a
+          href="/dashboard/menu"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
 
 function FormField({
   label,
@@ -265,11 +362,15 @@ function BundleComponentFields({
 }
 
 export default async function MenuManagementPage({
-  searchParams,
+    searchParams,
 }: {
-  searchParams?: Promise<{ success?: string }>;
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+  }>;
 }) {
   const params = await searchParams;
+  const message = getMenuMessage(params?.success, params?.error);
   const user = await requireUser();
 
   const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
@@ -332,21 +433,10 @@ export default async function MenuManagementPage({
 
   return (
     <div>
+       <Toast message={message} />
       <PageHeader
         title="Menu Management"
         description="Digital menu categories, products, images, pricing, availability, bundle menus, and recipe links."
-      />
-
-      <DashboardSuccess
-        success={params?.success}
-        messages={{
-          'category-created': 'Category successfully added.',
-          'category-updated': 'Category successfully updated.',
-          'category-deleted': 'Category successfully deleted.',
-          'product-created': 'Product successfully added.',
-          'product-updated': 'Product successfully updated.',
-          'product-deleted': 'Product successfully deleted.',
-        }}
       />
 
       <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">

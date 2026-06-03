@@ -238,7 +238,7 @@ export default async function MyRequestsPage({
                       <p className="font-black">
                         Total: {money(Number(charge.totalAmount))}
                       </p>
-                      <p>Payment: {charge.paymentStatus}</p>
+                      <p>Payment: POSTED</p>
                     </div>
                   </div>
                 ) : (

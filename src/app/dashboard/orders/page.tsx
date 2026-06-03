@@ -11,7 +11,7 @@ import { OrdersClient } from './OrdersClient';
 
 export const dynamic = 'force-dynamic';
 
-const activeStatuses = [
+const activeStatuses: OrderStatus[] = [
   OrderStatus.PENDING,
   OrderStatus.ACCEPTED,
   OrderStatus.PREPARING,

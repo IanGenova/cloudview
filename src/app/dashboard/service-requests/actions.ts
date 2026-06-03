@@ -382,33 +382,37 @@ export async function updateServiceRequestAction(formData: FormData) {
       return;
     }
 
-    const idsToCharge = chargeRequestIds.length
-      ? chargeRequestIds
-      : requestId
-        ? [requestId]
-        : requestIds;
+    const idsToCharge = (
+  chargeRequestIds.length
+    ? chargeRequestIds
+    : requestId
+      ? [requestId]
+      : requestIds
+).filter((id): id is string => Boolean(id));
 
-    for (const id of idsToCharge) {
-      const request = requests.find((item) => item.id === id);
+for (const id of idsToCharge) {
+  const serviceRequestId = id;
 
-      if (!request?.roomId) {
-        continue;
-      }
+  const request = requests.find((item) => item.id === serviceRequestId);
+
+  if (!request?.roomId) {
+    continue;
+  }
 
       const chargeItemName = cleanText(
         formData.get(`chargeItemName_${id}`) ?? formData.get('chargeItemName'),
         160
       );
       const chargeDescription = cleanText(
-        formData.get(`chargeDescription_${id}`) ??
+       formData.get(`chargeDescription_${serviceRequestId}`)??
           formData.get('chargeDescription'),
         300
       );
       const chargeQuantity = parsePositiveInteger(
-        formData.get(`chargeQuantity_${id}`) ?? formData.get('chargeQuantity')
+        formData.get(`chargeQuantity_${serviceRequestId}`) ?? formData.get('chargeQuantity')
       );
       const chargeUnitPrice = parsePositiveMoney(
-        formData.get(`chargeUnitPrice_${id}`) ?? formData.get('chargeUnitPrice')
+        formData.get(`chargeUnitPrice_${serviceRequestId}`) ?? formData.get('chargeUnitPrice')
       );
 
       if (!chargeItemName || !chargeQuantity || !chargeUnitPrice) {
@@ -419,7 +423,7 @@ export async function updateServiceRequestAction(formData: FormData) {
 
       await tx.roomAddOnCharge.upsert({
         where: {
-          serviceRequestId: id,
+          serviceRequestId,
         },
         update: {
           itemName: chargeItemName,
@@ -433,7 +437,7 @@ export async function updateServiceRequestAction(formData: FormData) {
           chargeCode: generateChargeCode(),
           hotelId: request.hotelId,
           roomId: request.roomId,
-          serviceRequestId: id,
+          serviceRequestId,
           itemName: chargeItemName,
           description: chargeDescription || null,
           quantity: chargeQuantity,

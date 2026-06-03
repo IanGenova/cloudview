@@ -67,7 +67,7 @@ function redirectLocations({
   success?: string;
   error?: string;
   tab: DirectoryTab;
-}) {
+}): never {
   revalidatePath('/dashboard/locations');
   revalidatePath('/dashboard/tags');
 
@@ -156,7 +156,7 @@ export async function createRoomAction(formData: FormData) {
 }
 
 export async function updateRoomAction(formData: FormData) {
-  const roomId = String(formData.get('roomId') || '');
+  const roomId = cleanText(formData.get('roomId'));
 
   const existing = await db.room.findUnique({
     where: {
@@ -165,7 +165,10 @@ export async function updateRoomAction(formData: FormData) {
   });
 
   if (!existing) {
-    throw new Error('Room not found.');
+    redirectLocations({
+      error: 'room-not-found',
+      tab: 'rooms',
+    });
   }
 
   const parsed = updateRoomSchema.parse({
@@ -219,7 +222,7 @@ export async function updateRoomAction(formData: FormData) {
 }
 
 export async function deleteRoomAction(formData: FormData) {
-  const roomId = String(formData.get('roomId') || '');
+  const roomId = cleanText(formData.get('roomId'));
 
   const room = await db.room.findUnique({
     where: {
@@ -228,20 +231,34 @@ export async function deleteRoomAction(formData: FormData) {
   });
 
   if (!room) {
-    throw new Error('Room not found.');
+    redirectLocations({
+      error: 'room-not-found',
+      tab: 'rooms',
+    });
   }
 
   await assertHotelAccess(room.hotelId);
 
-  await db.room.update({
-    where: {
-      id: roomId,
-    },
-    data: {
-      isActive: false,
-      deletedAt: new Date(),
-    },
-  });
+  await db.$transaction([
+    db.nfcTag.updateMany({
+      where: {
+        roomId: room.id,
+      },
+      data: {
+        roomId: null,
+      },
+    }),
+
+    db.room.update({
+      where: {
+        id: room.id,
+      },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+      },
+    }),
+  ]);
 
   redirectLocations({
     success: 'room-deleted',
@@ -256,7 +273,7 @@ export async function createLocationAction(formData: FormData) {
     hotelId: formData.get('hotelId') || user.hotelId,
     name: cleanText(formData.get('name'), 160),
     type: formData.get('type'),
-    description: cleanText(formData.get('description'), 1000),
+    description: cleanText(formData.get('description'), 500),
     isActive: true,
   });
 
@@ -280,7 +297,7 @@ export async function createLocationAction(formData: FormData) {
 }
 
 export async function updateLocationAction(formData: FormData) {
-  const locationId = String(formData.get('locationId') || '');
+  const locationId = cleanText(formData.get('locationId'));
 
   const existing = await db.location.findUnique({
     where: {
@@ -289,7 +306,10 @@ export async function updateLocationAction(formData: FormData) {
   });
 
   if (!existing) {
-    throw new Error('Location not found.');
+    redirectLocations({
+      error: 'location-not-found',
+      tab: 'locations',
+    });
   }
 
   const parsed = updateLocationSchema.parse({
@@ -297,7 +317,7 @@ export async function updateLocationAction(formData: FormData) {
     hotelId: formData.get('hotelId') || existing.hotelId,
     name: cleanText(formData.get('name'), 160),
     type: formData.get('type'),
-    description: cleanText(formData.get('description'), 1000),
+    description: cleanText(formData.get('description'), 500),
     isActive: formData.get('isActive') === 'on',
   });
 
@@ -324,7 +344,7 @@ export async function updateLocationAction(formData: FormData) {
 }
 
 export async function deleteLocationAction(formData: FormData) {
-  const locationId = String(formData.get('locationId') || '');
+  const locationId = cleanText(formData.get('locationId'));
 
   const location = await db.location.findUnique({
     where: {
@@ -333,20 +353,34 @@ export async function deleteLocationAction(formData: FormData) {
   });
 
   if (!location) {
-    throw new Error('Location not found.');
+    redirectLocations({
+      error: 'location-not-found',
+      tab: 'locations',
+    });
   }
 
   await assertHotelAccess(location.hotelId);
 
-  await db.location.update({
-    where: {
-      id: locationId,
-    },
-    data: {
-      isActive: false,
-      deletedAt: new Date(),
-    },
-  });
+  await db.$transaction([
+    db.nfcTag.updateMany({
+      where: {
+        locationId: location.id,
+      },
+      data: {
+        locationId: null,
+      },
+    }),
+
+    db.location.update({
+      where: {
+        id: location.id,
+      },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+      },
+    }),
+  ]);
 
   redirectLocations({
     success: 'location-deleted',

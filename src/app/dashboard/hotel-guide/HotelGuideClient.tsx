@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { HotelGuideItemType } from '@prisma/client';
+import { CheckCircle2, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -92,6 +93,71 @@ const iconOptions = [
 
 const itemTypeOptions = Object.values(HotelGuideItemType);
 
+function Toast({ message }: { message: Message }) {
+  const [visible, setVisible] = useState(Boolean(message));
+
+  useEffect(() => {
+    if (!message) {
+      setVisible(false);
+      return;
+    }
+
+    setVisible(true);
+
+    const timeout = window.setTimeout(() => {
+      setVisible(false);
+    }, 4500);
+
+    return () => window.clearTimeout(timeout);
+  }, [message?.text, message?.type]);
+
+  if (!message || !visible) {
+    return null;
+  }
+
+  return (
+    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+      <div
+        className={
+          message.type === 'success'
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+        }
+      >
+        <div
+          className={
+            message.type === 'success'
+              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+          }
+        >
+          {message.type === 'success' ? (
+            <CheckCircle2 className="size-5" />
+          ) : (
+            <X className="size-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black">
+            {message.type === 'success' ? 'Success' : 'Action failed'}
+          </p>
+          <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setVisible(false)}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Modal({
   title,
   description,
@@ -104,9 +170,9 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 py-4">
+      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-white p-6">
           <div>
             <h2 className="text-xl font-black">{title}</h2>
             {description ? (
@@ -118,14 +184,48 @@ function Modal({
             type="button"
             onClick={onClose}
             className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            aria-label="Close modal"
           >
             ✕
           </button>
         </div>
 
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>
+  );
+}
+
+function ConfirmDeleteForm({
+  action,
+  hiddenName,
+  hiddenValue,
+  label,
+  confirmMessage,
+}: {
+  action: (formData: FormData) => void;
+  hiddenName: string;
+  hiddenValue: string;
+  label: string;
+  confirmMessage: string;
+}) {
+  return (
+    <form
+      action={action}
+      onSubmit={(event) => {
+        if (!window.confirm(confirmMessage)) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <input type="hidden" name={hiddenName} value={hiddenValue} />
+      <button
+        type="submit"
+        className="h-9 w-full rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
+      >
+        {label}
+      </button>
+    </form>
   );
 }
 
@@ -361,12 +461,42 @@ function ItemFormFields({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <input name="hours" defaultValue={item?.hours ?? ''} placeholder="Hours e.g. 7:00 AM - 9:00 PM" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
-        <input name="location" defaultValue={item?.location ?? ''} placeholder="Location" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
-        <input name="contact" defaultValue={item?.contact ?? ''} placeholder="Contact / Extension" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
-        <input name="mapUrl" defaultValue={item?.mapUrl ?? ''} placeholder="Map URL" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
-        <input name="buttonLabel" defaultValue={item?.buttonLabel ?? ''} placeholder="Button Label e.g. View Menu" className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
-        <input name="buttonHref" defaultValue={item?.buttonHref ?? ''} placeholder="Button Link e.g. menu, service, pool, https://..." className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400" />
+        <input
+          name="hours"
+          defaultValue={item?.hours ?? ''}
+          placeholder="Hours e.g. 7:00 AM - 9:00 PM"
+          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+        <input
+          name="location"
+          defaultValue={item?.location ?? ''}
+          placeholder="Location"
+          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+        <input
+          name="contact"
+          defaultValue={item?.contact ?? ''}
+          placeholder="Contact / Extension"
+          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+        <input
+          name="mapUrl"
+          defaultValue={item?.mapUrl ?? ''}
+          placeholder="Map URL"
+          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+        <input
+          name="buttonLabel"
+          defaultValue={item?.buttonLabel ?? ''}
+          placeholder="Button Label e.g. View Menu"
+          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+        <input
+          name="buttonHref"
+          defaultValue={item?.buttonHref ?? ''}
+          placeholder="Button Link e.g. menu, service, pool, https://..."
+          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
       </div>
 
       <input
@@ -387,6 +517,68 @@ function ItemFormFields({
         Show in Guest Portal
       </label>
     </>
+  );
+}
+
+function GalleryPreview({ images }: { images: GuideImage[] }) {
+  if (!images.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-neutral-300 p-4 text-center text-xs font-bold text-neutral-400">
+        No gallery images yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {images.map((image) => (
+        <div
+          key={image.id}
+          className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+        >
+          <div
+            className="h-28 bg-neutral-100 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${image.imageUrl})`,
+            }}
+          />
+
+          <div className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-xs font-black">
+                {image.title || 'Gallery Image'}
+              </p>
+
+              <span
+                className={
+                  image.isActive
+                    ? 'rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700'
+                    : 'rounded-full bg-neutral-100 px-2 py-1 text-[9px] font-black text-neutral-500'
+                }
+              >
+                {image.isActive ? 'ACTIVE' : 'HIDDEN'}
+              </span>
+            </div>
+
+            {image.caption ? (
+              <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
+                {image.caption}
+              </p>
+            ) : null}
+
+            <div className="mt-3">
+              <ConfirmDeleteForm
+                action={deleteGuideImageAction}
+                hiddenName="imageId"
+                hiddenValue={image.id}
+                label="Delete Image"
+                confirmMessage="Delete this hotel guide image?"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -510,72 +702,6 @@ function UploadImageModal({
   );
 }
 
-function GalleryPreview({
-  images,
-}: {
-  images: GuideImage[];
-}) {
-  if (!images.length) {
-    return (
-      <div className="rounded-2xl border border-dashed border-neutral-300 p-4 text-center text-xs font-bold text-neutral-400">
-        No gallery images yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {images.map((image) => (
-        <div
-          key={image.id}
-          className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
-        >
-          <div
-            className="h-28 bg-neutral-100 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${image.imageUrl})`,
-            }}
-          />
-
-          <div className="p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-xs font-black">
-                {image.title || 'Gallery Image'}
-              </p>
-
-              <span
-                className={
-                  image.isActive
-                    ? 'rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700'
-                    : 'rounded-full bg-neutral-100 px-2 py-1 text-[9px] font-black text-neutral-500'
-                }
-              >
-                {image.isActive ? 'ACTIVE' : 'HIDDEN'}
-              </span>
-            </div>
-
-            {image.caption ? (
-              <p className="mt-1 line-clamp-2 text-[11px] text-neutral-500">
-                {image.caption}
-              </p>
-            ) : null}
-
-            <form action={deleteGuideImageAction} className="mt-3">
-              <input type="hidden" name="imageId" value={image.id} />
-              <button
-                type="submit"
-                className="h-9 w-full rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
-              >
-                Delete Image
-              </button>
-            </form>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function HotelGuideClient({
   hotels,
   sections,
@@ -591,7 +717,9 @@ export function HotelGuideClient({
 }) {
   const [creatingSection, setCreatingSection] = useState(false);
   const [creatingItem, setCreatingItem] = useState(false);
-  const [editingSection, setEditingSection] = useState<GuideSection | null>(null);
+  const [editingSection, setEditingSection] = useState<GuideSection | null>(
+    null
+  );
   const [editingItem, setEditingItem] = useState<GuideItem | null>(null);
   const [uploadSection, setUploadSection] = useState<GuideSection | null>(null);
   const [uploadItem, setUploadItem] = useState<GuideItem | null>(null);
@@ -618,23 +746,14 @@ export function HotelGuideClient({
 
   return (
     <>
-      {message ? (
-        <div
-          className={
-            message.type === 'success'
-              ? 'mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700'
-              : 'mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700'
-          }
-        >
-          {message.text}
-        </div>
-      ) : null}
+      <Toast message={message} />
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
         <div>
           <h2 className="text-xl font-black">Dynamic Hotel Guide</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Create sections, items, and brochure-style gallery images for the Guest Portal.
+            Create sections, items, and brochure-style gallery images for the
+            Guest Portal.
           </p>
         </div>
 
@@ -677,190 +796,190 @@ export function HotelGuideClient({
         <form
           action={seedDefaultHotelGuideAction}
           className="rounded-3xl border border-neutral-200 bg-white p-5"
+          onSubmit={(event) => {
+            if (
+              !window.confirm(
+                'Add the default hotel guide sections and items?'
+              )
+            ) {
+              event.preventDefault();
+            }
+          }}
         >
-          <p className="text-sm font-bold text-neutral-500">Default Setup</p>
-
-          <Select
-            name="hotelId"
-            defaultValue={defaultHotelId}
-            disabled={!canChangeHotel}
-          >
-            {hotels.map((hotel) => (
-              <option key={hotel.id} value={hotel.id}>
-                {hotel.name}
-              </option>
-            ))}
-          </Select>
-
-          <Button className="mt-3 w-full">Add Defaults</Button>
+          <input type="hidden" name="hotelId" value={defaultHotelId} />
+          <p className="text-sm font-bold text-neutral-500">Starter Content</p>
+          <Button className="mt-3 w-full">Seed Defaults</Button>
         </form>
       </div>
 
-      <Card>
-        <CardContent>
-          <h2 className="text-xl font-black">Existing Guide Content</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            These sections, items, and gallery images are shown dynamically in the Guest Portal.
-          </p>
+      <div className="grid gap-5">
+        {sections.map((section) => (
+          <Card key={section.id}>
+            <CardContent>
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-xl font-black">{section.title}</h3>
 
-          <div className="mt-5 space-y-5">
-            {sections.map((section) => (
-              <section
-                key={section.id}
-                className="rounded-[2rem] border border-neutral-200 bg-white p-5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-black">{section.title}</h3>
-
-                      <span
-                        className={
-                          section.isActive
-                            ? 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
-                            : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-500'
-                        }
-                      >
-                        {section.isActive ? 'ACTIVE' : 'HIDDEN'}
-                      </span>
-                    </div>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {section.hotelName} · {section.subtitle || 'No subtitle'} · Sort {section.sortOrder}
-                    </p>
+                    <span
+                      className={
+                        section.isActive
+                          ? 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
+                          : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-500'
+                      }
+                    >
+                      {section.isActive ? 'ACTIVE' : 'HIDDEN'}
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setUploadSection(section)}
-                      className="h-10 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800"
-                    >
-                      Upload Images
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setEditingSection(section)}
-                      className="h-10 rounded-2xl border border-neutral-200 px-4 text-sm font-black hover:bg-neutral-50"
-                    >
-                      Edit Section
-                    </button>
-
-                    <form action={deleteGuideSectionAction}>
-                      <input type="hidden" name="sectionId" value={section.id} />
-                      <button
-                        type="submit"
-                        className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-black text-white hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <p className="mb-2 text-xs font-black uppercase text-neutral-500">
-                    Section Brochure Gallery
+                  <p className="mt-1 text-sm font-semibold text-neutral-500">
+                    {section.hotelName} · {section.subtitle || 'No subtitle'}
                   </p>
-                  <GalleryPreview images={section.galleryImages} />
+
+                  {section.description ? (
+                    <p className="mt-2 text-sm leading-6 text-neutral-600">
+                      {section.description}
+                    </p>
+                  ) : null}
+
+                  <p className="mt-2 text-xs font-bold text-neutral-400">
+                    Icon: {section.iconKey} · Sort: {section.sortOrder}
+                  </p>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                  {section.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-black">{item.title}</p>
-                          <p className="mt-1 text-xs font-bold text-neutral-500">
-                            {item.itemType} · {item.iconKey} · Sort {item.sortOrder}
-                          </p>
+                <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[360px]">
+                  <button
+                    type="button"
+                    onClick={() => setEditingSection(section)}
+                    className="h-10 rounded-2xl border border-neutral-200 px-4 text-sm font-black hover:bg-neutral-50"
+                  >
+                    Edit Section
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setUploadSection(section)}
+                    className="h-10 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800"
+                  >
+                    Upload Image
+                  </button>
+
+                  <ConfirmDeleteForm
+                    action={deleteGuideSectionAction}
+                    hiddenName="sectionId"
+                    hiddenValue={section.id}
+                    label="Delete Section"
+                    confirmMessage="Delete this section, all guide items, and gallery images?"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <p className="mb-2 text-sm font-black">Section Gallery</p>
+                <GalleryPreview images={section.galleryImages} />
+              </div>
+
+              <div className="mt-5 grid gap-3">
+                <p className="text-sm font-black">Guide Items</p>
+
+                {section.items.length ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {section.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-black">{item.title}</h4>
+
+                              <span
+                                className={
+                                  item.isActive
+                                    ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700'
+                                    : 'rounded-full bg-neutral-200 px-2 py-1 text-[10px] font-black text-neutral-500'
+                                }
+                              >
+                                {item.isActive ? 'ACTIVE' : 'HIDDEN'}
+                              </span>
+                            </div>
+
+                            <p className="mt-1 text-xs font-bold text-neutral-500">
+                              {item.itemType} · {item.subtitle || 'No subtitle'}
+                            </p>
+                          </div>
+
+                          <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black text-neutral-500">
+                            Sort {item.sortOrder}
+                          </span>
                         </div>
 
-                        <span
-                          className={
-                            item.isActive
-                              ? 'rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700'
-                              : 'rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-black text-neutral-500'
-                          }
-                        >
-                          {item.isActive ? 'ACTIVE' : 'HIDDEN'}
-                        </span>
-                      </div>
+                        {item.content ? (
+                          <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
+                            {item.content}
+                          </p>
+                        ) : null}
 
-                      {item.content ? (
-                        <p className="mt-3 line-clamp-3 text-xs leading-5 text-neutral-600">
-                          {item.content}
-                        </p>
-                      ) : (
-                        <p className="mt-3 text-xs text-neutral-400">
-                          No content.
-                        </p>
-                      )}
-
-                      <div className="mt-4">
-                        <p className="mb-2 text-[10px] font-black uppercase text-neutral-500">
-                          Item Gallery
-                        </p>
-                        <GalleryPreview images={item.galleryImages} />
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setUploadItem(item)}
-                          className="h-10 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
-                        >
-                          Images
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setEditingItem(item)}
-                          className="h-10 rounded-2xl border border-neutral-200 text-sm font-black hover:bg-white"
-                        >
-                          Edit
-                        </button>
-
-                        <form action={deleteGuideItemAction}>
-                          <input type="hidden" name="itemId" value={item.id} />
+                        <div className="mt-4 grid gap-2 sm:grid-cols-3">
                           <button
-                            type="submit"
-                            className="h-10 w-full rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700"
+                            type="button"
+                            onClick={() => setEditingItem(item)}
+                            className="h-9 rounded-xl border border-neutral-200 bg-white text-xs font-black hover:bg-neutral-50"
                           >
-                            Delete
+                            Edit
                           </button>
-                        </form>
+
+                          <button
+                            type="button"
+                            onClick={() => setUploadItem(item)}
+                            className="h-9 rounded-xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+                          >
+                            Upload Image
+                          </button>
+
+                          <ConfirmDeleteForm
+                            action={deleteGuideItemAction}
+                            hiddenName="itemId"
+                            hiddenValue={item.id}
+                            label="Delete"
+                            confirmMessage="Delete this guide item and its gallery images?"
+                          />
+                        </div>
+
+                        <div className="mt-4">
+                          <GalleryPreview images={item.galleryImages} />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-
-                  {!section.items.length ? (
-                    <div className="rounded-3xl border border-dashed border-neutral-300 p-5 text-center">
-                      <p className="text-sm font-black">No items yet.</p>
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-            ))}
-
-            {!sections.length ? (
-              <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-                <p className="font-black">No hotel guide content yet.</p>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Create a section or use the default setup button.
-                </p>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-neutral-300 p-6 text-center text-sm font-bold text-neutral-400">
+                    No guide items in this section yet.
+                  </div>
+                )}
               </div>
-            ) : null}
+            </CardContent>
+          </Card>
+        ))}
+
+        {!sections.length ? (
+          <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
+            <p className="font-black">No Hotel Guide sections yet.</p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Create a section or seed default content to start building the
+              guest guide.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        ) : null}
+      </div>
 
       {creatingSection ? (
-        <Modal title="Create Guide Section" onClose={() => setCreatingSection(false)}>
+        <Modal
+          title="Create Guide Section"
+          description="Add a new main section to the Guest Portal Hotel Guide."
+          onClose={() => setCreatingSection(false)}
+        >
           <form action={createGuideSectionAction} className="space-y-4">
             <SectionFormFields
               hotels={hotels}
@@ -869,7 +988,11 @@ export function HotelGuideClient({
             />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setCreatingSection(false)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
+              <button
+                type="button"
+                onClick={() => setCreatingSection(false)}
+                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+              >
                 Cancel
               </button>
               <Button>Create Section</Button>
@@ -879,22 +1002,34 @@ export function HotelGuideClient({
       ) : null}
 
       {creatingItem ? (
-        <Modal title="Create Guide Item" onClose={() => setCreatingItem(false)}>
+        <Modal
+          title="Create Guide Item"
+          description="Add an information card, policy, contact, quick action, or facility item."
+          onClose={() => setCreatingItem(false)}
+        >
           <form action={createGuideItemAction} className="space-y-4">
             <ItemFormFields sections={sections} />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setCreatingItem(false)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
+              <button
+                type="button"
+                onClick={() => setCreatingItem(false)}
+                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+              >
                 Cancel
               </button>
-              <Button>Create Item</Button>
+              <Button>Create Guide Item</Button>
             </div>
           </form>
         </Modal>
       ) : null}
 
       {editingSection ? (
-        <Modal title="Edit Guide Section" onClose={() => setEditingSection(null)}>
+        <Modal
+          title="Edit Guide Section"
+          description="Update this guide section."
+          onClose={() => setEditingSection(null)}
+        >
           <form action={updateGuideSectionAction} className="space-y-4">
             <input type="hidden" name="sectionId" value={editingSection.id} />
             <SectionFormFields
@@ -905,44 +1040,52 @@ export function HotelGuideClient({
             />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEditingSection(null)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
+              <button
+                type="button"
+                onClick={() => setEditingSection(null)}
+                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+              >
                 Cancel
               </button>
-              <Button>Save Changes</Button>
+              <Button>Save Section</Button>
             </div>
           </form>
         </Modal>
       ) : null}
 
       {editingItem ? (
-        <Modal title="Edit Guide Item" onClose={() => setEditingItem(null)}>
+        <Modal
+          title="Edit Guide Item"
+          description="Update this hotel guide item."
+          onClose={() => setEditingItem(null)}
+        >
           <form action={updateGuideItemAction} className="space-y-4">
             <input type="hidden" name="itemId" value={editingItem.id} />
             <ItemFormFields sections={sections} item={editingItem} />
 
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEditingItem(null)} className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50">
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+              >
                 Cancel
               </button>
-              <Button>Save Changes</Button>
+              <Button>Save Guide Item</Button>
             </div>
           </form>
         </Modal>
       ) : null}
 
-      {uploadSection ? (
+      {uploadSection || uploadItem ? (
         <UploadImageModal
           sections={sections}
-          section={uploadSection}
-          onClose={() => setUploadSection(null)}
-        />
-      ) : null}
-
-      {uploadItem ? (
-        <UploadImageModal
-          sections={sections}
-          item={uploadItem}
-          onClose={() => setUploadItem(null)}
+          section={uploadSection ?? undefined}
+          item={uploadItem ?? undefined}
+          onClose={() => {
+            setUploadSection(null);
+            setUploadItem(null);
+          }}
         />
       ) : null}
     </>

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Building2, MapPin, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Building2, CheckCircle2, MapPin, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -7,7 +7,6 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { ModalOpenButton } from '@/components/dashboard/ModalOpenButton';
-import { DashboardSuccess } from '@/components/dashboard/DashboardSuccess';
 import { ConfirmSubmitButton } from '@/components/dashboard/ConfirmSubmitButton';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -24,7 +23,6 @@ const LOCATION_TYPES = [
   'POOL',
   'LOBBY',
   'RESTAURANT',
-  'SPA',
   'PARKING',
   'AMENITY',
   'GYM',
@@ -33,6 +31,13 @@ const LOCATION_TYPES = [
 ] as const;
 
 type DirectoryTab = 'rooms' | 'locations';
+
+type Message =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
 
 function FormField({
   label,
@@ -99,6 +104,59 @@ function Modal({
   );
 }
 
+function Toast({
+  message,
+  closeHref,
+}: {
+  message: Message;
+  closeHref: string;
+}) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+      <div
+        className={
+          message.type === 'success'
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+        }
+      >
+        <div
+          className={
+            message.type === 'success'
+              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+          }
+        >
+          {message.type === 'success' ? (
+            <CheckCircle2 className="size-5" />
+          ) : (
+            <X className="size-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black">
+            {message.type === 'success' ? 'Success' : 'Action failed'}
+          </p>
+          <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
+        </div>
+
+        <a
+          href={closeHref}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function getActiveTab(tab?: string): DirectoryTab {
   return tab === 'locations' ? 'locations' : 'rooms';
 }
@@ -147,19 +205,54 @@ function countBadgeClassName(isActive: boolean) {
     : 'rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-black text-neutral-700';
 }
 
+function getLocationsMessage(success?: string, error?: string): Message {
+  if (success) {
+    const messages: Record<string, string> = {
+      'room-created': 'Room successfully added.',
+      'room-updated': 'Room successfully updated.',
+      'room-deleted': 'Room successfully deleted.',
+      'location-created': 'Location successfully added.',
+      'location-updated': 'Location successfully updated.',
+      'location-deleted': 'Location successfully deleted.',
+    };
+
+    return {
+      type: 'success',
+      text: messages[success] ?? 'Action completed successfully.',
+    };
+  }
+
+  if (error) {
+    const messages: Record<string, string> = {
+      'room-number-exists':
+        'A room with this number already exists in this hotel. Please use a different room number.',
+      'room-not-found': 'Room was not found.',
+      'location-not-found': 'Location was not found.',
+    };
+
+    return {
+      type: 'error',
+      text: messages[error] ?? 'Something went wrong. Please try again.',
+    };
+  }
+
+  return null;
+}
+
 export default async function RoomsAndLocationsPage({
   searchParams,
 }: {
-        searchParams?: Promise<{
-        success?: string;
-        error?: string;
-        tab?: string;
-        q?: string;
-      }>;
+  searchParams?: Promise<{
+    success?: string;
+    error?: string;
+    tab?: string;
+    q?: string;
+  }>;
 }) {
   const params = await searchParams;
   const activeTab = getActiveTab(params?.tab);
   const searchQuery = cleanSearchQuery(params?.q);
+  const message = getLocationsMessage(params?.success, params?.error);
 
   const user = await requireUser();
 
@@ -248,32 +341,12 @@ export default async function RoomsAndLocationsPage({
 
   return (
     <div>
+      <Toast message={message} closeHref={buildDirectoryHref(activeTab, searchQuery)} />
+
       <PageHeader
         title="Rooms & Locations"
         description="Create and manage guest rooms, pool areas, lobby panels, restaurants, amenities, and other NFC destinations."
       />
-
-      <DashboardSuccess
-        success={params?.success}
-        messages={{
-          'room-created': 'Room successfully added.',
-          'room-updated': 'Room successfully updated.',
-          'room-deleted': 'Room successfully deleted.',
-          'location-created': 'Location successfully added.',
-          'location-updated': 'Location successfully updated.',
-          'location-deleted': 'Location successfully deleted.',
-          
-        }}
-        
-      />
-              {params?.error ? (
-          <div className="mb-5 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-            {{
-              'room-number-exists':
-                'A room with this number already exists in this hotel. Please use a different room number.',
-            }[params.error] ?? 'Something went wrong. Please try again.'}
-          </div>
-        ) : null}
 
       <div className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -331,9 +404,7 @@ export default async function RoomsAndLocationsPage({
             >
               <MapPin className="size-4" />
               Locations
-              <span
-                className={countBadgeClassName(activeTab === 'locations')}
-              >
+              <span className={countBadgeClassName(activeTab === 'locations')}>
                 {locations.length}
               </span>
             </a>
@@ -583,7 +654,7 @@ export default async function RoomsAndLocationsPage({
             <div>
               <h2 className="text-2xl font-black">Locations</h2>
               <p className="text-sm text-neutral-500">
-                Non-room areas such as pool, lobby, restaurant, spa, parking, or
+                Non-room areas such as pool, lobby, restaurant, parking, or
                 amenities.
               </p>
             </div>
@@ -801,7 +872,7 @@ export default async function RoomsAndLocationsPage({
       <Modal
         id="add-room-modal"
         title="Add Room"
-        description="Create a guest room that can later be connected to NFC tags."
+        description="Create a guest room destination that can be assigned to NFC tags."
       >
         <form action={createRoomAction} className="grid gap-5 md:grid-cols-2">
           {user.role === 'SUPER_ADMIN' ? (
@@ -821,18 +892,15 @@ export default async function RoomsAndLocationsPage({
             <input type="hidden" name="hotelId" value={user.hotelId!} />
           )}
 
-          <FormField
-            label="Room Number"
-            helper="Example: 305, Villa 2, Suite A."
-          >
+          <FormField label="Room Number" helper="Example: 305 or Villa A.">
             <Input name="number" placeholder="305" required />
           </FormField>
 
           <FormField
             label="Room Display Name"
-            helper="Guest/staff friendly room name."
+            helper="Example: Deluxe King Room or Pool Villa."
           >
-            <Input name="name" placeholder="Deluxe Room 305" required />
+            <Input name="name" placeholder="Deluxe King Room" required />
           </FormField>
 
           <FormField
@@ -851,7 +919,7 @@ export default async function RoomsAndLocationsPage({
       <Modal
         id="add-location-modal"
         title="Add Location"
-        description="Create a non-room destination such as pool, lobby, spa, restaurant, or amenity area."
+        description="Create a non-room destination such as pool, lobby, restaurant, or amenity area."
       >
         <form
           action={createLocationAction}

@@ -1,6 +1,14 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { OrderItemStatus, OrderStatus } from '@prisma/client';
-import { Clock, History, RefreshCcw } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  History,
+  RefreshCcw,
+  X,
+} from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { KitchenRunningTimer } from '@/components/dashboard/KitchenRunningTimer';
@@ -11,6 +19,13 @@ import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
+
+type KitchenToastMessage =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
 
 type KitchenOrderItem = {
   id: string;
@@ -42,6 +57,158 @@ type KitchenOrder = {
   location: { name: string } | null;
   items: KitchenOrderItem[];
 };
+
+function getKitchenSuccessCode(status: OrderStatus) {
+  if (status === OrderStatus.PREPARING) {
+    return 'order-accepted';
+  }
+
+  if (status === OrderStatus.READY) {
+    return 'order-ready';
+  }
+
+  if (status === OrderStatus.DELIVERED) {
+    return 'order-delivered';
+  }
+
+  if (status === OrderStatus.CANCELLED) {
+    return 'order-cancelled';
+  }
+
+  return 'order-updated';
+}
+
+function getKitchenMessage(success?: string, error?: string): KitchenToastMessage {
+  if (success) {
+    const messages: Record<string, string> = {
+      'order-accepted': 'Order accepted and moved to Preparing.',
+      'order-ready': 'Order marked as Ready.',
+      'order-delivered': 'Order marked as Delivered.',
+      'order-cancelled': 'Order was rejected/cancelled successfully.',
+      'order-updated': 'Kitchen order was updated successfully.',
+    };
+
+    return {
+      type: 'success',
+      text: messages[success] ?? 'Kitchen action completed successfully.',
+    };
+  }
+
+  if (error) {
+    const messages: Record<string, string> = {
+      'status-update-failed':
+        'Unable to update the kitchen order. Please refresh and try again.',
+    };
+
+    return {
+      type: 'error',
+      text: messages[error] ?? 'Something went wrong.',
+    };
+  }
+
+  return null;
+}
+
+function buildKitchenRedirectUrl({
+  success,
+  error,
+  history,
+}: {
+  success?: string;
+  error?: string;
+  history?: string;
+}) {
+  const query = new URLSearchParams();
+
+  if (history) {
+    query.set('history', history);
+  }
+
+  if (success) {
+    query.set('success', success);
+  }
+
+  if (error) {
+    query.set('error', error);
+  }
+
+  return query.toString()
+    ? `/dashboard/kitchen?${query.toString()}`
+    : '/dashboard/kitchen';
+}
+
+async function updateKitchenOrderStatusAction(formData: FormData) {
+  'use server';
+
+  const status = formData.get('status') as OrderStatus;
+  const history = String(formData.get('history') || '');
+
+  await updateOrderStatusAction(formData);
+
+  redirect(
+    buildKitchenRedirectUrl({
+      success: getKitchenSuccessCode(status),
+      history,
+    })
+  );
+}
+
+function KitchenToast({
+  message,
+  showHistory,
+}: {
+  message: KitchenToastMessage;
+  showHistory: boolean;
+}) {
+  if (!message) {
+    return null;
+  }
+
+  const closeHref = showHistory
+    ? '/dashboard/kitchen?history=1'
+    : '/dashboard/kitchen';
+
+  return (
+    <div className="fixed right-5 top-5 z-[9999] w-[calc(100vw-2.5rem)] max-w-md">
+      <div
+        className={
+          message.type === 'success'
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-100'
+        }
+      >
+        <div
+          className={
+            message.type === 'success'
+              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+          }
+        >
+          {message.type === 'success' ? (
+            <CheckCircle2 className="size-5" />
+          ) : (
+            <AlertTriangle className="size-5" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black">
+            {message.type === 'success' ? 'Success' : 'Action failed'}
+          </p>
+          <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
+        </div>
+
+        <Link
+          href={closeHref}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white dark:bg-white/10 dark:hover:bg-white/20"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat('en-PH', {
@@ -107,16 +274,27 @@ function OrderActionButton({
   status,
   label,
   tone = 'dark',
+  history,
 }: {
   orderId: string;
   status: OrderStatus;
   label: string;
   tone?: 'dark' | 'danger' | 'gold' | 'light';
+  history?: string;
 }) {
   return (
-    <form action={updateOrderStatusAction} className="w-full">
+    <form action={updateKitchenOrderStatusAction} className="w-full">
       <input type="hidden" name="orderId" value={orderId} />
       <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="history" value={history ?? ''} />
+      <input
+        type="hidden"
+        name="note"
+        value={`Kitchen display changed status to ${status.replaceAll(
+          '_',
+          ' '
+        )}`}
+      />
 
       <button
         type="submit"
@@ -461,11 +639,16 @@ function KitchenHistoryItemLine({ item }: { item: KitchenOrderItem }) {
 export default async function KitchenDisplayPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ history?: string }>;
+  searchParams?: Promise<{
+    history?: string;
+    success?: string;
+    error?: string;
+  }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
   const showHistory = params?.history === '1';
+  const message = getKitchenMessage(params?.success, params?.error);
 
   const baseWhere =
     user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
@@ -557,6 +740,7 @@ export default async function KitchenDisplayPage({
       className="min-h-screen bg-white p-6 text-neutral-950 dark:bg-neutral-950 dark:text-white"
     >
       <RealtimeKitchenRefresh />
+      <KitchenToast message={message} showHistory={showHistory} />
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <PageHeader

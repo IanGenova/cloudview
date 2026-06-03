@@ -674,7 +674,7 @@ async function cancelGuestOrderItemAction(formData: FormData) {
     throw new Error('This item is already cancelled.');
   }
 
-  let finalOrderStatus = order.status;
+  let finalOrderStatus: OrderStatus = order.status;
   let statusUpdatedAt = new Date();
   let restoredProductIds: string[] = [];
 

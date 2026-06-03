@@ -14,13 +14,18 @@ function getActiveTab(tab?: string): InventoryTab {
 function getMessage(error?: string, success?: string) {
   if (success) {
     const messages: Record<string, string> = {
-      'stock-updated': 'Menu stock availability was updated.',
-      'stocks-initialized': 'Menu stock records were initialized.',
-      'service-stock-enabled': 'Service inventory tracking was enabled.',
-      'service-stock-disabled': 'Service inventory tracking was disabled.',
-      'service-stock-updated': 'Service request inventory was updated.',
+      'stock-updated':
+        'Menu stock was updated successfully.',
+      'stocks-initialized':
+        'Missing menu stock records were initialized successfully.',
+      'service-stock-enabled':
+        'Service inventory tracking was enabled successfully.',
+      'service-stock-disabled':
+        'Service inventory tracking was disabled successfully.',
+      'service-stock-updated':
+        'Service request inventory was updated successfully.',
       'service-stocks-initialized':
-        'Service inventory records were initialized.',
+        'Missing service inventory records were initialized successfully.',
     };
 
     return {
