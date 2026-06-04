@@ -6,11 +6,16 @@ export function MobileNav() {
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {[
           ['Home', '/dashboard'],
+          ['Hotels', '/dashboard/hotels'],
+          ['Hotel Guide', '/dashboard/hotel-guide'],
+          ['Rooms', '/dashboard/locations'],
+          ['NFC Tags', '/dashboard/tags'],
+          ['Menu', '/dashboard/menu'],
+          ['Inventory', '/dashboard/inventory'],
           ['Orders', '/dashboard/orders'],
           ['Kitchen', '/dashboard/kitchen'],
           ['Requests', '/dashboard/service-requests'],
-          ['Menu', '/dashboard/menu'],
-          ['Inventory', '/dashboard/inventory']
+
         ].map(([label, href]) => (
           <Link key={href} href={href} className="shrink-0 rounded-full bg-neutral-100 px-4 py-2 text-sm font-bold">{label}</Link>
         ))}
