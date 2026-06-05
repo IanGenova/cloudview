@@ -8,6 +8,7 @@ import {
   verifyPassword,
 } from '@/lib/auth';
 import { loginSchema } from '@/lib/validators';
+import type { User } from '@prisma/client';
 
 export type LoginActionState =
   | {
@@ -31,11 +32,22 @@ export async function loginAction(
     };
   }
 
-  const user = await db.user.findUnique({
-    where: {
-      email: parsed.data.email,
-    },
-  });
+  let user: User | null = null;
+
+  try {
+    user = await db.user.findUnique({
+      where: {
+        email: parsed.data.email,
+      },
+    });
+  } catch (error) {
+    console.error('Login database lookup failed:', error);
+
+    return {
+      error:
+        'Database connection failed. Check DATABASE_URL username, password, host, port, and database name.',
+    };
+  }
 
   if (!user || !user.isActive) {
     return {

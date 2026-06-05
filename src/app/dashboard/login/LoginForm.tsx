@@ -1,17 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useActionState } from 'react';
-import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { useActionState, useEffect, useState } from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { loginAction, type LoginActionState } from './actions';
 
-function LoginToast({
-  state,
-}: {
-  state: LoginActionState;
-}) {
+function LoginToast({ state }: { state: LoginActionState }) {
   const [visible, setVisible] = useState(Boolean(state?.error || state?.success));
 
   useEffect(() => {
@@ -81,40 +85,127 @@ function LoginToast({
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(loginAction, undefined);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   return (
     <>
       <LoginToast state={state} />
 
-      <form action={action} className="space-y-4">
+      <form action={action} className="space-y-6">
         <div>
-          <label className="mb-2 block text-sm font-bold">Email</label>
-          <Input
-            name="email"
-            type="email"
-            defaultValue="admin@cloudview.test"
-            required
-          />
+          <label
+            htmlFor="email"
+            className="mb-2 block text-sm font-black text-ink"
+          >
+            Email
+          </label>
+
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-400" />
+
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              defaultValue="admin@cloudview.test"
+              required
+              autoComplete="email"
+              className="h-14 rounded-2xl border-neutral-200 bg-white pl-12 text-base font-semibold shadow-sm transition focus:border-gold focus:ring-gold/20"
+            />
+          </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-bold">Password</label>
-          <Input
-            name="password"
-            type="password"
-            defaultValue="Password123!"
-            required
-          />
+          <label
+            htmlFor="password"
+            className="mb-2 block text-sm font-black text-ink"
+          >
+            Password
+          </label>
+
+          <div className="relative">
+            <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-400" />
+
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              defaultValue="Password123!"
+              required
+              autoComplete="current-password"
+              className="h-14 rounded-2xl border-neutral-200 bg-white px-12 text-base font-semibold shadow-sm transition focus:border-gold focus:ring-gold/20"
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-4 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-ink"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? (
+                <EyeOff className="size-5" />
+              ) : (
+                <Eye className="size-5" />
+              )}
+            </button>
+          </div>
         </div>
 
-        <Button disabled={pending} className="w-full" size="lg">
-          {pending ? 'Signing in...' : 'Sign in'}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-3 text-sm font-bold text-neutral-600">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              className="size-5 rounded border-neutral-300 text-ink accent-ink"
+            />
+            Remember me
+          </label>
+
+          <button
+            type="button"
+            className="text-sm font-black text-gold transition hover:text-ink"
+          >
+            Forgot password?
+          </button>
+        </div>
+
+        <Button
+          disabled={pending}
+          className="h-16 w-full rounded-2xl bg-ink text-base font-black text-white shadow-[0_16px_34px_rgba(11,31,58,0.24)] transition hover:-translate-y-0.5 hover:bg-black disabled:translate-y-0 disabled:opacity-70"
+          size="lg"
+        >
+          <span className="inline-flex items-center gap-3">
+            <LockKeyhole className="size-5" />
+            {pending ? 'Signing in...' : 'Sign in'}
+          </span>
         </Button>
 
-        <p className="text-center text-xs text-neutral-500">
-          Seed accounts: admin@cloudview.test / hoteladmin@cloudview.test /
-          staff@cloudview.test / kitchen@cloudview.test
-        </p>
+        <div className="pt-2">
+          <div className="flex items-center gap-4">
+            <span className="h-px flex-1 bg-neutral-200" />
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-gold">
+              Demo Accounts
+            </p>
+            <span className="h-px flex-1 bg-neutral-200" />
+          </div>
+
+          <div className="mt-5 flex items-start justify-center gap-3 text-center text-sm font-semibold leading-7 text-neutral-600">
+            <UserRound className="mt-1 size-5 shrink-0 text-neutral-500" />
+
+            <p>
+              admin@cloudview.test{' '}
+              <span className="mx-2 font-black text-gold">/</span>
+              hoteladmin@cloudview.test{' '}
+              <span className="mx-2 font-black text-gold">/</span>
+              <br className="hidden sm:block" />
+              staff@cloudview.test{' '}
+              <span className="mx-2 font-black text-gold">/</span>
+              kitchen@cloudview.test
+            </p>
+          </div>
+        </div>
       </form>
     </>
   );

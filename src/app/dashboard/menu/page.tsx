@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { MenuImageUploadPreview } from '@/components/dashboard/MenuImageUploadPreview';
 import { ModalOpenButton } from '@/components/dashboard/ModalOpenButton';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -615,7 +616,6 @@ export default async function MenuManagementPage({
               >
                 <form
                   action={updateProductAction}
-                  encType="multipart/form-data"
                   className="grid gap-5 md:grid-cols-2"
                 >
                   <input type="hidden" name="productId" value={product.id} />
@@ -678,16 +678,16 @@ export default async function MenuManagementPage({
                   </FormField>
 
                   <FormField
-                    label="Upload New Product Image"
-                    helper="Leave blank to keep the current image."
-                    className="md:col-span-2"
-                  >
-                    <Input
-                      name="imageFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                    />
-                  </FormField>
+                        label="Upload New Product Image"
+                        helper="Leave blank to keep the current image."
+                        className="md:col-span-2"
+                      >
+                        <MenuImageUploadPreview
+                          name="imageFile"
+                          currentImageUrl={imageUrl}
+                          currentImageAlt={product.name}
+                        />
+                      </FormField>
 
                   <FormField
                     label="Image URL"
@@ -753,7 +753,6 @@ export default async function MenuManagementPage({
       >
         <form
           action={createProductAction}
-          encType="multipart/form-data"
           className="grid gap-5 md:grid-cols-2"
         >
           <FormField
@@ -805,11 +804,7 @@ export default async function MenuManagementPage({
           </FormField>
 
           <FormField label="Upload Product Image" className="md:col-span-2">
-            <Input
-              name="imageFile"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-            />
+            <MenuImageUploadPreview name="imageFile" />
           </FormField>
 
           <FormField label="Image URL" className="md:col-span-2">
