@@ -1,9 +1,10 @@
 'use client';
 
-import type { Role } from '@prisma/client';
+import type { DashboardModule, Role } from '@prisma/client';
 import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+
 import {
   createUserAccountAction,
   deleteUserAccountAction,
@@ -17,6 +18,14 @@ type HotelOption = {
   name: string;
 };
 
+type UserDashboardPermission = {
+  module: DashboardModule;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+};
+
 type UserAccount = {
   id: string;
   name: string;
@@ -27,7 +36,77 @@ type UserAccount = {
     id: string;
     name: string;
   } | null;
+  dashboardPermissions: UserDashboardPermission[];
 };
+type PermissionKey = 'canView' | 'canCreate' | 'canEdit' | 'canDelete';
+
+type PermissionDraft = Record<
+  string,
+  {
+    canView: boolean;
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  }
+>;
+
+type CreateUserDraft = {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+  hotelId: string;
+  permissions: PermissionDraft;
+};
+
+function createEmptyPermissionDraft(currentUserRole: Role): PermissionDraft {
+  const draft: PermissionDraft = {};
+
+  dashboardModuleOptions
+    .filter((module) => {
+      if (currentUserRole === 'SUPER_ADMIN') {
+        return true;
+      }
+
+      return !module.superAdminOnly;
+    })
+    .forEach((module) => {
+      draft[module.key] = {
+        canView: false,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+      };
+    });
+
+  return draft;
+}
+
+function createInitialUserDraft({
+  allowedRoles,
+  hotels,
+  currentUserRole,
+}: {
+  allowedRoles: Role[];
+  hotels: HotelOption[];
+  currentUserRole: Role;
+}): CreateUserDraft {
+  const defaultRole = allowedRoles[0] ?? 'STAFF';
+
+  return {
+    name: '',
+    email: '',
+    password: '',
+    role: defaultRole,
+    hotelId:
+      currentUserRole === 'SUPER_ADMIN'
+        ? defaultRole === 'SUPER_ADMIN'
+          ? ''
+          : hotels[0]?.id ?? ''
+        : hotels[0]?.id ?? '',
+    permissions: createEmptyPermissionDraft(currentUserRole),
+  };
+}
 
 type ToastMessage =
   | {
@@ -35,6 +114,219 @@ type ToastMessage =
       text: string;
     }
   | null;
+
+  const dashboardModuleOptions: {
+  key: DashboardModule;
+  label: string;
+  description: string;
+  superAdminOnly?: boolean;
+}[] = [
+  {
+    key: 'OVERVIEW' as DashboardModule,
+    label: 'Overview',
+    description: 'Dashboard summary and quick overview.',
+  },
+  {
+    key: 'HOTELS' as DashboardModule,
+    label: 'Hotels',
+    description: 'Create and manage hotel records.',
+    superAdminOnly: true,
+  },
+  {
+    key: 'HOTEL_GUIDE' as DashboardModule,
+    label: 'Hotel Guide',
+    description: 'Manage guest portal guide content.',
+  },
+  {
+    key: 'ROOMS_LOCATIONS' as DashboardModule,
+    label: 'Rooms & Locations',
+    description: 'Manage rooms, locations, and assigned areas.',
+  },
+  {
+    key: 'NFC_TAGS' as DashboardModule,
+    label: 'NFC Tags',
+    description: 'Manage NFC guest access tags.',
+  },
+  {
+    key: 'MENU' as DashboardModule,
+    label: 'Menu',
+    description: 'Manage food menu products and bundles.',
+  },
+  {
+    key: 'INVENTORY' as DashboardModule,
+    label: 'Inventory',
+    description: 'Manage menu and service inventory.',
+  },
+  {
+    key: 'ORDERS' as DashboardModule,
+    label: 'Orders',
+    description: 'Manage guest food orders.',
+  },
+  {
+    key: 'KITCHEN_DISPLAY' as DashboardModule,
+    label: 'Kitchen Display',
+    description: 'Access kitchen order display.',
+  },
+  {
+    key: 'SERVICES_MODULE' as DashboardModule,
+    label: 'Services Module',
+    description: 'Manage hotel service catalog.',
+  },
+  {
+    key: 'SERVICE_REQUESTS' as DashboardModule,
+    label: 'Service Requests',
+    description: 'Manage guest service requests.',
+  },
+  {
+    key: 'POS_TERMINAL' as DashboardModule,
+    label: 'POS Terminal',
+    description: 'Access food and service POS.',
+  },
+  {
+    key: 'ANALYTICS' as DashboardModule,
+    label: 'Analytics',
+    description: 'View reports and analytics.',
+  },
+  {
+    key: 'HOTEL_SETTINGS' as DashboardModule,
+    label: 'Hotel Settings',
+    description: 'Edit hotel-level configuration.',
+  },
+  {
+    key: 'USER_ACCOUNT_SETTINGS' as DashboardModule,
+    label: 'User Account Settings',
+    description: 'Manage dashboard users and access.',
+  },
+];
+
+const permissionColumns = [
+  {
+    key: 'canView',
+    label: 'View',
+  },
+  {
+    key: 'canCreate',
+    label: 'Create',
+  },
+  {
+    key: 'canEdit',
+    label: 'Edit',
+  },
+  {
+    key: 'canDelete',
+    label: 'Delete',
+  },
+] as const;
+
+function PermissionMatrix({
+  permissions,
+  currentUserRole,
+  compact = false,
+  permissionDraft,
+  onPermissionChange,
+}: {
+  permissions?: UserDashboardPermission[];
+  currentUserRole: Role;
+  compact?: boolean;
+  permissionDraft?: PermissionDraft;
+  onPermissionChange?: (
+    module: DashboardModule,
+    key: PermissionKey,
+    checked: boolean
+  ) => void;
+}) {
+  const isControlled = Boolean(permissionDraft && onPermissionChange);
+
+  const permissionMap = new Map(
+    (permissions ?? []).map((permission) => [permission.module, permission])
+  );
+
+  const visibleModules = dashboardModuleOptions.filter((module) => {
+    if (currentUserRole === 'SUPER_ADMIN') {
+      return true;
+    }
+
+    return !module.superAdminOnly;
+  });
+
+  return (
+    <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4">
+      <input type="hidden" name="permissionsEnabled" value="1" />
+
+      <div className="mb-4">
+        <p className="text-sm font-black">Dashboard Module Access</p>
+        <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
+          Select which dashboard pages and functions this user can access.
+        </p>
+      </div>
+
+      <div
+        className={
+          compact
+            ? 'max-h-[320px] space-y-3 overflow-y-auto pr-1'
+            : 'max-h-[520px] space-y-3 overflow-y-auto pr-1'
+        }
+      >
+        {visibleModules.map((module) => {
+          const savedPermission = permissionMap.get(module.key);
+          const draftPermission = permissionDraft?.[module.key];
+
+          return (
+            <div
+              key={module.key}
+              className="rounded-2xl border border-neutral-200 bg-white p-4"
+            >
+              <div>
+                <p className="text-sm font-black leading-tight">
+                  {module.label}
+                </p>
+                <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
+                  {module.description}
+                </p>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {permissionColumns.map((column) => {
+                  const checked = isControlled
+                    ? Boolean(draftPermission?.[column.key])
+                    : Boolean(savedPermission?.[column.key]);
+
+                  return (
+                    <label
+                      key={`${module.key}-${column.key}`}
+                      className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-black text-neutral-700 transition hover:border-neutral-400 hover:bg-white"
+                    >
+                      <span>{column.label}</span>
+
+                      <input
+                        type="checkbox"
+                        name={`permission:${module.key}:${column.key}`}
+                        checked={isControlled ? checked : undefined}
+                        defaultChecked={!isControlled ? checked : undefined}
+                        onChange={
+                          isControlled
+                            ? (event) => {
+                                onPermissionChange?.(
+                                  module.key,
+                                  column.key,
+                                  event.target.checked
+                                );
+                              }
+                            : undefined
+                        }
+                        className="size-4 cursor-pointer rounded border-neutral-300 accent-black"
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const roleLabels: Record<Role, string> = {
   SUPER_ADMIN: 'Super Admin',
@@ -167,29 +459,276 @@ function Modal({
   title,
   children,
   onClose,
+  size = 'default',
 }: {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
+  size?: 'default' | 'wide';
 }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-xl rounded-[2rem] bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="text-xl font-black">{title}</h2>
+  const widthClass = size === 'wide' ? 'max-w-3xl' : 'max-w-xl';
 
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-6 sm:items-center">
+      <div
+        className={`flex max-h-[calc(100dvh-2rem)] w-full ${widthClass} flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl`}
+      >
+        <div className="shrink-0 border-b border-neutral-100 bg-white px-6 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-black">{title}</h2>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid size-11 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateUserModal({
+  hotels,
+  allowedRoles,
+  currentUserRole,
+  onClose,
+  onToast,
+}: {
+  hotels: HotelOption[];
+  allowedRoles: Role[];
+  currentUserRole: Role;
+  onClose: () => void;
+  onToast: (message: ToastMessage) => void;
+}) {
+  const router = useRouter();
+  const [state, formAction] = useActionState(
+    createUserAccountAction,
+    initialState
+  );
+
+  const [draft, setDraft] = useState<CreateUserDraft>(() =>
+    createInitialUserDraft({
+      allowedRoles,
+      hotels,
+      currentUserRole,
+    })
+  );
+
+  useEffect(() => {
+    if (!state.message) {
+      return;
+    }
+
+    onToast({
+      type: state.ok ? 'success' : 'error',
+      text: state.message,
+    });
+
+    if (state.ok) {
+      router.refresh();
+      onClose();
+    }
+  }, [state, router, onClose, onToast]);
+
+  function updateDraft<K extends keyof CreateUserDraft>(
+    key: K,
+    value: CreateUserDraft[K]
+  ) {
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function updateRole(role: Role) {
+    setDraft((current) => ({
+      ...current,
+      role,
+      hotelId:
+        role === 'SUPER_ADMIN'
+          ? ''
+          : current.hotelId || hotels[0]?.id || '',
+    }));
+  }
+
+  function updatePermission(
+    module: DashboardModule,
+    key: PermissionKey,
+    checked: boolean
+  ) {
+    setDraft((current) => {
+      const currentModule = current.permissions[module] ?? {
+        canView: false,
+        canCreate: false,
+        canEdit: false,
+        canDelete: false,
+      };
+
+      const nextModule = {
+        ...currentModule,
+        [key]: checked,
+      };
+
+      if (
+        key !== 'canView' &&
+        checked
+      ) {
+        nextModule.canView = true;
+      }
+
+      if (
+        key === 'canView' &&
+        !checked
+      ) {
+        nextModule.canCreate = false;
+        nextModule.canEdit = false;
+        nextModule.canDelete = false;
+      }
+
+      return {
+        ...current,
+        permissions: {
+          ...current.permissions,
+          [module]: nextModule,
+        },
+      };
+    });
+  }
+
+  return (
+    <Modal title="Create New User" onClose={onClose} size="wide">
+      <form action={formAction} className="space-y-4">
+        <StateMessage state={state} />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Full Name
+            </label>
+            <input
+              name="name"
+              required
+              value={draft.name}
+              onChange={(event) => updateDraft('name', event.target.value)}
+              placeholder="Juan Dela Cruz"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Email
+            </label>
+            <input
+              name="email"
+              type="email"
+              required
+              value={draft.email}
+              onChange={(event) => updateDraft('email', event.target.value)}
+              placeholder="user@email.com"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Temporary Password
+            </label>
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              value={draft.password}
+              onChange={(event) => updateDraft('password', event.target.value)}
+              placeholder="Minimum 8 characters"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+            <p className="mt-1 text-xs text-neutral-500">
+              Must include uppercase, lowercase, and number.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              User Role
+            </label>
+            <select
+              name="role"
+              value={draft.role}
+              onChange={(event) => updateRole(event.target.value as Role)}
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            >
+              {allowedRoles.map((role) => (
+                <option key={role} value={role}>
+                  {roleLabels[role]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Hotel Access
+            </label>
+            <select
+              name="hotelId"
+              value={draft.hotelId}
+              onChange={(event) => updateDraft('hotelId', event.target.value)}
+              disabled={
+                currentUserRole !== 'SUPER_ADMIN' ||
+                draft.role === 'SUPER_ADMIN'
+              }
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+            >
+              {currentUserRole === 'SUPER_ADMIN' ? (
+                <option value="">No hotel / Super Admin</option>
+              ) : null}
+
+              {hotels.map((hotel) => (
+                <option key={hotel.id} value={hotel.id}>
+                  {hotel.name}
+                </option>
+              ))}
+            </select>
+
+            {draft.role !== 'SUPER_ADMIN' && !draft.hotelId ? (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                Please select a hotel for this role.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <PermissionMatrix
+          currentUserRole={currentUserRole}
+          compact
+          permissionDraft={draft.permissions}
+          onPermissionChange={updatePermission}
+        />
+
+        <div className="sticky bottom-0 -mx-6 flex justify-end gap-2 border-t border-neutral-200 bg-white/95 px-6 py-4 backdrop-blur">
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
           >
-            ✕
+            Cancel
           </button>
-        </div>
 
-        {children}
-      </div>
-    </div>
+          <SubmitButton>Create User Account</SubmitButton>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -230,90 +769,97 @@ function EditUserModal({
     }
   }, [state, router, onClose, onToast]);
 
-  return (
-    <Modal title="Edit User Account" onClose={onClose}>
-      <form action={formAction} className="space-y-4">
-        <input type="hidden" name="userId" value={account.id} />
+ return (
+  <Modal title="Edit User Account" onClose={onClose}>
+    <form action={formAction} className="space-y-4">
+      <input type="hidden" name="userId" value={account.id} />
 
-        <StateMessage state={state} />
+      <StateMessage state={state} />
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Full Name
-          </label>
-          <input
-            name="name"
-            defaultValue={account.name}
-            required
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-          />
-        </div>
+      <div>
+        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          Full Name
+        </label>
+        <input
+          name="name"
+          defaultValue={account.name}
+          required
+          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+      </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Email
-          </label>
-          <input
-            name="email"
-            type="email"
-            defaultValue={account.email}
-            required
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-          />
-        </div>
+      <div>
+        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          Email
+        </label>
+        <input
+          name="email"
+          type="email"
+          defaultValue={account.email}
+          required
+          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        />
+      </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            User Role
-          </label>
-          <select
-            name="role"
-            defaultValue={account.role}
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-          >
-            {allowedRoles.map((role) => (
-              <option key={role} value={role}>
-                {roleLabels[role]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          User Role
+        </label>
+        <select
+          name="role"
+          defaultValue={account.role}
+          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+        >
+          {allowedRoles.map((role) => (
+            <option key={role} value={role}>
+              {roleLabels[role]}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Hotel Access
-          </label>
-          <select
-            name="hotelId"
-            defaultValue={account.hotelId ?? ''}
-            disabled={currentUserRole !== 'SUPER_ADMIN'}
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
-          >
-            {currentUserRole === 'SUPER_ADMIN' ? (
-              <option value="">No hotel / Super Admin</option>
-            ) : null}
+      <div>
+        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          Hotel Access
+        </label>
+        <select
+          name="hotelId"
+          defaultValue={account.hotelId ?? ''}
+          disabled={currentUserRole !== 'SUPER_ADMIN'}
+          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+        >
+          {currentUserRole === 'SUPER_ADMIN' ? (
+            <option value="">No hotel / Super Admin</option>
+          ) : null}
 
-            {hotels.map((hotel) => (
-              <option key={hotel.id} value={hotel.id}>
-                {hotel.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          {hotels.map((hotel) => (
+            <option key={hotel.id} value={hotel.id}>
+              {hotel.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-          >
-            Cancel
-          </button>
-          <SubmitButton>Save Changes</SubmitButton>
-        </div>
-      </form>
-    </Modal>
-  );
+      <PermissionMatrix
+        permissions={account.dashboardPermissions}
+        currentUserRole={currentUserRole}
+        compact
+      />
+
+      <div className="sticky bottom-0 -mx-6 flex justify-end gap-2 border-t border-neutral-200 bg-white/95 px-6 py-4 backdrop-blur">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+        >
+          Cancel
+        </button>
+
+        <SubmitButton>Save Changes</SubmitButton>
+      </div>
+    </form>
+  </Modal>
+);
 }
 
 function ResetPasswordModal({
@@ -479,145 +1025,41 @@ export function UserAccountSettingsClient({
   allowedRoles: Role[];
   currentUserRole: Role;
 }) {
-  const router = useRouter();
   const [toast, setToast] = useState<ToastMessage>(null);
 
-  const [createState, createFormAction] = useActionState(
-    createUserAccountAction,
-    initialState
-  );
-
+  const [creatingUser, setCreatingUser] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [resetPasswordUser, setResetPasswordUser] =
     useState<UserAccount | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
 
-  useEffect(() => {
-    if (!createState.message) {
-      return;
-    }
-
-    setToast({
-      type: createState.ok ? 'success' : 'error',
-      text: createState.message,
-    });
-
-    if (createState.ok) {
-      router.refresh();
-    }
-  }, [createState, router]);
-
   return (
     <>
       <Toast message={toast} onClose={() => setToast(null)} />
 
-      <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
+      <div className="space-y-5">
         <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-black">Create New User</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Add a dashboard user and assign their role.
-          </p>
-
-          <form action={createFormAction} className="mt-5 space-y-4">
-            <StateMessage state={createState} />
-
+          <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
             <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Full Name
-              </label>
-              <input
-                name="name"
-                required
-                placeholder="Juan Dela Cruz"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Email
-              </label>
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder="user@email.com"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Temporary Password
-              </label>
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                placeholder="Minimum 8 characters"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-              <p className="mt-1 text-xs text-neutral-500">
-                Must include uppercase, lowercase, and number.
+              <h2 className="text-xl font-black">Existing Users</h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Create users, edit accounts, reset passwords, delete users, and
+                manage dashboard module access.
               </p>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                User Role
-              </label>
-              <select
-                name="role"
-                defaultValue={allowedRoles[0]}
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              >
-                {allowedRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {roleLabels[role]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Hotel Access
-              </label>
-              <select
-                name="hotelId"
-                defaultValue=""
-                disabled={currentUserRole !== 'SUPER_ADMIN'}
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
-              >
-                {currentUserRole === 'SUPER_ADMIN' ? (
-                  <option value="">No hotel / Super Admin</option>
-                ) : null}
-
-                {hotels.map((hotel) => (
-                  <option key={hotel.id} value={hotel.id}>
-                    {hotel.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <button
-              type="submit"
-              className="h-11 w-full rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+              type="button"
+              onClick={() => setCreatingUser(true)}
+              className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
             >
-              Create User Account
+              Create New User
             </button>
-          </form>
+          </div>
         </div>
 
         <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-black">Existing Users</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Edit users, reset passwords, or delete user accounts.
-          </p>
-
-          <div className="mt-5 space-y-4">
+          <div className="mt-1 space-y-4">
             {users.map((account) => (
               <div
                 key={account.id}
@@ -627,6 +1069,7 @@ export function UserAccountSettingsClient({
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-black">{account.name}</h3>
+
                       <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-700">
                         {roleLabels[account.role]}
                       </span>
@@ -640,6 +1083,16 @@ export function UserAccountSettingsClient({
                       Hotel:{' '}
                       <span className="font-bold">
                         {account.hotel?.name ?? 'No hotel assigned'}
+                      </span>
+                    </p>
+
+                    <p className="mt-2 text-xs font-bold text-neutral-500">
+                      Modules:{' '}
+                      <span className="text-neutral-800">
+                        {account.dashboardPermissions?.filter(
+                          (permission) => permission.canView
+                        ).length ?? 0}{' '}
+                        visible
                       </span>
                     </p>
                   </div>
@@ -677,13 +1130,24 @@ export function UserAccountSettingsClient({
               <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
                 <p className="font-black">No user accounts found.</p>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Create your first dashboard user from the form.
+                  Create your first dashboard user using the Create New User
+                  button.
                 </p>
               </div>
             ) : null}
           </div>
         </div>
       </div>
+
+      {creatingUser ? (
+        <CreateUserModal
+          hotels={hotels}
+          allowedRoles={allowedRoles}
+          currentUserRole={currentUserRole}
+          onClose={() => setCreatingUser(false)}
+          onToast={setToast}
+        />
+      ) : null}
 
       {editingUser ? (
         <EditUserModal

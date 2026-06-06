@@ -13,14 +13,14 @@ function getAllowedRoles(role: Role) {
 }
 
 export default async function UserAccountSettingsPage() {
-  const user = await requireUser();
+  const currentUser = await requireUser();
 
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
-  const allowedRoles = getAllowedRoles(user.role);
+  const allowedRoles = getAllowedRoles(currentUser.role);
 
-  const [hotels, users] = await Promise.all([
-    user.role === Role.SUPER_ADMIN
+  const [hotels, userAccounts] = await Promise.all([
+    currentUser.role === Role.SUPER_ADMIN
       ? db.hotel.findMany({
           select: {
             id: true,
@@ -32,7 +32,7 @@ export default async function UserAccountSettingsPage() {
         })
       : db.hotel.findMany({
           where: {
-            id: user.hotelId!,
+            id: currentUser.hotelId!,
           },
           select: {
             id: true,
@@ -45,10 +45,10 @@ export default async function UserAccountSettingsPage() {
 
     db.user.findMany({
       where:
-        user.role === Role.SUPER_ADMIN
+        currentUser.role === Role.SUPER_ADMIN
           ? {}
           : {
-              hotelId: user.hotelId!,
+              hotelId: currentUser.hotelId!,
             },
       select: {
         id: true,
@@ -62,6 +62,18 @@ export default async function UserAccountSettingsPage() {
             name: true,
           },
         },
+        dashboardPermissions: {
+          select: {
+            module: true,
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: true,
+          },
+          orderBy: {
+            module: 'asc',
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -69,18 +81,34 @@ export default async function UserAccountSettingsPage() {
     }),
   ]);
 
+  const users = userAccounts.map((account) => ({
+    id: account.id,
+    name: account.name,
+    email: account.email,
+    role: account.role,
+    hotelId: account.hotelId,
+    hotel: account.hotel,
+    dashboardPermissions: account.dashboardPermissions.map((permission) => ({
+      module: permission.module,
+      canView: permission.canView,
+      canCreate: permission.canCreate,
+      canEdit: permission.canEdit,
+      canDelete: permission.canDelete,
+    })),
+  }));
+
   return (
     <div>
       <PageHeader
         title="User Account Settings"
-        description="Create user accounts, assign hotel access, and manage dashboard roles."
+        description="Create user accounts, assign hotel access, manage dashboard roles, and control module-level permissions."
       />
 
       <UserAccountSettingsClient
         users={users}
         hotels={hotels}
         allowedRoles={allowedRoles}
-        currentUserRole={user.role}
+        currentUserRole={currentUser.role}
       />
     </div>
   );

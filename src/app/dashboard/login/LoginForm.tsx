@@ -117,60 +117,40 @@ export function LoginForm() {
         </div>
 
         <div>
-          <label
-            htmlFor="password"
-            className="mb-2 block text-sm font-black text-ink"
-          >
-            Password
-          </label>
-
-          <div className="relative">
-            <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-neutral-400" />
-
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              defaultValue="Password123!"
-              required
-              autoComplete="current-password"
-              className="h-14 rounded-2xl border-neutral-200 bg-white px-12 text-base font-semibold shadow-sm transition focus:border-gold focus:ring-gold/20"
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-4 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-ink"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            <label
+              htmlFor="password"
+              className="mb-2 block text-sm font-black text-ink"
             >
-              {showPassword ? (
-                <EyeOff className="size-5" />
-              ) : (
-                <Eye className="size-5" />
-              )}
-            </button>
+              Password
+            </label>
+
+            <div className="relative">
+              <LockKeyhole className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-neutral-400" />
+
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                defaultValue="Password123!"
+                required
+                autoComplete="current-password"
+                className="h-14 rounded-2xl border-neutral-200 bg-white pl-14 pr-14 text-base font-semibold shadow-sm transition focus:border-gold focus:ring-gold/20"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-4 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-ink"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="size-5" />
+                ) : (
+                  <Eye className="size-5" />
+                )}
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-3 text-sm font-bold text-neutral-600">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) => setRememberMe(event.target.checked)}
-              className="size-5 rounded border-neutral-300 text-ink accent-ink"
-            />
-            Remember me
-          </label>
-
-          <button
-            type="button"
-            className="text-sm font-black text-gold transition hover:text-ink"
-          >
-            Forgot password?
-          </button>
-        </div>
-
         <Button
           disabled={pending}
           className="h-16 w-full rounded-2xl bg-ink text-base font-black text-white shadow-[0_16px_34px_rgba(11,31,58,0.24)] transition hover:-translate-y-0.5 hover:bg-black disabled:translate-y-0 disabled:opacity-70"

@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+  
 }
 
 enum Role {
@@ -99,6 +100,44 @@ enum OrderItemStatus {
   CANCELLED
 }
 
+enum DashboardModule {
+  OVERVIEW
+  HOTELS
+  HOTEL_GUIDE
+  ROOMS_LOCATIONS
+  NFC_TAGS
+  MENU
+  INVENTORY
+  ORDERS
+  KITCHEN_DISPLAY
+  SERVICES_MODULE
+  SERVICE_REQUESTS
+  POS_TERMINAL
+  ANALYTICS
+  HOTEL_SETTINGS
+  USER_ACCOUNT_SETTINGS
+}
+
+model UserDashboardPermission {
+  id        String          @id @default(cuid())
+  userId    String
+  module    DashboardModule
+
+  canView   Boolean         @default(false)
+  canCreate Boolean         @default(false)
+  canEdit   Boolean         @default(false)
+  canDelete Boolean         @default(false)
+
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module])
+  @@index([userId])
+  @@index([module])
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -116,6 +155,7 @@ model User {
   serviceStatusUpdates    ServiceRequestStatusHistory[]
   inventoryMovements      InventoryMovement[]
   activityLogs            ActivityLog[]
+  dashboardPermissions UserDashboardPermission[]
 
   @@index([hotelId])
 }

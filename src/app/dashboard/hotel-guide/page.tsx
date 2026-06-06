@@ -16,6 +16,7 @@ function getMessage(error?: string, success?: string) {
       'image-uploaded': 'Gallery image uploaded successfully.',
       'image-deleted': 'Gallery image deleted successfully.',
       seeded: 'Default hotel guide content added successfully.',
+      'pool-seeded': 'Pool guide content added or updated successfully.',
     };
 
     return {

@@ -13,6 +13,7 @@ import {
   deleteGuideItemAction,
   deleteGuideSectionAction,
   seedDefaultHotelGuideAction,
+  seedPoolGuideContentAction,
   updateGuideItemAction,
   updateGuideSectionAction,
   uploadGuideImageAction,
@@ -89,6 +90,9 @@ const iconOptions = [
   'Search',
   'Shield',
   'HelpCircle',
+  'Sparkles',
+'ShieldCheck',
+'Clock3',
 ];
 
 const itemTypeOptions = Object.values(HotelGuideItemType);
@@ -793,23 +797,48 @@ export function HotelGuideClient({
           <p className="mt-2 text-3xl font-black">{totalImages}</p>
         </div>
 
-        <form
-          action={seedDefaultHotelGuideAction}
-          className="rounded-3xl border border-neutral-200 bg-white p-5"
-          onSubmit={(event) => {
-            if (
-              !window.confirm(
-                'Add the default hotel guide sections and items?'
-              )
-            ) {
-              event.preventDefault();
-            }
-          }}
-        >
-          <input type="hidden" name="hotelId" value={defaultHotelId} />
-          <p className="text-sm font-bold text-neutral-500">Starter Content</p>
-          <Button className="mt-3 w-full">Seed Defaults</Button>
-        </form>
+                <div className="rounded-3xl border border-neutral-200 bg-white p-5">
+            <p className="text-sm font-bold text-neutral-500">Starter Content</p>
+
+            <div className="mt-3 grid gap-2">
+              <form
+                action={seedDefaultHotelGuideAction}
+                onSubmit={(event) => {
+                  if (
+                    !window.confirm(
+                      'Add the default hotel guide sections and items?'
+                    )
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <input type="hidden" name="hotelId" value={defaultHotelId} />
+                <Button className="w-full">Seed Defaults</Button>
+              </form>
+
+              <form
+                action={seedPoolGuideContentAction}
+                onSubmit={(event) => {
+                  if (
+                    !window.confirm(
+                      'Add or update the dynamic Pool & Amenities content?'
+                    )
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <input type="hidden" name="hotelId" value={defaultHotelId} />
+                <button
+                  type="submit"
+                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black hover:bg-neutral-50"
+                >
+                  Seed / Update Pool
+                </button>
+              </form>
+            </div>
+          </div>
       </div>
 
       <div className="grid gap-5">

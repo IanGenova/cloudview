@@ -143,6 +143,79 @@ const DEFAULT_SECTIONS: DefaultGuideSection[] = [
   },
 ];
 
+const DEFAULT_POOL_SECTION: DefaultGuideSection = {
+  title: 'Pool & Amenities',
+  subtitle: 'Luxury pool, towels, wellness, and safety guide',
+  description:
+    'Infinity pool hours, poolside services, wellness options, and guest safety reminders.',
+  imageUrl:
+    'https://images.unsplash.com/photo-1572331165267-854da2b10ccc?auto=format&fit=crop&w=1200&q=80',
+  iconKey: 'Waves',
+  sortOrder: 2,
+  items: [
+    {
+      title: 'Infinity Pool',
+      subtitle:
+        'Take a dip and unwind in a refined resort atmosphere with a breathtaking view.',
+      content:
+        'No running. Children must be supervised. Shower before entering. No glassware in the pool area. Follow lifeguard and staff instructions.',
+      itemType: HotelGuideItemType.FACILITY,
+      iconKey: 'Waves',
+      imageUrl:
+        'https://images.unsplash.com/photo-1572331165267-854da2b10ccc?auto=format&fit=crop&w=1200&q=80',
+      hours: '7:00 AM - 9:00 PM',
+      location: 'Pool Deck',
+      buttonLabel: 'Open Pool Page',
+      buttonHref: 'pool',
+      sortOrder: 1,
+    },
+    {
+      title: 'Poolside Menu',
+      subtitle: 'Order food and drinks',
+      content:
+        'Enjoy selected food and beverages served near the pool area.',
+      itemType: HotelGuideItemType.DINING,
+      iconKey: 'Utensils',
+      buttonLabel: 'View Menu',
+      buttonHref: 'menu',
+      sortOrder: 2,
+    },
+    {
+      title: 'Request Towels',
+      subtitle: 'Ask staff for extra towels',
+      content:
+        'Request extra towels or pool assistance from the service team.',
+      itemType: HotelGuideItemType.FACILITY,
+      iconKey: 'Waves',
+      buttonLabel: 'Request Service',
+      buttonHref: 'service',
+      sortOrder: 3,
+    },
+    {
+      title: 'Pool Rules',
+      subtitle: 'Guidelines for your safety',
+      content:
+        'No running. Children must be supervised. Shower before entering. No glassware in the pool area.',
+      itemType: HotelGuideItemType.POLICY,
+      iconKey: 'ShieldCheck',
+      buttonLabel: 'View Rules',
+      buttonHref: 'pool#pool-rules',
+      sortOrder: 4,
+    },
+    {
+      title: 'Spa & Wellness',
+      subtitle: 'Relax and rejuvenate',
+      content:
+        'Explore wellness options and relaxing amenities available during your stay.',
+      itemType: HotelGuideItemType.FACILITY,
+      iconKey: 'Sparkles',
+      buttonLabel: 'Open Hotel Guide',
+      buttonHref: 'guide',
+      sortOrder: 5,
+    },
+  ],
+};
+
 function redirectToGuide(params: { error?: string; success?: string }): never {
   const query = new URLSearchParams();
 
@@ -628,6 +701,9 @@ export async function uploadGuideImageAction(formData: FormData) {
   }
 
   revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+
   redirectToGuide({ success: 'image-uploaded' });
 }
 
@@ -662,7 +738,101 @@ export async function deleteGuideImageAction(formData: FormData) {
   await deletePublicImageFile(image.imageUrl);
 
   revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+
   redirectToGuide({ success: 'image-deleted' });
+
+}
+
+export async function seedPoolGuideContentAction(formData: FormData) {
+  const user = await requireUser();
+  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+
+  const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
+
+  if (!hotelId) {
+    redirectToGuide({ error: 'hotel-required' });
+  }
+
+  assertHotelScope(user, hotelId);
+
+  const existingSection = await db.hotelGuideSection.findFirst({
+    where: {
+      hotelId,
+      title: DEFAULT_POOL_SECTION.title,
+    },
+  });
+
+  const sectionData = {
+    hotelId,
+    title: DEFAULT_POOL_SECTION.title,
+    subtitle: DEFAULT_POOL_SECTION.subtitle,
+    description: DEFAULT_POOL_SECTION.description,
+    imageUrl: DEFAULT_POOL_SECTION.imageUrl,
+    iconKey: DEFAULT_POOL_SECTION.iconKey,
+    sortOrder: DEFAULT_POOL_SECTION.sortOrder,
+    isActive: true,
+  };
+
+  const poolSection = existingSection
+    ? await db.hotelGuideSection.update({
+        where: {
+          id: existingSection.id,
+        },
+        data: sectionData,
+      })
+    : await db.hotelGuideSection.create({
+        data: sectionData,
+      });
+
+  for (const item of DEFAULT_POOL_SECTION.items) {
+    const existingItem = await db.hotelGuideItem.findFirst({
+      where: {
+        hotelId,
+        sectionId: poolSection.id,
+        title: item.title,
+      },
+    });
+
+    const itemData = {
+      hotelId,
+      sectionId: poolSection.id,
+      title: item.title,
+      subtitle: item.subtitle || null,
+      content: item.content || null,
+      itemType: item.itemType,
+      imageUrl: item.imageUrl ?? null,
+      iconKey: item.iconKey,
+      hours: item.hours ?? null,
+      location: item.location ?? null,
+      contact: item.contact ?? null,
+      mapUrl: item.mapUrl ?? null,
+      buttonLabel: item.buttonLabel ?? null,
+      buttonHref: item.buttonHref ?? null,
+      sortOrder: item.sortOrder,
+      isActive: true,
+    };
+
+    if (existingItem) {
+      await db.hotelGuideItem.update({
+        where: {
+          id: existingItem.id,
+        },
+        data: itemData,
+      });
+    } else {
+      await db.hotelGuideItem.create({
+        data: itemData,
+      });
+    }
+  }
+
+  revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+
+  redirectToGuide({ success: 'pool-seeded' });
 }
 
 export async function seedDefaultHotelGuideAction(formData: FormData) {

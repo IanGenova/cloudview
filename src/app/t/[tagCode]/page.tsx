@@ -159,7 +159,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
             compact
             href={`/t/${tagCode}/pool`}
             icon={Waves}
-            title="Pool & Amenities"
+            title="Pool"
             description=""
           />
 

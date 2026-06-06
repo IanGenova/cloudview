@@ -1,4 +1,9 @@
-import { OrderStatus, ServiceRequestStatus } from '@prisma/client';
+import {
+  DashboardModule,
+  OrderStatus,
+  ServiceRequestStatus,
+} from '@prisma/client';
+import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
@@ -6,10 +11,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { money } from '@/lib/money';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import {
+  getFirstVisibleDashboardHref,
+  getUserDashboardPermissions,
+  hasDashboardPermission,
+} from '@/lib/dashboard-permissions';
 
 export default async function DashboardHome() {
   const user = await requireUser();
-  const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+
+  const permissions = await getUserDashboardPermissions(user.id, user.role);
+  const canViewOverview = hasDashboardPermission(
+    permissions,
+    DashboardModule.OVERVIEW,
+    'canView'
+  );
+
+  if (!canViewOverview) {
+    const firstAllowedHref = await getFirstVisibleDashboardHref(
+      user.id,
+      user.role
+    );
+
+    redirect(firstAllowedHref ?? '/login');
+  }
+
+  const hotelWhere =
+    user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 

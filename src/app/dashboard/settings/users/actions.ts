@@ -1,6 +1,6 @@
 'use server';
 
-import { Prisma, Role } from '@prisma/client';
+import { DashboardModule, Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { requireRole, requireUser } from '@/lib/auth';
@@ -12,6 +12,16 @@ export type ActionState = {
   message?: string;
 };
 
+type PermissionKey = 'canView' | 'canCreate' | 'canEdit' | 'canDelete';
+
+type DashboardPermissionInput = {
+  module: DashboardModule;
+  canView: boolean;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+};
+
 const SUPER_ADMIN_ALLOWED_ROLES: readonly Role[] = [
   Role.SUPER_ADMIN,
   Role.HOTEL_ADMIN,
@@ -21,12 +31,51 @@ const SUPER_ADMIN_ALLOWED_ROLES: readonly Role[] = [
 
 const HOTEL_ADMIN_ALLOWED_ROLES: readonly Role[] = [Role.STAFF, Role.KITCHEN];
 
+const ALL_DASHBOARD_MODULES: readonly DashboardModule[] = [
+  DashboardModule.OVERVIEW,
+  DashboardModule.HOTELS,
+  DashboardModule.HOTEL_GUIDE,
+  DashboardModule.ROOMS_LOCATIONS,
+  DashboardModule.NFC_TAGS,
+  DashboardModule.MENU,
+  DashboardModule.INVENTORY,
+  DashboardModule.ORDERS,
+  DashboardModule.KITCHEN_DISPLAY,
+  DashboardModule.SERVICES_MODULE,
+  DashboardModule.SERVICE_REQUESTS,
+  DashboardModule.POS_TERMINAL,
+  DashboardModule.ANALYTICS,
+  DashboardModule.HOTEL_SETTINGS,
+  DashboardModule.USER_ACCOUNT_SETTINGS,
+];
+
+const HOTEL_ADMIN_RESTRICTED_MODULES = new Set<DashboardModule>([
+  DashboardModule.HOTELS,
+]);
+
+const PERMISSION_KEYS: readonly PermissionKey[] = [
+  'canView',
+  'canCreate',
+  'canEdit',
+  'canDelete',
+];
+
 function getAllowedRoles(currentUserRole: Role) {
   if (currentUserRole === Role.SUPER_ADMIN) {
     return SUPER_ADMIN_ALLOWED_ROLES;
   }
 
   return HOTEL_ADMIN_ALLOWED_ROLES;
+}
+
+function getAssignableDashboardModules(currentUserRole: Role) {
+  if (currentUserRole === Role.SUPER_ADMIN) {
+    return ALL_DASHBOARD_MODULES;
+  }
+
+  return ALL_DASHBOARD_MODULES.filter(
+    (module) => !HOTEL_ADMIN_RESTRICTED_MODULES.has(module)
+  );
 }
 
 function normalizeEmail(value: FormDataEntryValue | null) {
@@ -75,6 +124,200 @@ function getReadablePrismaError(error: unknown) {
   return 'Something went wrong. Please try again.';
 }
 
+function permissionFieldName(module: DashboardModule, key: PermissionKey) {
+  return `permission:${module}:${key}`;
+}
+
+function isChecked(value: FormDataEntryValue | null) {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = String(value).toLowerCase();
+
+  return normalized === 'on' || normalized === 'true' || normalized === '1';
+}
+
+function fullPermission(module: DashboardModule): DashboardPermissionInput {
+  return {
+    module,
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+  };
+}
+
+function viewOnlyPermission(module: DashboardModule): DashboardPermissionInput {
+  return {
+    module,
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+}
+
+function customPermission(
+  module: DashboardModule,
+  permissions: Partial<Omit<DashboardPermissionInput, 'module'>>
+): DashboardPermissionInput {
+  const canCreate = permissions.canCreate ?? false;
+  const canEdit = permissions.canEdit ?? false;
+  const canDelete = permissions.canDelete ?? false;
+
+  const canView =
+    Boolean(permissions.canView ?? false) ||
+    canCreate ||
+    canEdit ||
+    canDelete;
+
+  return {
+    module,
+    canView,
+    canCreate,
+    canEdit,
+    canDelete,
+  };
+}
+
+function getDefaultDashboardPermissions(role: Role): DashboardPermissionInput[] {
+  if (role === Role.SUPER_ADMIN) {
+    return ALL_DASHBOARD_MODULES.map(fullPermission);
+  }
+
+  if (role === Role.HOTEL_ADMIN) {
+    return ALL_DASHBOARD_MODULES.filter(
+      (module) => module !== DashboardModule.HOTELS
+    ).map(fullPermission);
+  }
+
+  if (role === Role.KITCHEN) {
+    return [
+      viewOnlyPermission(DashboardModule.OVERVIEW),
+      viewOnlyPermission(DashboardModule.ORDERS),
+      customPermission(DashboardModule.KITCHEN_DISPLAY, {
+        canView: true,
+        canEdit: true,
+      }),
+      viewOnlyPermission(DashboardModule.INVENTORY),
+    ];
+  }
+
+  return [
+    viewOnlyPermission(DashboardModule.OVERVIEW),
+    viewOnlyPermission(DashboardModule.HOTEL_GUIDE),
+    viewOnlyPermission(DashboardModule.ROOMS_LOCATIONS),
+    viewOnlyPermission(DashboardModule.NFC_TAGS),
+    customPermission(DashboardModule.MENU, {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+    }),
+    customPermission(DashboardModule.INVENTORY, {
+      canView: true,
+      canEdit: true,
+    }),
+    customPermission(DashboardModule.ORDERS, {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+    }),
+    viewOnlyPermission(DashboardModule.KITCHEN_DISPLAY),
+    customPermission(DashboardModule.SERVICES_MODULE, {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+    }),
+    customPermission(DashboardModule.SERVICE_REQUESTS, {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+    }),
+    customPermission(DashboardModule.POS_TERMINAL, {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+    }),
+    viewOnlyPermission(DashboardModule.ANALYTICS),
+  ];
+}
+
+function parseDashboardPermissionsFromForm(
+  formData: FormData,
+  currentUserRole: Role,
+  targetRole: Role
+): DashboardPermissionInput[] | null {
+  const permissionsEnabled = formData.get('permissionsEnabled') === '1';
+
+  if (!permissionsEnabled) {
+    return null;
+  }
+
+  if (targetRole === Role.SUPER_ADMIN) {
+    return getDefaultDashboardPermissions(Role.SUPER_ADMIN);
+  }
+
+  const assignableModules = new Set(
+    getAssignableDashboardModules(currentUserRole)
+  );
+
+  return ALL_DASHBOARD_MODULES.filter((module) =>
+    assignableModules.has(module)
+  ).map((module) => {
+    const canCreate = isChecked(
+      formData.get(permissionFieldName(module, 'canCreate'))
+    );
+    const canEdit = isChecked(
+      formData.get(permissionFieldName(module, 'canEdit'))
+    );
+    const canDelete = isChecked(
+      formData.get(permissionFieldName(module, 'canDelete'))
+    );
+
+    const canView =
+      isChecked(formData.get(permissionFieldName(module, 'canView'))) ||
+      canCreate ||
+      canEdit ||
+      canDelete;
+
+    return {
+      module,
+      canView,
+      canCreate,
+      canEdit,
+      canDelete,
+    };
+  });
+}
+
+async function syncDashboardPermissions(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  permissions: DashboardPermissionInput[]
+) {
+  await tx.userDashboardPermission.deleteMany({
+    where: {
+      userId,
+    },
+  });
+
+  if (!permissions.length) {
+    return;
+  }
+
+  await tx.userDashboardPermission.createMany({
+    data: permissions.map((permission) => ({
+      userId,
+      module: permission.module,
+      canView: permission.canView,
+      canCreate: permission.canCreate,
+      canEdit: permission.canEdit,
+      canDelete: permission.canDelete,
+    })),
+  });
+}
+
 export async function createUserAccountAction(
   _prevState: ActionState,
   formData: FormData
@@ -113,9 +356,11 @@ export async function createUserAccountAction(
     }
 
     const hotelId =
-      currentUser.role === Role.SUPER_ADMIN
-        ? hotelIdFromForm || null
-        : currentUser.hotelId;
+      role === Role.SUPER_ADMIN
+        ? null
+        : currentUser.role === Role.SUPER_ADMIN
+          ? hotelIdFromForm || null
+          : currentUser.hotelId;
 
     if (role !== Role.SUPER_ADMIN && !hotelId) {
       return {
@@ -126,14 +371,25 @@ export async function createUserAccountAction(
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await db.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        role,
-        hotelId,
-      },
+    const permissions =
+      parseDashboardPermissionsFromForm(formData, currentUser.role, role) ??
+      getDefaultDashboardPermissions(role);
+
+    await db.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          passwordHash,
+          role,
+          hotelId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await syncDashboardPermissions(tx, createdUser.id, permissions);
     });
 
     revalidatePath('/dashboard/settings/users');
@@ -199,10 +455,27 @@ export async function updateUserAccountAction(
       };
     }
 
+    if (targetUser.role === Role.SUPER_ADMIN && role !== Role.SUPER_ADMIN) {
+      const superAdminCount = await db.user.count({
+        where: {
+          role: Role.SUPER_ADMIN,
+        },
+      });
+
+      if (superAdminCount <= 1) {
+        return {
+          ok: false,
+          message: 'You cannot demote the last Super Admin account.',
+        };
+      }
+    }
+
     const hotelId =
-      currentUser.role === Role.SUPER_ADMIN
-        ? hotelIdFromForm || null
-        : currentUser.hotelId;
+      role === Role.SUPER_ADMIN
+        ? null
+        : currentUser.role === Role.SUPER_ADMIN
+          ? hotelIdFromForm || null
+          : currentUser.hotelId;
 
     if (role !== Role.SUPER_ADMIN && !hotelId) {
       return {
@@ -211,16 +484,27 @@ export async function updateUserAccountAction(
       };
     }
 
-    await db.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        name,
-        email,
-        role,
-        hotelId,
-      },
+    const parsedPermissions =
+      role === Role.SUPER_ADMIN
+        ? getDefaultDashboardPermissions(Role.SUPER_ADMIN)
+        : parseDashboardPermissionsFromForm(formData, currentUser.role, role);
+
+    await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          name,
+          email,
+          role,
+          hotelId,
+        },
+      });
+
+      if (parsedPermissions) {
+        await syncDashboardPermissions(tx, userId, parsedPermissions);
+      }
     });
 
     revalidatePath('/dashboard/settings/users');
