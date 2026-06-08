@@ -13,7 +13,7 @@ function getMessage(error?: string, success?: string) {
       'item-created': 'Guide item created successfully.',
       'item-updated': 'Guide item updated successfully.',
       'item-deleted': 'Guide item deleted successfully.',
-      'image-uploaded': 'Gallery image uploaded successfully.',
+      'image-uploaded': 'Gallery image(s) uploaded successfully.',
       'image-deleted': 'Gallery image deleted successfully.',
       seeded: 'Default hotel guide content added successfully.',
       'pool-seeded': 'Pool guide content added or updated successfully.',

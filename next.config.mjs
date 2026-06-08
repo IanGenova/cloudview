@@ -25,7 +25,8 @@ const nextConfig = {
 
   experimental: {
     serverActions: {
-      allowedOrigins: serverActionAllowedOrigins
+      allowedOrigins: serverActionAllowedOrigins,
+      bodySizeLimit: '50mb'
     }
   },
 

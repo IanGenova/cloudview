@@ -11,6 +11,10 @@ import { requireRole, requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 
+
+const MAX_GUIDE_IMAGES_PER_UPLOAD = 10;
+
+
 const MAX_GUIDE_IMAGE_SIZE = 4 * 1024 * 1024;
 
 type DefaultGuideItem = {
@@ -232,6 +236,38 @@ function redirectToGuide(params: { error?: string; success?: string }): never {
       ? `/dashboard/hotel-guide?${query.toString()}`
       : '/dashboard/hotel-guide'
   );
+}
+function isUploadedFile(value: FormDataEntryValue | null): value is File {
+  return value instanceof File && value.size > 0;
+}
+
+function cleanImageTitleFromFileName(fileName: string) {
+  const withoutExtension = fileName.replace(/\.[^/.]+$/, '');
+
+  const cleaned = withoutExtension
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned.slice(0, 120);
+}
+
+function getImageTitle({
+  baseTitle,
+  fileName,
+  index,
+  total,
+}: {
+  baseTitle: string | null | undefined;
+  fileName: string;
+  index: number;
+  total: number;
+}) {
+  if (baseTitle) {
+    return total > 1 ? `${baseTitle} ${index + 1}`.slice(0, 120) : baseTitle;
+  }
+
+  return cleanImageTitleFromFileName(fileName) || `Gallery Image ${index + 1}`;
 }
 
 function parseSortOrder(value: FormDataEntryValue | null) {
@@ -627,10 +663,29 @@ export async function uploadGuideImageAction(formData: FormData) {
   const caption = cleanText(formData.get('caption'), 300);
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
-  const file = formData.get('image') as File | null;
+
+  const imageFiles = formData
+    .getAll('images')
+    .filter((value): value is File => isUploadedFile(value));
+
+  const legacyFile = formData.get('image');
+
+  const files = imageFiles.length
+    ? imageFiles
+    : isUploadedFile(legacyFile)
+      ? [legacyFile]
+      : [];
 
   if (!sectionId && !itemId) {
     redirectToGuide({ error: 'section-required' });
+  }
+
+  if (!files.length) {
+    redirectToGuide({ error: 'image-required' });
+  }
+
+  if (files.length > MAX_GUIDE_IMAGES_PER_UPLOAD) {
+    redirectToGuide({ error: 'image-upload-failed' });
   }
 
   let hotelId = '';
@@ -680,23 +735,43 @@ export async function uploadGuideImageAction(formData: FormData) {
     finalItemId = null;
   }
 
-  try {
-    const imageUrl = await saveHotelGuideImageFile(file!);
+  const savedImageUrls: string[] = [];
 
-    await db.hotelGuideImage.create({
-      data: {
+  try {
+    const imageRows = [];
+
+    for (const [index, file] of files.entries()) {
+      const imageUrl = await saveHotelGuideImageFile(file);
+
+      savedImageUrls.push(imageUrl);
+
+      imageRows.push({
         hotelId,
         sectionId: finalSectionId,
         itemId: finalItemId,
-        title: title || null,
+        title: getImageTitle({
+          baseTitle: title,
+          fileName: file.name,
+          index,
+          total: files.length,
+        }),
         caption: caption || null,
         imageUrl,
-        sortOrder,
+        sortOrder: sortOrder + index,
         isActive,
-      },
+      });
+    }
+
+    await db.hotelGuideImage.createMany({
+      data: imageRows,
     });
   } catch (error) {
     console.error(error);
+
+    await Promise.allSettled(
+      savedImageUrls.map((imageUrl) => deletePublicImageFile(imageUrl))
+    );
+
     redirectToGuide({ error: 'image-upload-failed' });
   }
 

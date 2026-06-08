@@ -1,9 +1,32 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import {
+  type ChangeEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { HotelGuideItemType } from '@prisma/client';
-import { CheckCircle2, X } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/Card';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Image as ImageIcon,
+  Layers,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+  Maximize2,
+
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import {
@@ -362,9 +385,11 @@ function SectionFormFields({
 function ItemFormFields({
   sections,
   item,
+  defaultSectionId,
 }: {
   sections: GuideSection[];
   item?: GuideItem;
+  defaultSectionId?: string;
 }) {
   return (
     <>
@@ -373,7 +398,10 @@ function ItemFormFields({
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
             Section
           </label>
-          <Select name="sectionId" defaultValue={sections[0]?.id ?? ''}>
+          <Select
+            name="sectionId"
+            defaultValue={defaultSectionId ?? sections[0]?.id ?? ''}
+          >
             {sections.map((section) => (
               <option key={section.id} value={section.id}>
                 {section.hotelName} · {section.title}
@@ -597,10 +625,143 @@ function UploadImageModal({
   item?: GuideItem;
   onClose: () => void;
 }) {
+ const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const [previews, setPreviews] = useState<
+      {
+        id: string;
+        name: string;
+        sizeLabel: string;
+        url: string;
+        file: File;
+      }[]
+    >([]);
+
+    const [previewError, setPreviewError] = useState('');
+    const [selectedPreview, setSelectedPreview] = useState<{
+      title?: string;
+      caption?: string;
+      imageUrl: string;
+    } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [previews]);
+
+  function formatFileSize(size: number) {
+    if (size < 1024 * 1024) {
+      return `${Math.max(1, Math.round(size / 1024))} KB`;
+    }
+
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function syncInputFiles(nextPreviews: typeof previews) {
+  if (!fileInputRef.current) {
+    return;
+  }
+
+  const dataTransfer = new DataTransfer();
+
+  nextPreviews.forEach((preview) => {
+    dataTransfer.items.add(preview.file);
+  });
+
+  fileInputRef.current.files = dataTransfer.files;
+}
+
+function clearPreviews() {
+  previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+  setPreviews([]);
+  setPreviewError('');
+
+  if (fileInputRef.current) {
+    fileInputRef.current.value = '';
+  }
+}
+
+
+
+function removePreview(previewId: string) {
+  const removedPreview = previews.find((preview) => preview.id === previewId);
+  const nextPreviews = previews.filter((preview) => preview.id !== previewId);
+
+  if (removedPreview) {
+    URL.revokeObjectURL(removedPreview.url);
+  }
+
+  setPreviews(nextPreviews);
+  syncInputFiles(nextPreviews);
+
+  if (!nextPreviews.length && fileInputRef.current) {
+    fileInputRef.current.value = '';
+  }
+}
+
+function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
+  const files = Array.from(event.target.files ?? []);
+
+  previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+
+  setPreviews([]);
+  setPreviewError('');
+
+  if (!files.length) {
+    return;
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const maxFileSize = 4 * 1024 * 1024;
+  const maxFiles = 10;
+
+  if (files.length > maxFiles) {
+    event.target.value = '';
+    setPreviewError(`You can upload up to ${maxFiles} images at once.`);
+    return;
+  }
+
+  const invalidFile = files.find((file) => !allowedTypes.includes(file.type));
+
+  if (invalidFile) {
+    event.target.value = '';
+    setPreviewError(
+      `${invalidFile.name} is not allowed. Use JPG, PNG, or WEBP only.`
+    );
+    return;
+  }
+
+  const oversizedFile = files.find((file) => file.size > maxFileSize);
+
+  if (oversizedFile) {
+    event.target.value = '';
+    setPreviewError(`${oversizedFile.name} is larger than 4MB.`);
+    return;
+  }
+
+  const nextPreviews = files.map((file, index) => ({
+    id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+    name: file.name,
+    sizeLabel: formatFileSize(file.size),
+    url: URL.createObjectURL(file),
+    file,
+  }));
+
+  setPreviews(nextPreviews);
+  syncInputFiles(nextPreviews);
+}
+
+  const uploadTargetLabel = item
+    ? `Guide Item: ${item.title}`
+    : section
+      ? `Section: ${section.title}`
+      : 'Selected section';
+
   return (
     <Modal
-      title="Upload Hotel Guide Image"
-      description="Upload brochure-style gallery photos for this Hotel Guide section or item."
+      title="Upload Hotel Guide Images"
+      description="Upload one or more brochure-style gallery photos for this Hotel Guide section or item."
       onClose={onClose}
     >
       <form action={uploadGuideImageAction} className="space-y-4">
@@ -626,44 +787,158 @@ function UploadImageModal({
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Image File
-          </label>
-          <input
-            name="image"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            required
-            className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold"
-          />
-          <p className="mt-1 text-xs text-neutral-500">
-            JPG, PNG, or WEBP only. Maximum 4MB.
+        <div className="rounded-2xl border border-[#c99c38]/20 bg-[#fffaf0] px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-wide text-[#9d741f]">
+            Upload Target
+          </p>
+          <p className="mt-1 text-sm font-black text-neutral-800">
+            {uploadTargetLabel}
           </p>
         </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Image Files
+          </label>
+
+          <input
+            ref={fileInputRef}
+            name="images"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            required
+            onChange={handleImagesChange}
+            className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+          />
+
+          <p className="mt-1 text-xs text-neutral-500">
+            Select up to 10 images. JPG, PNG, or WEBP only. Maximum 4MB per
+            image.
+          </p>
+
+          {previewError ? (
+            <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700">
+              {previewError}
+            </p>
+          ) : null}
+        </div>
+
+        {previews.length ? (
+          <div className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                  Image Preview
+                </p>
+                <p className="mt-1 text-sm font-black text-neutral-800">
+                  {previews.length} image{previews.length === 1 ? '' : 's'}{' '}
+                  selected
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={clearPreviews}
+                className="h-9 rounded-2xl border border-neutral-200 px-4 text-xs font-black hover:bg-neutral-50"
+              >
+                Clear Preview
+              </button>
+            </div>
+
+            <div className="grid gap-3 bg-neutral-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
+             {previews.map((preview) => (
+                    <div
+                      key={preview.id}
+                      className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedPreview({
+                            title: preview.name,
+                            imageUrl: preview.url,
+                          })
+                        }
+                        className="block w-full"
+                      >
+                        <div className="relative flex h-40 items-center justify-center bg-neutral-100">
+                          <img
+                            src={preview.url}
+                            alt={preview.name}
+                            className="h-full w-full object-cover"
+                          />
+
+                          <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
+
+                          <span className="absolute left-3 top-3 grid size-8 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+                            <Maximize2 className="size-4" />
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removePreview(preview.id)}
+                        className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-700"
+                        title="Remove from upload"
+                        aria-label="Remove from upload"
+                      >
+                        <X className="size-4" />
+                      </button>
+
+                      <div className="p-3">
+                        <p className="truncate text-xs font-black text-neutral-800">
+                          {preview.name}
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-neutral-500">
+                          {preview.sizeLabel}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[1.5rem] border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+            <p className="text-sm font-black text-neutral-600">
+              No images selected yet.
+            </p>
+            <p className="mt-1 text-xs font-bold text-neutral-400">
+              Choose multiple image files to preview them before uploading.
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-              Image Title
+              Base Image Title
             </label>
             <input
               name="title"
               placeholder="Pool Area"
-              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none"
+              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
             />
+            <p className="mt-1 text-xs text-neutral-500">
+              For multiple images, the system will append a number to this
+              title.
+            </p>
           </div>
 
           <div>
             <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-              Sort Order
+              Starting Sort Order
             </label>
             <input
               name="sortOrder"
               type="number"
-              defaultValue="0"
-              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none"
+              defaultValue={0}
+              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
             />
+            <p className="mt-1 text-xs text-neutral-500">
+              Each next image increases the sort order by 1.
+            </p>
           </div>
         </div>
 
@@ -674,9 +949,12 @@ function UploadImageModal({
           <textarea
             name="caption"
             rows={3}
-            placeholder="Short brochure caption for guests."
-            className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-bold outline-none"
+            placeholder="Short caption for these images"
+            className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           />
+          <p className="mt-1 text-xs text-neutral-500">
+            The same caption will be applied to all selected images.
+          </p>
         </div>
 
         <label className="flex items-center gap-2 text-sm font-bold">
@@ -685,12 +963,12 @@ function UploadImageModal({
             name="isActive"
             value="true"
             defaultChecked
-            className="size-4"
+            className="size-4 accent-black"
           />
           Show in Guest Portal Gallery
         </label>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-neutral-100 pt-4">
           <button
             type="button"
             onClick={onClose}
@@ -699,10 +977,641 @@ function UploadImageModal({
             Cancel
           </button>
 
-          <Button>Upload Image</Button>
+          <Button>
+            {previews.length > 1
+              ? `Upload ${previews.length} Images`
+              : 'Upload Image'}
+          </Button>
         </div>
       </form>
+              {selectedPreview ? (
+              <ImageLightbox
+                image={selectedPreview}
+                onClose={() => setSelectedPreview(null)}
+              />
+            ) : null}
     </Modal>
+  );
+}
+
+type StatusFilter = 'ALL' | 'ACTIVE' | 'HIDDEN';
+type SortMode = 'custom' | 'title-asc' | 'items-desc';
+type ViewMode = 'sections' | 'items';
+
+function StatusPill({ isActive }: { isActive: boolean }) {
+  return (
+    <span
+      className={
+        isActive
+          ? 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-700'
+          : 'inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black uppercase text-neutral-500'
+      }
+    >
+      <span
+        className={
+          isActive
+            ? 'size-1.5 rounded-full bg-emerald-500'
+            : 'size-1.5 rounded-full bg-neutral-400'
+        }
+      />
+      {isActive ? 'Active' : 'Hidden'}
+    </span>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  description,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  description: string;
+  icon: typeof Layers;
+}) {
+  return (
+    <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center gap-4">
+        <span className="grid size-13 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]">
+          <Icon className="size-6" />
+        </span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+            {label}
+          </p>
+          <p className="mt-1 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-xs font-bold text-neutral-500">
+            {description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImageLightbox({
+  image,
+  onClose,
+}: {
+  image: {
+    title?: string;
+    caption?: string;
+    imageUrl: string;
+  };
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-5 top-5 grid size-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+        aria-label="Close full screen preview"
+      >
+        <X className="size-5" />
+      </button>
+
+      <div className="flex max-h-[92dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] bg-black shadow-2xl">
+        <div className="min-h-0 flex-1 bg-black">
+          <img
+            src={image.imageUrl}
+            alt={image.title || 'Hotel guide image'}
+            className="max-h-[80dvh] w-full object-contain"
+          />
+        </div>
+
+        {(image.title || image.caption) ? (
+          <div className="border-t border-white/10 bg-black px-5 py-4 text-white">
+            {image.title ? (
+              <p className="text-sm font-black">{image.title}</p>
+            ) : null}
+
+            {image.caption ? (
+              <p className="mt-1 text-sm leading-6 text-white/70">
+                {image.caption}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDeleteDialog({
+  title,
+  message,
+  action,
+  hiddenName,
+  hiddenValue,
+  confirmLabel = 'Delete',
+  onClose,
+}: {
+  title: string;
+  message: string;
+  action: (formData: FormData) => void | Promise<void>;
+  hiddenName: string;
+  hiddenValue: string;
+  confirmLabel?: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div className="flex items-start gap-4 border-b border-neutral-100 p-6">
+          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-50 text-red-600">
+            <AlertTriangle className="size-6" />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-black text-neutral-950">{title}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-neutral-600">
+              {message}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200"
+            aria-label="Close confirmation"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <form action={action} className="flex justify-end gap-2 p-5">
+          <input type="hidden" name={hiddenName} value={hiddenValue} />
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black text-neutral-700 transition hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700"
+          >
+            {confirmLabel}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function GalleryImageDeleteButton({
+  imageId,
+  imageTitle,
+}: {
+  imageId: string;
+  imageTitle?: string;
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setConfirmingDelete(true)}
+        className="grid size-8 place-items-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-700"
+        title="Delete image"
+        aria-label="Delete image"
+      >
+        <Trash2 className="size-4" />
+      </button>
+
+      {confirmingDelete ? (
+        <ConfirmDeleteDialog
+          title="Delete Hotel Guide Image"
+          message={`Are you sure you want to delete ${
+            imageTitle ? `"${imageTitle}"` : 'this image'
+          }? This action cannot be undone.`}
+          action={deleteGuideImageAction}
+          hiddenName="imageId"
+          hiddenValue={imageId}
+          confirmLabel="Delete Image"
+          onClose={() => setConfirmingDelete(false)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function MiniGallery({ images }: { images: GuideImage[] }) {
+  const [selectedImage, setSelectedImage] = useState<GuideImage | null>(null);
+
+  if (!images.length) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {images.slice(0, 6).map((image) => (
+          <div
+            key={image.id}
+            className="group relative size-20 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-sm"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedImage(image)}
+              className="block size-full bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${image.imageUrl})`,
+              }}
+              title={image.title || 'Open image'}
+              aria-label="Open image in full screen"
+            >
+              <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
+
+              <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+                <Maximize2 className="size-3.5" />
+              </span>
+            </button>
+
+            <div className="absolute right-2 top-2 opacity-0 transition group-hover:opacity-100">
+              <GalleryImageDeleteButton imageId={image.id} />
+            </div>
+          </div>
+        ))}
+
+        {images.length > 6 ? (
+          <button
+            type="button"
+            onClick={() => setSelectedImage(images[6])}
+            className="grid size-20 place-items-center rounded-2xl border border-neutral-200 bg-neutral-50 text-xs font-black text-neutral-500 transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
+          >
+            +{images.length - 6}
+          </button>
+        ) : null}
+      </div>
+
+      {selectedImage ? (
+        <ImageLightbox
+          image={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function InlineDeleteForm({
+  action,
+  hiddenName,
+  hiddenValue,
+  label,
+  confirmMessage,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  hiddenName: string;
+  hiddenValue: string;
+  label: string;
+  confirmMessage: string;
+}) {
+  return (
+    <form
+      action={action}
+      onSubmit={(event) => {
+        if (!window.confirm(confirmMessage)) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <input type="hidden" name={hiddenName} value={hiddenValue} />
+      <button
+        type="submit"
+        className="inline-flex h-10 items-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 text-xs font-black text-red-600 transition hover:border-red-200 hover:bg-red-100"
+      >
+        <Trash2 className="size-4" />
+        {label}
+      </button>
+    </form>
+  );
+}
+
+function normalizeSearch(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function sectionMatches(section: GuideSection, query: string) {
+  if (!query) {
+    return true;
+  }
+
+  const sectionText = [
+    section.title,
+    section.subtitle,
+    section.description,
+    section.hotelName,
+    section.iconKey,
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  const itemText = section.items
+    .map((item) =>
+      [
+        item.title,
+        item.subtitle,
+        item.content,
+        item.itemType,
+        item.hours,
+        item.location,
+        item.contact,
+      ].join(' ')
+    )
+    .join(' ')
+    .toLowerCase();
+
+  return sectionText.includes(query) || itemText.includes(query);
+}
+
+function itemMatches(item: GuideItem, query: string) {
+  if (!query) {
+    return true;
+  }
+
+  return [
+    item.title,
+    item.subtitle,
+    item.content,
+    item.itemType,
+    item.hours,
+    item.location,
+    item.contact,
+  ]
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
+}
+
+function statusMatches(isActive: boolean, status: StatusFilter) {
+  if (status === 'ACTIVE') {
+    return isActive;
+  }
+
+  if (status === 'HIDDEN') {
+    return !isActive;
+  }
+
+  return true;
+}
+
+function getSectionImageCount(section: GuideSection) {
+  return (
+    section.galleryImages.length +
+    section.items.reduce(
+      (sum, item) => sum + item.galleryImages.length,
+      0
+    )
+  );
+}
+
+function sortSections(sections: GuideSection[], sortMode: SortMode) {
+  const nextSections = [...sections];
+
+  if (sortMode === 'title-asc') {
+    return nextSections.sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  if (sortMode === 'items-desc') {
+    return nextSections.sort((a, b) => b.items.length - a.items.length);
+  }
+
+  return nextSections.sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+function GuideItemRow({
+  item,
+  sectionTitle,
+  onEdit,
+  onUpload,
+}: {
+  item: GuideItem;
+  sectionTitle?: string;
+  onEdit: (item: GuideItem) => void;
+  onUpload: (item: GuideItem) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]">
+      <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="size-2 rounded-full bg-[#c99c38]" />
+
+            <h4 className="font-black">{item.title}</h4>
+
+            <StatusPill isActive={item.isActive} />
+
+            <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-black uppercase text-neutral-500">
+              Sort {item.sortOrder}
+            </span>
+          </div>
+
+          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-neutral-500">
+            {sectionTitle ? `${sectionTitle} · ` : ''}
+            {item.itemType}
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-neutral-600">
+            {item.subtitle || 'No subtitle'}
+          </p>
+
+          {item.content ? (
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-neutral-500">
+              {item.content}
+            </p>
+          ) : null}
+
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-neutral-400">
+            {item.hours ? <span>Hours: {item.hours}</span> : null}
+            {item.location ? <span>Location: {item.location}</span> : null}
+            {item.buttonHref ? <span>Link: {item.buttonHref}</span> : null}
+          </div>
+
+          <MiniGallery images={item.galleryImages} />
+        </div>
+
+        <div className="flex flex-wrap gap-2 xl:justify-end">
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-neutral-200 px-4 text-xs font-black transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5]"
+          >
+            <Pencil className="size-4" />
+            Edit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onUpload(item)}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#11100b] px-4 text-xs font-black text-white transition hover:bg-black"
+          >
+            <Upload className="size-4 text-[#c99c38]" />
+            Upload Image
+          </button>
+
+          <InlineDeleteForm
+            action={deleteGuideItemAction}
+            hiddenName="itemId"
+            hiddenValue={item.id}
+            label="Delete"
+            confirmMessage="Delete this guide item and its gallery images?"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionAccordionRow({
+  section,
+  visibleItems,
+  expanded,
+  onToggle,
+  onEditSection,
+  onUploadSection,
+  onCreateItem,
+  onEditItem,
+  onUploadItem,
+}: {
+  section: GuideSection;
+  visibleItems: GuideItem[];
+  expanded: boolean;
+  onToggle: () => void;
+  onEditSection: (section: GuideSection) => void;
+  onUploadSection: (section: GuideSection) => void;
+  onCreateItem: (sectionId: string) => void;
+  onEditItem: (item: GuideItem) => void;
+  onUploadItem: (item: GuideItem) => void;
+}) {
+  const imageCount = getSectionImageCount(section);
+
+  return (
+    <div className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-[0_14px_35px_rgba(0,0,0,0.04)]">
+      <div className="grid gap-4 p-5 xl:grid-cols-[1fr_auto] xl:items-center">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex min-w-0 items-start gap-4 text-left"
+        >
+          <span className="mt-1 grid size-10 shrink-0 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]">
+            {expanded ? (
+              <ChevronDown className="size-5" />
+            ) : (
+              <ChevronRight className="size-5" />
+            )}
+          </span>
+
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-black">{section.title}</span>
+              <StatusPill isActive={section.isActive} />
+            </span>
+
+            <span className="mt-1 block text-sm font-semibold text-neutral-500">
+              {section.subtitle || 'No subtitle'}
+            </span>
+
+            <span className="mt-2 flex flex-wrap gap-3 text-xs font-bold text-neutral-400">
+              <span>{section.hotelName}</span>
+              <span>{section.items.length} items</span>
+              <span>{imageCount} images</span>
+              <span>Sort {section.sortOrder}</span>
+            </span>
+          </span>
+        </button>
+
+        <div className="flex flex-wrap gap-2 xl:justify-end">
+          <button
+            type="button"
+            onClick={() => onEditSection(section)}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-neutral-200 px-4 text-xs font-black transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5]"
+          >
+            <Pencil className="size-4" />
+            Edit Section
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onUploadSection(section)}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#11100b] px-4 text-xs font-black text-white transition hover:bg-black"
+          >
+            <Upload className="size-4 text-[#c99c38]" />
+            Upload Images
+          </button>
+
+          <InlineDeleteForm
+            action={deleteGuideSectionAction}
+            hiddenName="sectionId"
+            hiddenValue={section.id}
+            label="Delete"
+            confirmMessage="Delete this section, all guide items, and gallery images?"
+          />
+        </div>
+      </div>
+
+      {expanded ? (
+        <div className="border-t border-neutral-100 bg-neutral-50/60 p-5">
+          {section.description ? (
+            <p className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 text-sm leading-6 text-neutral-600">
+              {section.description}
+            </p>
+          ) : null}
+
+          <MiniGallery images={section.galleryImages} />
+
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3">
+              <div>
+                <p className="text-sm font-black">
+                  Guide Items ({visibleItems.length})
+                </p>
+                <p className="mt-1 text-xs font-bold text-neutral-500">
+                  Items shown inside this section in the Guest Portal.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onCreateItem(section.id)}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-[#c99c38]/40 bg-[#fffaf0] px-4 text-xs font-black text-[#9d741f] transition hover:border-[#c99c38] hover:bg-[#f7f1e5]"
+              >
+                <Plus className="size-4" />
+                Add Guide Item
+              </button>
+            </div>
+
+            <div className="space-y-3 p-4">
+              {visibleItems.map((item) => (
+                <GuideItemRow
+                  key={item.id}
+                  item={item}
+                  onEdit={onEditItem}
+                  onUpload={onUploadItem}
+                />
+              ))}
+
+              {!visibleItems.length ? (
+                <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+                  <p className="font-black">No matching guide items.</p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Add a new item or adjust your search/filter.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -721,12 +1630,40 @@ export function HotelGuideClient({
 }) {
   const [creatingSection, setCreatingSection] = useState(false);
   const [creatingItem, setCreatingItem] = useState(false);
+  const [defaultItemSectionId, setDefaultItemSectionId] = useState<
+    string | undefined
+  >(undefined);
+
   const [editingSection, setEditingSection] = useState<GuideSection | null>(
     null
   );
   const [editingItem, setEditingItem] = useState<GuideItem | null>(null);
   const [uploadSection, setUploadSection] = useState<GuideSection | null>(null);
   const [uploadItem, setUploadItem] = useState<GuideItem | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [sortMode, setSortMode] = useState<SortMode>('custom');
+  const [viewMode, setViewMode] = useState<ViewMode>('sections');
+
+  const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(
+    () => new Set(sections[0]?.id ? [sections[0].id] : [])
+  );
+
+  useEffect(() => {
+    setExpandedSectionIds((current) => {
+      const existingIds = new Set(sections.map((section) => section.id));
+      const next = new Set(
+        Array.from(current).filter((id) => existingIds.has(id))
+      );
+
+      if (!next.size && sections[0]?.id) {
+        next.add(sections[0].id);
+      }
+
+      return next;
+    });
+  }, [sections]);
 
   const totalItems = useMemo(
     () => sections.reduce((sum, section) => sum + section.items.length, 0),
@@ -748,59 +1685,139 @@ export function HotelGuideClient({
     [sections]
   );
 
+  const normalizedQuery = normalizeSearch(searchQuery);
+
+  const visibleSections = useMemo(() => {
+    const filtered = sections.filter((section) => {
+      return (
+        statusMatches(section.isActive, statusFilter) &&
+        sectionMatches(section, normalizedQuery)
+      );
+    });
+
+    return sortSections(filtered, sortMode);
+  }, [sections, normalizedQuery, statusFilter, sortMode]);
+
+  const flatVisibleItems = useMemo(() => {
+    return visibleSections.flatMap((section) =>
+      section.items
+        .filter((item) => {
+          return (
+            statusMatches(item.isActive, statusFilter) &&
+            itemMatches(item, normalizedQuery)
+          );
+        })
+        .map((item) => ({
+          section,
+          item,
+        }))
+    );
+  }, [visibleSections, normalizedQuery, statusFilter]);
+
+  function openCreateItem(sectionId?: string) {
+    setDefaultItemSectionId(sectionId);
+    setCreatingItem(true);
+  }
+
+  function closeCreateItem() {
+    setCreatingItem(false);
+    setDefaultItemSectionId(undefined);
+  }
+
+  function toggleSection(sectionId: string) {
+    setExpandedSectionIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+
+      return next;
+    });
+  }
+
   return (
     <>
       <Toast message={message} />
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
-        <div>
-          <h2 className="text-xl font-black">Dynamic Hotel Guide</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Create sections, items, and brochure-style gallery images for the
-            Guest Portal.
-          </p>
-        </div>
+      <div className="space-y-6">
+        <section className="flex flex-wrap items-end justify-between gap-4 rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#c99c38]">
+              Guest Portal CMS
+            </p>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setCreatingSection(true)}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-          >
-            Create Section
-          </button>
+            <h2 className="mt-2 text-2xl font-black">Dynamic Hotel Guide</h2>
 
-          <button
-            type="button"
-            onClick={() => setCreatingItem(true)}
-            disabled={!sections.length}
-            className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Create Guide Item
-          </button>
-        </div>
-      </div>
+            <p className="mt-1 text-sm font-medium text-neutral-500">
+              Manage sections, guide items, and brochure images shown in the
+              Guest Portal.
+            </p>
+          </div>
 
-      <div className="mb-5 grid gap-3 md:grid-cols-4">
-        <div className="rounded-3xl border border-neutral-200 bg-white p-5">
-          <p className="text-sm font-bold text-neutral-500">Sections</p>
-          <p className="mt-2 text-3xl font-black">{sections.length}</p>
-        </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setCreatingSection(true)}
+              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
+            >
+              <Plus className="size-4 text-[#c99c38]" />
+              Create Section
+            </button>
 
-        <div className="rounded-3xl border border-neutral-200 bg-white p-5">
-          <p className="text-sm font-bold text-neutral-500">Guide Items</p>
-          <p className="mt-2 text-3xl font-black">{totalItems}</p>
-        </div>
+            <button
+              type="button"
+              onClick={() => openCreateItem()}
+              disabled={!sections.length}
+              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="size-4 text-[#c99c38]" />
+              Create Guide Item
+            </button>
+          </div>
+        </section>
 
-        <div className="rounded-3xl border border-neutral-200 bg-white p-5">
-          <p className="text-sm font-bold text-neutral-500">Gallery Images</p>
-          <p className="mt-2 text-3xl font-black">{totalImages}</p>
-        </div>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            label="Sections"
+            value={sections.length}
+            description="Total guide sections"
+            icon={Layers}
+          />
 
-                <div className="rounded-3xl border border-neutral-200 bg-white p-5">
-            <p className="text-sm font-bold text-neutral-500">Starter Content</p>
+          <SummaryCard
+            label="Guide Items"
+            value={totalItems}
+            description="Information cards and actions"
+            icon={FileText}
+          />
 
-            <div className="mt-3 grid gap-2">
+          <SummaryCard
+            label="Gallery Images"
+            value={totalImages}
+            description="Uploaded section and item photos"
+            icon={ImageIcon}
+          />
+
+          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center gap-4">
+              <span className="grid size-13 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]">
+                <Sparkles className="size-6" />
+              </span>
+
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                  Starter Content
+                </p>
+                <p className="mt-1 text-sm font-bold text-neutral-500">
+                  Seed default templates
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2">
               <form
                 action={seedDefaultHotelGuideAction}
                 onSubmit={(event) => {
@@ -832,175 +1849,157 @@ export function HotelGuideClient({
                 <input type="hidden" name="hotelId" value={defaultHotelId} />
                 <button
                   type="submit"
-                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black hover:bg-neutral-50"
+                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
                 >
                   Seed / Update Pool
                 </button>
               </form>
             </div>
           </div>
-      </div>
+        </section>
 
-      <div className="grid gap-5">
-        {sections.map((section) => (
-          <Card key={section.id}>
-            <CardContent>
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-xl font-black">{section.title}</h3>
+        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+          <div className="border-b border-neutral-100 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black">Content Manager</h3>
+                <p className="mt-1 text-sm font-medium text-neutral-500">
+                  Expand a section to edit its guide items.
+                </p>
+              </div>
 
-                    <span
-                      className={
-                        section.isActive
-                          ? 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
-                          : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-500'
-                      }
-                    >
-                      {section.isActive ? 'ACTIVE' : 'HIDDEN'}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-sm font-semibold text-neutral-500">
-                    {section.hotelName} · {section.subtitle || 'No subtitle'}
-                  </p>
-
-                  {section.description ? (
-                    <p className="mt-2 text-sm leading-6 text-neutral-600">
-                      {section.description}
-                    </p>
-                  ) : null}
-
-                  <p className="mt-2 text-xs font-bold text-neutral-400">
-                    Icon: {section.iconKey} · Sort: {section.sortOrder}
-                  </p>
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2 xl:min-w-[360px]">
-                  <button
-                    type="button"
-                    onClick={() => setEditingSection(section)}
-                    className="h-10 rounded-2xl border border-neutral-200 px-4 text-sm font-black hover:bg-neutral-50"
-                  >
-                    Edit Section
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setUploadSection(section)}
-                    className="h-10 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800"
-                  >
-                    Upload Image
-                  </button>
-
-                  <ConfirmDeleteForm
-                    action={deleteGuideSectionAction}
-                    hiddenName="sectionId"
-                    hiddenValue={section.id}
-                    label="Delete Section"
-                    confirmMessage="Delete this section, all guide items, and gallery images?"
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search sections or items..."
+                    className="h-11 w-72 rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
                   />
                 </div>
+
+                <select
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as StatusFilter)
+                  }
+                  className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">Active Only</option>
+                  <option value="HIDDEN">Hidden Only</option>
+                </select>
+
+                <select
+                  value={sortMode}
+                  onChange={(event) =>
+                    setSortMode(event.target.value as SortMode)
+                  }
+                  className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+                >
+                  <option value="custom">Sort: Custom Order</option>
+                  <option value="title-asc">Sort: Title A-Z</option>
+                  <option value="items-desc">Sort: Most Items</option>
+                </select>
+
+                <div className="flex rounded-2xl border border-neutral-200 bg-neutral-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('sections')}
+                    className={
+                      viewMode === 'sections'
+                        ? 'h-9 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white'
+                        : 'h-9 rounded-xl px-4 text-xs font-black text-neutral-500 hover:bg-white'
+                    }
+                  >
+                    Sections View
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('items')}
+                    className={
+                      viewMode === 'items'
+                        ? 'h-9 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white'
+                        : 'h-9 rounded-xl px-4 text-xs font-black text-neutral-500 hover:bg-white'
+                    }
+                  >
+                    Items View
+                  </button>
+                </div>
               </div>
-
-              <div className="mt-5">
-                <p className="mb-2 text-sm font-black">Section Gallery</p>
-                <GalleryPreview images={section.galleryImages} />
-              </div>
-
-              <div className="mt-5 grid gap-3">
-                <p className="text-sm font-black">Guide Items</p>
-
-                {section.items.length ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {section.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-black">{item.title}</h4>
-
-                              <span
-                                className={
-                                  item.isActive
-                                    ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700'
-                                    : 'rounded-full bg-neutral-200 px-2 py-1 text-[10px] font-black text-neutral-500'
-                                }
-                              >
-                                {item.isActive ? 'ACTIVE' : 'HIDDEN'}
-                              </span>
-                            </div>
-
-                            <p className="mt-1 text-xs font-bold text-neutral-500">
-                              {item.itemType} · {item.subtitle || 'No subtitle'}
-                            </p>
-                          </div>
-
-                          <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black text-neutral-500">
-                            Sort {item.sortOrder}
-                          </span>
-                        </div>
-
-                        {item.content ? (
-                          <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
-                            {item.content}
-                          </p>
-                        ) : null}
-
-                        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                          <button
-                            type="button"
-                            onClick={() => setEditingItem(item)}
-                            className="h-9 rounded-xl border border-neutral-200 bg-white text-xs font-black hover:bg-neutral-50"
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setUploadItem(item)}
-                            className="h-9 rounded-xl bg-black text-xs font-black text-white hover:bg-neutral-800"
-                          >
-                            Upload Image
-                          </button>
-
-                          <ConfirmDeleteForm
-                            action={deleteGuideItemAction}
-                            hiddenName="itemId"
-                            hiddenValue={item.id}
-                            label="Delete"
-                            confirmMessage="Delete this guide item and its gallery images?"
-                          />
-                        </div>
-
-                        <div className="mt-4">
-                          <GalleryPreview images={item.galleryImages} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-neutral-300 p-6 text-center text-sm font-bold text-neutral-400">
-                    No guide items in this section yet.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {!sections.length ? (
-          <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
-            <p className="font-black">No Hotel Guide sections yet.</p>
-            <p className="mt-1 text-sm text-neutral-500">
-              Create a section or seed default content to start building the
-              guest guide.
-            </p>
+            </div>
           </div>
-        ) : null}
+
+          <div className="space-y-4 p-5">
+            {viewMode === 'sections' ? (
+              <>
+                {visibleSections.map((section) => {
+                  const sectionItselfMatches = sectionMatches(
+                    {
+                      ...section,
+                      items: [],
+                    },
+                    normalizedQuery
+                  );
+
+                  const visibleItems =
+                    normalizedQuery && !sectionItselfMatches
+                      ? section.items.filter((item) =>
+                          itemMatches(item, normalizedQuery)
+                        )
+                      : section.items;
+
+                  return (
+                    <SectionAccordionRow
+                      key={section.id}
+                      section={section}
+                      visibleItems={visibleItems}
+                      expanded={expandedSectionIds.has(section.id)}
+                      onToggle={() => toggleSection(section.id)}
+                      onEditSection={setEditingSection}
+                      onUploadSection={setUploadSection}
+                      onCreateItem={openCreateItem}
+                      onEditItem={setEditingItem}
+                      onUploadItem={setUploadItem}
+                    />
+                  );
+                })}
+
+                {!visibleSections.length ? (
+                  <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
+                    <p className="font-black">No sections found.</p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Adjust your search/filter or create a new guide section.
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="space-y-3">
+                {flatVisibleItems.map(({ section, item }) => (
+                  <GuideItemRow
+                    key={item.id}
+                    item={item}
+                    sectionTitle={section.title}
+                    onEdit={setEditingItem}
+                    onUpload={setUploadItem}
+                  />
+                ))}
+
+                {!flatVisibleItems.length ? (
+                  <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
+                    <p className="font-black">No guide items found.</p>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Adjust your search/filter or create a new guide item.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
       {creatingSection ? (
@@ -1034,15 +2033,18 @@ export function HotelGuideClient({
         <Modal
           title="Create Guide Item"
           description="Add an information card, policy, contact, quick action, or facility item."
-          onClose={() => setCreatingItem(false)}
+          onClose={closeCreateItem}
         >
           <form action={createGuideItemAction} className="space-y-4">
-            <ItemFormFields sections={sections} />
+            <ItemFormFields
+              sections={sections}
+              defaultSectionId={defaultItemSectionId}
+            />
 
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setCreatingItem(false)}
+                onClick={closeCreateItem}
                 className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
               >
                 Cancel
