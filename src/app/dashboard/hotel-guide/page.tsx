@@ -167,6 +167,8 @@ export default async function HotelGuideModulePage({
           description: section.description ?? '',
           imageUrl: section.imageUrl ?? '',
           iconKey: section.iconKey,
+          panoramaEnabled: section.panoramaEnabled,
+          panoramaImageUrl: section.panoramaImageUrl ?? '',
           sortOrder: section.sortOrder,
           isActive: section.isActive,
           galleryImages: section.galleryImages.map((image) => ({
@@ -187,6 +189,8 @@ export default async function HotelGuideModulePage({
             itemType: item.itemType,
             imageUrl: item.imageUrl ?? '',
             iconKey: item.iconKey,
+            panoramaEnabled: item.panoramaEnabled,
+            panoramaImageUrl: item.panoramaImageUrl ?? '',
             hours: item.hours ?? '',
             location: item.location ?? '',
             contact: item.contact ?? '',

@@ -11,6 +11,8 @@ import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope } from '@/lib/access';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
+import { publishLowStockAlert } from '@/lib/realtime/dashboard-alerts';
+
 
 const MENU_MANUAL_OPERATIONS: readonly MenuAvailabilityMovementType[] = [
   MenuAvailabilityMovementType.SET_STOCK,
@@ -27,6 +29,61 @@ const SERVICE_MANUAL_OPERATIONS: readonly ServiceAvailabilityMovementType[] = [
   ServiceAvailabilityMovementType.SOLD_OUT,
   ServiceAvailabilityMovementType.REOPEN,
 ];
+
+const MENU_LOW_STOCK_THRESHOLD = 5;
+const SERVICE_LOW_STOCK_THRESHOLD = 3;
+
+async function publishMenuLowStockIfNeeded(payload: {
+  hotelId: string;
+  productId: string;
+  productName: string;
+  availableQty: number;
+  source: string;
+}) {
+  if (payload.availableQty > MENU_LOW_STOCK_THRESHOLD) {
+    return;
+  }
+
+  try {
+    await publishLowStockAlert({
+      hotelId: payload.hotelId,
+      inventoryItemId: payload.productId,
+      itemName: payload.productName,
+      availableQty: payload.availableQty,
+      reorderLevel: MENU_LOW_STOCK_THRESHOLD,
+      unit: 'items',
+      source: payload.source,
+    });
+  } catch (error) {
+    console.warn('Failed to publish menu low stock alert:', error);
+  }
+}
+
+async function publishServiceLowStockIfNeeded(payload: {
+  hotelId: string;
+  serviceId: string;
+  serviceName: string;
+  availableQty: number;
+  source: string;
+}) {
+  if (payload.availableQty > SERVICE_LOW_STOCK_THRESHOLD) {
+    return;
+  }
+
+  try {
+    await publishLowStockAlert({
+      hotelId: payload.hotelId,
+      inventoryItemId: payload.serviceId,
+      itemName: payload.serviceName,
+      availableQty: payload.availableQty,
+      reorderLevel: SERVICE_LOW_STOCK_THRESHOLD,
+      unit: 'slots',
+      source: payload.source,
+    });
+  } catch (error) {
+    console.warn('Failed to publish service low stock alert:', error);
+  }
+}
 
 type InventoryTab = 'menu' | 'services';
 
@@ -202,7 +259,7 @@ export async function controlMenuStockAction(formData: FormData) {
     });
   }
 
-  await db.$transaction(async (tx) => {
+  const lowStockContext = await db.$transaction(async (tx) => {
     const existingStock = await tx.menuAvailabilityStock.findUnique({
       where: {
         hotelId_productId: {
@@ -275,7 +332,17 @@ export async function controlMenuStockAction(formData: FormData) {
         userId: user.id,
       },
     });
+
+    return {
+      hotelId: product.hotelId,
+      productId: product.id,
+      productName: product.name,
+      availableQty: nextQty,
+      source: `MENU_${operation}`,
+    };
   });
+
+  await publishMenuLowStockIfNeeded(lowStockContext);
 
   revalidateInventoryPages();
 
@@ -588,7 +655,7 @@ export async function controlServiceStockAction(formData: FormData) {
     });
   }
 
-  await db.$transaction(async (tx) => {
+  const lowStockContext = await db.$transaction(async (tx) => {
     await tx.serviceCatalogItem.update({
       where: {
         id: service.id,
@@ -670,7 +737,17 @@ export async function controlServiceStockAction(formData: FormData) {
         userId: user.id,
       },
     });
+
+    return {
+      hotelId: service.hotelId,
+      serviceId: service.id,
+      serviceName: service.name,
+      availableQty: nextQty,
+      source: `SERVICE_${operation}`,
+    };
   });
+
+  await publishServiceLowStockIfNeeded(lowStockContext);
 
   revalidateInventoryPages();
 

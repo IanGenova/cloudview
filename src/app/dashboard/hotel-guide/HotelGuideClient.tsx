@@ -66,6 +66,10 @@ type GuideItem = {
   itemType: HotelGuideItemType;
   imageUrl: string;
   iconKey: string;
+
+  panoramaEnabled: boolean;
+  panoramaImageUrl: string;
+
   hours: string;
   location: string;
   contact: string;
@@ -86,6 +90,10 @@ type GuideSection = {
   description: string;
   imageUrl: string;
   iconKey: string;
+
+  panoramaEnabled: boolean;
+  panoramaImageUrl: string;
+
   sortOrder: number;
   isActive: boolean;
   galleryImages: GuideImage[];
@@ -256,6 +264,262 @@ function ConfirmDeleteForm({
   );
 }
 
+function CoverPhotoField({
+  imageUrl,
+  label,
+}: {
+  imageUrl?: string;
+  label: string;
+}) {
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  function handleCoverImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    setPreviewUrl('');
+    setFileName('');
+    setError('');
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxFileSize = 4 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      event.target.value = '';
+      setError('Use JPG, PNG, or WEBP only.');
+      return;
+    }
+
+    if (file.size > maxFileSize) {
+      event.target.value = '';
+      setError('Cover photo must be 4MB or smaller.');
+      return;
+    }
+
+    setPreviewUrl(URL.createObjectURL(file));
+    setFileName(file.name);
+  }
+
+  const displayImageUrl = previewUrl || imageUrl || '';
+
+  return (
+    <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+      <label className="mb-3 block text-xs font-black uppercase text-neutral-500">
+        {label}
+      </label>
+
+      <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+        <div className="flex h-32 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+          {displayImageUrl ? (
+            <img
+              src={displayImageUrl}
+              alt={label}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center text-neutral-400">
+              <ImageIcon className="size-8" />
+              <span className="mt-2 text-xs font-black">No cover yet</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <input
+              name="coverImage"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleCoverImageChange}
+              className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+            />
+
+            <p className="mt-1 text-xs font-bold text-neutral-500">
+              Uploading a file will replace the cover image URL below. JPG, PNG,
+              or WEBP only. Max 4MB.
+            </p>
+
+            {fileName ? (
+              <p className="mt-2 text-xs font-black text-[#9d741f]">
+                Selected: {fileName}
+              </p>
+            ) : null}
+
+            {error ? (
+              <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Or Paste Cover Image URL
+            </label>
+            <input
+              name="imageUrl"
+              defaultValue={imageUrl ?? ''}
+              placeholder="https://..."
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanoramaField({
+  enabled,
+  panoramaImageUrl,
+  label,
+}: {
+  enabled?: boolean;
+  panoramaImageUrl?: string;
+  label: string;
+}) {
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  function handlePanoramaChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    setPreviewUrl('');
+    setFileName('');
+    setError('');
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxFileSize = 12 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      event.target.value = '';
+      setError('Use JPG, PNG, or WEBP only.');
+      return;
+    }
+
+    if (file.size > maxFileSize) {
+      event.target.value = '';
+      setError('360° panorama must be 12MB or smaller.');
+      return;
+    }
+
+    setPreviewUrl(URL.createObjectURL(file));
+    setFileName(file.name);
+  }
+
+  const displayImageUrl = previewUrl || panoramaImageUrl || '';
+
+  return (
+    <div className="rounded-[1.5rem] border border-[#c99c38]/30 bg-[#fffaf0] p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <label className="block text-xs font-black uppercase tracking-wide text-[#9d741f]">
+            {label}
+          </label>
+          <p className="mt-1 text-xs font-bold text-neutral-500">
+            Use a 2:1 equirectangular image, example: 6000×3000 or 4000×2000.
+          </p>
+        </div>
+
+        <label className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/40 bg-white px-3 py-2 text-xs font-black text-neutral-800">
+          <input
+            type="checkbox"
+            name="panoramaEnabled"
+            value="true"
+            defaultChecked={enabled ?? false}
+            className="size-4 accent-black"
+          />
+          Enable 360°
+        </label>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+        <div className="flex h-36 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+          {displayImageUrl ? (
+            <img
+              src={displayImageUrl}
+              alt={label}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center text-neutral-400">
+              <ImageIcon className="size-8" />
+              <span className="mt-2 text-xs font-black">No 360° image</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <input
+              name="panoramaImage"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handlePanoramaChange}
+              className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+            />
+
+            <p className="mt-1 text-xs font-bold text-neutral-500">
+              Uploading a file will replace the 360° URL below.
+            </p>
+
+            {fileName ? (
+              <p className="mt-2 text-xs font-black text-[#9d741f]">
+                Selected: {fileName}
+              </p>
+            ) : null}
+
+            {error ? (
+              <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Or Paste 360° Panorama URL
+            </label>
+            <input
+              name="panoramaImageUrl"
+              defaultValue={panoramaImageUrl ?? ''}
+              placeholder="https://yourdomain.com/pool-360.jpg"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function SectionFormFields({
   hotels,
   defaultHotelId,
@@ -328,45 +592,43 @@ function SectionFormFields({
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Cover Image URL
-          </label>
-          <input
-            name="imageUrl"
-            defaultValue={section?.imageUrl ?? ''}
-            placeholder="https://..."
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-          />
-        </div>
+             <CoverPhotoField
+  imageUrl={section?.imageUrl ?? ''}
+  label="Section Cover Photo"
+/>
+        <PanoramaField
+          enabled={section?.panoramaEnabled ?? false}
+          panoramaImageUrl={section?.panoramaImageUrl ?? ''}
+          label="Section 360° Panorama"
+        />
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Icon
-          </label>
-          <Select name="iconKey" defaultValue={section?.iconKey ?? 'Info'}>
-            {iconOptions.map((icon) => (
-              <option key={icon} value={icon}>
-                {icon}
-              </option>
-            ))}
-          </Select>
-        </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Icon
+              </label>
+              <Select name="iconKey" defaultValue={section?.iconKey ?? 'Info'}>
+                {iconOptions.map((icon) => (
+                  <option key={icon} value={icon}>
+                    {icon}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Sort Order
-          </label>
-          <input
-            name="sortOrder"
-            type="number"
-            step="1"
-            defaultValue={section?.sortOrder ?? 0}
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-          />
-        </div>
-      </div>
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Sort Order
+              </label>
+              <input
+                name="sortOrder"
+                type="number"
+                step="1"
+                defaultValue={section?.sortOrder ?? 0}
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
+          </div>
 
       <label className="flex items-center gap-2 text-sm font-bold">
         <input
@@ -492,51 +754,95 @@ function ItemFormFields({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <input
-          name="hours"
-          defaultValue={item?.hours ?? ''}
-          placeholder="Hours e.g. 7:00 AM - 9:00 PM"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-        <input
-          name="location"
-          defaultValue={item?.location ?? ''}
-          placeholder="Location"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-        <input
-          name="contact"
-          defaultValue={item?.contact ?? ''}
-          placeholder="Contact / Extension"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-        <input
-          name="mapUrl"
-          defaultValue={item?.mapUrl ?? ''}
-          placeholder="Map URL"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-        <input
-          name="buttonLabel"
-          defaultValue={item?.buttonLabel ?? ''}
-          placeholder="Button Label e.g. View Menu"
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-        <input
-          name="buttonHref"
-          defaultValue={item?.buttonHref ?? ''}
-          placeholder="Button Link e.g. menu, service, pool, https://..."
-          className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-      </div>
+            <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Hours
+              </label>
+              <input
+                name="hours"
+                defaultValue={item?.hours ?? ''}
+                placeholder="e.g. 7:00 AM - 9:00 PM"
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
 
-      <input
-        name="imageUrl"
-        defaultValue={item?.imageUrl ?? ''}
-        placeholder="Optional cover image URL"
-        className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-      />
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Location
+              </label>
+              <input
+                name="location"
+                defaultValue={item?.location ?? ''}
+                placeholder="e.g. Pool Deck, Ground Floor, Lobby"
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Contact / Extension
+              </label>
+              <input
+                name="contact"
+                defaultValue={item?.contact ?? ''}
+                placeholder="e.g. Front Desk 0, Housekeeping 102"
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Map URL
+              </label>
+              <input
+                name="mapUrl"
+                defaultValue={item?.mapUrl ?? ''}
+                placeholder="Paste Google Maps or internal location link"
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Button Label
+              </label>
+              <input
+                name="buttonLabel"
+                defaultValue={item?.buttonLabel ?? ''}
+                placeholder="e.g. View Menu, Request Service, Open Pool Page"
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                Button Link
+              </label>
+              <input
+                name="buttonHref"
+                defaultValue={item?.buttonHref ?? ''}
+                placeholder="e.g. menu, service, pool, https://..."
+                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Cover Image URL
+            </label>
+                          <CoverPhotoField
+                imageUrl={item?.imageUrl ?? ''}
+                label="Guide Item Cover Photo"
+              />
+            </div>
+
+            <PanoramaField
+              enabled={item?.panoramaEnabled ?? false}
+              panoramaImageUrl={item?.panoramaImageUrl ?? ''}
+              label="Guide Item 360° Panorama"
+            />
 
       <label className="flex items-center gap-2 text-sm font-bold">
         <input
@@ -2008,7 +2314,11 @@ export function HotelGuideClient({
           description="Add a new main section to the Guest Portal Hotel Guide."
           onClose={() => setCreatingSection(false)}
         >
-          <form action={createGuideSectionAction} className="space-y-4">
+         <form
+              action={createGuideSectionAction}
+              
+              className="space-y-4"
+            >
             <SectionFormFields
               hotels={hotels}
               defaultHotelId={defaultHotelId}
@@ -2035,7 +2345,10 @@ export function HotelGuideClient({
           description="Add an information card, policy, contact, quick action, or facility item."
           onClose={closeCreateItem}
         >
-          <form action={createGuideItemAction} className="space-y-4">
+          <form
+              action={createGuideItemAction}
+              className="space-y-4"
+            >
             <ItemFormFields
               sections={sections}
               defaultSectionId={defaultItemSectionId}
@@ -2061,7 +2374,10 @@ export function HotelGuideClient({
           description="Update this guide section."
           onClose={() => setEditingSection(null)}
         >
-          <form action={updateGuideSectionAction} className="space-y-4">
+          <form
+              action={updateGuideSectionAction}
+              className="space-y-4"
+            >
             <input type="hidden" name="sectionId" value={editingSection.id} />
             <SectionFormFields
               hotels={hotels}
@@ -2090,7 +2406,10 @@ export function HotelGuideClient({
           description="Update this hotel guide item."
           onClose={() => setEditingItem(null)}
         >
-          <form action={updateGuideItemAction} className="space-y-4">
+          <form
+                  action={updateGuideItemAction}
+                  className="space-y-4">
+                    
             <input type="hidden" name="itemId" value={editingItem.id} />
             <ItemFormFields sections={sections} item={editingItem} />
 

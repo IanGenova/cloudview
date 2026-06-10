@@ -24,6 +24,13 @@ import {
   updateProductAction,
 } from './actions';
 
+import {
+  DynamicBundleComponentFields,
+  ProductBundleProvider,
+  ProductTypeField,
+} from './DynamicBundleFields';
+
+
 type BundleComponentOption = {
   id: string;
   hotelId: string;
@@ -268,99 +275,7 @@ function getBundleNormalTotalCents(
   );
 }
 
-function BundleComponentFields({
-  componentOptions,
-  defaultComponents = [],
-  currentProductId,
-}: {
-  componentOptions: BundleComponentOption[];
-  defaultComponents?: BundleComponentValue[];
-  currentProductId?: string;
-}) {
-  const maxRows = Math.max(6, defaultComponents.length + 2);
-  const rows = Array.from({ length: maxRows }, (_, index) => {
-    return (
-      defaultComponents[index] ?? {
-        componentProductId: '',
-        quantity: 1,
-      }
-    );
-  });
 
-  const availableComponentOptions = componentOptions.filter(
-    (option) =>
-      option.productType === MenuProductType.SINGLE &&
-      option.id !== currentProductId
-  );
-
-  return (
-    <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 md:col-span-2">
-      <div className="mb-4">
-        <p className="text-sm font-black text-amber-900">Bundle Components</p>
-        <p className="mt-1 text-xs font-bold leading-relaxed text-amber-800">
-          Use this section only when Product Type is set to Bundle / Combo.
-          Select the single menu items included in the bundle and the quantity
-          required for each bundle sold.
-        </p>
-      </div>
-
-      {availableComponentOptions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-amber-300 bg-white/70 p-4 text-sm font-bold text-amber-800">
-          Create single menu items first before creating a bundle.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {rows.map((row, index) => (
-            <div
-              key={`bundle-component-row-${index}`}
-              className="grid gap-2 rounded-2xl bg-white/80 p-3 md:grid-cols-[1fr_140px]"
-            >
-              <label className="grid gap-1">
-                <span className="text-xs font-black uppercase tracking-[0.12em] text-amber-700">
-                  Component Item {index + 1}
-                </span>
-                <select
-                  name="bundleComponentProductId"
-                  defaultValue={row.componentProductId}
-                  className="h-11 rounded-2xl border border-amber-200 bg-white px-4 text-sm font-bold outline-none"
-                >
-                  <option value="">No component</option>
-                  {availableComponentOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.hotel.name} · {option.category.name} ·{' '}
-                      {option.name} · {money(option.priceCents)}
-                      {!option.isAvailable ? ' (Hidden)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-1">
-                <span className="text-xs font-black uppercase tracking-[0.12em] text-amber-700">
-                  Qty
-                </span>
-                <input
-                  name="bundleComponentQuantity"
-                  type="number"
-                  min="1"
-                  step="1"
-                  defaultValue={row.quantity}
-                  className="h-11 rounded-2xl border border-amber-200 bg-white px-4 text-sm font-bold outline-none"
-                />
-              </label>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <p className="mt-4 rounded-2xl bg-white/70 p-3 text-xs font-bold leading-relaxed text-amber-900">
-        Example: Breakfast Combo can include 1 Breakfast Pancakes and 1 Iced
-        Tea. When a guest orders 2 combos, inventory should deduct 2 Pancakes
-        and 2 Iced Tea in the next inventory step.
-      </p>
-    </div>
-  );
-}
 
 export default async function MenuManagementPage({
     searchParams,
@@ -431,6 +346,21 @@ export default async function MenuManagementPage({
   const componentOptions = products.filter(
     (product) => product.productType === MenuProductType.SINGLE
   );
+
+  const bundleComponentOptions = componentOptions.map((product) => ({
+  id: product.id,
+  hotelId: product.hotelId,
+  name: product.name,
+  priceCents: product.priceCents,
+  isAvailable: product.isAvailable,
+  productType: product.productType,
+  hotel: {
+    name: product.hotel.name,
+  },
+  category: {
+    name: product.category.name,
+  },
+}));
 
   return (
     <div>
@@ -614,132 +544,116 @@ export default async function MenuManagementPage({
                 title={`Edit ${product.name}`}
                 description="Update product details, pricing, image, availability, and bundle components."
               >
-                <form
-                  action={updateProductAction}
-                  className="grid gap-5 md:grid-cols-2"
-                >
-                  <input type="hidden" name="productId" value={product.id} />
+               <form
+  action={updateProductAction}
+          className="grid gap-5 md:grid-cols-2"
+        >
+          <input type="hidden" name="productId" value={product.id} />
 
-                  <FormField label="Menu Category">
-                    <Select
-                      name="categoryId"
-                      required
-                      defaultValue={product.categoryId}
-                    >
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.hotel.name} · {category.name}
-                          {!category.isActive ? ' (Hidden)' : ''}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
+          <ProductBundleProvider defaultProductType={product.productType}>
+            <FormField label="Menu Category">
+              <Select
+                name="categoryId"
+                required
+                defaultValue={product.categoryId}
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.hotel.name} · {category.name}
+                    {!category.isActive ? ' (Hidden)' : ''}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-                  <FormField
-                    label="Product Type"
-                    helper="Use Single Item for normal products. Use Bundle / Combo for fixed sets."
-                  >
-                    <Select
-                      name="productType"
-                      required
-                      defaultValue={product.productType}
-                    >
-                      <option value={MenuProductType.SINGLE}>
-                        Single Item
-                      </option>
-                      <option value={MenuProductType.BUNDLE}>
-                        Bundle / Combo
-                      </option>
-                    </Select>
-                  </FormField>
+            <ProductTypeField helper="Use Single Item for normal products. Use Bundle / Combo for fixed sets." />
 
-                  <FormField label="Product Name">
-                    <Input name="name" defaultValue={product.name} required />
-                  </FormField>
+            <FormField label="Product Name">
+              <Input name="name" defaultValue={product.name} required />
+            </FormField>
 
-                  <FormField label="Price">
-                    <Input
-                      name="price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      defaultValue={(product.priceCents / 100).toString()}
-                      required
-                    />
-                  </FormField>
+            <FormField label="Price">
+              <Input
+                name="price"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={(product.priceCents / 100).toString()}
+                required
+              />
+            </FormField>
 
-                  <FormField label="Preparation Time">
-                    <Input
-                      name="prepTimeMinutes"
-                      type="number"
-                      min="0"
-                      defaultValue={product.prepTimeMinutes}
-                    />
-                  </FormField>
+            <FormField label="Preparation Time">
+              <Input
+                name="prepTimeMinutes"
+                type="number"
+                min="0"
+                defaultValue={product.prepTimeMinutes}
+              />
+            </FormField>
 
-                  <FormField
-                        label="Upload New Product Image"
-                        helper="Leave blank to keep the current image."
-                        className="md:col-span-2"
-                      >
-                        <MenuImageUploadPreview
-                          name="imageFile"
-                          currentImageUrl={imageUrl}
-                          currentImageAlt={product.name}
-                        />
-                      </FormField>
+            <FormField
+              label="Upload New Product Image"
+              helper="Leave blank to keep the current image."
+              className="md:col-span-2"
+            >
+              <MenuImageUploadPreview
+                name="imageFile"
+                currentImageUrl={imageUrl}
+                currentImageAlt={product.name}
+              />
+            </FormField>
 
-                  <FormField
-                    label="Image URL"
-                    helper="Optional. If filled, this replaces the current image."
-                    className="md:col-span-2"
-                  >
-                    <Input
-                      name="imageUrl"
-                      type="url"
-                      placeholder="https://..."
-                    />
-                  </FormField>
+            <FormField
+              label="Image URL"
+              helper="Optional. If filled, this replaces the current image."
+              className="md:col-span-2"
+            >
+              <Input
+                name="imageUrl"
+                type="url"
+                placeholder="https://..."
+              />
+            </FormField>
 
-                  <FormField label="Description" className="md:col-span-2">
-                    <Textarea
-                      name="description"
-                      defaultValue={product.description || ''}
-                    />
-                  </FormField>
+            <FormField label="Description" className="md:col-span-2">
+              <Textarea
+                name="description"
+                defaultValue={product.description || ''}
+              />
+            </FormField>
 
-                  <BundleComponentFields
-                    componentOptions={componentOptions}
-                    currentProductId={product.id}
-                    defaultComponents={product.bundleComponents.map(
-                      (component) => ({
-                        componentProductId: component.componentProductId,
-                        quantity: component.quantity,
-                      })
-                    )}
-                  />
+            <DynamicBundleComponentFields
+              componentOptions={bundleComponentOptions}
+              currentProductId={product.id}
+              defaultComponents={product.bundleComponents.map((component) => ({
+                componentProductId: component.componentProductId,
+                quantity: component.quantity,
+              }))}
+            />
 
-                  <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
-                    <input
-                      name="isAvailable"
-                      type="checkbox"
-                      defaultChecked={product.isAvailable}
-                      className="size-4 accent-black"
-                    />
-                    <span>
-                      <span className="block text-sm font-black">
-                        Available
-                      </span>
-                      <span className="text-xs font-medium text-neutral-500">
-                        Show this product in the guest portal and POS.
-                      </span>
-                    </span>
-                  </label>
+            <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+              <input
+                name="isAvailable"
+                type="checkbox"
+                defaultChecked={product.isAvailable}
+                className="size-4 accent-black"
+              />
+              <span>
+                <span className="block text-sm font-black">
+                  Available
+                </span>
+                <span className="text-xs font-medium text-neutral-500">
+                  Show this product in the guest portal and POS.
+                </span>
+              </span>
+            </label>
 
-                  <div className="md:col-span-2">
-                    <Button className="w-full">Save Product Changes</Button>
-                  </div>
-                </form>
+            <div className="md:col-span-2">
+              <Button className="w-full">Save Product Changes</Button>
+            </div>
+          </ProductBundleProvider>
+        </form>
               </Modal>
             </article>
           );
@@ -751,94 +665,88 @@ export default async function MenuManagementPage({
         title="Add Product"
         description="Create a single menu item or a fixed bundle/combo."
       >
-        <form
-          action={createProductAction}
-          className="grid gap-5 md:grid-cols-2"
-        >
-          <FormField
-            label="Menu Category"
-            helper="Select where this product will appear."
+       <form
+  action={createProductAction}
+            className="grid gap-5 md:grid-cols-2"
           >
-            <Select name="categoryId" required>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.hotel.name} · {category.name}
-                  {!category.isActive ? ' (Hidden)' : ''}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+            <ProductBundleProvider defaultProductType="SINGLE">
+              <FormField
+                label="Menu Category"
+                helper="Select where this product will appear."
+              >
+                <Select name="categoryId" required>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.hotel.name} · {category.name}
+                      {!category.isActive ? ' (Hidden)' : ''}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
 
-          <FormField
-            label="Product Type"
-            helper="Choose Single Item or Bundle / Combo."
-          >
-            <Select name="productType" required defaultValue={MenuProductType.SINGLE}>
-              <option value={MenuProductType.SINGLE}>Single Item</option>
-              <option value={MenuProductType.BUNDLE}>Bundle / Combo</option>
-            </Select>
-          </FormField>
+              <ProductTypeField helper="Choose Single Item or Bundle / Combo." />
 
-          <FormField label="Product Name">
-            <Input name="name" placeholder="Club Sandwich" required />
-          </FormField>
+              <FormField label="Product Name">
+                <Input name="name" placeholder="Club Sandwich" required />
+              </FormField>
 
-          <FormField label="Price" helper="Example: 280 means ₱280.00.">
-            <Input
-              name="price"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="280"
-              required
-            />
-          </FormField>
+              <FormField label="Price" helper="Example: 280 means ₱280.00.">
+                <Input
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="280"
+                  required
+                />
+              </FormField>
 
-          <FormField label="Preparation Time">
-            <Input
-              name="prepTimeMinutes"
-              type="number"
-              min="0"
-              defaultValue="15"
-            />
-          </FormField>
+              <FormField label="Preparation Time">
+                <Input
+                  name="prepTimeMinutes"
+                  type="number"
+                  min="0"
+                  defaultValue="15"
+                />
+              </FormField>
 
-          <FormField label="Upload Product Image" className="md:col-span-2">
-            <MenuImageUploadPreview name="imageFile" />
-          </FormField>
+              <FormField label="Upload Product Image" className="md:col-span-2">
+                <MenuImageUploadPreview name="imageFile" />
+              </FormField>
 
-          <FormField label="Image URL" className="md:col-span-2">
-            <Input name="imageUrl" type="url" placeholder="https://..." />
-          </FormField>
+              <FormField label="Image URL" className="md:col-span-2">
+                <Input name="imageUrl" type="url" placeholder="https://..." />
+              </FormField>
 
-          <FormField label="Description" className="md:col-span-2">
-            <Textarea
-              name="description"
-              placeholder="Short product description."
-            />
-          </FormField>
+              <FormField label="Description" className="md:col-span-2">
+                <Textarea
+                  name="description"
+                  placeholder="Short product description."
+                />
+              </FormField>
 
-          <BundleComponentFields componentOptions={componentOptions} />
+              <DynamicBundleComponentFields componentOptions={bundleComponentOptions} />
 
-          <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
-            <input
-              name="isAvailable"
-              type="checkbox"
-              defaultChecked
-              className="size-4 accent-black"
-            />
-            <span>
-              <span className="block text-sm font-black">Available</span>
-              <span className="text-xs font-medium text-neutral-500">
-                Show this product in the guest portal and POS.
-              </span>
-            </span>
-          </label>
+              <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+                <input
+                  name="isAvailable"
+                  type="checkbox"
+                  defaultChecked
+                  className="size-4 accent-black"
+                />
+                <span>
+                  <span className="block text-sm font-black">Available</span>
+                  <span className="text-xs font-medium text-neutral-500">
+                    Show this product in the guest portal and POS.
+                  </span>
+                </span>
+              </label>
 
-          <div className="md:col-span-2">
-            <Button className="w-full">Create Product</Button>
-          </div>
-        </form>
+              <div className="md:col-span-2">
+                <Button className="w-full">Create Product</Button>
+              </div>
+            </ProductBundleProvider>
+          </form>
       </Modal>
 
       <Modal

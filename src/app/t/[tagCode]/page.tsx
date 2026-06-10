@@ -14,7 +14,7 @@ import { db } from '@/lib/db';
 import { GuestBottomNav, GuestLogo } from '@/components/guest/GuestShell';
 import { QuickAction } from '@/components/guest/QuickAction';
 
-const resortImage =
+const fallbackResortImage =
   'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80';
 
 type GuestHomeProps = {
@@ -94,14 +94,18 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
   const guestGreeting = tag.room ? `Room ${tag.room.number}` : locationName;
 
+  const heroImage =
+    tag.hotel.settings?.guestPortalHeroImageUrl?.trim() || fallbackResortImage;
+
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
       <div className="mx-auto min-h-screen max-w-md bg-black shadow-soft">
         <section className="relative min-h-[58vh] overflow-hidden rounded-b-[2.5rem] px-5 pb-7 pt-10">
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${resortImage})` }}
+            style={{ backgroundImage: `url(${heroImage})` }}
           />
+
           <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/30 to-black" />
 
           <button

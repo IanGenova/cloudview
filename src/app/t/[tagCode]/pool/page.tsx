@@ -461,7 +461,7 @@ const poolSection =
         </div>
       </main>
 
-      <GuestBottomNav tagCode={tagCode} active="services" />
+      <GuestBottomNav tagCode={tagCode} active="services" dark />
     </>
   );
 }

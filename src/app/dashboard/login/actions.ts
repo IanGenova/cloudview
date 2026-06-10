@@ -8,7 +8,7 @@ import {
   verifyPassword,
 } from '@/lib/auth';
 import { loginSchema } from '@/lib/validators';
-import type { User } from '@prisma/client';
+import type { Role, User } from '@prisma/client';
 
 export type LoginActionState =
   | {
@@ -16,6 +16,41 @@ export type LoginActionState =
       success?: string;
     }
   | undefined;
+
+function getSafeDashboardRedirect(
+  nextValue: FormDataEntryValue | null,
+  role: Role
+) {
+  const fallback = dashboardHomeForRole(role);
+
+  if (typeof nextValue !== 'string') {
+    return fallback;
+  }
+
+  const next = nextValue.trim();
+
+  if (!next) {
+    return fallback;
+  }
+
+  if (!next.startsWith('/dashboard')) {
+    return fallback;
+  }
+
+  if (next.startsWith('//')) {
+    return fallback;
+  }
+
+  if (next.includes('://')) {
+    return fallback;
+  }
+
+  if (next === '/dashboard/login') {
+    return fallback;
+  }
+
+  return next;
+}
 
 export async function loginAction(
   _: LoginActionState,
@@ -32,12 +67,14 @@ export async function loginAction(
     };
   }
 
+  const email = parsed.data.email.trim().toLowerCase();
+
   let user: User | null = null;
 
   try {
     user = await db.user.findUnique({
       where: {
-        email: parsed.data.email,
+        email,
       },
     });
   } catch (error) {
@@ -68,7 +105,10 @@ export async function loginAction(
     email: user.email,
     role: user.role,
     hotelId: user.hotelId,
+    isActive: user.isActive,
   });
 
-  redirect(dashboardHomeForRole(user.role));
+  const redirectTo = getSafeDashboardRedirect(formData.get('next'), user.role);
+
+  redirect(redirectTo);
 }

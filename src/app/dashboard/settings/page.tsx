@@ -91,6 +91,59 @@ export default async function SettingsPage() {
               <Input name="logoUrl" defaultValue={hotel?.logoUrl ?? ''} placeholder="https://yourdomain.com/logo.png" />
             </FormField>
 
+            <FormField
+  label="Guest Portal Hero Image"
+  helper="This image appears as the main background image on the guest portal front page. Uploading a file will override the pasted URL."
+  className="md:col-span-2"
+>
+  <div className="grid gap-4 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4 md:grid-cols-[240px_1fr]">
+    <div className="h-40 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      {hotel?.settings?.guestPortalHeroImageUrl ? (
+        <img
+          src={hotel.settings.guestPortalHeroImageUrl}
+          alt="Guest portal hero preview"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="grid h-full place-items-center text-center text-xs font-black text-neutral-400">
+          No hero image yet
+        </div>
+      )}
+    </div>
+
+    <div className="grid gap-3">
+      <div>
+        <span className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          Upload Hero Image
+        </span>
+
+        <input
+          name="guestPortalHeroImage"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+        />
+
+        <p className="mt-1 text-xs font-medium text-neutral-500">
+          JPG, PNG, or WEBP only. Maximum 4MB.
+        </p>
+      </div>
+
+      <div>
+        <span className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          Or Paste Hero Image URL
+        </span>
+
+        <Input
+          name="guestPortalHeroImageUrl"
+          defaultValue={hotel?.settings?.guestPortalHeroImageUrl ?? ''}
+          placeholder="https://yourdomain.com/guest-portal-hero.jpg"
+        />
+      </div>
+    </div>
+  </div>
+</FormField>
+
             <FormField label="Primary Brand Color" helper="Main dark color used for premium headers and buttons.">
               <Input name="brandColor" defaultValue={hotel?.brandColor} placeholder="#111111" />
             </FormField>

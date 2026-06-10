@@ -99,7 +99,8 @@ export default async function GuidePage({
             description: section.description ?? '',
             imageUrl: section.imageUrl ?? '',
             iconKey: section.iconKey,
-
+            panoramaEnabled: section.panoramaEnabled,
+            panoramaImageUrl: section.panoramaImageUrl ?? '',
             galleryImages: section.galleryImages.map((image) => ({
               id: image.id,
               title: image.title ?? '',
@@ -115,6 +116,8 @@ export default async function GuidePage({
               subtitle: item.subtitle ?? '',
               content: item.content ?? '',
               iconKey: item.iconKey,
+              panoramaEnabled: item.panoramaEnabled,
+              panoramaImageUrl: item.panoramaImageUrl ?? '',
               hours: item.hours ?? '',
               location: item.location ?? '',
               contact: item.contact ?? '',

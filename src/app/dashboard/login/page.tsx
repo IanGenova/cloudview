@@ -2,37 +2,46 @@ import { redirect } from 'next/navigation';
 import { LoginForm } from './LoginForm';
 import { dashboardHomeForRole, getCurrentUser } from '@/lib/auth';
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    next?: string;
+  }>;
+}) {
+  const { next } = await searchParams;
   const user = await getCurrentUser();
 
-  // If already logged in and user presses browser Back to /dashboard/login,
-  // redirect back to dashboard instead of showing login inside the dashboard shell.
   if (user) {
     redirect(dashboardHomeForRole(user.role));
   }
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-cream px-5 py-10 text-ink">
+    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-[#f7efe2] px-5 py-10 text-ink">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[-12rem] top-[-10rem] h-[32rem] w-[32rem] rounded-full bg-white/80 blur-3xl" />
-        <div className="absolute right-[-10rem] top-[8rem] h-[34rem] w-[34rem] rounded-full bg-gold/10 blur-3xl" />
-        <div className="absolute bottom-[-16rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/70 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.88),transparent_34%),radial-gradient(circle_at_84%_72%,rgba(193,128,37,0.10),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.52),rgba(248,229,198,0.36))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#fffaf0_0%,#f7ead6_34%,#e7c98f_100%)]" />
+        <div className="absolute left-1/2 top-[38%] h-[46rem] w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/75 blur-3xl" />
+        <div className="absolute right-[-12rem] top-[8rem] h-[36rem] w-[36rem] rounded-full bg-[#c99c38]/25 blur-3xl" />
+        <div className="absolute left-[-14rem] bottom-[-10rem] h-[34rem] w-[34rem] rounded-full bg-[#f5d996]/35 blur-3xl" />
+        <div className="absolute bottom-[-18rem] left-[-8rem] h-[34rem] w-[120vw] rotate-[-8deg] rounded-[100%] bg-white/35 blur-2xl" />
+        <div className="absolute bottom-[-20rem] right-[-10rem] h-[32rem] w-[90vw] rotate-[10deg] rounded-[100%] bg-[#fff6df]/45 blur-2xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_45%,rgba(80,54,18,0.10)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.28)_42%,transparent_50%,rgba(255,255,255,0.18)_62%,transparent_78%)]" />
       </div>
 
       <section className="relative z-10 w-full max-w-4xl">
-        <div className="overflow-hidden rounded-[2rem] border border-gold/20 bg-white/82 shadow-[0_28px_80px_rgba(18,18,18,0.12)] backdrop-blur-xl">
-          <div className="h-1.5 bg-gradient-to-r from-transparent via-gold to-transparent" />
+        <div className="overflow-hidden rounded-[2rem] border border-[#c99c38]/25 bg-white/78 shadow-[0_30px_90px_rgba(60,42,15,0.18)] backdrop-blur-2xl">
+          <div className="h-1.5 bg-gradient-to-r from-transparent via-[#c99c38] to-transparent" />
 
           <div className="px-6 py-8 sm:px-10 sm:py-10 lg:px-16 lg:py-12">
             <div className="mx-auto max-w-2xl">
               <div className="text-center">
-                <p className="text-sm font-black uppercase tracking-[0.45em] text-gold">
+                <p className="text-sm font-black uppercase tracking-[0.45em] text-[#b88938]">
                   Cloud View
                 </p>
 
                 <h1 className="mt-5 font-serif text-4xl font-black tracking-tight text-ink sm:text-5xl">
-                 CloudView Admin Portal
+                  CloudView Admin Portal
                 </h1>
 
                 <p className="mt-4 text-base font-medium leading-7 text-neutral-500 sm:text-lg">
@@ -41,7 +50,7 @@ export default async function LoginPage() {
               </div>
 
               <div className="mt-9">
-                <LoginForm />
+                <LoginForm next={next ?? ''} />
               </div>
             </div>
           </div>

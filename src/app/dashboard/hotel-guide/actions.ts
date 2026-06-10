@@ -14,6 +14,8 @@ import { cleanText } from '@/lib/sanitize';
 
 const MAX_GUIDE_IMAGES_PER_UPLOAD = 10;
 
+const MAX_GUIDE_PANORAMA_SIZE = 12 * 1024 * 1024;
+
 
 const MAX_GUIDE_IMAGE_SIZE = 4 * 1024 * 1024;
 
@@ -358,6 +360,110 @@ async function deletePublicImageFile(imageUrl: string) {
   }
 }
 
+async function saveHotelGuidePanoramaFile(file: File) {
+  if (!file || file.size <= 0) {
+    throw new Error('Panorama image file is required.');
+  }
+
+  if (file.size > MAX_GUIDE_PANORAMA_SIZE) {
+    throw new Error('360° panorama must be 12MB or smaller.');
+  }
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Uploaded panorama must be an image.');
+  }
+
+  const extension = getFileExtension(file);
+
+  if (!extension) {
+    throw new Error('Only JPG, PNG, and WEBP panorama images are allowed.');
+  }
+
+  const fileName = `${randomUUID()}-360.${extension}`;
+  const uploadDir = path.join(
+    process.cwd(),
+    'public',
+    'uploads',
+    'hotel-guide'
+  );
+
+  await mkdir(uploadDir, {
+    recursive: true,
+  });
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+
+  await writeFile(path.join(uploadDir, fileName), buffer);
+
+  return `/uploads/hotel-guide/${fileName}`;
+}
+
+async function resolvePanoramaImageUrl(formData: FormData) {
+  const typedPanoramaImageUrl = cleanText(
+    formData.get('panoramaImageUrl'),
+    700
+  );
+
+  const panoramaFile = formData.get('panoramaImage');
+
+  if (!isUploadedFile(panoramaFile)) {
+    return {
+      panoramaImageUrl: typedPanoramaImageUrl || null,
+      uploadedPanoramaImageUrl: null,
+    };
+  }
+
+  const uploadedPanoramaImageUrl =
+    await saveHotelGuidePanoramaFile(panoramaFile);
+
+  return {
+    panoramaImageUrl: uploadedPanoramaImageUrl,
+    uploadedPanoramaImageUrl,
+  };
+}
+
+async function deleteReplacedPanoramaImage(
+  previousPanoramaImageUrl: string | null | undefined,
+  nextPanoramaImageUrl: string | null
+) {
+  if (
+    previousPanoramaImageUrl &&
+    previousPanoramaImageUrl !== nextPanoramaImageUrl
+  ) {
+    await deletePublicImageFile(previousPanoramaImageUrl);
+  }
+}
+
+
+async function resolveCoverImageUrl(formData: FormData) {
+  const typedImageUrl = cleanText(formData.get('imageUrl'), 700);
+  const coverImageFile = formData.get('coverImage');
+
+  if (!isUploadedFile(coverImageFile)) {
+    return {
+      imageUrl: typedImageUrl || null,
+      uploadedImageUrl: null,
+    };
+  }
+
+  const uploadedImageUrl = await saveHotelGuideImageFile(coverImageFile);
+
+  return {
+    imageUrl: uploadedImageUrl,
+    uploadedImageUrl,
+  };
+}
+
+async function deleteReplacedCoverImage(
+  previousImageUrl: string | null | undefined,
+  nextImageUrl: string | null
+) {
+  if (previousImageUrl && previousImageUrl !== nextImageUrl) {
+    await deletePublicImageFile(previousImageUrl);
+  }
+}
+
 export async function createGuideSectionAction(formData: FormData) {
   const user = await requireUser();
   requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
@@ -366,13 +472,20 @@ export async function createGuideSectionAction(formData: FormData) {
   const title = cleanText(formData.get('title'), 120);
   const subtitle = cleanText(formData.get('subtitle'), 180);
   const description = cleanText(formData.get('description'), 500);
-  const imageUrl = cleanText(formData.get('imageUrl'), 700);
   const iconKey = cleanText(formData.get('iconKey'), 80) || 'Info';
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
+  const panoramaEnabled = formData.get('panoramaEnabled') === 'true';
 
-  if (!hotelId) redirectToGuide({ error: 'hotel-required' });
-  if (!title) redirectToGuide({ error: 'title-required' });
+if (!hotelId) redirectToGuide({ error: 'hotel-required' });
+if (!title) redirectToGuide({ error: 'title-required' });
+
+let uploadedPanoramaImageUrl: string | null = null;
+
+try {
+  const cover = await resolveCoverImageUrl(formData);
+  const panorama = await resolvePanoramaImageUrl(formData);
+  uploadedPanoramaImageUrl = panorama.uploadedPanoramaImageUrl;
 
   await db.hotelGuideSection.create({
     data: {
@@ -380,14 +493,28 @@ export async function createGuideSectionAction(formData: FormData) {
       title,
       subtitle: subtitle || null,
       description: description || null,
-      imageUrl: imageUrl || null,
+      imageUrl: cover.imageUrl,
       iconKey,
+      panoramaEnabled: panoramaEnabled && Boolean(panorama.panoramaImageUrl),
+      panoramaImageUrl: panorama.panoramaImageUrl,
       sortOrder,
       isActive,
     },
   });
+} catch (error) {
+  console.error(error);
+
+  if (uploadedPanoramaImageUrl) {
+    await deletePublicImageFile(uploadedPanoramaImageUrl);
+  }
+
+  redirectToGuide({ error: 'image-upload-failed' });
+}
 
   revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+
   redirectToGuide({ success: 'section-created' });
 }
 
@@ -399,10 +526,10 @@ export async function updateGuideSectionAction(formData: FormData) {
   const title = cleanText(formData.get('title'), 120);
   const subtitle = cleanText(formData.get('subtitle'), 180);
   const description = cleanText(formData.get('description'), 500);
-  const imageUrl = cleanText(formData.get('imageUrl'), 700);
   const iconKey = cleanText(formData.get('iconKey'), 80) || 'Info';
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
+  const panoramaEnabled = formData.get('panoramaEnabled') === 'true';
 
   if (!sectionId) redirectToGuide({ error: 'section-required' });
   if (!title) redirectToGuide({ error: 'title-required' });
@@ -419,6 +546,16 @@ export async function updateGuideSectionAction(formData: FormData) {
 
   assertHotelScope(user, section.hotelId);
 
+  let uploadedCoverImageUrl: string | null = null;
+  let uploadedPanoramaImageUrl: string | null = null;
+
+try {
+  const cover = await resolveCoverImageUrl(formData);
+  uploadedCoverImageUrl = cover.uploadedImageUrl;
+
+  const panorama = await resolvePanoramaImageUrl(formData);
+  uploadedPanoramaImageUrl = panorama.uploadedPanoramaImageUrl;
+
   await db.hotelGuideSection.update({
     where: {
       id: section.id,
@@ -427,14 +564,39 @@ export async function updateGuideSectionAction(formData: FormData) {
       title,
       subtitle: subtitle || null,
       description: description || null,
-      imageUrl: imageUrl || null,
+      imageUrl: cover.imageUrl,
       iconKey,
+      panoramaEnabled: panoramaEnabled && Boolean(panorama.panoramaImageUrl),
+      panoramaImageUrl: panorama.panoramaImageUrl,
       sortOrder,
       isActive,
     },
   });
 
+  await deleteReplacedCoverImage(section.imageUrl, cover.imageUrl);
+
+  await deleteReplacedPanoramaImage(
+    section.panoramaImageUrl,
+    panorama.panoramaImageUrl
+  );
+} catch (error) {
+  console.error(error);
+
+  if (uploadedCoverImageUrl) {
+    await deletePublicImageFile(uploadedCoverImageUrl);
+  }
+
+  if (uploadedPanoramaImageUrl) {
+    await deletePublicImageFile(uploadedPanoramaImageUrl);
+  }
+
+  redirectToGuide({ error: 'image-upload-failed' });
+}
+
   revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+
   redirectToGuide({ success: 'section-updated' });
 }
 
@@ -469,11 +631,15 @@ export async function deleteGuideSectionAction(formData: FormData) {
   assertHotelScope(user, section.hotelId);
 
   const imageUrls = [
-    ...section.galleryImages.map((image) => image.imageUrl),
-    ...section.items.flatMap((item) =>
-      item.galleryImages.map((image) => image.imageUrl)
-    ),
-  ];
+  section.imageUrl,
+  section.panoramaImageUrl,
+  ...section.galleryImages.map((image) => image.imageUrl),
+  ...section.items.flatMap((item) => [
+    item.imageUrl,
+    item.panoramaImageUrl,
+    ...item.galleryImages.map((image) => image.imageUrl),
+  ]),
+].filter((imageUrl): imageUrl is string => Boolean(imageUrl));
 
   await db.hotelGuideSection.delete({
     where: {
@@ -498,7 +664,6 @@ export async function createGuideItemAction(formData: FormData) {
   const subtitle = cleanText(formData.get('subtitle'), 180);
   const content = cleanText(formData.get('content'), 4000);
   const itemType = validateItemType(formData.get('itemType'));
-  const imageUrl = cleanText(formData.get('imageUrl'), 700);
   const iconKey = cleanText(formData.get('iconKey'), 80) || 'Info';
   const hours = cleanText(formData.get('hours'), 180);
   const location = cleanText(formData.get('location'), 180);
@@ -508,6 +673,7 @@ export async function createGuideItemAction(formData: FormData) {
   const buttonHref = cleanText(formData.get('buttonHref'), 300);
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
+  const panoramaEnabled = formData.get('panoramaEnabled') === 'true';
 
   if (!sectionId) redirectToGuide({ error: 'section-required' });
   if (!title) redirectToGuide({ error: 'title-required' });
@@ -525,6 +691,13 @@ export async function createGuideItemAction(formData: FormData) {
 
   assertHotelScope(user, section.hotelId);
 
+ let uploadedPanoramaImageUrl: string | null = null;
+
+try {
+  const panorama = await resolvePanoramaImageUrl(formData);
+  uploadedPanoramaImageUrl = panorama.uploadedPanoramaImageUrl;
+  const cover = await resolveCoverImageUrl(formData);
+
   await db.hotelGuideItem.create({
     data: {
       hotelId: section.hotelId,
@@ -533,8 +706,10 @@ export async function createGuideItemAction(formData: FormData) {
       subtitle: subtitle || null,
       content: content || null,
       itemType,
-      imageUrl: imageUrl || null,
+      imageUrl: cover.imageUrl,
       iconKey,
+      panoramaEnabled: panoramaEnabled && Boolean(panorama.panoramaImageUrl),
+      panoramaImageUrl: panorama.panoramaImageUrl,
       hours: hours || null,
       location: location || null,
       contact: contact || null,
@@ -545,8 +720,20 @@ export async function createGuideItemAction(formData: FormData) {
       isActive,
     },
   });
+} catch (error) {
+  console.error(error);
+
+  if (uploadedPanoramaImageUrl) {
+    await deletePublicImageFile(uploadedPanoramaImageUrl);
+  }
+
+  redirectToGuide({ error: 'image-upload-failed' });
+}
 
   revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+
   redirectToGuide({ success: 'item-created' });
 }
 
@@ -559,7 +746,6 @@ export async function updateGuideItemAction(formData: FormData) {
   const subtitle = cleanText(formData.get('subtitle'), 180);
   const content = cleanText(formData.get('content'), 4000);
   const itemType = validateItemType(formData.get('itemType'));
-  const imageUrl = cleanText(formData.get('imageUrl'), 700);
   const iconKey = cleanText(formData.get('iconKey'), 80) || 'Info';
   const hours = cleanText(formData.get('hours'), 180);
   const location = cleanText(formData.get('location'), 180);
@@ -569,6 +755,7 @@ export async function updateGuideItemAction(formData: FormData) {
   const buttonHref = cleanText(formData.get('buttonHref'), 300);
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
+  const panoramaEnabled = formData.get('panoramaEnabled') === 'true';
 
   if (!itemId) redirectToGuide({ error: 'item-required' });
   if (!title) redirectToGuide({ error: 'title-required' });
@@ -586,6 +773,13 @@ export async function updateGuideItemAction(formData: FormData) {
 
   assertHotelScope(user, item.hotelId);
 
+  let uploadedPanoramaImageUrl: string | null = null;
+
+try {
+  const panorama = await resolvePanoramaImageUrl(formData);
+  uploadedPanoramaImageUrl = panorama.uploadedPanoramaImageUrl;
+  const cover = await resolveCoverImageUrl(formData);
+
   await db.hotelGuideItem.update({
     where: {
       id: item.id,
@@ -595,8 +789,10 @@ export async function updateGuideItemAction(formData: FormData) {
       subtitle: subtitle || null,
       content: content || null,
       itemType,
-      imageUrl: imageUrl || null,
+      imageUrl: cover.imageUrl,
       iconKey,
+      panoramaEnabled: panoramaEnabled && Boolean(panorama.panoramaImageUrl),
+      panoramaImageUrl: panorama.panoramaImageUrl,
       hours: hours || null,
       location: location || null,
       contact: contact || null,
@@ -608,7 +804,24 @@ export async function updateGuideItemAction(formData: FormData) {
     },
   });
 
+  await deleteReplacedPanoramaImage(
+    item.panoramaImageUrl,
+    panorama.panoramaImageUrl
+  );
+} catch (error) {
+  console.error(error);
+
+  if (uploadedPanoramaImageUrl) {
+    await deletePublicImageFile(uploadedPanoramaImageUrl);
+  }
+
+  redirectToGuide({ error: 'image-upload-failed' });
+}
+
   revalidatePath('/dashboard/hotel-guide');
+  revalidatePath('/t/[tagCode]/guide', 'page');
+  revalidatePath('/t/[tagCode]/pool', 'page');
+
   redirectToGuide({ success: 'item-updated' });
 }
 
@@ -637,7 +850,11 @@ export async function deleteGuideItemAction(formData: FormData) {
 
   assertHotelScope(user, item.hotelId);
 
-  const imageUrls = item.galleryImages.map((image) => image.imageUrl);
+  const imageUrls = [
+  item.imageUrl,
+  item.panoramaImageUrl,
+  ...item.galleryImages.map((image) => image.imageUrl),
+].filter((imageUrl): imageUrl is string => Boolean(imageUrl));
 
   await db.hotelGuideItem.delete({
     where: {

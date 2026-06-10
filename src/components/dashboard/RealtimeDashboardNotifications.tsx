@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
+  Ban,
   BellRing,
   ChefHat,
   ConciergeBell,
+  PackageMinus,
   Volume2,
   Wifi,
   WifiOff,
@@ -12,6 +14,12 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
+
+const REALTIME_ENDPOINTS = {
+  kitchen: '/api/realtime/kitchen-token',
+  service: '/api/realtime/service-requests-token',
+  operations: '/api/realtime/operations-token',
+};
 
 type KitchenPayload = {
   event?: string;
@@ -33,9 +41,40 @@ type ServiceRequestPayload = {
   updatedAt?: string;
 };
 
+type LowStockPayload = {
+  event: 'inventory.low_stock';
+  hotelId: string;
+  inventoryItemId: string;
+  itemName: string;
+  availableQty: number;
+  reorderLevel: number;
+  unit: string;
+  source?: string;
+  updatedAt?: string;
+};
+
+type CancelledItemPayload = {
+  event: 'order.item_cancelled' | 'order.cancelled';
+  hotelId: string;
+  orderId?: string;
+  orderCode: string;
+  itemName?: string;
+  cancelledQty?: number;
+  reason?: string;
+  source?: string;
+  updatedAt?: string;
+};
+
+type OperationsPayload = LowStockPayload | CancelledItemPayload;
+
 type DashboardNotification = {
   id: string;
-  type: 'ORDER' | 'SERVICE_REQUEST' | 'SYSTEM';
+  type:
+    | 'ORDER'
+    | 'SERVICE_REQUEST'
+    | 'LOW_STOCK'
+    | 'CANCELLED_ITEM'
+    | 'SYSTEM';
   title: string;
   message: string;
   href: string;
@@ -45,11 +84,11 @@ type DashboardNotification = {
 type BrowserAudioContextConstructor = typeof AudioContext;
 
 type RealtimeStatus =
+  | 'disabled'
   | 'connecting'
   | 'connected'
   | 'reconnecting'
-  | 'error'
-  | 'disabled';
+  | 'error';
 
 type RealtimeErrorContext = {
   error?: {
@@ -60,12 +99,18 @@ type RealtimeErrorContext = {
   type?: string;
 };
 
+type NotificationPermissionState = NotificationPermission | 'unsupported';
+
 function createNotificationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function normalizeValue(value?: string | null) {
   return String(value ?? '').trim().toUpperCase();
+}
+
+function formatSource(source?: string) {
+  return source ? source.replace(/_/g, ' ') : '';
 }
 
 function isKitchenOrderCreatedEvent(data: KitchenPayload) {
@@ -100,13 +145,31 @@ function isServiceRequestCreatedEvent(data: ServiceRequestPayload) {
 
   if (
     (data.requestCode || data.requestId) &&
-    (!status || status === 'PENDING') &&
+    (!status || status === 'PENDING' || status === 'NEW') &&
     source !== 'DASHBOARD'
   ) {
     return true;
   }
 
   return false;
+}
+
+function isLowStockEvent(data: unknown): data is LowStockPayload {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'event' in data &&
+    data.event === 'inventory.low_stock'
+  );
+}
+
+function isCancelledItemEvent(data: unknown): data is CancelledItemPayload {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'event' in data &&
+    (data.event === 'order.item_cancelled' || data.event === 'order.cancelled')
+  );
 }
 
 function getAudioContextConstructor(): BrowserAudioContextConstructor | null {
@@ -179,65 +242,104 @@ function isTransportClosedError(value: unknown) {
 function getRealtimeErrorMessage(value: unknown) {
   const ctx = getRealtimeErrorContext(value);
 
-  const code = ctx.error?.code;
-  const message = ctx.error?.message;
-  const transport = ctx.transport;
-  const type = ctx.type;
+  return ctx.error?.message || ctx.type || null;
+}
 
-  return [
-    code ? `code ${code}` : null,
-    message ? message : null,
-    transport ? `transport: ${transport}` : null,
-    type ? `type: ${type}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+function getNotificationIcon(type: DashboardNotification['type']) {
+  if (type === 'ORDER') {
+    return ChefHat;
+  }
+
+  if (type === 'SERVICE_REQUEST') {
+    return ConciergeBell;
+  }
+
+  if (type === 'LOW_STOCK') {
+    return PackageMinus;
+  }
+
+  if (type === 'CANCELLED_ITEM') {
+    return Ban;
+  }
+
+  return BellRing;
+}
+
+function getNotificationStyle(type: DashboardNotification['type']) {
+  if (type === 'LOW_STOCK') {
+    return {
+      iconWrap: 'bg-amber-100 text-amber-700',
+      border: 'border-amber-200',
+    };
+  }
+
+  if (type === 'CANCELLED_ITEM') {
+    return {
+      iconWrap: 'bg-red-100 text-red-700',
+      border: 'border-red-200',
+    };
+  }
+
+  if (type === 'ORDER') {
+    return {
+      iconWrap: 'bg-emerald-100 text-emerald-700',
+      border: 'border-emerald-200',
+    };
+  }
+
+  if (type === 'SERVICE_REQUEST') {
+    return {
+      iconWrap: 'bg-blue-100 text-blue-700',
+      border: 'border-blue-200',
+    };
+  }
+
+  return {
+    iconWrap: 'bg-neutral-100 text-neutral-700',
+    border: 'border-neutral-200',
+  };
 }
 
 export function RealtimeDashboardNotifications() {
   const router = useRouter();
 
-  const [alertsEnabled, setAlertsEnabled] = useState(false);
   const [notifications, setNotifications] = useState<DashboardNotification[]>(
     []
   );
 
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const alertsEnabledRef = useRef(false);
+
   const [browserNotificationPermission, setBrowserNotificationPermission] =
-    useState<NotificationPermission | 'unsupported'>('default');
+    useState<NotificationPermissionState>('unsupported');
 
   const [kitchenStatus, setKitchenStatus] =
-    useState<RealtimeStatus>('connecting');
+    useState<RealtimeStatus>('disabled');
 
   const [serviceStatus, setServiceStatus] =
-    useState<RealtimeStatus>('connecting');
+    useState<RealtimeStatus>('disabled');
+
+  const [operationsStatus, setOperationsStatus] =
+    useState<RealtimeStatus>('disabled');
 
   const [lastRealtimeIssue, setLastRealtimeIssue] = useState<string | null>(
     null
   );
 
-  const alertsEnabledRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const recentEventKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    alertsEnabledRef.current = alertsEnabled;
-  }, [alertsEnabled]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const storedValue = window.localStorage.getItem(
+    const savedValue = window.localStorage.getItem(
       'cloudview-dashboard-alerts-enabled'
     );
 
-    if (storedValue === 'true') {
-      setAlertsEnabled(true);
-      alertsEnabledRef.current = true;
-    }
+    const enabled = savedValue === 'true';
 
-    if (!('Notification' in window)) {
+    setAlertsEnabled(enabled);
+    alertsEnabledRef.current = enabled;
+
+    if (!canUseBrowserNotifications()) {
       setBrowserNotificationPermission('unsupported');
       return;
     }
@@ -338,7 +440,7 @@ export function RealtimeDashboardNotifications() {
       type: 'SYSTEM',
       title: 'Dashboard Realtime',
       message,
-      href: '/dashboard/kitchen',
+      href: '/dashboard/orders',
       createdAt: Date.now(),
     };
 
@@ -355,7 +457,7 @@ export function RealtimeDashboardNotifications() {
       type: 'SYSTEM',
       title: 'Dashboard Alerts Test',
       message: 'Sound cue, in-app alert, and browser notification test.',
-      href: '/dashboard/kitchen',
+      href: '/dashboard/orders',
       createdAt: Date.now(),
     };
 
@@ -390,7 +492,7 @@ export function RealtimeDashboardNotifications() {
             title: 'Sound Alerts Enabled',
             message:
               'In-app alerts and sound are enabled. Browser push notifications require HTTPS for LAN IP access.',
-            href: '/dashboard/kitchen',
+            href: '/dashboard/orders',
             createdAt: Date.now(),
           },
           ...current,
@@ -422,6 +524,15 @@ export function RealtimeDashboardNotifications() {
     }
   }
 
+  function disableAlerts() {
+    setAlertsEnabled(false);
+    alertsEnabledRef.current = false;
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cloudview-dashboard-alerts-enabled', 'false');
+    }
+  }
+
   function hasRecentlyHandled(key: string) {
     if (recentEventKeysRef.current.has(key)) {
       return true;
@@ -445,6 +556,9 @@ export function RealtimeDashboardNotifications() {
     let serviceCentrifuge: ReturnType<typeof createCentrifugoClient> | null =
       null;
 
+    let operationsCentrifuge: ReturnType<typeof createCentrifugoClient> | null =
+      null;
+
     const subscriptions: Array<{
       unsubscribe: () => void;
     }> = [];
@@ -454,7 +568,7 @@ export function RealtimeDashboardNotifications() {
 
       if (isTransportClosedError(ctx)) {
         console.warn(
-          'Kitchen realtime transport closed. Centrifugo is reachable but closed the WebSocket. Check WSS/TLS, allowed origins, token secret, and Centrifugo config.',
+          'Kitchen realtime transport closed. Check WSS/TLS, allowed origins, token secret, and Centrifugo config.',
           ctx
         );
 
@@ -477,7 +591,7 @@ export function RealtimeDashboardNotifications() {
 
       if (isTransportClosedError(ctx)) {
         console.warn(
-          'Service request realtime transport closed. Centrifugo is reachable but closed the WebSocket. Check WSS/TLS, allowed origins, token secret, and Centrifugo config.',
+          'Service request realtime transport closed. Check WSS/TLS, allowed origins, token secret, and Centrifugo config.',
           ctx
         );
 
@@ -495,55 +609,76 @@ export function RealtimeDashboardNotifications() {
       setLastRealtimeIssue(message || 'Service request realtime client error.');
     }
 
+    function handleOperationsClientError(ctx: unknown) {
+      const message = getRealtimeErrorMessage(ctx);
+
+      if (isTransportClosedError(ctx)) {
+        console.warn(
+          'Operations realtime transport closed. Check WSS/TLS, allowed origins, token secret, and Centrifugo config.',
+          ctx
+        );
+
+        setOperationsStatus('reconnecting');
+        setLastRealtimeIssue(
+          message ||
+            'Operations realtime transport closed. Check Centrifugo WSS/TLS, allowed origins, and token secret.'
+        );
+
+        return;
+      }
+
+      console.error('Operations realtime client error:', ctx);
+      setOperationsStatus('error');
+      setLastRealtimeIssue(message || 'Operations realtime client error.');
+    }
+
+    async function getRealtimePayload(endpoint: string, label: string) {
+      const response = await fetch(endpoint, {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `${label} token route failed. HTTP ${response.status}. Check ${endpoint} and CENTRIFUGO_TOKEN_HMAC_SECRET.`
+        );
+      }
+
+      return (await response.json()) as {
+        token?: string;
+        channels?: string[];
+      };
+    }
+
     async function connectKitchenNotifications() {
       setKitchenStatus('connecting');
 
       try {
-        const response = await fetch('/api/realtime/kitchen-token', {
-          cache: 'no-store',
-        });
-
-        if (!response.ok) {
-          console.warn(
-            `Unable to get kitchen realtime notification token. HTTP ${response.status}`
-          );
-          setKitchenStatus('error');
-          setLastRealtimeIssue(
-            `Kitchen token route failed. HTTP ${response.status}. Check /api/realtime/kitchen-token and CENTRIFUGO_TOKEN_HMAC_SECRET.`
-          );
-          return;
-        }
-
-        const payload = (await response.json()) as {
-          token?: string;
-          channels?: string[];
-        };
+        const payload = await getRealtimePayload(
+          REALTIME_ENDPOINTS.kitchen,
+          'Kitchen'
+        );
 
         if (disposed) {
           return;
         }
 
         if (!payload.token) {
-          console.warn('Kitchen realtime token route returned no token.');
           setKitchenStatus('error');
           setLastRealtimeIssue('Kitchen token route returned no token.');
           return;
         }
 
         if (!payload.channels?.length) {
-          console.warn('Kitchen realtime token route returned no channels.');
           setKitchenStatus('disabled');
-          setLastRealtimeIssue('Kitchen realtime returned no channels.');
           return;
         }
 
         kitchenCentrifuge = createCentrifugoClient(payload.token, {
-                    tokenEndpoint: '/api/realtime/kitchen-token',
-                    debugLabel: 'Kitchen realtime',
-                  });
+          tokenEndpoint: REALTIME_ENDPOINTS.kitchen,
+          debugLabel: 'Kitchen realtime',
+        });
 
         if (!kitchenCentrifuge) {
-          console.warn('Unable to create kitchen Centrifugo client.');
           setKitchenStatus('error');
           setLastRealtimeIssue('Unable to create kitchen Centrifugo client.');
           return;
@@ -579,10 +714,9 @@ export function RealtimeDashboardNotifications() {
               return;
             }
 
-            const orderKey = data.orderCode || createNotificationId();
-
-            const eventKey = `order:${orderKey}:${
-              data.updatedAt ?? data.status ?? data.source ?? ''
+            const orderCode = data.orderCode ?? 'New order';
+            const eventKey = `kitchen:${orderCode}:${data.status ?? ''}:${
+              data.updatedAt ?? ''
             }`;
 
             if (hasRecentlyHandled(eventKey)) {
@@ -592,13 +726,11 @@ export function RealtimeDashboardNotifications() {
             pushNotification({
               id: createNotificationId(),
               type: 'ORDER',
-              title: 'New Kitchen Order',
-              message: data.orderCode
-                ? `Order ${data.orderCode} was received${
-                    data.source ? ` from ${data.source.replaceAll('_', ' ')}` : ''
-                  }.`
-                : 'A new kitchen order was received.',
-              href: '/dashboard/kitchen',
+              title: 'New Food Order',
+              message: `${orderCode} is waiting for kitchen review.${
+                data.paymentStatus ? ` Payment: ${data.paymentStatus}.` : ''
+              }`,
+              href: '/dashboard/orders',
               createdAt: Date.now(),
             });
           });
@@ -620,7 +752,9 @@ export function RealtimeDashboardNotifications() {
         console.error('Kitchen notification realtime error:', error);
         setKitchenStatus('error');
         setLastRealtimeIssue(
-          'Kitchen realtime setup failed. Check the token route and Centrifugo client configuration.'
+          error instanceof Error
+            ? error.message
+            : 'Kitchen realtime setup failed.'
         );
       }
     }
@@ -629,57 +763,34 @@ export function RealtimeDashboardNotifications() {
       setServiceStatus('connecting');
 
       try {
-        const response = await fetch('/api/realtime/service-requests-token', {
-          cache: 'no-store',
-        });
-
-        if (!response.ok) {
-          console.warn(
-            `Unable to get service request realtime notification token. HTTP ${response.status}`
-          );
-          setServiceStatus('error');
-          setLastRealtimeIssue(
-            `Service request token route failed. HTTP ${response.status}. Check /api/realtime/service-requests-token and CENTRIFUGO_TOKEN_HMAC_SECRET.`
-          );
-          return;
-        }
-
-        const payload = (await response.json()) as {
-          token?: string;
-          channels?: string[];
-        };
+        const payload = await getRealtimePayload(
+          REALTIME_ENDPOINTS.service,
+          'Service'
+        );
 
         if (disposed) {
           return;
         }
 
         if (!payload.token) {
-          console.warn('Service request realtime token route returned no token.');
           setServiceStatus('error');
-          setLastRealtimeIssue('Service request token route returned no token.');
+          setLastRealtimeIssue('Service token route returned no token.');
           return;
         }
 
         if (!payload.channels?.length) {
-          console.warn(
-            'Service request realtime token route returned no channels.'
-          );
           setServiceStatus('disabled');
-          setLastRealtimeIssue('Service request realtime returned no channels.');
           return;
         }
 
         serviceCentrifuge = createCentrifugoClient(payload.token, {
-          tokenEndpoint: '/api/realtime/service-requests-token',
+          tokenEndpoint: REALTIME_ENDPOINTS.service,
           debugLabel: 'Service request realtime',
         });
 
         if (!serviceCentrifuge) {
-          console.warn('Unable to create service request Centrifugo client.');
           setServiceStatus('error');
-          setLastRealtimeIssue(
-            'Unable to create service request Centrifugo client.'
-          );
+          setLastRealtimeIssue('Unable to create service Centrifugo client.');
           return;
         }
 
@@ -713,11 +824,11 @@ export function RealtimeDashboardNotifications() {
               return;
             }
 
-            const requestKey =
-              data.requestCode || data.requestId || createNotificationId();
+            const requestCode =
+              data.requestCode ?? data.requestId ?? 'New service request';
 
-            const eventKey = `service:${requestKey}:${
-              data.updatedAt ?? data.status ?? data.source ?? ''
+            const eventKey = `service:${requestCode}:${data.status ?? ''}:${
+              data.updatedAt ?? ''
             }`;
 
             if (hasRecentlyHandled(eventKey)) {
@@ -727,12 +838,8 @@ export function RealtimeDashboardNotifications() {
             pushNotification({
               id: createNotificationId(),
               type: 'SERVICE_REQUEST',
-              title: 'New Guest Service Request',
-              message: data.requestCode
-                ? `Request ${data.requestCode} was received${
-                    data.source ? ` from ${data.source.replaceAll('_', ' ')}` : ''
-                  }.`
-                : 'A new service request was received.',
+              title: 'New Service Request',
+              message: `${requestCode} needs staff attention.`,
               href: '/dashboard/service-requests',
               createdAt: Date.now(),
             });
@@ -752,16 +859,165 @@ export function RealtimeDashboardNotifications() {
 
         serviceCentrifuge.connect();
       } catch (error) {
-        console.error('Service request notification realtime error:', error);
+        console.error('Service request realtime error:', error);
         setServiceStatus('error');
         setLastRealtimeIssue(
-          'Service request realtime setup failed. Check the token route and Centrifugo client configuration.'
+          error instanceof Error
+            ? error.message
+            : 'Service realtime setup failed.'
         );
       }
     }
 
-    connectKitchenNotifications();
-    connectServiceRequestNotifications();
+    async function connectOperationsNotifications() {
+      setOperationsStatus('connecting');
+
+      try {
+        const payload = await getRealtimePayload(
+          REALTIME_ENDPOINTS.operations,
+          'Operations'
+        );
+
+        if (disposed) {
+          return;
+        }
+
+        if (!payload.token) {
+          console.warn('Operations realtime token route returned no token.');
+          setOperationsStatus('error');
+          setLastRealtimeIssue('Operations token route returned no token.');
+          return;
+        }
+
+        if (!payload.channels?.length) {
+          console.warn('Operations realtime token route returned no channels.');
+          setOperationsStatus('disabled');
+          return;
+        }
+
+        operationsCentrifuge = createCentrifugoClient(payload.token, {
+          tokenEndpoint: REALTIME_ENDPOINTS.operations,
+          debugLabel: 'Operations realtime',
+        });
+
+        if (!operationsCentrifuge) {
+          console.warn('Unable to create operations Centrifugo client.');
+          setOperationsStatus('error');
+          setLastRealtimeIssue('Unable to create operations Centrifugo client.');
+          return;
+        }
+
+        operationsCentrifuge.on('connected', () => {
+          console.info('Operations realtime connected.');
+          setOperationsStatus('connected');
+          setLastRealtimeIssue(null);
+        });
+
+        operationsCentrifuge.on('connecting', () => {
+          console.info('Operations realtime connecting.');
+          setOperationsStatus('connecting');
+        });
+
+        operationsCentrifuge.on('disconnected', () => {
+          console.warn('Operations realtime disconnected.');
+          setOperationsStatus('reconnecting');
+        });
+
+        operationsCentrifuge.on('error', handleOperationsClientError);
+
+        for (const channelName of payload.channels) {
+          const subscription =
+            operationsCentrifuge.newSubscription(channelName);
+
+          subscription.on('publication', (ctx) => {
+            const data = ctx.data as OperationsPayload;
+
+            console.info('Operations realtime publication:', data);
+
+            if (isLowStockEvent(data)) {
+              const eventKey = `low-stock:${data.inventoryItemId}:${
+                data.availableQty
+              }:${data.updatedAt ?? ''}`;
+
+              if (hasRecentlyHandled(eventKey)) {
+                return;
+              }
+
+              pushNotification({
+                id: createNotificationId(),
+                type: 'LOW_STOCK',
+                title: 'Low Stock Alert',
+                message: `${data.itemName} is down to ${data.availableQty} ${
+                  data.unit
+                }. Reorder level is ${data.reorderLevel} ${data.unit}.${
+                  data.source ? ` Source: ${formatSource(data.source)}.` : ''
+                }`,
+                href: '/dashboard/inventory',
+                createdAt: Date.now(),
+              });
+
+              return;
+            }
+
+            if (isCancelledItemEvent(data)) {
+              const eventKey = `cancelled:${data.orderCode}:${
+                data.itemName ?? 'order'
+              }:${data.cancelledQty ?? 0}:${data.updatedAt ?? ''}`;
+
+              if (hasRecentlyHandled(eventKey)) {
+                return;
+              }
+
+              pushNotification({
+                id: createNotificationId(),
+                type: 'CANCELLED_ITEM',
+                title:
+                  data.event === 'order.cancelled'
+                    ? 'Order Cancelled'
+                    : 'Item Cancelled',
+                message:
+                  data.event === 'order.cancelled'
+                    ? `Order ${data.orderCode} was cancelled${
+                        data.reason ? `. Reason: ${data.reason}` : '.'
+                      }`
+                    : `${data.cancelledQty ?? 1}× ${
+                        data.itemName ?? 'item'
+                      } was cancelled from ${data.orderCode}${
+                        data.reason ? `. Reason: ${data.reason}` : '.'
+                      }`,
+                href: '/dashboard/orders',
+                createdAt: Date.now(),
+              });
+            }
+          });
+
+          subscription.on('subscribed', () => {
+            console.info(`Subscribed to operations channel: ${channelName}`);
+          });
+
+          subscription.on('error', (ctx) => {
+            console.error(`Operations subscription error: ${channelName}`, ctx);
+          });
+
+          subscription.subscribe();
+          subscriptions.push(subscription);
+        }
+
+        operationsCentrifuge.connect();
+      } catch (error) {
+        console.error('Operations notification realtime error:', error);
+        setOperationsStatus('error');
+        setLastRealtimeIssue(
+          error instanceof Error
+            ? error.message
+            : 'Operations realtime setup failed.'
+        );
+      }
+    }
+
+    void connectKitchenNotifications();
+    void connectServiceRequestNotifications();
+    void connectOperationsNotifications();
 
     return () => {
       disposed = true;
@@ -785,129 +1041,82 @@ export function RealtimeDashboardNotifications() {
       } catch {
         // Ignore disconnect errors.
       }
+
+      try {
+        operationsCentrifuge?.disconnect();
+      } catch {
+        // Ignore disconnect errors.
+      }
     };
-  }, [router]);
+  }, []);
 
   const hasRealtimeError =
-    kitchenStatus === 'error' || serviceStatus === 'error';
+    kitchenStatus === 'error' ||
+    serviceStatus === 'error' ||
+    operationsStatus === 'error';
 
   const realtimeConnected =
-    kitchenStatus === 'connected' || serviceStatus === 'connected';
+    kitchenStatus === 'connected' ||
+    serviceStatus === 'connected' ||
+    operationsStatus === 'connected';
 
   const realtimeConnecting =
     kitchenStatus === 'connecting' ||
     kitchenStatus === 'reconnecting' ||
     serviceStatus === 'connecting' ||
-    serviceStatus === 'reconnecting';
+    serviceStatus === 'reconnecting' ||
+    operationsStatus === 'connecting' ||
+    operationsStatus === 'reconnecting';
+
+  const realtimeStatusLabel = hasRealtimeError
+    ? 'Issue'
+    : realtimeConnected
+      ? 'Live'
+      : realtimeConnecting
+        ? 'Connecting'
+        : 'Offline';
+
+  const RealtimeIcon = realtimeConnected ? Wifi : WifiOff;
 
   return (
-    <>
-      {!alertsEnabled ? (
-        <button
-          type="button"
-          onClick={enableAlerts}
-          className="fixed bottom-5 right-5 z-[80] inline-flex items-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-black text-white shadow-2xl transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
-        >
-          <Volume2 className="size-4" />
-          Enable Alerts
-        </button>
-      ) : null}
-
-      {alertsEnabled ? (
-        <div className="fixed bottom-5 right-5 z-[80] flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500 px-3 py-2 text-sm font-black text-white shadow-2xl">
-          <BellRing className="size-4" />
-          Alerts On
-
-          <span
-            className={`inline-flex items-center gap-1 rounded-xl px-2 py-1 text-[11px] font-black ${
-              hasRealtimeError
-                ? 'bg-red-500 text-white'
-                : realtimeConnected
-                  ? 'bg-white/20 text-white'
-                  : realtimeConnecting
-                    ? 'bg-amber-400 text-black'
-                    : 'bg-neutral-900 text-white'
-            }`}
-            title={`Kitchen: ${kitchenStatus}. Service: ${serviceStatus}.${
-              lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
-            }`}
-          >
-            {hasRealtimeError ? (
-              <WifiOff className="size-3" />
-            ) : (
-              <Wifi className="size-3" />
-            )}
-
-            {hasRealtimeError
-              ? 'Realtime Error'
-              : realtimeConnected
-                ? 'Live'
-                : realtimeConnecting
-                  ? 'Reconnecting'
-                  : 'Realtime Off'}
-          </span>
-
-          <button
-            type="button"
-            onClick={pushTestNotification}
-            className="inline-flex items-center gap-1 rounded-xl bg-white/20 px-2 py-1 text-xs font-black text-white transition hover:bg-white/30"
-          >
-            <Volume2 className="size-3" />
-            Test Alert
-          </button>
-        </div>
-      ) : null}
-
-      <div className="fixed right-5 top-5 z-[90] w-[min(390px,calc(100vw-2rem))] space-y-3">
+    <div className="fixed bottom-5 right-5 z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
+      <div className="w-full space-y-3">
         {notifications.map((notification) => {
-          const Icon =
-            notification.type === 'ORDER'
-              ? ChefHat
-              : notification.type === 'SERVICE_REQUEST'
-                ? ConciergeBell
-                : BellRing;
+          const Icon = getNotificationIcon(notification.type);
+          const style = getNotificationStyle(notification.type);
 
           return (
             <div
               key={notification.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                removeNotification(notification.id);
-                router.push(notification.href);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  removeNotification(notification.id);
-                  router.push(notification.href);
-                }
-              }}
-              className="cursor-pointer rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-2xl transition hover:-translate-y-0.5 hover:shadow-xl dark:border-neutral-800 dark:bg-neutral-950"
+              className={`overflow-hidden rounded-3xl border ${style.border} bg-white shadow-2xl`}
             >
-              <div className="flex items-start gap-3">
-                <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gold text-black">
+              <div className="flex items-start gap-3 p-4">
+                <span
+                  className={`grid size-10 shrink-0 place-items-center rounded-2xl ${style.iconWrap}`}
+                >
                   <Icon className="size-5" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="font-black text-neutral-950 dark:text-white">
-                    {notification.title}
-                  </p>
-                  <p className="mt-1 text-sm leading-5 text-neutral-500 dark:text-neutral-400">
-                    {notification.message}
-                  </p>
-                  <p className="mt-2 text-xs font-black text-gold">
-                    Tap to open module
-                  </p>
-                </div>
+                </span>
 
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
+                  onClick={() => {
+                    router.push(notification.href);
                     removeNotification(notification.id);
                   }}
-                  className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300"
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <p className="text-sm font-black text-neutral-950">
+                    {notification.title}
+                  </p>
+                  <p className="mt-1 text-sm font-bold leading-6 text-neutral-600">
+                    {notification.message}
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => removeNotification(notification.id)}
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200"
                   aria-label="Dismiss notification"
                 >
                   <X className="size-4" />
@@ -918,29 +1127,50 @@ export function RealtimeDashboardNotifications() {
         })}
       </div>
 
-      {alertsEnabled &&
-      browserNotificationPermission !== 'granted' &&
-      browserNotificationPermission !== 'unsupported' ? (
-        <div className="fixed bottom-20 right-5 z-[80] max-w-sm rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800 shadow-xl dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-          Browser push notifications are not granted yet. Sound and in-app
-          alerts will still work.
-        </div>
+      {lastRealtimeIssue ? (
+        <button
+          type="button"
+          onClick={() => pushSystemNotification(lastRealtimeIssue)}
+          className="max-w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-800 shadow-lg"
+        >
+          Realtime issue detected
+        </button>
       ) : null}
 
-      {alertsEnabled && browserNotificationPermission === 'unsupported' ? (
-        <div className="fixed bottom-20 right-5 z-[80] max-w-sm rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800 shadow-xl dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-          Browser push notifications require HTTPS for LAN IP access. Use{' '}
-          <b>https://192.168.0.130:3000</b>. Sound and in-app alerts are still
-          enabled.
-        </div>
-      ) : null}
+      <div
+        className="flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-white shadow-2xl"
+        title={`Kitchen: ${kitchenStatus}. Service: ${serviceStatus}. Operations: ${operationsStatus}.${
+          lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={alertsEnabled ? disableAlerts : enableAlerts}
+          className="inline-flex h-8 items-center gap-2 rounded-xl px-2 text-xs font-black transition hover:bg-white/15"
+        >
+          <Volume2 className="size-4" />
+          {alertsEnabled ? 'Alerts On' : 'Enable Alerts'}
+        </button>
 
-      {alertsEnabled && lastRealtimeIssue ? (
-        <div className="fixed bottom-36 right-5 z-[80] max-w-sm rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-800 shadow-xl dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
-          <p className="font-black">Realtime diagnostic:</p>
-          <p className="mt-1 leading-relaxed">{lastRealtimeIssue}</p>
-        </div>
-      ) : null}
-    </>
+        <span className="inline-flex h-7 items-center gap-1 rounded-xl bg-white/15 px-2 text-[11px] font-black">
+          <RealtimeIcon className="size-3.5" />
+          {realtimeStatusLabel}
+        </span>
+
+        <button
+          type="button"
+          onClick={pushTestNotification}
+          className="inline-flex h-7 items-center gap-1 rounded-xl bg-white/15 px-2 text-[11px] font-black transition hover:bg-white/25"
+        >
+          Test Alert
+        </button>
+
+        {browserNotificationPermission === 'denied' ? (
+          <span className="rounded-xl bg-red-500/25 px-2 py-1 text-[10px] font-black">
+            Browser Blocked
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }

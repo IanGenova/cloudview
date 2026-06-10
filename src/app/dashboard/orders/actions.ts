@@ -24,6 +24,7 @@ import {
   triggerKitchenOrderUpdated,
 } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
+import { publishCancelledItemAlert } from '@/lib/realtime/dashboard-alerts';
 
 type RestoreOrderItem = {
   id: string;
@@ -50,6 +51,23 @@ type RestoreRequirement = {
   reason: string;
   duplicateGuardText: string;
 };
+
+async function safelyPublishCancelledItemAlert(payload: {
+  hotelId: string;
+  orderId?: string;
+  orderCode: string;
+  itemName?: string;
+  cancelledQty?: number;
+  reason?: string;
+  source: string;
+  wholeOrderCancelled?: boolean;
+}) {
+  try {
+    await publishCancelledItemAlert(payload);
+  } catch (error) {
+    console.warn('Failed to publish cancelled order/item alert:', error);
+  }
+}
 
 function revalidateOrderPaths(order: {
   orderCode: string;
@@ -723,6 +741,19 @@ export async function cancelOrderItemAction(formData: FormData) {
     });
   }
 
+  await safelyPublishCancelledItemAlert({
+  hotelId: order.hotelId,
+  orderId: order.id,
+  orderCode: order.orderCode,
+  itemName: item.productNameSnapshot,
+  cancelledQty: remainingQuantity,
+  reason: reason || undefined,
+  source: allItemsCancelled ? 'ORDER_CANCELLED' : 'ORDER_ITEM_CANCELLED',
+  wholeOrderCancelled: allItemsCancelled,
+});
+
+  
+
   redirectToOrdersWithMessage({
     success: allItemsCancelled ? 'order-cancelled' : 'item-cancelled',
   });
@@ -836,6 +867,17 @@ export async function updateOrderStatusAction(formData: FormData) {
 
     throw error;
   }
+    if (status === OrderStatus.CANCELLED) {
+    await safelyPublishCancelledItemAlert({
+      hotelId: order.hotelId,
+      orderId: order.id,
+      orderCode: order.orderCode,
+      reason: note || undefined,
+      source: 'ORDER_CANCELLED',
+      wholeOrderCancelled: true,
+    });
+  }
+
 
   revalidateOrderPaths(order);
 

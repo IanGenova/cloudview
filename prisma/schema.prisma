@@ -218,6 +218,8 @@ model HotelSettings {
   guideText         String?  @db.Text
   contactPhone      String?
   contactEmail      String?
+  guestPortalHeroImageUrl String? @db.Text
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -802,6 +804,9 @@ model HotelGuideSection {
   imageUrl    String? @db.Text
   iconKey     String  @default("Info")
 
+  panoramaEnabled  Boolean @default(false)
+  panoramaImageUrl String? @db.Text
+
   sortOrder Int     @default(0)
   isActive  Boolean @default(true)
 
@@ -829,6 +834,9 @@ model HotelGuideItem {
 
   imageUrl String? @db.Text
   iconKey  String  @default("Info")
+
+  panoramaEnabled  Boolean @default(false)
+  panoramaImageUrl String? @db.Text
 
   hours    String?
   location String?
