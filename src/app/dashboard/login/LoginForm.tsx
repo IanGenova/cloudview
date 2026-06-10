@@ -15,6 +15,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { loginAction, type LoginActionState } from './actions';
 
+type LoginFormProps = {
+  next?: string;
+};
+
 function LoginToast({ state }: { state: LoginActionState }) {
   const [visible, setVisible] = useState(Boolean(state?.error || state?.success));
 
@@ -83,16 +87,17 @@ function LoginToast({ state }: { state: LoginActionState }) {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ next = '' }: LoginFormProps) {
   const [state, action, pending] = useActionState(loginAction, undefined);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
 
   return (
     <>
       <LoginToast state={state} />
 
       <form action={action} className="space-y-6">
+        <input type="hidden" name="next" value={next} />
+
         <div>
           <label
             htmlFor="email"
@@ -117,41 +122,43 @@ export function LoginForm() {
         </div>
 
         <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-sm font-black text-ink"
+          <label
+            htmlFor="password"
+            className="mb-2 block text-sm font-black text-ink"
+          >
+            Password
+          </label>
+
+          <div className="relative">
+            <LockKeyhole className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-neutral-400" />
+
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              defaultValue="Password123!"
+              required
+              autoComplete="current-password"
+              className="h-14 rounded-2xl border-neutral-200 bg-white pl-14 pr-14 text-base font-semibold shadow-sm transition focus:border-gold focus:ring-gold/20"
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute right-4 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-ink"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              Password
-            </label>
-
-            <div className="relative">
-              <LockKeyhole className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-neutral-400" />
-
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                defaultValue="Password123!"
-                required
-                autoComplete="current-password"
-                className="h-14 rounded-2xl border-neutral-200 bg-white pl-14 pr-14 text-base font-semibold shadow-sm transition focus:border-gold focus:ring-gold/20"
-              />
-
-              <button
-                type="button"
-                onClick={() => setShowPassword((current) => !current)}
-                className="absolute right-4 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-ink"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <EyeOff className="size-5" />
-                ) : (
-                  <Eye className="size-5" />
-                )}
-              </button>
-            </div>
+              {showPassword ? (
+                <EyeOff className="size-5" />
+              ) : (
+                <Eye className="size-5" />
+              )}
+            </button>
           </div>
+        </div>
+
         <Button
+          type="submit"
           disabled={pending}
           className="h-16 w-full rounded-2xl bg-ink text-base font-black text-white shadow-[0_16px_34px_rgba(11,31,58,0.24)] transition hover:-translate-y-0.5 hover:bg-black disabled:translate-y-0 disabled:opacity-70"
           size="lg"

@@ -225,6 +225,13 @@ function getReportDescription(reportKey: ReportKey) {
   return 'Executive daily summary of sales, orders, service requests, inventory health, cancellations, guest portal activity, and audit events.';
 }
 
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  const arrayBuffer = new ArrayBuffer(buffer.byteLength);
+  const view = new Uint8Array(arrayBuffer);
+  view.set(buffer);
+  return arrayBuffer;
+}
+
 async function buildReportData(request: NextRequest): Promise<ReportData> {
   const user = await requireUser();
   const searchParams = request.nextUrl.searchParams;
@@ -1201,27 +1208,27 @@ export async function GET(request: NextRequest) {
     }
 
     if (format === 'xlsx') {
-      const buffer = await createExcelBuffer(data);
+  const buffer = await createExcelBuffer(data);
 
-      return new Response(buffer, {
-        headers: {
-          'Content-Type':
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': `attachment; filename="${fileName}"`,
-          'Cache-Control': 'no-store',
-        },
-      });
-    }
+  return new Response(bufferToArrayBuffer(buffer), {
+    headers: {
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Cache-Control': 'no-store',
+    },
+  });
+}
 
     const buffer = await createPdfBuffer(data);
 
-    return new Response(buffer, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Cache-Control': 'no-store',
-      },
-    });
+return new Response(bufferToArrayBuffer(buffer), {
+  headers: {
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `attachment; filename="${fileName}"`,
+    'Cache-Control': 'no-store',
+  },
+});
   } catch (error) {
     console.error('Report export failed:', error);
 

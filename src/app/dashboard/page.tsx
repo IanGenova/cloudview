@@ -10,6 +10,7 @@ import {
   Boxes,
   CalendarDays,
   ClipboardList,
+  ChevronDown,
   CreditCard,
   ShoppingBag,
   TrendingDown,
@@ -478,10 +479,10 @@ function buildServiceRequestBreakdown(
     (request) => request.status === ServiceRequestStatus.COMPLETED
   ).length;
 
-  const pending = requests.filter((request) =>
-    [ServiceRequestStatus.NEW, ServiceRequestStatus.IN_PROGRESS].includes(
-      request.status
-    )
+  const pending = requests.filter(
+    (request) =>
+      request.status === ServiceRequestStatus.NEW ||
+      request.status === ServiceRequestStatus.IN_PROGRESS
   ).length;
 
   const cancelled = requests.filter(

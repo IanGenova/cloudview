@@ -137,19 +137,18 @@ function legacyRoleFallback(
 
     return (
       action === 'canView' &&
-      [DashboardModule.OVERVIEW, DashboardModule.ORDERS].includes(module)
+      (module === DashboardModule.OVERVIEW ||
+        module === DashboardModule.ORDERS)
     );
   }
 
   if (role === Role.STAFF) {
     return (
       action === 'canView' &&
-      [
-        DashboardModule.OVERVIEW,
-        DashboardModule.ORDERS,
-        DashboardModule.SERVICE_REQUESTS,
-        DashboardModule.POS_TERMINAL,
-      ].includes(module)
+      (module === DashboardModule.OVERVIEW ||
+        module === DashboardModule.ORDERS ||
+        module === DashboardModule.SERVICE_REQUESTS ||
+        module === DashboardModule.POS_TERMINAL)
     );
   }
 

@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@/lib/auth';
+import { db } from '@/lib/db';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { MobileNav } from '@/components/dashboard/MobileNav';
 import { RealtimeDashboardNotifications } from '@/components/dashboard/RealtimeDashboardNotifications';
@@ -14,12 +15,25 @@ export default async function DashboardLayout({
   // When no user exists, render login/logout pages without dashboard shell.
   if (!user) return <>{children}</>;
 
-  const navItems = await getVisibleDashboardNavItems(user.id, user.role);
+  const [navItems, hotel] = await Promise.all([
+    getVisibleDashboardNavItems(user.id, user.role),
+
+    user.hotelId
+      ? db.hotel.findUnique({
+          where: {
+            id: user.hotelId,
+          },
+          select: {
+            name: true,
+          },
+        })
+      : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex min-h-screen bg-neutral-50">
       <Sidebar
-        hotelName={user.hotel?.name ?? undefined}
+        hotelName={hotel?.name ?? undefined}
         navItems={navItems}
       />
 
@@ -41,7 +55,7 @@ export default async function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <RealtimeDashboardNotifications /> 
+            <RealtimeDashboardNotifications />
 
             <a
               href="/dashboard/logout"

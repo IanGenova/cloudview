@@ -77,6 +77,10 @@ export async function createHotelAction(formData: FormData) {
     redirectToHotels({ error: 'hotel-required' });
   }
 
+if (!name) {
+  throw new Error('Hotel name is required.');
+}
+
   try {
     await db.hotel.create({
       data: {
