@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ConciergeBell,
   CreditCard,
+  FileBarChart2,
   Home,
   Hotel,
   BookOpen,
@@ -29,6 +30,12 @@ type DashboardNavItem = {
   group?: 'main' | 'settings';
 };
 
+const reportsNavItem: DashboardNavItem = {
+  module: 'REPORTS',
+  label: 'Reports',
+  href: '/dashboard/reports',
+};
+
 const moduleIconMap: Record<string, LucideIcon> = {
   OVERVIEW: LayoutDashboard,
   HOTELS: Hotel,
@@ -43,6 +50,7 @@ const moduleIconMap: Record<string, LucideIcon> = {
   SERVICE_REQUESTS: ConciergeBell,
   POS_TERMINAL: CreditCard,
   ANALYTICS: BarChart3,
+  REPORTS: FileBarChart2,
   HOTEL_SETTINGS: Settings,
   USER_ACCOUNT_SETTINGS: Settings,
 };
@@ -61,6 +69,28 @@ function isActiveRoute(pathname: string, href: string) {
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
+}
+
+function insertReportsItem(items: DashboardNavItem[]) {
+  const hasReports = items.some(
+    (item) => item.module === 'REPORTS' || item.href === '/dashboard/reports'
+  );
+
+  if (hasReports) {
+    return items;
+  }
+
+  const analyticsIndex = items.findIndex((item) => item.module === 'ANALYTICS');
+
+  if (analyticsIndex >= 0) {
+    return [
+      ...items.slice(0, analyticsIndex + 1),
+      reportsNavItem,
+      ...items.slice(analyticsIndex + 1),
+    ];
+  }
+
+  return [...items, reportsNavItem];
 }
 
 function SidebarLink({
@@ -115,7 +145,9 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
 
-  const mainItems = navItems.filter((item) => item.group !== 'settings');
+  const originalMainItems = navItems.filter((item) => item.group !== 'settings');
+  const mainItems = insertReportsItem(originalMainItems);
+
   const settingsItems = navItems.filter((item) => item.group === 'settings');
 
   const homeHref = navItems[0]?.href ?? '/dashboard';
