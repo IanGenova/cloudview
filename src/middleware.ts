@@ -197,7 +197,7 @@ function applySecurityHeaders(response: NextResponse) {
     "style-src 'self' 'unsafe-inline'",
     isDev
       ? "connect-src 'self' ws: wss: http: https:"
-      : "connect-src 'self' https:",
+      : `connect-src 'self' https: wss://${process.env.NEXT_PUBLIC_LAN_IP || '192.168.0.130'}:8000 wss://localhost:8000`,
     "media-src 'self' blob: https:",
     "worker-src 'self' blob:",
     isDev ? '' : 'upgrade-insecure-requests',
