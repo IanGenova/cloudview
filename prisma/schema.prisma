@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-  
 }
 
 enum Role {
@@ -116,22 +115,53 @@ enum DashboardModule {
   ANALYTICS
   HOTEL_SETTINGS
   USER_ACCOUNT_SETTINGS
+  REWARDS
+}
+
+enum GuestPointLedgerType {
+  EARNED
+  REDEEMED
+  ADJUSTED
+  VOIDED
+  EXPIRED
+  REFUNDED
+  BONUS
+}
+
+enum GuestPointLedgerStatus {
+  PENDING
+  CONFIRMED
+  VOIDED
+}
+
+enum RewardType {
+  DISCOUNT_AMOUNT
+  DISCOUNT_PERCENT
+  FREE_ITEM
+  CUSTOM
+}
+
+enum RewardRedemptionStatus {
+  RESERVED
+  USED
+  CANCELLED
+  EXPIRED
 }
 
 model UserDashboardPermission {
-  id        String          @id @default(cuid())
-  userId    String
-  module    DashboardModule
+  id     String          @id @default(cuid())
+  userId String
+  module DashboardModule
 
-  canView   Boolean         @default(false)
-  canCreate Boolean         @default(false)
-  canEdit   Boolean         @default(false)
-  canDelete Boolean         @default(false)
+  canView   Boolean @default(false)
+  canCreate Boolean @default(false)
+  canEdit   Boolean @default(false)
+  canDelete Boolean @default(false)
 
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, module])
   @@index([userId])
@@ -150,12 +180,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assignedServiceRequests ServiceRequest[]              @relation("AssignedRequests")
-  orderStatusUpdates      OrderStatusHistory[]
-  serviceStatusUpdates    ServiceRequestStatusHistory[]
-  inventoryMovements      InventoryMovement[]
-  activityLogs            ActivityLog[]
-  dashboardPermissions UserDashboardPermission[]
+  assignedServiceRequests  ServiceRequest[]              @relation("AssignedRequests")
+  orderStatusUpdates       OrderStatusHistory[]
+  serviceStatusUpdates     ServiceRequestStatusHistory[]
+  inventoryMovements       InventoryMovement[]
+  activityLogs             ActivityLog[]
+  dashboardPermissions     UserDashboardPermission[]
+  createdGuestPointLedgers GuestPointLedger[]            @relation("GuestPointLedgerCreatedBy")
 
   @@index([hotelId])
 }
@@ -196,32 +227,38 @@ model Hotel {
   menuBundleComponents         MenuBundleComponent[]
   serviceAvailabilityStocks    ServiceAvailabilityStock[]
   serviceAvailabilityMovements ServiceAvailabilityMovement[]
+  guestMembers                 GuestMember[]
+  guestPointAccounts           GuestPointAccount[]
+  guestPointLedgers            GuestPointLedger[]
+  rewards                      Reward[]
+  rewardRedemptions            RewardRedemption[]
+  guestPointSettings           GuestPointSettings?
 
   guideImages      HotelGuideImage[]
   nfcGuestSessions NfcGuestSession[]
 }
 
 model HotelSettings {
-  id                String   @id @default(cuid())
-  hotelId           String   @unique
-  hotel             Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  currency          String   @default("PHP")
-  taxRate           Decimal  @default(0.00) @db.Decimal(6, 4)
-  serviceChargeRate Decimal  @default(0.00) @db.Decimal(6, 4)
-  wifiName          String?
-  wifiPassword      String?
-  checkInTime       String   @default("2:00 PM")
-  checkOutTime      String   @default("12:00 PM")
-  poolHours         String   @default("7:00 AM - 9:00 PM")
-  poolRules         String?  @db.Text
-  policies          String?  @db.Text
-  guideText         String?  @db.Text
-  contactPhone      String?
-  contactEmail      String?
+  id                      String  @id @default(cuid())
+  hotelId                 String  @unique
+  hotel                   Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  currency                String  @default("PHP")
+  taxRate                 Decimal @default(0.00) @db.Decimal(6, 4)
+  serviceChargeRate       Decimal @default(0.00) @db.Decimal(6, 4)
+  wifiName                String?
+  wifiPassword            String?
+  checkInTime             String  @default("2:00 PM")
+  checkOutTime            String  @default("12:00 PM")
+  poolHours               String  @default("7:00 AM - 9:00 PM")
+  poolRules               String? @db.Text
+  policies                String? @db.Text
+  guideText               String? @db.Text
+  contactPhone            String?
+  contactEmail            String?
   guestPortalHeroImageUrl String? @db.Text
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Room {
@@ -472,6 +509,8 @@ model Order {
   inventoryMovements InventoryMovement[]
   guestSessionId     String?
   guestSession       NfcGuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  guestMemberId      String?
+  guestMember        GuestMember?         @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
   @@index([guestSessionId])
   @@index([hotelId])
@@ -1057,4 +1096,155 @@ model ServiceAvailabilityMovement {
   @@index([stockId])
   @@index([type])
   @@index([serviceRequestId])
+}
+
+model GuestMember {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  name      String
+  phone     String?
+  email     String?
+  birthDate DateTime?
+
+  isActive Boolean @default(true)
+
+  pointAccount GuestPointAccount?
+  pointLedger  GuestPointLedger[]
+  redemptions  RewardRedemption[]
+  orders       Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId])
+  @@index([phone])
+  @@index([email])
+}
+
+model GuestPointAccount {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  guestMemberId String      @unique
+  guestMember   GuestMember @relation(fields: [guestMemberId], references: [id], onDelete: Cascade)
+
+  availablePoints        Int @default(0)
+  pendingPoints          Int @default(0)
+  lifetimeEarnedPoints   Int @default(0)
+  lifetimeRedeemedPoints Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId])
+}
+
+model GuestPointLedger {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  guestMemberId String
+  guestMember   GuestMember @relation(fields: [guestMemberId], references: [id], onDelete: Cascade)
+
+  type   GuestPointLedgerType
+  status GuestPointLedgerStatus @default(CONFIRMED)
+
+  points Int
+
+  source      String
+  referenceId String?
+  description String?
+
+  createdById String?
+  createdBy   User?   @relation("GuestPointLedgerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([hotelId, type, source, referenceId])
+  @@index([hotelId])
+  @@index([guestMemberId])
+  @@index([source])
+  @@index([referenceId])
+}
+
+model Reward {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String? @db.Text
+
+  pointsCost Int
+  rewardType RewardType @default(DISCOUNT_AMOUNT)
+
+  discountCents   Int?
+  discountPercent Int?
+  freeProductId   String?
+
+  isActive Boolean @default(true)
+
+  validFrom  DateTime?
+  validUntil DateTime?
+
+  redemptions RewardRedemption[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId])
+}
+
+model RewardRedemption {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  guestMemberId String
+  guestMember   GuestMember @relation(fields: [guestMemberId], references: [id], onDelete: Cascade)
+
+  rewardId String
+  reward   Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  pointsUsed Int
+  code       String @unique
+
+  status RewardRedemptionStatus @default(RESERVED)
+
+  orderId String?
+
+  redeemedAt  DateTime  @default(now())
+  usedAt      DateTime?
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId])
+  @@index([guestMemberId])
+  @@index([rewardId])
+}
+
+model GuestPointSettings {
+  id      String @id @default(cuid())
+  hotelId String @unique
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  // Example: 10000 cents = ₱100 = 1 point
+  spendCentsPerPoint Int @default(10000)
+
+  minimumSpendCents Int @default(0)
+
+  redemptionEnabled Boolean @default(true)
+
+  pointsExpirationDays Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

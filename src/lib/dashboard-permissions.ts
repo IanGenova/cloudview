@@ -103,6 +103,12 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     href: '/dashboard/analytics',
     group: 'main',
   },
+  {
+  module: DashboardModule.REWARDS,
+  label: 'Rewards',
+  href: '/dashboard/rewards',
+  group: 'main',
+},
     {
       module: DashboardModule.HOTEL_SETTINGS,
       label: 'Hotel Settings',
@@ -148,13 +154,13 @@ function legacyRoleFallback(
       (module === DashboardModule.OVERVIEW ||
         module === DashboardModule.ORDERS ||
         module === DashboardModule.SERVICE_REQUESTS ||
-        module === DashboardModule.POS_TERMINAL)
+        module === DashboardModule.POS_TERMINAL ||
+        module === DashboardModule.REWARDS)
     );
   }
 
   return false;
 }
-
 export async function getUserDashboardPermissions(userId: string, role: Role) {
   if (role === Role.SUPER_ADMIN) {
     return DASHBOARD_NAV_ITEMS.map((item) => ({

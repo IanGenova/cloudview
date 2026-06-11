@@ -25,6 +25,7 @@ import {
 } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { publishCancelledItemAlert } from '@/lib/realtime/dashboard-alerts';
+import { awardOrderPointsIfEligible, voidOrderPoints } from '@/lib/rewards';
 
 type RestoreOrderItem = {
   id: string;
@@ -66,6 +67,22 @@ async function safelyPublishCancelledItemAlert(payload: {
     await publishCancelledItemAlert(payload);
   } catch (error) {
     console.warn('Failed to publish cancelled order/item alert:', error);
+  }
+}
+
+async function safelyAwardOrderPoints(orderId: string) {
+  try {
+    await awardOrderPointsIfEligible(orderId);
+  } catch (error) {
+    console.warn('Failed to award order reward points:', error);
+  }
+}
+
+async function safelyVoidOrderPoints(orderId: string) {
+  try {
+    await voidOrderPoints(orderId);
+  } catch (error) {
+    console.warn('Failed to void order reward points:', error);
   }
 }
 
@@ -752,6 +769,10 @@ export async function cancelOrderItemAction(formData: FormData) {
   wholeOrderCancelled: allItemsCancelled,
 });
 
+      if (allItemsCancelled) {
+        await safelyVoidOrderPoints(order.id);
+      }
+
   
 
   redirectToOrdersWithMessage({
@@ -867,16 +888,22 @@ export async function updateOrderStatusAction(formData: FormData) {
 
     throw error;
   }
+    if (status === OrderStatus.DELIVERED) {
+      await safelyAwardOrderPoints(order.id);
+    }
+
     if (status === OrderStatus.CANCELLED) {
-    await safelyPublishCancelledItemAlert({
-      hotelId: order.hotelId,
-      orderId: order.id,
-      orderCode: order.orderCode,
-      reason: note || undefined,
-      source: 'ORDER_CANCELLED',
-      wholeOrderCancelled: true,
-    });
-  }
+      await safelyVoidOrderPoints(order.id);
+
+      await safelyPublishCancelledItemAlert({
+        hotelId: order.hotelId,
+        orderId: order.id,
+        orderCode: order.orderCode,
+        reason: note || undefined,
+        source: 'ORDER_CANCELLED',
+        wholeOrderCancelled: true,
+      });
+    }
 
 
   revalidateOrderPaths(order);
@@ -949,6 +976,7 @@ export async function markOrderPaidAction(formData: FormData) {
       paymentStatus: PaymentStatus.PAID,
     },
   });
+  await safelyAwardOrderPoints(order.id);
 
   revalidateOrderPaths(order);
 
