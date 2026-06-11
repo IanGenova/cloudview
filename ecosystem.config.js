@@ -26,7 +26,7 @@ module.exports = {
       // Point PM2 directly to the Next.js core file inside your project
       script: "node_modules/next/dist/bin/next",
       // Notice this is just "dev" now, NOT "run dev"
-      args: "dev", 
+      args: "start",
       cwd: "D:\\Genova\\NASPIN TECH\\PROJECTS\\cloud-view-mvp",
       autorestart: true,
       watch: false,
