@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { MenuClient } from '@/components/guest/MenuClient';
+import { getGuestRewardsContextForTag } from '@/lib/nfc-rewards';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,6 +124,8 @@ export default async function GuestMenuPage({
   const location = tag.room
     ? `Room ${tag.room.number}`
     : tag.location?.name ?? tag.label;
+
+  const rewardsContext = await getGuestRewardsContextForTag(tagCode);
 
   if (tag.status !== 'ACTIVE') {
     return (
@@ -314,6 +317,55 @@ export default async function GuestMenuPage({
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
+        <div className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5 text-white">
+  {rewardsContext.guestMember && rewardsContext.pointAccount ? (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
+          CloudView Rewards
+        </p>
+
+        <h2 className="mt-2 text-xl font-black">
+          {rewardsContext.pointAccount.availablePoints} points available
+        </h2>
+
+        <p className="mt-1 text-sm font-semibold text-white/50">
+          Complete paid orders to earn more rewards points.
+        </p>
+      </div>
+
+      <Link
+        href={`/t/${tagCode}/rewards`}
+        className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
+      >
+        View
+      </Link>
+    </div>
+  ) : (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
+          CloudView Rewards
+        </p>
+
+        <h2 className="mt-2 text-xl font-black">
+          Earn points from this order
+        </h2>
+
+        <p className="mt-1 text-sm font-semibold text-white/50">
+          Claim rewards before ordering so this order can be linked to your points.
+        </p>
+      </div>
+
+      <Link
+        href={`/t/${tagCode}/rewards`}
+        className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
+      >
+        Claim
+      </Link>
+    </div>
+  )}
+</div>
         <MenuClient
           tagCode={tagCode}
           products={menuProducts}

@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
-import { OrderStatus, ServiceRequestStatus } from '@prisma/client';
+import { OrderStatus, ServiceRequestStatus, TagType } from '@prisma/client';
+import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
 import { db } from '@/lib/db';
+
 
 export const ACTIVE_ORDER_STATUSES = [
   OrderStatus.PENDING,
@@ -21,6 +23,7 @@ const nfcGuestSessionSelect = {
   tagId: true,
   roomId: true,
   locationId: true,
+  guestMemberId: true,
   endedAt: true,
 } as const;
 
@@ -61,10 +64,35 @@ export async function getNfcGuestSessionPendingCounts(sessionId: string) {
 export async function getReusableNfcGuestSessionForTag({
   tagId,
   hotelId,
+  tagType,
+  roomId,
+  locationId,
 }: {
   tagId: string;
   hotelId: string;
+  tagType: TagType;
+  roomId?: string | null;
+  locationId?: string | null;
 }) {
+  const policy = getNfcSessionPolicy({
+    tagType,
+    roomId,
+    locationId,
+  });
+
+  /**
+   * Public location tags such as POOL, LOBBY, RESTAURANT, BAR, GYM, SPA,
+   * AMENITY, PARKING, and OTHER must NOT reuse another guest's pending session.
+   *
+   * Each device/browser gets its own session.
+   */
+  if (!policy.reusePendingSession) {
+    return null;
+  }
+
+  /**
+   * Existing reusable-session logic remains for private ROOM tags only.
+   */
   const sessionWithPendingWork = await db.nfcGuestSession.findFirst({
     where: {
       tagId,
@@ -156,16 +184,15 @@ export async function getCurrentNfcGuestSession(tagCode: string) {
     });
   }
 
-  await db.nfcGuestSession.update({
+  return db.nfcGuestSession.update({
     where: {
       id: session.id,
     },
     data: {
       lastSeenAt: new Date(),
     },
+    select: nfcGuestSessionSelect,
   });
-
-  return session;
 }
 
 export async function getCurrentNfcGuestSessionStatus(tagCode: string) {

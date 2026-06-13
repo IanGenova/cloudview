@@ -13,6 +13,7 @@ import { assertHotelScope } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
 import { triggerServiceRequestUpdated } from '@/lib/realtime/service-request-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
+import { awardServiceRequestPointsIfEligible } from '@/lib/nfc-rewards';
 
 function generateChargeCode() {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -78,6 +79,14 @@ function revalidateServiceRequestPaths() {
   revalidatePath('/dashboard/inventory');
   revalidatePath('/t/[tagCode]/service', 'page');
   revalidatePath('/t/[tagCode]/requests', 'page');
+}
+
+async function safelyAwardServiceRequestPoints(serviceRequestId: string) {
+  try {
+    await awardServiceRequestPointsIfEligible(serviceRequestId);
+  } catch (error) {
+    console.warn('Failed to award service request reward points:', error);
+  }
 }
 
 type ServiceRequestForRestore = {
@@ -471,11 +480,15 @@ for (const id of idsToCharge) {
     });
   }
 
-  if (status === ServiceRequestStatus.IN_PROGRESS) {
+if (status === ServiceRequestStatus.IN_PROGRESS) {
   redirectToServiceRequests('request-started');
 }
 
 if (status === ServiceRequestStatus.COMPLETED) {
+  await Promise.allSettled(
+    requestIds.map((id) => safelyAwardServiceRequestPoints(id))
+  );
+
   redirectToServiceRequests('request-completed');
 }
 

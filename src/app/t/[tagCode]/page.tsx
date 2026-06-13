@@ -213,6 +213,18 @@ export default async function GuestHome({ params }: GuestHomeProps) {
                 <Hotel className="size-4 text-gold" />
                 Contact staff and front desk support
               </Link>
+              <Link
+                  href={`/t/${tagCode}/rewards`}
+                  className="rounded-3xl border border-[#c99c38]/25 bg-[#11100b] p-5 text-white shadow-xl"
+                >
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-[#c99c38]">
+                    CloudView Rewards
+                  </p>
+                  <p className="mt-2 text-xl font-black">Claim points from your stay</p>
+                  <p className="mt-1 text-sm font-semibold text-white/60">
+                    Earn points from NFC visits, orders, and completed requests.
+                  </p>
+                </Link>
             </div>
           </div>
         </section>

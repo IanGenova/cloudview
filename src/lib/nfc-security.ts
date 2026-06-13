@@ -5,6 +5,12 @@ import { db } from '@/lib/db';
 
 export const NFC_ACCESS_COOKIE = 'cv_nfc_access';
 
+export function getNfcAccessCookieName(tagCode: string) {
+  const safeTagCode = tagCode.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  return `${NFC_ACCESS_COOKIE}_${safeTagCode}`;
+}
+
 function getAccessTtlMinutes() {
   return Number(process.env.NFC_ACCESS_TTL_MINUTES || 60);
 }
@@ -170,6 +176,7 @@ async function expireSessionAndRedirect(
 export async function createNfcAccessSession(tag: {
   id: string;
   hotelId: string;
+  code?: string;
 }) {
   const cookieStore = await cookies();
   const fingerprint = await getRequestFingerprint();
@@ -198,27 +205,27 @@ export async function createNfcAccessSession(tag: {
     },
   });
 
-  cookieStore.set(NFC_ACCESS_COOKIE, rawToken, {
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     secure: await shouldUseSecureNfcCookies(),
     path: '/',
     maxAge: getAccessTtlMinutes() * 60,
-  });
+  };
+
+  if (tag.code) {
+    cookieStore.set(getNfcAccessCookieName(tag.code), rawToken, cookieOptions);
+  }
+
+  /**
+   * Legacy fallback cookie.
+   * Keep this so old guest pages/routes still work while we transition to
+   * tag-specific access cookies.
+   */
+  cookieStore.set(NFC_ACCESS_COOKIE, rawToken, cookieOptions);
 }
 
 export async function requireNfcGuestAccess(tagCode: string) {
-  const cookieStore = await cookies();
-  const rawToken = cookieStore.get(NFC_ACCESS_COOKIE)?.value;
-
-  if (!rawToken) {
-    redirect(
-      `${getPublicAppUrl()}/nfc-access-denied?tag=${encodeURIComponent(
-        tagCode
-      )}&reason=no-session`
-    );
-  }
-
   const tag = await db.nfcTag.findUnique({
     where: {
       code: tagCode,
@@ -236,6 +243,20 @@ export async function requireNfcGuestAccess(tagCode: string) {
 
   if (!tag || tag.status !== 'ACTIVE' || tag.deletedAt) {
     redirect(`${getPublicAppUrl()}/nfc-access-denied?reason=inactive-tag`);
+  }
+
+  const cookieStore = await cookies();
+
+  const rawToken =
+    cookieStore.get(getNfcAccessCookieName(tag.code))?.value ||
+    cookieStore.get(NFC_ACCESS_COOKIE)?.value;
+
+  if (!rawToken) {
+    redirect(
+      `${getPublicAppUrl()}/nfc-access-denied?tag=${encodeURIComponent(
+        tagCode
+      )}&reason=no-session`
+    );
   }
 
   const now = new Date();

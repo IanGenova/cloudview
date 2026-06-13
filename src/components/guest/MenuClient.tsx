@@ -813,6 +813,24 @@ export function MenuClient({
               </div>
             </div>
 
+            <div className="mt-5 rounded-[2rem] border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+              CloudView Rewards
+            </p>
+
+            <p className="mt-2 text-sm font-bold leading-6 text-amber-900">
+              Claim rewards before placing your order so this purchase can be linked to your points.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push(`/t/${tagCode}/rewards`)}
+              className="mt-3 rounded-2xl bg-amber-600 px-4 py-2 text-xs font-black text-white"
+            >
+              Claim Rewards
+            </button>
+          </div>
+
             <div className="mt-5 rounded-[2rem] bg-white p-4 shadow-soft">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">

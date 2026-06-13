@@ -12,7 +12,9 @@ import {
   ACTIVE_SERVICE_REQUEST_STATUSES,
   getNfcGuestSessionCookieName,
   getReusableNfcGuestSessionForTag,
+  getNfcGuestSessionPendingCounts,
 } from '@/lib/nfc-guest-session';
+import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
 
 function publicUrl(path: string) {
   return new URL(path, getPublicAppUrl());
@@ -51,6 +53,122 @@ function redirectHttpRequestToHttps(request: Request) {
   return NextResponse.redirect(httpsUrl, 308);
 }
 
+function getRequestCookie(request: Request, cookieName: string) {
+  const cookieHeader = request.headers.get('cookie');
+
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookieHeader.split(';').map((item) => item.trim());
+
+  for (const cookie of cookies) {
+    const separatorIndex = cookie.indexOf('=');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const name = cookie.slice(0, separatorIndex);
+    const value = cookie.slice(separatorIndex + 1);
+
+    if (name === cookieName) {
+      return decodeURIComponent(value);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Public tags should allow unlimited devices.
+ *
+ * But for the SAME browser/device, we can safely reuse its own existing
+ * session cookie so the guest does not lose their own pending orders/requests.
+ *
+ * This does NOT reuse another guest's session.
+ */
+async function getBrowserOwnedPublicGuestSession({
+  request,
+  tag,
+}: {
+  request: Request;
+  tag: {
+    id: string;
+    code: string;
+    hotelId: string;
+  };
+}) {
+  const cookieName = getNfcGuestSessionCookieName(tag.code);
+  const sessionKey = getRequestCookie(request, cookieName);
+
+  if (!sessionKey) {
+    return null;
+  }
+
+  const session = await db.nfcGuestSession.findUnique({
+    where: {
+      sessionKey,
+    },
+    select: {
+      id: true,
+      sessionKey: true,
+      hotelId: true,
+      tagId: true,
+      endedAt: true,
+    },
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  if (session.hotelId !== tag.hotelId || session.tagId !== tag.id) {
+    return null;
+  }
+
+  if (session.endedAt) {
+    const pendingCounts = await getNfcGuestSessionPendingCounts(session.id);
+
+    if (pendingCounts.totalPending <= 0) {
+      return null;
+    }
+
+    return db.nfcGuestSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        endedAt: null,
+        lastSeenAt: new Date(),
+      },
+      select: {
+        id: true,
+        sessionKey: true,
+        hotelId: true,
+        tagId: true,
+        endedAt: true,
+      },
+    });
+  }
+
+  return db.nfcGuestSession.update({
+    where: {
+      id: session.id,
+    },
+    data: {
+      lastSeenAt: new Date(),
+    },
+    select: {
+      id: true,
+      sessionKey: true,
+      hotelId: true,
+      tagId: true,
+      endedAt: true,
+    },
+  });
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -77,6 +195,7 @@ export async function GET(
       hotelId: true,
       roomId: true,
       locationId: true,
+      tagType: true,
       status: true,
       scanSecret: true,
       deletedAt: true,
@@ -99,16 +218,32 @@ export async function GET(
     );
   }
 
-  /**
-   * Important fix:
-   * If this NFC tag already has a guest session with pending orders or
-   * active service requests, reuse that same session instead of creating
-   * a new guest session.
-   */
-  const reusableGuestSession = await getReusableNfcGuestSessionForTag({
-    tagId: tag.id,
-    hotelId: tag.hotelId,
+  const policy = getNfcSessionPolicy({
+    tagType: tag.tagType,
+    roomId: tag.roomId,
+    locationId: tag.locationId,
   });
+
+  /**
+   * PRIVATE ROOM:
+   * - May reuse a pending room session.
+   *
+   * PUBLIC LOCATION:
+   * - Does not reuse another guest's pending session.
+   * - May reuse only the same browser's own cookie session.
+   */
+  const reusableGuestSession = policy.reusePendingSession
+    ? await getReusableNfcGuestSessionForTag({
+        tagId: tag.id,
+        hotelId: tag.hotelId,
+        tagType: tag.tagType,
+        roomId: tag.roomId,
+        locationId: tag.locationId,
+      })
+    : await getBrowserOwnedPublicGuestSession({
+        request,
+        tag,
+      });
 
   const guestSessionKey = reusableGuestSession?.sessionKey ?? randomUUID();
 
@@ -122,15 +257,25 @@ export async function GET(
       },
     });
 
-    await tx.nfcAccessSession.updateMany({
-      where: {
-        tagId: tag.id,
-        revokedAt: null,
-      },
-      data: {
-        revokedAt: new Date(),
-      },
-    });
+    /**
+     * Important:
+     * For private ROOM tags, revoke existing access sessions because the room
+     * panel is controlled and anti-sharing is stricter.
+     *
+     * For public POOL/LOBBY/RESTAURANT/etc. tags, DO NOT revoke sessions.
+     * Otherwise, every new tap would kick out previous guests.
+     */
+    if (policy.requireStrictBrowserSession) {
+      await tx.nfcAccessSession.updateMany({
+        where: {
+          tagId: tag.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+    }
 
     await tx.nfcAccessSession.deleteMany({
       where: {
@@ -141,40 +286,79 @@ export async function GET(
     });
 
     /**
-     * Close only old guest sessions that have no pending work.
-     * Do not close sessions that still have pending orders or requests.
+     * Private room tags:
+     * Close old no-pending sessions so the room panel stays clean.
+     *
+     * Public location tags:
+     * Do not close other active sessions on every tap.
+     * Multiple devices must remain active independently.
      */
-    await tx.nfcGuestSession.updateMany({
-      where: {
-        tagId: tag.id,
-        hotelId: tag.hotelId,
-        endedAt: null,
-        ...(reusableGuestSession
-          ? {
-              id: {
-                not: reusableGuestSession.id,
+    if (policy.requireStrictBrowserSession) {
+      await tx.nfcGuestSession.updateMany({
+        where: {
+          tagId: tag.id,
+          hotelId: tag.hotelId,
+          endedAt: null,
+          ...(reusableGuestSession
+            ? {
+                id: {
+                  not: reusableGuestSession.id,
+                },
+              }
+            : {}),
+          orders: {
+            none: {
+              status: {
+                in: [...ACTIVE_ORDER_STATUSES],
               },
-            }
-          : {}),
-        orders: {
-          none: {
-            status: {
-              in: [...ACTIVE_ORDER_STATUSES],
+            },
+          },
+          serviceRequests: {
+            none: {
+              status: {
+                in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+              },
             },
           },
         },
-        serviceRequests: {
-          none: {
-            status: {
-              in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+        data: {
+          endedAt: new Date(),
+        },
+      });
+    } else {
+      /**
+       * Public cleanup only:
+       * Close old public sessions with no pending work after 24 hours.
+       * This prevents database clutter without interrupting current guests.
+       */
+      await tx.nfcGuestSession.updateMany({
+        where: {
+          tagId: tag.id,
+          hotelId: tag.hotelId,
+          endedAt: null,
+          lastSeenAt: {
+            lt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          },
+          orders: {
+            none: {
+              status: {
+                in: [...ACTIVE_ORDER_STATUSES],
+              },
+            },
+          },
+          serviceRequests: {
+            none: {
+              status: {
+                in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+              },
             },
           },
         },
-      },
-      data: {
-        endedAt: new Date(),
-      },
-    });
+        data: {
+          endedAt: new Date(),
+        },
+      });
+    }
 
     if (reusableGuestSession) {
       await tx.nfcGuestSession.update({
@@ -202,10 +386,10 @@ export async function GET(
   });
 
   await createNfcAccessSession({
-    id: tag.id,
-    hotelId: tag.hotelId,
-  });
-
+  id: tag.id,
+  hotelId: tag.hotelId,
+  code: tag.code,
+});
   const redirectUrl =
     tag.status === 'ACTIVE'
       ? publicUrl(`/t/${tag.code}?nfcSession=1`)

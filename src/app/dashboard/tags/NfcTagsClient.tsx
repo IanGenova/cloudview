@@ -9,7 +9,9 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  ShieldCheck,
   Trash2,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -270,6 +272,88 @@ function buildAutoLabel({
   return '';
 }
 
+type SessionModeInfo = {
+  mode: 'PRIVATE_ROOM' | 'PUBLIC_LOCATION';
+  label: string;
+  description: string;
+  containerClass: string;
+  iconClass: string;
+};
+
+function getSessionModeInfo(tag: {
+  tagType: string;
+  roomId?: string | null;
+  locationId?: string | null;
+}): SessionModeInfo {
+  const isPrivateRoom =
+    tag.tagType === 'ROOM' && Boolean(tag.roomId) && !tag.locationId;
+
+  if (isPrivateRoom) {
+    return {
+      mode: 'PRIVATE_ROOM',
+      label: 'Private Room Session',
+      description:
+        'Best for room panels. Pending guest orders or service requests may be reused for the same room session.',
+      containerClass: 'border-blue-200 bg-blue-50 text-blue-900',
+      iconClass: 'bg-blue-100 text-blue-700',
+    };
+  }
+
+  return {
+    mode: 'PUBLIC_LOCATION',
+    label: 'Public Multi-Device',
+    description:
+      'Unlimited guests/devices may tap this NFC tag. Each device receives a separate guest session.',
+    containerClass: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    iconClass: 'bg-emerald-100 text-emerald-700',
+  };
+}
+
+function SessionModePreview({
+  tagType,
+  roomId,
+  locationId,
+}: {
+  tagType: string;
+  roomId?: string | null;
+  locationId?: string | null;
+}) {
+  const sessionMode = getSessionModeInfo({
+    tagType,
+    roomId,
+    locationId,
+  });
+
+  const Icon =
+    sessionMode.mode === 'PRIVATE_ROOM' ? ShieldCheck : UsersRound;
+
+  return (
+    <div
+      className={`rounded-2xl border p-4 text-sm ${sessionMode.containerClass}`}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`grid size-10 shrink-0 place-items-center rounded-2xl ${sessionMode.iconClass}`}
+        >
+          <Icon className="size-5" />
+        </span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+            Session Mode
+          </p>
+
+          <p className="mt-1 text-base font-black">{sessionMode.label}</p>
+
+          <p className="mt-1 text-xs font-bold leading-5 opacity-75">
+            {sessionMode.description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GeneratedCodeInput({
   code,
   helper,
@@ -498,6 +582,13 @@ function CreateTagForm({
           ))}
         </Select>
       </FormField>
+      <div className="md:col-span-2 xl:col-span-3">
+      <SessionModePreview
+        tagType={tagType}
+        roomId={selectedRoomId || null}
+        locationId={selectedLocationId || null}
+      />
+    </div>
 
       <div className="md:col-span-2 xl:col-span-3">
         <Button className="w-full md:w-auto">Create Secure NFC Tag</Button>
@@ -622,6 +713,13 @@ function EditTagForm({
           ))}
         </Select>
       </FormField>
+      <div className="md:col-span-2 xl:col-span-3">
+      <SessionModePreview
+        tagType={tagType}
+        roomId={roomId || null}
+        locationId={locationId || null}
+      />
+    </div>
 
       <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800 md:col-span-2 xl:col-span-3">
         Updating the Unique Tag ID changes the NFC guest URL. After saving,
@@ -817,10 +915,19 @@ export function NfcTagsClient({
 
       <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
         {filteredTags.map((tag) => {
-          const secureLaunchUrl = toHttpsAppUrl(tag.secureLaunchUrl);
-          const lockedDestinationUrl = toHttpsAppUrl(tag.lockedDestinationUrl);
+        const secureLaunchUrl = toHttpsAppUrl(tag.secureLaunchUrl);
+        const lockedDestinationUrl = toHttpsAppUrl(tag.lockedDestinationUrl);
 
-          return (
+        const sessionMode = getSessionModeInfo({
+          tagType: tag.tagType,
+          roomId: tag.roomId,
+          locationId: tag.locationId,
+        });
+
+        const SessionIcon =
+          sessionMode.mode === 'PRIVATE_ROOM' ? ShieldCheck : UsersRound;
+
+        return (
             <article
               key={tag.id}
               className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm"
@@ -855,6 +962,29 @@ export function NfcTagsClient({
                     <b>Last Scanned:</b> {formatDate(tag.lastScannedAt)}
                   </p>
                 </div>
+                <div
+                    className={`rounded-2xl border p-4 text-sm ${sessionMode.containerClass}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`grid size-9 shrink-0 place-items-center rounded-xl ${sessionMode.iconClass}`}
+                      >
+                        <SessionIcon className="size-4" />
+                      </span>
+
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] opacity-70">
+                          Session Mode
+                        </p>
+
+                        <p className="mt-1 font-black">{sessionMode.label}</p>
+
+                        <p className="mt-1 text-xs font-bold leading-5 opacity-75">
+                          {sessionMode.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                 <div className="space-y-2 rounded-2xl bg-neutral-50 p-4 text-xs">
                   <div>

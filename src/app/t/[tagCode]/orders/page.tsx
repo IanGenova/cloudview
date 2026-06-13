@@ -15,6 +15,7 @@ import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { getGuestRewardsContextForTag } from '@/lib/nfc-rewards';
 
 export const dynamic = 'force-dynamic';
 
@@ -277,6 +278,7 @@ export default async function MyOrdersPage({
   }
 
   const guestSession = await getCurrentNfcGuestSession(tagCode);
+  const rewardsContext = await getGuestRewardsContextForTag(tagCode);
 
   const location = tag.room
     ? `Room ${tag.room.number}`
@@ -345,6 +347,58 @@ export default async function MyOrdersPage({
             </div>
           </div>
         </section>
+
+        {rewardsContext.guestMember && rewardsContext.pointAccount ? (
+  <section className="mb-5 rounded-[2rem] border border-gold/25 bg-gold/10 p-5">
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
+          CloudView Rewards
+        </p>
+
+        <h2 className="mt-2 text-xl font-black text-white">
+          {rewardsContext.pointAccount.availablePoints} points available
+        </h2>
+
+        <p className="mt-1 text-sm font-semibold text-white/50">
+          Orders linked to your rewards profile can earn points once paid and delivered.
+        </p>
+      </div>
+
+      <Link
+        href={`/t/${tagCode}/rewards`}
+        className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
+      >
+        View
+      </Link>
+    </div>
+  </section>
+) : (
+        <section className="mb-5 rounded-[2rem] border border-gold/25 bg-white/5 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
+                CloudView Rewards
+              </p>
+
+              <h2 className="mt-2 text-xl font-black text-white">
+                Claim points from your orders
+              </h2>
+
+              <p className="mt-1 text-sm font-semibold text-white/50">
+                Link your guest rewards profile to earn points from food orders and services.
+              </p>
+            </div>
+
+            <Link
+              href={`/t/${tagCode}/rewards`}
+              className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
+            >
+              Claim
+            </Link>
+          </div>
+        </section>
+      )}
 
         {orders.length ? (
           <div className="space-y-4">

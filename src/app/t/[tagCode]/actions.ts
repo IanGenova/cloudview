@@ -17,6 +17,7 @@ import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
+import { resolveGuestMemberIdForCurrentNfcSession } from '@/lib/nfc-rewards';
 
 type StockRequirement = {
   productId: string;
@@ -90,7 +91,10 @@ function addServiceStockRequirement(
 }
 
 export async function createGuestOrder(input: unknown) {
+
   const parsed = createGuestOrderSchema.parse(input);
+  
+
 
   const tag = await db.nfcTag.findUnique({
     where: {
@@ -116,9 +120,13 @@ export async function createGuestOrder(input: unknown) {
 
   const guestSession = await requireCurrentNfcGuestSession(parsed.tagCode);
 
-  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
-    throw new Error('Invalid guest session. Please tap the NFC card again.');
-  }
+if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+  throw new Error('Invalid guest session. Please tap the NFC card again.');
+}
+
+const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(
+  parsed.tagCode
+);
 
   const uniqueProductIds = Array.from(
     new Set(parsed.items.map((item) => item.productId))
@@ -282,13 +290,14 @@ export async function createGuestOrder(input: unknown) {
     }
 
     const createdOrder = await tx.order.create({
-      data: {
-        hotelId: tag.hotelId,
-        roomId: tag.roomId,
-        locationId: tag.locationId,
-        tagId: tag.id,
-        guestSessionId: guestSession.id,
-        orderCode,
+        data: {
+          hotelId: tag.hotelId,
+          roomId: tag.roomId,
+          locationId: tag.locationId,
+          tagId: tag.id,
+          guestSessionId: guestSession.id,
+          guestMemberId,
+          orderCode,
         guestName: cleanText(parsed.guestName, 100),
         notes: cleanText(parsed.notes, 1000),
         paymentMethod: parsed.paymentMethod as PaymentMethod,
@@ -553,11 +562,13 @@ export async function createServiceRequestAction(formData: FormData) {
     });
   }
 
-  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
-    redirectToService(tagCode, {
-      error: 'invalid_session',
-    });
-  }
+ if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+  redirectToService(tagCode, {
+    error: 'invalid_session',
+  });
+}
+
+const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(tagCode);
 
   const services = await db.serviceCatalogItem.findMany({
     where: {
@@ -724,6 +735,7 @@ export async function createServiceRequestAction(formData: FormData) {
             locationId: tag.locationId,
             tagId: tag.id,
             guestSessionId: guestSession.id,
+            guestMemberId,
             requestCode: groupedRequestCode,
             type: item.service.name,
             guestName: guestName || null,

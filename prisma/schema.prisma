@@ -513,6 +513,7 @@ model Order {
   guestMember        GuestMember?         @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
   @@index([guestSessionId])
+  @@index([guestMemberId])
   @@index([hotelId])
   @@index([status])
   @@index([createdAt])
@@ -611,9 +612,13 @@ model ServiceRequest {
 
   statusHistory  ServiceRequestStatusHistory[]
   guestSessionId String?
-  guestSession   NfcGuestSession?              @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  guestSession   NfcGuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+
+  guestMemberId String?
+  guestMember   GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
   @@index([guestSessionId])
+  @@index([guestMemberId])
   @@index([hotelId])
   @@index([status])
   @@index([requestCode])
@@ -742,14 +747,17 @@ model NfcGuestSession {
   roomId     String?
   locationId String?
 
+  guestMemberId String?
+
   startedAt  DateTime  @default(now())
   lastSeenAt DateTime  @default(now())
   endedAt    DateTime?
 
-  hotel    Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  tag      NfcTag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  room     Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hotel       Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  tag         NfcTag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  room        Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  location    Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  guestMember GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
   orders          Order[]
   serviceRequests ServiceRequest[]
@@ -758,6 +766,7 @@ model NfcGuestSession {
   @@index([tagId])
   @@index([roomId])
   @@index([locationId])
+  @@index([guestMemberId])
   @@index([startedAt])
 }
 
@@ -1110,10 +1119,12 @@ model GuestMember {
 
   isActive Boolean @default(true)
 
-  pointAccount GuestPointAccount?
-  pointLedger  GuestPointLedger[]
-  redemptions  RewardRedemption[]
-  orders       Order[]
+  pointAccount    GuestPointAccount?
+  pointLedger     GuestPointLedger[]
+  redemptions     RewardRedemption[]
+  orders          Order[]
+  nfcSessions     NfcGuestSession[]
+  serviceRequests ServiceRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1242,6 +1253,15 @@ model GuestPointSettings {
   minimumSpendCents Int @default(0)
 
   redemptionEnabled Boolean @default(true)
+
+  // NFC engagement rewards
+  nfcTapPoints        Int     @default(1)
+  nfcDailyMaxPoints   Int     @default(3)
+  nfcOncePerTagPerDay Boolean @default(true)
+
+  // Service request rewards
+  serviceRequestCompletionPoints Int @default(1)
+  serviceRequestDailyMaxPoints   Int @default(3)
 
   pointsExpirationDays Int?
 
