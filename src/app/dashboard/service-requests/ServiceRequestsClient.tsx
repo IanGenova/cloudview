@@ -6,7 +6,10 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  Download,
   Eye,
+  Images,
+  Maximize2,
   MessageCircle,
   ReceiptText,
   Search,
@@ -44,6 +47,19 @@ type RequestStatusHistory = {
   userName: string;
 };
 
+type ServiceRequestAttachment = {
+  id: string;
+  imageUrl: string;
+  originalName: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  caption: string | null;
+  attachmentType: string;
+  uploadedByGuest: boolean;
+  uploadedByName: string | null;
+  createdAt: string;
+};
+
 type ServiceRequestOrderItem = {
   id: string;
   requestCode: string;
@@ -55,6 +71,7 @@ type ServiceRequestOrderItem = {
   createdAt: string;
   charge: RequestCharge | null;
   statusHistory: RequestStatusHistory[];
+  attachments: ServiceRequestAttachment[];
 };
 
 type RequestGroup = {
@@ -73,6 +90,7 @@ type RequestGroup = {
   billedCount: number;
   totalChargeAmount: number;
   items: ServiceRequestOrderItem[];
+  attachments: ServiceRequestAttachment[];
 };
 
 type TabValue = 'LIVE' | 'ALL' | 'BILLED' | 'NOT_BILLED' | 'HISTORY';
@@ -131,6 +149,34 @@ function formatDateTime(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function attachmentTypeLabel(type: string) {
+  return type.replaceAll('_', ' ');
+}
+
+function getAttachmentBadgeClass(type: string, uploadedByGuest: boolean) {
+  if (uploadedByGuest || type === 'GUEST_UPLOAD') {
+    return 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200';
+  }
+
+  if (type === 'STAFF_AFTER') {
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
+  }
+
+  if (type === 'STAFF_BEFORE') {
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200';
+  }
+
+  return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
 }
 
 function statusLabel(status: string) {
@@ -317,6 +363,168 @@ function extractQuantityFromNotes(notes: string) {
   return Number.isInteger(quantity) && quantity > 0 ? quantity : 1;
 }
 
+function AttachmentGallery({
+  title,
+  attachments,
+  compact = false,
+}: {
+  title: string;
+  attachments: ServiceRequestAttachment[];
+  compact?: boolean;
+}) {
+  const [selectedAttachment, setSelectedAttachment] =
+    useState<ServiceRequestAttachment | null>(null);
+
+  if (!attachments.length) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-black text-neutral-950 dark:text-white">
+              <Images className="size-4 text-gold" />
+              {title}
+            </p>
+
+            <p className="mt-1 text-xs font-semibold text-neutral-500">
+              {attachments.length} photo{attachments.length === 1 ? '' : 's'} attached
+            </p>
+          </div>
+        </div>
+
+        <div
+          className={
+            compact
+              ? 'grid grid-cols-4 gap-2'
+              : 'grid grid-cols-2 gap-3 sm:grid-cols-3'
+          }
+        >
+          {attachments.map((attachment) => (
+            <button
+              key={attachment.id}
+              type="button"
+              onClick={() => setSelectedAttachment(attachment)}
+              className="group overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 text-left transition hover:border-gold dark:border-neutral-800 dark:bg-neutral-900"
+            >
+              <div
+                className={
+                  compact
+                    ? 'relative aspect-square bg-neutral-100 dark:bg-neutral-800'
+                    : 'relative aspect-[4/3] bg-neutral-100 dark:bg-neutral-800'
+                }
+              >
+                <img
+                  src={attachment.imageUrl}
+                  alt={attachment.originalName || 'Service request attachment'}
+                  className="size-full object-cover"
+                />
+
+                <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/70 text-white opacity-0 transition group-hover:opacity-100">
+                  <Maximize2 className="size-4" />
+                </span>
+              </div>
+
+              {!compact ? (
+                <div className="p-3">
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${getAttachmentBadgeClass(
+                      attachment.attachmentType,
+                      attachment.uploadedByGuest
+                    )}`}
+                  >
+                    {attachment.uploadedByGuest
+                      ? 'Guest Upload'
+                      : attachmentTypeLabel(attachment.attachmentType)}
+                  </span>
+
+                  <p className="mt-2 truncate text-xs font-black text-neutral-800 dark:text-neutral-200">
+                    {attachment.originalName || 'Uploaded photo'}
+                  </p>
+
+                  <p className="mt-1 text-[11px] font-bold text-neutral-400">
+                    {formatFileSize(attachment.sizeBytes)}
+                  </p>
+                </div>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {selectedAttachment ? (
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/80 px-4 py-4">
+          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-neutral-900">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 p-4 dark:border-neutral-800">
+              <div className="min-w-0">
+                <p className="text-lg font-black text-neutral-950 dark:text-white">
+                  {selectedAttachment.originalName || 'Service Request Photo'}
+                </p>
+
+                <p className="mt-1 text-xs font-semibold text-neutral-500">
+                  {selectedAttachment.uploadedByGuest
+                    ? 'Uploaded by guest'
+                    : `Uploaded by ${selectedAttachment.uploadedByName || 'staff'}`} ·{' '}
+                  {formatDateTime(selectedAttachment.createdAt)} ·{' '}
+                  {formatFileSize(selectedAttachment.sizeBytes)}
+                </p>
+
+                {selectedAttachment.caption ? (
+                  <p className="mt-2 text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+                    {selectedAttachment.caption}
+                  </p>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedAttachment(null)}
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
+                aria-label="Close photo preview"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto bg-black">
+              <img
+                src={selectedAttachment.imageUrl}
+                alt={selectedAttachment.originalName || 'Service request attachment'}
+                className="mx-auto max-h-[72vh] w-auto object-contain"
+              />
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-neutral-100 p-4 dark:border-neutral-800">
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-black uppercase ${getAttachmentBadgeClass(
+                  selectedAttachment.attachmentType,
+                  selectedAttachment.uploadedByGuest
+                )}`}
+              >
+                {selectedAttachment.uploadedByGuest
+                  ? 'Guest Upload'
+                  : attachmentTypeLabel(selectedAttachment.attachmentType)}
+              </span>
+
+              <a
+                href={selectedAttachment.imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
+              >
+                <Download className="size-4" />
+                Open / Download
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function RequestItemCard({
   item,
   onCancel,
@@ -377,6 +585,16 @@ function RequestItemCard({
           </p>
         </div>
       ) : null}
+
+    {item.attachments?.length ? (
+  <div className="mt-3">
+    <AttachmentGallery
+      title="Item Photos"
+      attachments={item.attachments}
+      compact
+    />
+  </div>
+) : null}
 
       {!canCancelItem && item.status !== 'CANCELLED' ? (
         <p className="mt-3 rounded-xl bg-neutral-100 p-3 text-xs font-bold text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
@@ -529,7 +747,9 @@ function DetailsModal({
                 <h2 className="text-2xl font-black text-neutral-950 dark:text-white">
                   {request.requestCode}
                 </h2>
+
                 <StatusPill status={request.status} />
+
                 <BillingPill
                   billedCount={request.billedCount}
                   itemCount={request.itemCount}
@@ -554,6 +774,11 @@ function DetailsModal({
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="space-y-3">
+              <AttachmentGallery
+                title="Request Photos"
+                attachments={request.attachments ?? []}
+              />
+
               <h3 className="font-black text-neutral-950 dark:text-white">
                 Service Items
               </h3>
@@ -611,6 +836,7 @@ function DetailsModal({
                     <span className="text-xs font-black uppercase text-neutral-500">
                       Status
                     </span>
+
                     <Select
                       name="status"
                       value={selectedStatus}
@@ -630,6 +856,7 @@ function DetailsModal({
                     <span className="text-xs font-black uppercase text-neutral-500">
                       Assign Staff
                     </span>
+
                     <Select
                       name="assignedToId"
                       value={selectedStaffId}
@@ -638,6 +865,7 @@ function DetailsModal({
                       }
                     >
                       <option value="">Unassigned</option>
+
                       {staff.map((staffMember) => (
                         <option key={staffMember.id} value={staffMember.id}>
                           {staffMember.name}
@@ -650,6 +878,7 @@ function DetailsModal({
                     <span className="text-xs font-black uppercase text-neutral-500">
                       Internal Note
                     </span>
+
                     <textarea
                       name="note"
                       placeholder="Optional note for this grouped request order"
@@ -666,7 +895,10 @@ function DetailsModal({
                       onChange={(event) => setPostCharge(event.target.checked)}
                       className="mt-1 size-4"
                     />
-                    Post or update room add-on charges for selected items.
+
+                    <span>
+                      Post or update room add-on charges for selected items.
+                    </span>
                   </label>
 
                   {postCharge ? (
@@ -1153,6 +1385,14 @@ function RequestLane({
                     : ''}
                 </p>
               </div>
+
+              {request.attachments.length > 0 ? (
+  <div className="mt-3 flex items-center gap-2 rounded-2xl bg-blue-50 p-3 text-xs font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+    <Images className="size-4" />
+    {request.attachments.length} photo
+    {request.attachments.length === 1 ? '' : 's'} attached
+  </div>
+) : null}
 
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">

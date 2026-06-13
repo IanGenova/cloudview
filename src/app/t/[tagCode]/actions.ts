@@ -6,6 +6,7 @@ import {
   MenuProductType,
   PaymentMethod,
   ServiceAvailabilityMovementType,
+  ServiceRequestAttachmentType,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -18,6 +19,11 @@ import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
 import { resolveGuestMemberIdForCurrentNfcSession } from '@/lib/nfc-rewards';
+import {
+  getServiceRequestImageFiles,
+  saveServiceRequestImageFiles,
+  validateServiceRequestImageFile,
+} from '@/lib/service-request-attachments';
 
 type StockRequirement = {
   productId: string;
@@ -516,6 +522,17 @@ export async function createServiceRequestAction(formData: FormData) {
         .filter(Boolean)
     )
   ) as string[];
+      const attachmentFiles = getServiceRequestImageFiles(formData, 'attachments');
+
+    try {
+      for (const file of attachmentFiles) {
+        validateServiceRequestImageFile(file);
+      }
+    } catch {
+      redirectToService(tagCode, {
+        error: 'invalid_attachment',
+      });
+    }
 
   if (!tagCode) {
     redirect('/t');
@@ -881,6 +898,18 @@ const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(tagCode);
       error: 'request_failed',
     });
   }
+  
+  if (attachmentFiles.length > 0 && createdRequests.length > 0) {
+  await saveServiceRequestImageFiles({
+    hotelId: tag.hotelId,
+    requestId: createdRequests[0].id,
+    requestCode: groupedRequestCode,
+    files: attachmentFiles,
+    attachmentType: ServiceRequestAttachmentType.GUEST_UPLOAD,
+    uploadedByGuest: true,
+    caption: notes || null,
+  });
+}
 
   await Promise.allSettled(
     createdRequests.map((request) =>

@@ -67,6 +67,13 @@ enum ServiceRequestStatus {
   CANCELLED
 }
 
+enum ServiceRequestAttachmentType {
+  GUEST_UPLOAD
+  STAFF_BEFORE
+  STAFF_AFTER
+  INTERNAL_NOTE
+}
+
 enum InventoryMovementType {
   STOCK_IN
   STOCK_OUT
@@ -180,13 +187,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  assignedServiceRequests  ServiceRequest[]              @relation("AssignedRequests")
-  orderStatusUpdates       OrderStatusHistory[]
-  serviceStatusUpdates     ServiceRequestStatusHistory[]
-  inventoryMovements       InventoryMovement[]
-  activityLogs             ActivityLog[]
-  dashboardPermissions     UserDashboardPermission[]
-  createdGuestPointLedgers GuestPointLedger[]            @relation("GuestPointLedgerCreatedBy")
+  assignedServiceRequests           ServiceRequest[]              @relation("AssignedRequests")
+  orderStatusUpdates                OrderStatusHistory[]
+  serviceStatusUpdates              ServiceRequestStatusHistory[]
+  inventoryMovements                InventoryMovement[]
+  activityLogs                      ActivityLog[]
+  dashboardPermissions              UserDashboardPermission[]
+  createdGuestPointLedgers          GuestPointLedger[]            @relation("GuestPointLedgerCreatedBy")
+  uploadedServiceRequestAttachments ServiceRequestAttachment[]    @relation("ServiceRequestAttachmentUploadedBy")
 
   @@index([hotelId])
 }
@@ -227,6 +235,7 @@ model Hotel {
   menuBundleComponents         MenuBundleComponent[]
   serviceAvailabilityStocks    ServiceAvailabilityStock[]
   serviceAvailabilityMovements ServiceAvailabilityMovement[]
+  serviceRequestAttachments    ServiceRequestAttachment[]
   guestMembers                 GuestMember[]
   guestPointAccounts           GuestPointAccount[]
   guestPointLedgers            GuestPointLedger[]
@@ -611,8 +620,9 @@ model ServiceRequest {
   updatedAt DateTime @updatedAt
 
   statusHistory  ServiceRequestStatusHistory[]
+  attachments    ServiceRequestAttachment[]
   guestSessionId String?
-  guestSession   NfcGuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  guestSession   NfcGuestSession?              @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
 
   guestMemberId String?
   guestMember   GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
@@ -623,6 +633,40 @@ model ServiceRequest {
   @@index([status])
   @@index([requestCode])
   @@index([hotelId, requestCode])
+}
+
+model ServiceRequestAttachment {
+  id String @id @default(cuid())
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  requestId String?
+  request   ServiceRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  requestCode String?
+
+  imageUrl     String  @db.Text
+  originalName String?
+  mimeType     String
+  sizeBytes    Int
+
+  caption String? @db.Text
+
+  attachmentType ServiceRequestAttachmentType @default(GUEST_UPLOAD)
+
+  uploadedById String?
+  uploadedBy   User?   @relation("ServiceRequestAttachmentUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  uploadedByGuest Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([hotelId])
+  @@index([requestId])
+  @@index([requestCode])
+  @@index([attachmentType])
+  @@index([uploadedById])
 }
 
 model ServiceRequestStatusHistory {

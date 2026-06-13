@@ -11,6 +11,7 @@ const liveStatuses: ServiceRequestStatus[] = [
   ServiceRequestStatus.NEW,
   ServiceRequestStatus.IN_PROGRESS,
 ];
+
 function getServiceRequestsMessage(success?: string, error?: string) {
   if (success) {
     const messages: Record<string, string> = {
@@ -86,7 +87,6 @@ export default async function ServiceRequestsPage({
     error?: string;
   }>;
 }) {
-
   const user = await requireUser();
   const params = await searchParams;
   const message = getServiceRequestsMessage(params?.success, params?.error);
@@ -129,6 +129,28 @@ export default async function ServiceRequestsPage({
             note: true,
             createdAt: true,
             user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        attachments: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+          select: {
+            id: true,
+            imageUrl: true,
+            originalName: true,
+            mimeType: true,
+            sizeBytes: true,
+            caption: true,
+            attachmentType: true,
+            uploadedByGuest: true,
+            createdAt: true,
+            uploadedBy: {
               select: {
                 name: true,
                 email: true,
@@ -187,6 +209,24 @@ export default async function ServiceRequestsPage({
     charges.map((charge) => [charge.serviceRequestId, charge])
   );
 
+  function mapAttachment(
+    attachment: (typeof requests)[number]['attachments'][number]
+  ) {
+    return {
+      id: attachment.id,
+      imageUrl: attachment.imageUrl,
+      originalName: attachment.originalName,
+      mimeType: attachment.mimeType,
+      sizeBytes: attachment.sizeBytes,
+      caption: attachment.caption,
+      attachmentType: attachment.attachmentType,
+      uploadedByGuest: attachment.uploadedByGuest,
+      uploadedByName:
+        attachment.uploadedBy?.name ?? attachment.uploadedBy?.email ?? null,
+      createdAt: attachment.createdAt.toISOString(),
+    };
+  }
+
   const groupedRequestsMap = new Map<string, typeof requests>();
 
   for (const request of requests) {
@@ -235,6 +275,14 @@ export default async function ServiceRequestsPage({
         )
       );
 
+      const groupAttachments = Array.from(
+        new Map(
+          sortedGroup
+            .flatMap((request) => request.attachments.map(mapAttachment))
+            .map((attachment) => [attachment.id, attachment])
+        ).values()
+      );
+
       return {
         id: groupKey,
         hotelId: first.hotelId,
@@ -265,6 +313,7 @@ export default async function ServiceRequestsPage({
         itemCount: sortedGroup.length,
         billedCount: groupCharges.length,
         totalChargeAmount,
+        attachments: groupAttachments,
         items: sortedGroup.map((request) => {
           const charge = chargesByRequestId.get(request.id);
 
@@ -279,17 +328,17 @@ export default async function ServiceRequestsPage({
               request.assignedTo?.name ?? request.assignedTo?.email ?? '',
             createdAt: request.createdAt.toISOString(),
             charge: charge
-  ? {
-            id: charge.id,
-            chargeCode: charge.chargeCode,
-            itemName: charge.itemName,
-            description: charge.description ?? '',
-            quantity: charge.quantity,
-            unitPrice: Number(charge.unitPrice),
-            totalAmount: Number(charge.totalAmount),
-            paymentStatus: 'POSTED',
-          }
-        : null,
+              ? {
+                  id: charge.id,
+                  chargeCode: charge.chargeCode,
+                  itemName: charge.itemName,
+                  description: charge.description ?? '',
+                  quantity: charge.quantity,
+                  unitPrice: Number(charge.unitPrice),
+                  totalAmount: Number(charge.totalAmount),
+                  paymentStatus: 'POSTED',
+                }
+              : null,
             statusHistory: request.statusHistory.map((history) => ({
               id: history.id,
               status: history.status,
@@ -297,6 +346,7 @@ export default async function ServiceRequestsPage({
               createdAt: history.createdAt.toISOString(),
               userName: history.user?.name ?? history.user?.email ?? '',
             })),
+            attachments: request.attachments.map(mapAttachment),
           };
         }),
       };
@@ -328,8 +378,8 @@ export default async function ServiceRequestsPage({
       />
 
       <ServiceRequestsClient
-         message={message}
-         statuses={Object.values(ServiceRequestStatus)}
+        message={message}
+        statuses={Object.values(ServiceRequestStatus)}
         staff={staff.map((staffMember) => ({
           id: staffMember.id,
           name: staffMember.name ?? staffMember.email,

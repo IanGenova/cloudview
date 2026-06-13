@@ -1,6 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import {
+  type ChangeEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   ArrowLeft,
@@ -9,6 +15,9 @@ import {
   Car,
   CheckCircle2,
   Clock,
+  Camera,
+  FileImage,
+  ImagePlus,
   ConciergeBell,
   Droplets,
   Hammer,
@@ -53,6 +62,47 @@ type ServiceCartItem = {
   serviceCode: string;
   quantity: number;
 };
+
+type AttachmentPreview = {
+  id: string;
+  file: File;
+  url: string;
+};
+
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
+
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) {
+    return `${Math.round(size / 1024)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function validateAttachmentFile(file: File) {
+  if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
+    return 'Please upload JPG, PNG, or WEBP images only.';
+  }
+
+  if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+    return 'Each image must be 5MB or smaller.';
+  }
+
+  return null;
+}
+
+function createAttachmentId(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
 
 const iconMap: Record<string, LucideIcon> = {
   Baby,
@@ -105,6 +155,7 @@ function getErrorMessage(error?: string) {
   }
 
   const messages: Record<string, string> = {
+    
     invalid_tag: 'Invalid guest access. Please scan the NFC tag again.',
     inactive_tag: 'This NFC tag is inactive. Please contact the front desk.',
     invalid_service: 'Please select at least one valid service.',
@@ -114,6 +165,8 @@ function getErrorMessage(error?: string) {
       'Please confirm the room add-on charge before submitting this request.',
     quantity_required: 'Please choose a valid quantity for every selected item.',
     request_failed: 'Unable to submit the request. Please try again.',
+    invalid_attachment: 'Please upload JPG, PNG, or WEBP images only. Maximum 5 images, 5MB each.',
+    
   };
 
   return messages[error] ?? 'Unable to submit the request. Please try again.';
@@ -209,6 +262,16 @@ export function GuestServiceOrderForm({
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const objectUrlsRef = useRef<string[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
+
+      useEffect(() => {
+        return () => {
+          objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+          objectUrlsRef.current = [];
+        };
+      }, []);
 
   const serviceMap = useMemo(
     () => new Map(services.map((service) => [service.code, service])),
@@ -336,11 +399,103 @@ export function GuestServiceOrderForm({
   }
 
   function clearCart() {
-    setCart([]);
-    setNotes('');
-    setChargeConsent(false);
-    setLocalError(null);
+  setCart([]);
+  setNotes('');
+  setChargeConsent(false);
+  setLocalError(null);
+  clearAttachments();
+}
+
+  function syncAttachmentInput(nextAttachments: AttachmentPreview[]) {
+  const input = attachmentInputRef.current;
+
+  if (!input) {
+    return;
   }
+
+  if (!nextAttachments.length) {
+    input.value = '';
+    return;
+  }
+
+  const dataTransfer = new DataTransfer();
+
+  nextAttachments.forEach((attachment) => {
+    dataTransfer.items.add(attachment.file);
+  });
+
+  input.files = dataTransfer.files;
+}
+
+function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
+  setLocalError(null);
+
+  const selectedFiles = Array.from(event.currentTarget.files ?? []);
+
+  if (!selectedFiles.length) {
+    return;
+  }
+
+  const nextAttachments = [...attachments];
+
+  for (const file of selectedFiles) {
+    if (nextAttachments.length >= MAX_ATTACHMENTS) {
+      setLocalError(`You can upload up to ${MAX_ATTACHMENTS} images only.`);
+      break;
+    }
+
+    const validationError = validateAttachmentFile(file);
+
+    if (validationError) {
+      setLocalError(validationError);
+      continue;
+    }
+
+    const url = URL.createObjectURL(file);
+
+    objectUrlsRef.current.push(url);
+
+    nextAttachments.push({
+      id: createAttachmentId(file),
+      file,
+      url,
+    });
+  }
+
+  setAttachments(nextAttachments);
+  syncAttachmentInput(nextAttachments);
+}
+
+function removeAttachment(attachmentId: string) {
+  const removedAttachment = attachments.find(
+    (attachment) => attachment.id === attachmentId
+  );
+
+  if (removedAttachment) {
+    URL.revokeObjectURL(removedAttachment.url);
+
+    objectUrlsRef.current = objectUrlsRef.current.filter(
+      (url) => url !== removedAttachment.url
+    );
+  }
+
+  const nextAttachments = attachments.filter(
+    (attachment) => attachment.id !== attachmentId
+  );
+
+  setAttachments(nextAttachments);
+  syncAttachmentInput(nextAttachments);
+}
+
+function clearAttachments() {
+  attachments.forEach((attachment) => URL.revokeObjectURL(attachment.url));
+  objectUrlsRef.current = [];
+  setAttachments([]);
+
+  if (attachmentInputRef.current) {
+    attachmentInputRef.current.value = '';
+  }
+}
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     setLocalError(null);
@@ -519,6 +674,87 @@ export function GuestServiceOrderForm({
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                 />
+
+                <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4">
+  <div className="flex items-start gap-3">
+    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-neutral-700 shadow-sm">
+      <ImagePlus className="size-5" />
+    </span>
+
+    <div className="min-w-0 flex-1">
+      <p className="text-sm font-black text-neutral-900">
+        Add Photos
+      </p>
+
+      <p className="mt-1 text-xs font-semibold leading-5 text-neutral-500">
+        Upload photos for maintenance issues, damages, leaks, missing items,
+        or areas needing attention. Maximum {MAX_ATTACHMENTS} images, 5MB each.
+      </p>
+    </div>
+  </div>
+
+  <input
+    ref={attachmentInputRef}
+    name="attachments"
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    multiple
+    onChange={handleAttachmentChange}
+    className="hidden"
+  />
+
+  <button
+    type="button"
+    onClick={() => attachmentInputRef.current?.click()}
+    className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-black text-white"
+  >
+    <Camera className="size-4" />
+    Take / Upload Photos
+  </button>
+
+  {attachments.length > 0 ? (
+    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {attachments.map((attachment) => (
+        <div
+          key={attachment.id}
+          className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+        >
+          <div className="relative aspect-square bg-neutral-100">
+            <img
+              src={attachment.url}
+              alt={attachment.file.name}
+              className="size-full object-cover"
+            />
+
+            <button
+              type="button"
+              onClick={() => removeAttachment(attachment.id)}
+              className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/70 text-white"
+              aria-label={`Remove ${attachment.file.name}`}
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <div className="p-2">
+            <p className="truncate text-xs font-black text-neutral-800">
+              {attachment.file.name}
+            </p>
+
+            <p className="mt-0.5 text-[11px] font-bold text-neutral-400">
+              {formatFileSize(attachment.file.size)}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white p-3 text-xs font-bold text-neutral-500">
+      <FileImage className="size-4 text-neutral-400" />
+      No photos attached yet.
+    </div>
+  )}
+</div>
 
                 {hasFixedPriceItem ? (
                   <label className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
