@@ -6,12 +6,12 @@ import {
   BarChart3,
   BedDouble,
   Boxes,
-  Gift,
   ChefHat,
   ChevronDown,
   ConciergeBell,
   CreditCard,
   FileBarChart2,
+  Gift,
   Home,
   Hotel,
   BookOpen,
@@ -19,6 +19,7 @@ import {
   RadioTower,
   Wrench,
   Settings,
+  ShieldCheck,
   ShoppingBag,
   Utensils,
   type LucideIcon,
@@ -31,11 +32,41 @@ type DashboardNavItem = {
   group?: 'main' | 'settings';
 };
 
+type SidebarGroup = {
+  label: string;
+  modules: string[];
+};
+
 const reportsNavItem: DashboardNavItem = {
   module: 'REPORTS',
   label: 'Reports',
   href: '/dashboard/reports',
 };
+
+const navGroups: SidebarGroup[] = [
+  {
+    label: 'Command Center',
+    modules: ['OVERVIEW', 'ANALYTICS', 'REPORTS'],
+  },
+  {
+    label: 'Property Setup',
+    modules: ['HOTELS', 'HOTEL_GUIDE', 'ROOMS_LOCATIONS', 'NFC_TAGS'],
+  },
+  {
+    label: 'Guest Operations',
+    modules: [
+      'ORDERS',
+      'KITCHEN_DISPLAY',
+      'SERVICES_MODULE',
+      'SERVICE_REQUESTS',
+      'REWARDS',
+    ],
+  },
+  {
+    label: 'Commerce & Inventory',
+    modules: ['MENU', 'INVENTORY', 'POS_TERMINAL'],
+  },
+];
 
 const moduleIconMap: Record<string, LucideIcon> = {
   OVERVIEW: LayoutDashboard,
@@ -95,12 +126,57 @@ function insertReportsItem(items: DashboardNavItem[]) {
   return [...items, reportsNavItem];
 }
 
+function sortItemsByGroupOrder(items: DashboardNavItem[], modules: string[]) {
+  const moduleRank = new Map(modules.map((module, index) => [module, index]));
+
+  return [...items].sort((a, b) => {
+    const rankA = moduleRank.get(a.module) ?? 999;
+    const rankB = moduleRank.get(b.module) ?? 999;
+
+    return rankA - rankB;
+  });
+}
+
+function buildGroupedNavItems(items: DashboardNavItem[]) {
+  const usedModules = new Set<string>();
+
+  const groups = navGroups
+    .map((group) => {
+      const groupItems = sortItemsByGroupOrder(
+        items.filter((item) => group.modules.includes(item.module)),
+        group.modules
+      );
+
+      groupItems.forEach((item) => usedModules.add(item.module));
+
+      return {
+        ...group,
+        items: groupItems,
+      };
+    })
+    .filter((group) => group.items.length > 0);
+
+  const otherItems = items.filter((item) => !usedModules.has(item.module));
+
+  if (otherItems.length > 0) {
+    groups.push({
+      label: 'Other Modules',
+      modules: otherItems.map((item) => item.module),
+      items: otherItems,
+    });
+  }
+
+  return groups;
+}
+
 function SidebarLink({
   item,
   pathname,
+  compact = false,
 }: {
   item: DashboardNavItem;
   pathname: string;
+  compact?: boolean;
 }) {
   const Icon = getModuleIcon(item.module);
   const active = isActiveRoute(pathname, item.href);
@@ -109,7 +185,8 @@ function SidebarLink({
     <Link
       href={item.href}
       className={cx(
-        'group relative flex items-center gap-3 overflow-hidden rounded-2xl border px-3 py-2.5 text-sm font-black transition-all duration-200',
+        'group relative flex items-center gap-3 overflow-hidden rounded-2xl border text-[12.5px] font-black transition-all duration-200',
+        compact ? 'px-2.5 py-2' : 'px-3 py-2.5',
         active
           ? 'border-[#d6a738]/55 bg-gradient-to-r from-[#d6a738] via-[#bd8f2d] to-[#8d641c] text-[#080604] shadow-[0_12px_26px_rgba(201,156,56,0.25)]'
           : 'border-transparent text-[#ddd4bf] hover:border-[#c99c38]/35 hover:bg-[#191308] hover:text-[#f7e7bd]'
@@ -124,17 +201,60 @@ function SidebarLink({
 
       <span
         className={cx(
-          'relative z-10 grid size-8 shrink-0 place-items-center rounded-xl transition',
+          'relative z-10 grid shrink-0 place-items-center rounded-xl transition',
+          compact ? 'size-7' : 'size-8',
           active
             ? 'bg-black/15 text-[#080604]'
             : 'bg-white/[0.045] text-[#c99c38] group-hover:bg-[#c99c38]/15 group-hover:text-[#f1c66a]'
         )}
       >
-        <Icon className="size-4" />
+        <Icon className={compact ? 'size-3.5' : 'size-4'} />
       </span>
 
       <span className="relative z-10 truncate">{item.label}</span>
     </Link>
+  );
+}
+
+function SidebarSection({
+  group,
+  pathname,
+}: {
+  group: SidebarGroup & {
+    items: DashboardNavItem[];
+  };
+  pathname: string;
+}) {
+  const hasActiveItem = group.items.some((item) =>
+    isActiveRoute(pathname, item.href)
+  );
+
+  return (
+    <details
+      className="group/section"
+      open={hasActiveItem || group.label === 'Command Center'}
+    >
+      <summary className="mb-2 flex cursor-pointer list-none items-center justify-between rounded-2xl px-3 py-2 text-[#9d8f70] transition hover:bg-white/[0.045] hover:text-[#f1c66a] [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block truncate text-[13px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+            {group.label}
+          </span>
+        </span>
+
+        <ChevronDown className="size-4 shrink-0 text-[#c99c38] transition-transform group-open/section:rotate-180" />
+      </summary>
+
+      <div className="space-y-1.5 pb-3">
+        {group.items.map((item) => (
+          <SidebarLink
+            key={`${group.label}-${item.module}`}
+            item={item}
+            pathname={pathname}
+            compact
+          />
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -149,6 +269,7 @@ export function Sidebar({
 
   const originalMainItems = navItems.filter((item) => item.group !== 'settings');
   const mainItems = insertReportsItem(originalMainItems);
+  const groupedMainItems = buildGroupedNavItems(mainItems);
 
   const settingsItems = navItems.filter((item) => item.group === 'settings');
 
@@ -189,21 +310,22 @@ export function Sidebar({
           </p>
         </Link>
 
-        <div className="mb-2 shrink-0 px-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#8d8065]">
-            Dashboard
-          </p>
-        </div>
-
         <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-1.5 pb-4">
-            {mainItems.map((item) => (
-              <SidebarLink key={item.module} item={item} pathname={pathname} />
-            ))}
+          {groupedMainItems.length > 0 ? (
+            <div className="space-y-1 pb-4">
+              {groupedMainItems.map((group) => (
+                <SidebarSection
+                  key={group.label}
+                  group={group}
+                  pathname={pathname}
+                />
+              ))}
 
-            {settingsItems.length > 0 ? (
-              <div className="pt-3">
-                <details className="group/settings" open>
+              {settingsItems.length > 0 ? (
+                <details
+                  className="group/settings pt-1"
+                  open={hasActiveSettings}
+                >
                   <summary
                     className={cx(
                       'flex cursor-pointer list-none items-center justify-between rounded-2xl border px-3 py-2.5 text-sm font-black transition [&::-webkit-details-marker]:hidden',
@@ -244,24 +366,30 @@ export function Sidebar({
                     })}
                   </div>
                 </details>
-              </div>
-            ) : null}
-
-            {!navItems.length ? (
-              <div className="rounded-2xl border border-dashed border-[#c99c38]/30 bg-[#11100c] p-4 text-sm font-bold text-[#b9aa88]">
-                No dashboard modules assigned.
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#c99c38]/30 bg-[#11100c] p-4 text-sm font-bold text-[#b9aa88]">
+              No dashboard modules assigned.
+            </div>
+          )}
         </nav>
 
         <div className="mt-3 shrink-0 rounded-2xl border border-[#c99c38]/20 bg-black/25 px-3 py-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#d6a738]">
-            Secure Access
-          </p>
-          <p className="mt-1 truncate text-xs font-semibold text-[#b9aa88]">
-            Permission-based modules
-          </p>
+          <div className="flex items-center gap-3">
+            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.045] text-[#c99c38]">
+              <ShieldCheck className="size-4" />
+            </span>
+
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                Secure Access
+              </p>
+              <p className="mt-0.5 truncate text-xs font-semibold text-[#b9aa88]">
+                Permission-based modules
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </aside>

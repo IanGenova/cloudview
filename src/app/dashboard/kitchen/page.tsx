@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { OrderItemStatus, OrderStatus } from '@prisma/client';
 import {
   AlertTriangle,
@@ -137,6 +138,7 @@ function buildKitchenRedirectUrl({
     : '/dashboard/kitchen';
 }
 
+// Ensure the cache busts so the data updates without a hard reload
 async function updateKitchenOrderStatusAction(formData: FormData) {
   'use server';
 
@@ -144,6 +146,9 @@ async function updateKitchenOrderStatusAction(formData: FormData) {
   const history = String(formData.get('history') || '');
 
   await updateOrderStatusAction(formData);
+  
+  // Revalidate the path to clear Next.js cache and show fresh DB data instantly
+  revalidatePath('/dashboard/kitchen');
 
   redirect(
     buildKitchenRedirectUrl({
@@ -151,6 +156,23 @@ async function updateKitchenOrderStatusAction(formData: FormData) {
       history,
     })
   );
+}
+
+// Server action specifically for soft-refreshing the kitchen board
+async function refreshKitchenAction(formData: FormData) {
+  'use server';
+  
+  // Forces a server re-render of this page
+  revalidatePath('/dashboard/kitchen');
+  
+  const history = formData.get('history');
+  
+  // Soft redirects preserve browser state (like Fullscreen API)
+  if (history === '1') {
+    redirect('/dashboard/kitchen?history=1');
+  } else {
+    redirect('/dashboard/kitchen');
+  }
 }
 
 function KitchenToast({
@@ -424,9 +446,11 @@ function KitchenOrderItemLine({ item }: { item: KitchenOrderItem }) {
 function KitchenOrderCard({
   order,
   type,
+  showHistory,
 }: {
   order: KitchenOrder;
   type: 'pending' | 'preparing' | 'ready';
+  showHistory: boolean;
 }) {
   const guestName = order.guestName?.trim() || 'Guest name not provided';
   const activeItemCount = getActiveItemCount(order.items);
@@ -437,8 +461,10 @@ function KitchenOrderCard({
       ? OrderStatus.PREPARING
       : order.status;
 
+  const historyParam = showHistory ? '1' : '';
+
   return (
-    <article className="flex h-[370px] w-[82vw] max-w-[320px] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:w-[310px] md:w-[320px]">
+    <article className="flex h-full min-h-[300px] w-[82vw] max-w-[320px] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:w-[310px] md:w-[320px]">
       <div className="shrink-0 border-b border-neutral-100 p-3 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -510,6 +536,7 @@ function KitchenOrderCard({
               status={OrderStatus.PREPARING}
               label="Accept"
               tone="dark"
+              history={historyParam}
             />
 
             <OrderActionButton
@@ -517,6 +544,7 @@ function KitchenOrderCard({
               status={OrderStatus.CANCELLED}
               label="Reject"
               tone="danger"
+              history={historyParam}
             />
           </div>
         ) : null}
@@ -527,6 +555,7 @@ function KitchenOrderCard({
             status={OrderStatus.READY}
             label="Done / Ready"
             tone="dark"
+            history={historyParam}
           />
         ) : null}
 
@@ -536,6 +565,7 @@ function KitchenOrderCard({
             status={OrderStatus.DELIVERED}
             label="Mark Delivered"
             tone="dark"
+            history={historyParam}
           />
         ) : null}
       </div>
@@ -548,15 +578,17 @@ function KitchenLane({
   description,
   orders,
   type,
+  showHistory,
 }: {
   title: string;
   description: string;
   orders: KitchenOrder[];
   type: 'pending' | 'preparing' | 'ready';
+  showHistory: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="flex items-center justify-between gap-3 px-4 pt-4">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="shrink-0 flex items-center justify-between gap-3 px-4 pt-4">
         <div>
           <h2 className="text-xl font-black text-neutral-950 dark:text-white md:text-2xl">
             {title}
@@ -572,10 +604,10 @@ function KitchenLane({
         </span>
       </div>
 
-      <div className="mt-4 overflow-x-auto px-4 pb-4">
-        <div className="flex min-w-full items-stretch gap-3">
+      <div className="min-h-0 flex-1 overflow-x-auto mt-4 px-4 pb-4">
+        <div className="flex h-full min-w-full items-stretch gap-3">
           {orders.length === 0 ? (
-            <div className="grid min-h-40 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
+            <div className="grid h-full w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
               <p className="font-black text-neutral-500 dark:text-neutral-400">
                 No {title.toLowerCase()} orders
               </p>
@@ -583,7 +615,12 @@ function KitchenLane({
           ) : null}
 
           {orders.map((order) => (
-            <KitchenOrderCard key={order.id} order={order} type={type} />
+            <KitchenOrderCard 
+              key={order.id} 
+              order={order} 
+              type={type} 
+              showHistory={showHistory} 
+            />
           ))}
         </div>
       </div>
@@ -737,19 +774,21 @@ export default async function KitchenDisplayPage({
   return (
     <div
       id="kitchen-display-fullscreen"
-      className="min-h-screen bg-white p-6 text-neutral-950 dark:bg-neutral-950 dark:text-white"
+      className="flex h-screen flex-col overflow-hidden bg-white p-6 text-neutral-950 dark:bg-neutral-950 dark:text-white"
     >
       <RealtimeKitchenRefresh />
       <KitchenToast message={message} showHistory={showHistory} />
 
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="mb-6 shrink-0 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <PageHeader
           title="Kitchen Display"
           description="Live kitchen workflow for pending, preparing, ready, and item-level cancellation updates."
         />
 
         <div className="flex flex-wrap gap-2">
-          <form>
+          {/* Changed standard form submission to utilize a soft Server Action */}
+          <form action={refreshKitchenAction}>
+            {showHistory && <input type="hidden" name="history" value="1" />}
             <button
               type="submit"
               className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
@@ -780,13 +819,19 @@ export default async function KitchenDisplayPage({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <main className="space-y-5 overflow-hidden">
+      <div className="min-h-0 flex-1 grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <main
+          className={cn(
+            'min-h-0 flex-col gap-5',
+            showHistory ? 'hidden xl:flex' : 'flex'
+          )}
+        >
           <KitchenLane
             title="Pending"
             description="New orders waiting for accept or reject."
             orders={pendingOrders}
             type="pending"
+            showHistory={showHistory}
           />
 
           <KitchenLane
@@ -794,6 +839,7 @@ export default async function KitchenDisplayPage({
             description="Accepted orders and orders currently being prepared."
             orders={preparingOrders}
             type="preparing"
+            showHistory={showHistory}
           />
 
           <KitchenLane
@@ -801,10 +847,16 @@ export default async function KitchenDisplayPage({
             description="Orders ready to be delivered to the guest."
             orders={readyOrders}
             type="ready"
+            showHistory={showHistory}
           />
         </main>
 
-        <aside className="xl:sticky xl:top-24 xl:h-[calc(100vh-8rem)]">
+        <aside
+          className={cn(
+            'min-h-0 h-full',
+            showHistory ? 'block' : 'hidden xl:block'
+          )}
+        >
           <section className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="border-b border-neutral-100 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
               <div className="flex items-center justify-between gap-3">

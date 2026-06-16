@@ -1,22 +1,24 @@
+import Link from 'next/link';
 import {
+  ChevronLeft,
+  ChevronRight,
   Gift,
-  Medal,
-  Plus,
   ReceiptText,
   Sparkles,
   Trophy,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { Role } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import {
-  createGuestMemberAction,
-  createRewardAction,
-  manualPointAdjustmentAction,
-} from './actions';
+import { RewardRedemptionActionButtons } from './RewardRedemptionActionButtons';
+import { RewardsActionModals } from './RewardsActionModals';
+import { RewardCatalogManager } from './RewardCatalogManager';
 
 export const dynamic = 'force-dynamic';
+
+const LEDGER_PAGE_SIZE = 10;
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-PH').format(value);
@@ -31,6 +33,16 @@ function formatDate(date: Date | null | undefined) {
   }).format(date);
 }
 
+function parsePage(value?: string) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(parsed));
+}
+
 function StatCard({
   label,
   value,
@@ -40,7 +52,7 @@ function StatCard({
   label: string;
   value: string | number;
   helper: string;
-  icon: typeof Gift;
+  icon: LucideIcon;
 }) {
   return (
     <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
@@ -61,16 +73,102 @@ function StatCard({
   );
 }
 
-export default async function RewardsPage() {
+function RedemptionStatusPill({ status }: { status: string }) {
+  const className =
+    status === 'RESERVED'
+      ? 'bg-amber-100 text-amber-700'
+      : status === 'USED'
+        ? 'bg-emerald-100 text-emerald-700'
+        : status === 'CANCELLED'
+          ? 'bg-red-100 text-red-700'
+          : 'bg-neutral-100 text-neutral-600';
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-black ${className}`}>
+      {status}
+    </span>
+  );
+}
+
+function LedgerPagination({
+  currentPage,
+  totalPages,
+  totalItems,
+}: {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+}) {
+  const start = totalItems === 0 ? 0 : (currentPage - 1) * LEDGER_PAGE_SIZE + 1;
+  const end = Math.min(currentPage * LEDGER_PAGE_SIZE, totalItems);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-neutral-100 px-6 py-4 md:flex-row md:items-center md:justify-between">
+      <p className="text-sm font-bold text-neutral-500">
+        Showing {start}-{end} of {formatNumber(totalItems)} ledger entries
+      </p>
+
+      <div className="flex items-center gap-2">
+        {currentPage > 1 ? (
+          <Link
+            href={`/dashboard/rewards?ledgerPage=${currentPage - 1}`}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-700 hover:bg-neutral-50"
+          >
+            <ChevronLeft className="size-4" />
+            Previous
+          </Link>
+        ) : (
+          <span className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-300">
+            <ChevronLeft className="size-4" />
+            Previous
+          </span>
+        )}
+
+        <span className="rounded-2xl bg-[#fff8e7] px-4 py-2 text-sm font-black text-[#9d741f]">
+          Page {currentPage} of {totalPages}
+        </span>
+
+        {currentPage < totalPages ? (
+          <Link
+            href={`/dashboard/rewards?ledgerPage=${currentPage + 1}`}
+            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-700 hover:bg-neutral-50"
+          >
+            Next
+            <ChevronRight className="size-4" />
+          </Link>
+        ) : (
+          <span className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-300">
+            Next
+            <ChevronRight className="size-4" />
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default async function RewardsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    ledgerPage?: string;
+  }>;
+}) {
   const user = await requireUser();
+  const params = await searchParams;
+  const requestedLedgerPage = parsePage(params?.ledgerPage);
 
   const hotels = await db.hotel.findMany({
     where:
       user.role === Role.SUPER_ADMIN
         ? {}
         : user.hotelId
-          ? { id: user.hotelId }
-          : { id: '__NO_ACCESS__' },
+          ? {
+              id: user.hotelId,
+            }
+          : {
+              id: '__NO_ACCESS__',
+            },
     select: {
       id: true,
       name: true,
@@ -85,7 +183,7 @@ export default async function RewardsPage() {
   const hotelWhere =
     user.role === Role.SUPER_ADMIN
       ? {
-          in: hotelIds,
+          in: hotelIds.length ? hotelIds : ['__NO_ACCESS__'],
         }
       : user.hotelId || '__NO_ACCESS__';
 
@@ -93,7 +191,8 @@ export default async function RewardsPage() {
     memberCount,
     rewards,
     accounts,
-    ledger,
+    ledgerCount,
+    memberOptions,
     redemptions,
   ] = await Promise.all([
     db.guestMember.count({
@@ -103,16 +202,21 @@ export default async function RewardsPage() {
     }),
 
     db.reward.findMany({
-      where: {
-        hotelId: hotelWhere,
+  where: {
+    hotelId: hotelWhere,
+  },
+  include: {
+    hotel: {
+      select: {
+        name: true,
       },
-      include: {
-        hotel: {
-          select: {
-            name: true,
-          },
-        },
+    },
+    _count: {
+      select: {
+        redemptions: true,
       },
+    },
+  },
       orderBy: {
         createdAt: 'desc',
       },
@@ -137,28 +241,32 @@ export default async function RewardsPage() {
       take: 20,
     }),
 
-    db.guestPointLedger.findMany({
+    db.guestPointLedger.count({
+      where: {
+        hotelId: hotelWhere,
+      },
+    }),
+
+    db.guestMember.findMany({
       where: {
         hotelId: hotelWhere,
       },
       include: {
-        guestMember: true,
         hotel: {
           select: {
             name: true,
           },
         },
-        createdBy: {
+        pointAccount: {
           select: {
-            name: true,
-            email: true,
+            availablePoints: true,
           },
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        name: 'asc',
       },
-      take: 50,
+      take: 250,
     }),
 
     db.rewardRedemption.findMany({
@@ -166,15 +274,52 @@ export default async function RewardsPage() {
         hotelId: hotelWhere,
       },
       include: {
+        hotel: {
+          select: {
+            name: true,
+          },
+        },
         guestMember: true,
         reward: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        redeemedAt: 'desc',
       },
-      take: 20,
+      take: 50,
     }),
   ]);
+
+  const totalLedgerPages = Math.max(
+    1,
+    Math.ceil(ledgerCount / LEDGER_PAGE_SIZE)
+  );
+
+  const currentLedgerPage = Math.min(requestedLedgerPage, totalLedgerPages);
+
+  const ledger = await db.guestPointLedger.findMany({
+    where: {
+      hotelId: hotelWhere,
+    },
+    include: {
+      guestMember: true,
+      hotel: {
+        select: {
+          name: true,
+        },
+      },
+      createdBy: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    skip: (currentLedgerPage - 1) * LEDGER_PAGE_SIZE,
+    take: LEDGER_PAGE_SIZE,
+  });
 
   const totalAvailablePoints = accounts.reduce(
     (sum, account) => sum + account.availablePoints,
@@ -193,6 +338,32 @@ export default async function RewardsPage() {
 
   const defaultHotelId = hotels[0]?.id ?? '';
 
+  const rewardCatalogItems = rewards.map((reward) => ({
+  id: reward.id,
+  name: reward.name,
+  description: reward.description ?? '',
+  pointsCost: reward.pointsCost,
+  rewardType: reward.rewardType,
+  discountCents: reward.discountCents,
+  discountPercent: reward.discountPercent,
+  freeProductId: reward.freeProductId ?? '',
+  isActive: reward.isActive,
+  validFrom: reward.validFrom ? reward.validFrom.toISOString().slice(0, 10) : '',
+  validUntil: reward.validUntil
+    ? reward.validUntil.toISOString().slice(0, 10)
+    : '',
+  redemptionCount: reward._count.redemptions,
+}));
+
+  const modalMembers = memberOptions.map((member) => ({
+    id: member.id,
+    hotelId: member.hotelId,
+    hotelName: member.hotel.name,
+    name: member.name,
+    contact: member.phone || member.email || 'No contact',
+    availablePoints: member.pointAccount?.availablePoints ?? 0,
+  }));
+
   return (
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
@@ -201,7 +372,8 @@ export default async function RewardsPage() {
             CloudView Rewards
           </h1>
           <p className="mt-2 text-base font-medium text-neutral-500">
-            Manage guest loyalty points, rewards, redemptions, and point activity.
+            Manage guest loyalty points, rewards, redemptions, and point
+            activity.
           </p>
         </div>
       </section>
@@ -236,381 +408,287 @@ export default async function RewardsPage() {
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
-        <div className="space-y-6">
-          <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-            <div className="border-b border-neutral-100 px-6 py-5">
-              <h2 className="text-xl font-black">Top Members</h2>
-              <p className="mt-1 text-sm font-medium text-neutral-500">
-                Guests with the highest available point balance.
-              </p>
-            </div>
+      <RewardsActionModals
+        hotels={hotels}
+        members={modalMembers}
+        defaultHotelId={defaultHotelId}
+        isSuperAdmin={user.role === Role.SUPER_ADMIN}
+      />
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left">
-                <thead className="bg-neutral-50">
-                  <tr>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Guest
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Hotel
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Available
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Lifetime Earned
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Redeemed
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {accounts.map((account) => (
-                    <tr
-                      key={account.id}
-                      className="border-t border-neutral-100"
-                    >
-                      <td className="px-5 py-4">
-                        <p className="font-black">{account.guestMember.name}</p>
-                        <p className="text-xs font-semibold text-neutral-500">
-                          {account.guestMember.phone ||
-                            account.guestMember.email ||
-                            'No contact'}
-                        </p>
-                      </td>
-                      <td className="px-5 py-4 text-sm font-bold">
-                        {account.hotel.name}
-                      </td>
-                      <td className="px-5 py-4 font-black text-[#b88938]">
-                        {formatNumber(account.availablePoints)}
-                      </td>
-                      <td className="px-5 py-4 font-bold">
-                        {formatNumber(account.lifetimeEarnedPoints)}
-                      </td>
-                      <td className="px-5 py-4 font-bold">
-                        {formatNumber(account.lifetimeRedeemedPoints)}
-                      </td>
-                    </tr>
-                  ))}
-
-                  {!accounts.length ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-5 py-10 text-center font-bold text-neutral-500"
-                      >
-                        No rewards members yet.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+          <div className="border-b border-neutral-100 px-6 py-5">
+            <h2 className="text-xl font-black">Top Members</h2>
+            <p className="mt-1 text-sm font-medium text-neutral-500">
+              Guests with the highest available point balance.
+            </p>
           </div>
 
-          <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-            <div className="border-b border-neutral-100 px-6 py-5">
-              <h2 className="text-xl font-black">Point Ledger</h2>
-              <p className="mt-1 text-sm font-medium text-neutral-500">
-                Every point movement must be recorded here. No silent balance changes.
-              </p>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left">
+              <thead className="bg-neutral-50">
+                <tr>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Guest
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Hotel
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Available
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Lifetime Earned
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Redeemed
+                  </th>
+                </tr>
+              </thead>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] text-left">
-                <thead className="bg-neutral-50">
-                  <tr>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Date
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Guest
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Type
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Points
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Source
-                    </th>
-                    <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
-                      Notes
-                    </th>
+              <tbody>
+                {accounts.map((account) => (
+                  <tr key={account.id} className="border-t border-neutral-100">
+                    <td className="px-5 py-4">
+                      <p className="font-black">{account.guestMember.name}</p>
+                      <p className="text-xs font-semibold text-neutral-500">
+                        {account.guestMember.phone ||
+                          account.guestMember.email ||
+                          'No contact'}
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-bold">
+                      {account.hotel.name}
+                    </td>
+                    <td className="px-5 py-4 font-black text-[#b88938]">
+                      {formatNumber(account.availablePoints)}
+                    </td>
+                    <td className="px-5 py-4 font-bold">
+                      {formatNumber(account.lifetimeEarnedPoints)}
+                    </td>
+                    <td className="px-5 py-4 font-bold">
+                      {formatNumber(account.lifetimeRedeemedPoints)}
+                    </td>
                   </tr>
-                </thead>
+                ))}
 
-                <tbody>
-                  {ledger.map((item) => (
-                    <tr key={item.id} className="border-t border-neutral-100">
-                      <td className="px-5 py-4 text-sm font-bold">
-                        {formatDate(item.createdAt)}
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="font-black">{item.guestMember.name}</p>
-                        <p className="text-xs text-neutral-500">
-                          {item.hotel.name}
-                        </p>
-                      </td>
-                      <td className="px-5 py-4 text-sm font-black">
-                        {item.type}
-                      </td>
-                      <td
-                        className={
-                          item.points >= 0
-                            ? 'px-5 py-4 font-black text-emerald-700'
-                            : 'px-5 py-4 font-black text-red-600'
-                        }
-                      >
-                        {item.points >= 0 ? '+' : ''}
-                        {formatNumber(item.points)}
-                      </td>
-                      <td className="px-5 py-4 text-sm font-bold">
-                        {item.source}
-                      </td>
-                      <td className="px-5 py-4 text-sm font-medium text-neutral-500">
-                        {item.description || '—'}
-                      </td>
-                    </tr>
-                  ))}
-
-                  {!ledger.length ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-5 py-10 text-center font-bold text-neutral-500"
-                      >
-                        No point activity yet.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+                {!accounts.length ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-10 text-center font-bold text-neutral-500"
+                    >
+                      No rewards members yet.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <aside className="space-y-6">
-          <div className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-            <h2 className="flex items-center gap-2 text-lg font-black">
-              <Plus className="size-5 text-[#b88938]" />
-              Add Guest Member
-            </h2>
+        <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 px-6 py-5">
+            <div>
+              <h2 className="text-xl font-black">Point Ledger</h2>
+              <p className="mt-1 text-sm font-medium text-neutral-500">
+                Latest point movements. Limited to 10 entries per page.
+              </p>
+            </div>
 
-            <form action={createGuestMemberAction} className="mt-5 space-y-4">
-              {user.role === Role.SUPER_ADMIN ? (
-                <select
-                  name="hotelId"
-                  defaultValue={defaultHotelId}
-                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
-                >
-                  {hotels.map((hotel) => (
-                    <option key={hotel.id} value={hotel.id}>
-                      {hotel.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
-              <input
-                name="name"
-                placeholder="Guest name"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-                required
-              />
-
-              <input
-                name="phone"
-                placeholder="Phone number"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-              />
-
-              <input
-                name="email"
-                placeholder="Email"
-                type="email"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-              />
-
-              <button className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white">
-                Create Member
-              </button>
-            </form>
+            <span className="rounded-full bg-[#fff8e7] px-3 py-1 text-xs font-black text-[#9d741f]">
+              10 per page
+            </span>
           </div>
 
-          <div className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-            <h2 className="flex items-center gap-2 text-lg font-black">
-              <Gift className="size-5 text-[#b88938]" />
-              Create Reward
-            </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-left">
+              <thead className="bg-neutral-50">
+                <tr>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Date
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Guest
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Type
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Points
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Source
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                    Notes
+                  </th>
+                </tr>
+              </thead>
 
-            <form action={createRewardAction} className="mt-5 space-y-4">
-              {user.role === Role.SUPER_ADMIN ? (
-                <select
-                  name="hotelId"
-                  defaultValue={defaultHotelId}
-                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
-                >
-                  {hotels.map((hotel) => (
-                    <option key={hotel.id} value={hotel.id}>
-                      {hotel.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
-              <input
-                name="name"
-                placeholder="Reward name"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-                required
-              />
-
-              <textarea
-                name="description"
-                placeholder="Description"
-                className="min-h-24 w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-bold"
-              />
-
-              <input
-                name="pointsCost"
-                type="number"
-                min="1"
-                placeholder="Points cost"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-                required
-              />
-
-              <select
-                name="rewardType"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
-              >
-                <option value="DISCOUNT_AMOUNT">Peso Discount</option>
-                <option value="DISCOUNT_PERCENT">Percent Discount</option>
-                <option value="FREE_ITEM">Free Item</option>
-                <option value="CUSTOM">Custom Reward</option>
-              </select>
-
-              <input
-                name="discountPesos"
-                type="number"
-                min="0"
-                placeholder="Discount amount in pesos"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-              />
-
-              <input
-                name="discountPercent"
-                type="number"
-                min="0"
-                max="100"
-                placeholder="Discount percent"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-              />
-
-              <button className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white">
-                Save Reward
-              </button>
-            </form>
-          </div>
-
-          <div className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-            <h2 className="flex items-center gap-2 text-lg font-black">
-              <Medal className="size-5 text-[#b88938]" />
-              Manual Adjustment
-            </h2>
-
-            <form action={manualPointAdjustmentAction} className="mt-5 space-y-4">
-              {user.role === Role.SUPER_ADMIN ? (
-                <select
-                  name="hotelId"
-                  defaultValue={defaultHotelId}
-                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
-                >
-                  {hotels.map((hotel) => (
-                    <option key={hotel.id} value={hotel.id}>
-                      {hotel.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
-              <select
-                name="guestMemberId"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
-                required
-              >
-                <option value="">Select guest</option>
-                {accounts.map((account) => (
-                  <option
-                    key={account.guestMemberId}
-                    value={account.guestMemberId}
-                  >
-                    {account.guestMember.name} — {account.availablePoints} pts
-                  </option>
+              <tbody>
+                {ledger.map((item) => (
+                  <tr key={item.id} className="border-t border-neutral-100">
+                    <td className="px-5 py-4 text-sm font-bold">
+                      {formatDate(item.createdAt)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <p className="font-black">{item.guestMember.name}</p>
+                      <p className="text-xs text-neutral-500">
+                        {item.hotel.name}
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-black">
+                      {item.type}
+                    </td>
+                    <td
+                      className={
+                        item.points >= 0
+                          ? 'px-5 py-4 font-black text-emerald-700'
+                          : 'px-5 py-4 font-black text-red-600'
+                      }
+                    >
+                      {item.points >= 0 ? '+' : ''}
+                      {formatNumber(item.points)}
+                    </td>
+                    <td className="px-5 py-4 text-sm font-bold">
+                      {item.source}
+                    </td>
+                    <td className="px-5 py-4 text-sm font-medium text-neutral-500">
+                      {item.description || '—'}
+                    </td>
+                  </tr>
                 ))}
-              </select>
 
-              <input
-                name="points"
-                type="number"
-                placeholder="+50 or -20"
-                className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold"
-                required
-              />
-
-              <textarea
-                name="description"
-                placeholder="Reason for adjustment"
-                className="min-h-24 w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-bold"
-              />
-
-              <button className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white">
-                Apply Adjustment
-              </button>
-            </form>
+                {!ledger.length ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-5 py-10 text-center font-bold text-neutral-500"
+                    >
+                      No point activity yet.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
-        </aside>
+
+          <LedgerPagination
+            currentPage={currentLedgerPage}
+            totalPages={totalLedgerPages}
+            totalItems={ledgerCount}
+          />
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-        <h2 className="text-xl font-black">Reward Catalog</h2>
+        <h2 className="text-xl font-black">Reward Redemptions</h2>
+        <p className="mt-1 text-sm font-medium text-neutral-500">
+          Guest redemption codes from the guest rewards page. Staff can verify,
+          mark as used, or cancel/refund unused codes.
+        </p>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {rewards.map((reward) => (
-            <div
-              key={reward.id}
-              className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-5"
-            >
-              <p className="text-lg font-black">{reward.name}</p>
-              <p className="mt-1 text-sm font-medium text-neutral-500">
-                {reward.description || 'No description'}
-              </p>
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[980px] text-left">
+            <thead className="bg-neutral-50">
+              <tr>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Code
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Guest
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Reward
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Hotel
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Points
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Status
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Date
+                </th>
+                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                  Action
+                </th>
+              </tr>
+            </thead>
 
-              <div className="mt-4 flex items-center justify-between">
-                <span className="rounded-full bg-[#fff8e7] px-3 py-1 text-xs font-black text-[#9d741f]">
-                  {formatNumber(reward.pointsCost)} pts
-                </span>
+            <tbody>
+              {redemptions.map((redemption) => (
+                <tr key={redemption.id} className="border-t border-neutral-100">
+                  <td className="px-5 py-4">
+                    <p className="font-mono text-sm font-black tracking-widest text-[#11100b]">
+                      {redemption.code}
+                    </p>
+                  </td>
 
-                <span className="text-xs font-black text-neutral-500">
-                  {reward.rewardType}
-                </span>
-              </div>
-            </div>
-          ))}
+                  <td className="px-5 py-4">
+                    <p className="font-black">{redemption.guestMember.name}</p>
+                    <p className="text-xs font-semibold text-neutral-500">
+                      {redemption.guestMember.phone ||
+                        redemption.guestMember.email ||
+                        'No contact'}
+                    </p>
+                  </td>
 
-          {!rewards.length ? (
-            <p className="rounded-2xl border border-dashed border-neutral-200 p-5 text-sm font-bold text-neutral-500">
-              No rewards created yet.
-            </p>
-          ) : null}
+                  <td className="px-5 py-4">
+                    <p className="font-black">{redemption.reward.name}</p>
+                    <p className="text-xs font-semibold text-neutral-500">
+                      {redemption.reward.rewardType}
+                    </p>
+                  </td>
+
+                  <td className="px-5 py-4 text-sm font-bold">
+                    {redemption.hotel.name}
+                  </td>
+
+                  <td className="px-5 py-4 font-black text-[#b88938]">
+                    {formatNumber(redemption.pointsUsed)}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <RedemptionStatusPill status={redemption.status} />
+                  </td>
+
+                  <td className="px-5 py-4 text-sm font-bold">
+                    {formatDate(redemption.redeemedAt)}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    {redemption.status === 'RESERVED' ? (
+                      <RewardRedemptionActionButtons redemptionId={redemption.id} />
+                    ) : (
+                      <span className="text-xs font-bold text-neutral-400">
+                        No action
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+
+              {!redemptions.length ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-5 py-10 text-center font-bold text-neutral-500"
+                  >
+                    No reward redemptions yet.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       </section>
+
+      <RewardCatalogManager rewards={rewardCatalogItems} />
     </div>
   );
 }
