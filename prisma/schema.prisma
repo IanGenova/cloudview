@@ -114,6 +114,7 @@ enum DashboardModule {
   NFC_TAGS
   MENU
   INVENTORY
+  GUEST_STAYS
   ORDERS
   KITCHEN_DISPLAY
   SERVICES_MODULE
@@ -133,6 +134,13 @@ enum GuestPointLedgerType {
   EXPIRED
   REFUNDED
   BONUS
+}
+
+enum GuestStayStatus {
+  ACTIVE
+  CHECKED_OUT
+  CANCELLED
+  EXPIRED
 }
 
 enum GuestPointLedgerStatus {
@@ -237,6 +245,7 @@ model Hotel {
   serviceAvailabilityMovements ServiceAvailabilityMovement[]
   serviceRequestAttachments    ServiceRequestAttachment[]
   guestMembers                 GuestMember[]
+  guestStays                   GuestStay[]
   guestPointAccounts           GuestPointAccount[]
   guestPointLedgers            GuestPointLedger[]
   rewards                      Reward[]
@@ -286,6 +295,7 @@ model Room {
   orders           Order[]
   serviceRequests  ServiceRequest[]
   nfcGuestSessions NfcGuestSession[]
+  guestStays       GuestStay[]
 
   @@unique([hotelId, number])
   @@index([hotelId])
@@ -521,11 +531,15 @@ model Order {
   guestMemberId      String?
   guestMember        GuestMember?         @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
+  guestStayId String?
+  guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
+
   @@index([guestSessionId])
   @@index([guestMemberId])
   @@index([hotelId])
   @@index([status])
   @@index([createdAt])
+  @@index([guestStayId])
 }
 
 model OrderItem {
@@ -619,6 +633,9 @@ model ServiceRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  guestStayId String?
+  guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
+
   statusHistory  ServiceRequestStatusHistory[]
   attachments    ServiceRequestAttachment[]
   guestSessionId String?
@@ -633,6 +650,7 @@ model ServiceRequest {
   @@index([status])
   @@index([requestCode])
   @@index([hotelId, requestCode])
+  @@index([guestStayId])
 }
 
 model ServiceRequestAttachment {
@@ -806,12 +824,16 @@ model NfcGuestSession {
   orders          Order[]
   serviceRequests ServiceRequest[]
 
+  guestStayId String?
+  guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
+
   @@index([hotelId])
   @@index([tagId])
   @@index([roomId])
   @@index([locationId])
   @@index([guestMemberId])
   @@index([startedAt])
+  @@index([guestStayId])
 }
 
 model RoomAddOnCharge {
@@ -1169,6 +1191,7 @@ model GuestMember {
   orders          Order[]
   nfcSessions     NfcGuestSession[]
   serviceRequests ServiceRequest[]
+  guestStays      GuestStay[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1176,6 +1199,65 @@ model GuestMember {
   @@index([hotelId])
   @@index([phone])
   @@index([email])
+}
+
+model GuestStay {
+  id String @id @default(cuid())
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  guestMemberId String
+  guestMember   GuestMember @relation(fields: [guestMemberId], references: [id], onDelete: Cascade)
+
+  passcodeHash      String
+  passcodeEncrypted String? @db.Text
+  maxDevices        Int     @default(2)
+
+  status GuestStayStatus @default(ACTIVE)
+
+  checkInAt          DateTime  @default(now())
+  expectedCheckOutAt DateTime?
+  checkedOutAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  devices          GuestStayDevice[]
+  nfcGuestSessions NfcGuestSession[]
+  orders           Order[]
+  serviceRequests  ServiceRequest[]
+  pointLedgers     GuestPointLedger[]
+
+  @@index([hotelId])
+  @@index([roomId])
+  @@index([guestMemberId])
+  @@index([status])
+  @@index([checkInAt])
+  @@index([expectedCheckOutAt])
+}
+
+model GuestStayDevice {
+  id String @id @default(cuid())
+
+  guestStayId String
+  guestStay   GuestStay @relation(fields: [guestStayId], references: [id], onDelete: Cascade)
+
+  deviceTokenHash String
+  userAgentHash   String?
+
+  deviceLabel String?
+
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@unique([guestStayId, deviceTokenHash])
+  @@index([guestStayId])
+  @@index([revokedAt])
 }
 
 model GuestPointAccount {
@@ -1217,11 +1299,15 @@ model GuestPointLedger {
   createdById String?
   createdBy   User?   @relation("GuestPointLedgerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
+  guestStayId String?
+  guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   @@unique([hotelId, type, source, referenceId])
   @@index([hotelId])
   @@index([guestMemberId])
+  @@index([guestStayId])
   @@index([source])
   @@index([referenceId])
 }
@@ -1306,6 +1392,9 @@ model GuestPointSettings {
   // Service request rewards
   serviceRequestCompletionPoints Int @default(1)
   serviceRequestDailyMaxPoints   Int @default(3)
+
+  guestStayCheckInEnabled Boolean @default(true)
+  guestStayCheckInPoints  Int     @default(10)
 
   pointsExpirationDays Int?
 

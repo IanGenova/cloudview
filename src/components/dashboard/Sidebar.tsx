@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Utensils,
+   UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -43,6 +44,12 @@ const reportsNavItem: DashboardNavItem = {
   href: '/dashboard/reports',
 };
 
+const guestStaysNavItem: DashboardNavItem = {
+  module: 'GUEST_STAYS',
+  label: 'Guest Stays',
+  href: '/dashboard/guest-stays',
+};
+
 const navGroups: SidebarGroup[] = [
   {
     label: 'Command Center',
@@ -55,6 +62,7 @@ const navGroups: SidebarGroup[] = [
   {
     label: 'Guest Operations',
     modules: [
+      'GUEST_STAYS',
       'ORDERS',
       'KITCHEN_DISPLAY',
       'SERVICES_MODULE',
@@ -82,6 +90,7 @@ const moduleIconMap: Record<string, LucideIcon> = {
   SERVICE_REQUESTS: ConciergeBell,
   POS_TERMINAL: CreditCard,
   ANALYTICS: BarChart3,
+  GUEST_STAYS: UserCheck,
   REWARDS: Gift,
   REPORTS: FileBarChart2,
   HOTEL_SETTINGS: Settings,
@@ -124,6 +133,29 @@ function insertReportsItem(items: DashboardNavItem[]) {
   }
 
   return [...items, reportsNavItem];
+}
+
+function insertGuestStaysItem(items: DashboardNavItem[]) {
+  const hasGuestStays = items.some(
+    (item) =>
+      item.module === 'GUEST_STAYS' || item.href === '/dashboard/guest-stays'
+  );
+
+  if (hasGuestStays) {
+    return items;
+  }
+
+  const ordersIndex = items.findIndex((item) => item.module === 'ORDERS');
+
+  if (ordersIndex >= 0) {
+    return [
+      ...items.slice(0, ordersIndex),
+      guestStaysNavItem,
+      ...items.slice(ordersIndex),
+    ];
+  }
+
+  return [...items, guestStaysNavItem];
 }
 
 function sortItemsByGroupOrder(items: DashboardNavItem[], modules: string[]) {
@@ -268,7 +300,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   const originalMainItems = navItems.filter((item) => item.group !== 'settings');
-  const mainItems = insertReportsItem(originalMainItems);
+  const mainItems = insertGuestStaysItem(insertReportsItem(originalMainItems));
   const groupedMainItems = buildGroupedNavItems(mainItems);
 
   const settingsItems = navItems.filter((item) => item.group === 'settings');

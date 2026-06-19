@@ -2,6 +2,7 @@
 
 import {
   type ButtonHTMLAttributes,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -387,18 +388,20 @@ export function MenuClient({
   currency,
   taxRate = 0,
   serviceChargeRate = 0,
+  defaultGuestName = '',
 }: {
   tagCode: string;
   products: Product[];
   currency: string;
   taxRate?: number;
   serviceChargeRate?: number;
+  defaultGuestName?: string;
 }) {
   const router = useRouter();
 
   const [screen, setScreen] = useState<'menu' | 'cart'>('menu');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [guestName, setGuestName] = useState('');
+  const [guestName, setGuestName] = useState(defaultGuestName);
   const [notes, setNotes] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('ROOM_SERVICE');
   const [confirmedClause, setConfirmedClause] = useState(false);
@@ -410,6 +413,10 @@ export function MenuClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+      setGuestName(defaultGuestName);
+    }, [defaultGuestName]);
 
   const productMap = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
@@ -738,11 +745,21 @@ export function MenuClient({
               <h3 className="mb-3 font-black">Order Details</h3>
 
               <div className="space-y-3">
-                <Input
-                  placeholder="Guest name optional"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                />
+               <div>
+                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                      Ordered By
+                    </label>
+
+                    <Input
+                      placeholder="Guest name"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                    />
+
+                    <p className="mt-1 text-xs font-semibold text-neutral-400">
+                      Auto-filled from the current stay. You may edit this if another guest is ordering.
+                    </p>
+                  </div>
 
                 <div>
                   <label className="mb-1 block text-xs font-black uppercase text-neutral-500">

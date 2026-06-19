@@ -1,4 +1,6 @@
 import type { ServiceRequestStatus } from '@prisma/client';
+import { publishManyToCentrifugo } from '@/lib/realtime/centrifugo-publisher';
+import { realtimeChannels } from '@/lib/realtime/channels';
 
 type ServiceRequestEventType =
   | 'service-request-created'
@@ -8,82 +10,48 @@ type ServiceRequestEventType =
 type ServiceRequestPublication = {
   event: ServiceRequestEventType;
   hotelId: string;
-  requestId?: string;
-  requestCode?: string;
-  status?: ServiceRequestStatus;
+  requestId: string;
+  requestCode: string;
+  status: ServiceRequestStatus;
   source: 'GUEST_PORTAL' | 'DASHBOARD';
   updatedAt: string;
 };
 
-function getCentrifugoApiUrl() {
-  const apiUrl = process.env.CENTRIFUGO_HTTP_API_URL;
-
-  if (!apiUrl) {
-    console.warn(
-      'CENTRIFUGO_HTTP_API_URL is missing. Service request realtime skipped.'
+function validateServiceRequestPublication(data: ServiceRequestPublication) {
+  if (!data.hotelId?.trim()) {
+    throw new Error(
+      'Service request realtime publish failed: hotelId is missing.'
     );
-    return null;
   }
 
-  const normalizedUrl = apiUrl.replace(/\/$/, '');
-
-  if (normalizedUrl.endsWith('/publish')) {
-    return normalizedUrl;
-  }
-
-  return `${normalizedUrl}/publish`;
-}
-
-function getCentrifugoApiKey() {
-  const apiKey = process.env.CENTRIFUGO_HTTP_API_KEY;
-
-  if (!apiKey) {
-    console.warn(
-      'CENTRIFUGO_HTTP_API_KEY is missing. Service request realtime skipped.'
+  if (!data.requestId?.trim()) {
+    throw new Error(
+      'Service request realtime publish failed: requestId is missing.'
     );
-    return null;
   }
 
-  return apiKey;
-}
-
-function getServiceRequestsChannel(hotelId: string) {
-  return `service-requests-${hotelId}`;
+  if (!data.requestCode?.trim()) {
+    throw new Error(
+      'Service request realtime publish failed: requestCode is missing.'
+    );
+  }
 }
 
 async function publishServiceRequestEvent(data: ServiceRequestPublication) {
-  const publishUrl = getCentrifugoApiUrl();
-  const apiKey = getCentrifugoApiKey();
+  validateServiceRequestPublication(data);
 
-  if (!publishUrl || !apiKey) {
-    return;
-  }
-
-  try {
-    const response = await fetch(publishUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-        'X-Centrifugo-Error-Mode': 'transport',
-      },
-      body: JSON.stringify({
-        channel: getServiceRequestsChannel(data.hotelId),
-        data,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(
-        'Centrifugo service request publish failed:',
-        response.status,
-        text
-      );
-    }
-  } catch (error) {
-    console.error('Centrifugo service request publish error:', error);
-  }
+  await publishManyToCentrifugo([
+    {
+      channel: realtimeChannels.serviceRequests(data.hotelId),
+      data,
+      debugLabel: `hotel-${data.event}`,
+    },
+    {
+      channel: realtimeChannels.serviceRequestsGlobal(),
+      data,
+      debugLabel: `global-${data.event}`,
+    },
+  ]);
 }
 
 export async function triggerServiceRequestCreated({

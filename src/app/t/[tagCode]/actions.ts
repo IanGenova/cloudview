@@ -15,7 +15,7 @@ import { cleanText } from '@/lib/sanitize';
 import { randomCode } from '@/lib/utils';
 import { logActivity } from '@/lib/activity';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
-import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
 import { resolveGuestMemberIdForCurrentNfcSession } from '@/lib/nfc-rewards';
@@ -96,6 +96,41 @@ function addServiceStockRequirement(
   requirements.set(input.serviceId, input);
 }
 
+async function getResolvedGuestPortalIdentity(tagCode: string) {
+  const identity = await getCurrentNfcGuestIdentity(tagCode);
+
+  if (!identity.session) {
+    return null;
+  }
+
+  const resolvedGuestMemberId =
+    identity.guestMemberId ??
+    (await resolveGuestMemberIdForCurrentNfcSession(tagCode));
+
+  return {
+    session: identity.session,
+    guestStayId: identity.guestStayId,
+    guestMemberId: resolvedGuestMemberId,
+    guestName: identity.guestName ? cleanText(identity.guestName, 100) : '',
+  };
+}
+
+function getGuestNameSnapshot({
+  stayGuestName,
+  submittedGuestName,
+}: {
+  stayGuestName?: string | null;
+  submittedGuestName?: string | null;
+}) {
+  const submittedName = cleanText(submittedGuestName || '', 100);
+
+  if (submittedName) {
+    return submittedName;
+  }
+
+  return cleanText(stayGuestName || '', 100);
+}
+
 export async function createGuestOrder(input: unknown) {
 
   const parsed = createGuestOrderSchema.parse(input);
@@ -124,15 +159,22 @@ export async function createGuestOrder(input: unknown) {
     throw new Error('This NFC tag is inactive or invalid.');
   }
 
-  const guestSession = await requireCurrentNfcGuestSession(parsed.tagCode);
+  const guestIdentity = await getResolvedGuestPortalIdentity(parsed.tagCode);
+
+if (!guestIdentity?.session) {
+  throw new Error('Guest session expired. Please tap the NFC card again.');
+}
+
+const guestSession = guestIdentity.session;
 
 if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
   throw new Error('Invalid guest session. Please tap the NFC card again.');
 }
 
-const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(
-  parsed.tagCode
-);
+const orderGuestName = getGuestNameSnapshot({
+  stayGuestName: guestIdentity.guestName,
+  submittedGuestName: parsed.guestName,
+});
 
   const uniqueProductIds = Array.from(
     new Set(parsed.items.map((item) => item.productId))
@@ -302,9 +344,10 @@ const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(
           locationId: tag.locationId,
           tagId: tag.id,
           guestSessionId: guestSession.id,
-          guestMemberId,
+          guestStayId: guestIdentity.guestStayId,
+          guestMemberId: guestIdentity.guestMemberId,
           orderCode,
-        guestName: cleanText(parsed.guestName, 100),
+          guestName: orderGuestName,
         notes: cleanText(parsed.notes, 1000),
         paymentMethod: parsed.paymentMethod as PaymentMethod,
         subtotalCents: subtotal,
@@ -447,7 +490,7 @@ const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(
 
   await logActivity({
     hotelId: tag.hotelId,
-    actor: 'Guest',
+    actor: orderGuestName || 'Guest',
     action: 'CREATE',
     entity: 'Order',
     entityId: order.id,
@@ -569,23 +612,36 @@ export async function createServiceRequestAction(formData: FormData) {
     });
   }
 
-  let guestSession;
+          let guestIdentity: Awaited<
+          ReturnType<typeof getResolvedGuestPortalIdentity>
+        > = null;
 
-  try {
-    guestSession = await requireCurrentNfcGuestSession(tagCode);
-  } catch {
-    redirectToService(tagCode, {
-      error: 'invalid_session',
-    });
-  }
+        try {
+          guestIdentity = await getResolvedGuestPortalIdentity(tagCode);
+        } catch {
+          redirectToService(tagCode, {
+            error: 'invalid_session',
+          });
+        }
 
- if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
-  redirectToService(tagCode, {
-    error: 'invalid_session',
-  });
-}
+        if (!guestIdentity?.session) {
+          redirectToService(tagCode, {
+            error: 'invalid_session',
+          });
+        }
 
-const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(tagCode);
+        const guestSession = guestIdentity.session;
+
+        if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+          redirectToService(tagCode, {
+            error: 'invalid_session',
+          });
+        }
+
+        const serviceGuestName = getGuestNameSnapshot({
+          stayGuestName: guestIdentity.guestName,
+          submittedGuestName: guestName,
+        });
 
   const services = await db.serviceCatalogItem.findMany({
     where: {
@@ -752,10 +808,11 @@ const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(tagCode);
             locationId: tag.locationId,
             tagId: tag.id,
             guestSessionId: guestSession.id,
-            guestMemberId,
+            guestStayId: guestIdentity.guestStayId,
+            guestMemberId: guestIdentity.guestMemberId,
             requestCode: groupedRequestCode,
             type: item.service.name,
-            guestName: guestName || null,
+            guestName: serviceGuestName || null,
             notes:
               [
                 `Grouped service request order ${groupedRequestCode}.`,
@@ -915,7 +972,7 @@ const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(tagCode);
     createdRequests.map((request) =>
       logActivity({
         hotelId: tag.hotelId,
-        actor: 'Guest',
+        actor: serviceGuestName || 'Guest',
         action: 'CREATE',
         entity: 'ServiceRequest',
         entityId: request.id,

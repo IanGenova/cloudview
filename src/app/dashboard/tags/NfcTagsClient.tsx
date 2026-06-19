@@ -157,30 +157,30 @@ function successMessage(success?: string) {
   return success ? messages[success] : null;
 }
 
-function getHttpsBaseOrigin() {
+function getHttpBaseOrigin() {
   if (typeof window === 'undefined') {
-    return 'https://192.168.0.130:3000';
+    return 'http://192.168.0.130:3000';
   }
 
   const { hostname, port } = window.location;
 
-  return `https://${hostname}${port ? `:${port}` : ''}`;
+  return `http://${hostname}${port ? `:${port}` : ''}`;
 }
 
-function toHttpsAppUrl(value: string) {
+function toHttpAppUrl(value: string) {
   if (!value) {
     return value;
   }
 
   try {
-    const httpsBaseOrigin = getHttpsBaseOrigin();
+    const httpBaseOrigin = getHttpBaseOrigin();
 
     const currentHostname =
       typeof window !== 'undefined'
         ? window.location.hostname
         : '192.168.0.130';
 
-    const url = new URL(value, httpsBaseOrigin);
+    const url = new URL(value, httpBaseOrigin);
 
     const isLocalHost =
       url.hostname === 'localhost' ||
@@ -189,20 +189,20 @@ function toHttpsAppUrl(value: string) {
       url.hostname.startsWith('192.168.');
 
     if (isLocalHost) {
-      url.protocol = 'https:';
+      url.protocol = 'http:';
       url.hostname = currentHostname;
       url.port = url.port || '3000';
 
       return url.toString();
     }
 
-    if (url.protocol === 'http:') {
-      url.protocol = 'https:';
+    if (url.protocol === 'https:') {
+      url.protocol = 'http:';
     }
 
     return url.toString();
   } catch {
-    return value.replace(/^http:\/\//i, 'https://');
+    return value.replace(/^https:\/\//i, 'http://');
   }
 }
 
@@ -915,8 +915,8 @@ export function NfcTagsClient({
 
       <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
         {filteredTags.map((tag) => {
-        const secureLaunchUrl = toHttpsAppUrl(tag.secureLaunchUrl);
-        const lockedDestinationUrl = toHttpsAppUrl(tag.lockedDestinationUrl);
+        const secureLaunchUrl = toHttpAppUrl(tag.secureLaunchUrl);
+        const lockedDestinationUrl = toHttpAppUrl(tag.lockedDestinationUrl);
 
         const sessionMode = getSessionModeInfo({
           tagType: tag.tagType,

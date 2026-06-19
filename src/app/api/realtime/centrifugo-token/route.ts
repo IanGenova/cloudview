@@ -3,50 +3,49 @@ import { db } from '@/lib/db';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
+
+function cleanParam(value: string | null, maxLength = 160) {
+  return String(value ?? '').trim().slice(0, maxLength);
+}
+
+function jsonError(message: string, status: number) {
+  return NextResponse.json(
+    {
+      error: message,
+    },
+    {
+      status,
+    }
+  );
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
-  const tagCode = url.searchParams.get('tagCode') || '';
-  const orderCode = url.searchParams.get('orderCode') || '';
+  const tagCode = cleanParam(url.searchParams.get('tagCode'), 160);
+  const orderCode = cleanParam(url.searchParams.get('orderCode'), 120);
 
   if (!tagCode || !orderCode) {
-    return NextResponse.json(
-      {
-        error: 'tagCode and orderCode are required.',
-      },
-      {
-        status: 400,
-      }
-    );
+    return jsonError('tagCode and orderCode are required.', 400);
   }
 
   const tag = await requireNfcGuestAccess(tagCode);
 
   if (!tag) {
-    return NextResponse.json(
-      {
-        error: 'Invalid NFC access.',
-      },
-      {
-        status: 401,
-      }
-    );
+    return jsonError('Invalid NFC access.', 401);
   }
 
   const guestSession = await getCurrentNfcGuestSession(tagCode);
 
   if (!guestSession) {
-    return NextResponse.json(
-      {
-        error: 'Guest session expired.',
-      },
-      {
-        status: 401,
-      }
-    );
+    return jsonError('Guest session expired.', 401);
+  }
+
+  if (guestSession.hotelId !== tag.hotelId || guestSession.tagId !== tag.id) {
+    return jsonError('Guest session does not match this NFC tag.', 403);
   }
 
   const order = await db.order.findFirst({
@@ -58,26 +57,23 @@ export async function GET(request: Request) {
     },
     select: {
       id: true,
+      orderCode: true,
     },
   });
 
   if (!order) {
-    return NextResponse.json(
-      {
-        error: 'Order not found in current guest session.',
-      },
-      {
-        status: 404,
-      }
-    );
+    return jsonError('Order not found in current guest session.', 404);
   }
 
+  const channel = realtimeChannels.guestOrder(order.orderCode);
+
   const token = createCentrifugoConnectionToken({
-    subject: `guest:${guestSession.id}`,
+    subject: `guest:${guestSession.id}:order:${order.id}`,
     ttlSeconds: 60 * 60,
   });
 
   return NextResponse.json({
     token,
+    channels: [channel],
   });
 }

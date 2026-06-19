@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
 
@@ -12,16 +12,47 @@ type RealtimeOrderPayload = {
   updatedAt?: string;
 };
 
+function getEventKey(data: RealtimeOrderPayload) {
+  return [
+    data.event || 'unknown',
+    data.orderCode || 'no-order',
+    data.status || data.paymentStatus || 'no-status',
+    data.updatedAt || 'no-time',
+  ].join(':');
+}
+
+function isRelevantOrderEvent(data: RealtimeOrderPayload, orderCode: string) {
+  if (!data?.event) {
+    return false;
+  }
+
+  if (data.orderCode && data.orderCode !== orderCode) {
+    return false;
+  }
+
+  return (
+    data.event === 'order-status-updated' ||
+    data.event === 'order-payment-updated'
+  );
+}
+
 export function RealtimeOrderRefresh({
   tagCode,
   orderCode,
-  fallbackIntervalMs = 30_000,
+  fallbackIntervalMs = 120_000,
+  refreshDebounceMs = 700,
 }: {
   tagCode: string;
   orderCode: string;
   fallbackIntervalMs?: number;
+  refreshDebounceMs?: number;
 }) {
   const router = useRouter();
+
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const lastEventKeyRef = useRef('');
+  const realtimeReadyRef = useRef(false);
+  const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
     let disposed = false;
@@ -30,11 +61,70 @@ export function RealtimeOrderRefresh({
       NonNullable<ReturnType<typeof createCentrifugoClient>>['newSubscription']
     > | null = null;
 
-    const refresh = () => {
-      router.refresh();
-    };
+    function clearScheduledRefresh() {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    }
 
-    const fallbackTimer = window.setInterval(refresh, fallbackIntervalMs);
+    function scheduleRefresh(reason: string, delayMs = refreshDebounceMs) {
+      if (disposed) {
+        return;
+      }
+
+      clearScheduledRefresh();
+
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        if (disposed) {
+          return;
+        }
+
+        lastRefreshAtRef.current = Date.now();
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.info('Refreshing order tracking page:', {
+            reason,
+            orderCode,
+          });
+        }
+
+        router.refresh();
+        refreshTimeoutRef.current = null;
+      }, delayMs);
+    }
+
+    const fallbackTimer = window.setInterval(() => {
+      if (disposed) {
+        return;
+      }
+
+      /**
+       * Do not keep hammering the server while the tab is hidden.
+       */
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      /**
+       * If Centrifugo is subscribed, realtime is already handling updates.
+       * The fallback should only work when realtime is unavailable.
+       */
+      if (realtimeReadyRef.current) {
+        return;
+      }
+
+      const elapsedSinceLastRefresh = Date.now() - lastRefreshAtRef.current;
+
+      if (
+        lastRefreshAtRef.current > 0 &&
+        elapsedSinceLastRefresh < fallbackIntervalMs
+      ) {
+        return;
+      }
+
+      scheduleRefresh('fallback-polling', 0);
+    }, Math.max(30_000, fallbackIntervalMs));
 
     async function connect() {
       try {
@@ -53,48 +143,80 @@ export function RealtimeOrderRefresh({
         }
 
         const payload = (await response.json()) as {
-          token?: string;
-        };
+            token?: string;
+            channels?: string[];
+          };
 
         if (!payload.token || disposed) {
           return;
         }
 
-        centrifuge = createCentrifugoClient(payload.token);
+        centrifuge = createCentrifugoClient(payload.token, {
+          tokenEndpoint: `/api/realtime/centrifugo-token?tagCode=${encodeURIComponent(
+            tagCode
+          )}&orderCode=${encodeURIComponent(orderCode)}`,
+          debugLabel: `Order tracking ${orderCode}`,
+        });
 
         if (!centrifuge) {
           return;
         }
 
-        subscription = centrifuge.newSubscription(`order-${orderCode}`);
+        const channel = payload.channels?.[0] || `order-${orderCode}`;
+
+        subscription = centrifuge.newSubscription(channel);
 
         subscription.on('publication', (ctx) => {
           const data = ctx.data as RealtimeOrderPayload;
 
-          if (!data?.event) {
-            refresh();
+          if (!isRelevantOrderEvent(data, orderCode)) {
             return;
           }
 
-          if (
-            data.event === 'order-status-updated' ||
-            data.event === 'order-payment-updated'
-          ) {
-            refresh();
+          const eventKey = getEventKey(data);
+
+          /**
+           * Avoid duplicate refreshes from duplicated publications,
+           * reconnect replay, or repeated same payload.
+           */
+          if (eventKey === lastEventKeyRef.current) {
+            return;
           }
+
+          lastEventKeyRef.current = eventKey;
+
+          scheduleRefresh(data.event || 'order-publication');
         });
 
         subscription.on('subscribed', () => {
-          console.log(`Subscribed to order-${orderCode}`);
+          realtimeReadyRef.current = true;
+
+          if (process.env.NODE_ENV !== 'production') {
+            console.info(`Subscribed to ${channel}`);
+          }
+        });
+
+        subscription.on('unsubscribed', () => {
+          realtimeReadyRef.current = false;
+
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(`Unsubscribed from ${channel}`);
+          }
         });
 
         subscription.on('error', (ctx) => {
-          console.warn('Centrifugo subscription error:', ctx);
+          realtimeReadyRef.current = false;
+          console.warn('Centrifugo order subscription error:', ctx);
+        });
+
+        centrifuge.on('disconnected', () => {
+          realtimeReadyRef.current = false;
         });
 
         subscription.subscribe();
         centrifuge.connect();
       } catch (error) {
+        realtimeReadyRef.current = false;
         console.error('Centrifugo realtime connection error:', error);
       }
     }
@@ -103,7 +225,10 @@ export function RealtimeOrderRefresh({
 
     return () => {
       disposed = true;
+      realtimeReadyRef.current = false;
+
       window.clearInterval(fallbackTimer);
+      clearScheduledRefresh();
 
       try {
         subscription?.unsubscribe();
@@ -112,7 +237,13 @@ export function RealtimeOrderRefresh({
         // Ignore disconnect errors.
       }
     };
-  }, [fallbackIntervalMs, orderCode, router, tagCode]);
+  }, [
+    fallbackIntervalMs,
+    orderCode,
+    refreshDebounceMs,
+    router,
+    tagCode,
+  ]);
 
   return null;
 }

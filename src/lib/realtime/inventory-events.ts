@@ -1,3 +1,6 @@
+import { publishManyToCentrifugo } from '@/lib/realtime/centrifugo-publisher';
+import { realtimeChannels } from '@/lib/realtime/channels';
+
 type InventoryEventType = 'inventory-stock-updated';
 
 type InventoryPublication = {
@@ -8,75 +11,33 @@ type InventoryPublication = {
   updatedAt: string;
 };
 
-function getCentrifugoApiUrl() {
-  const apiUrl = process.env.CENTRIFUGO_HTTP_API_URL;
+function validateInventoryPublication(data: InventoryPublication) {
+  if (!data.hotelId?.trim()) {
+    throw new Error('Inventory realtime publish failed: hotelId is missing.');
+  }
 
-  if (!apiUrl) {
-    console.warn(
-      'CENTRIFUGO_HTTP_API_URL is missing. Inventory realtime skipped.'
+  if (!Array.isArray(data.productIds)) {
+    throw new Error(
+      'Inventory realtime publish failed: productIds must be an array.'
     );
-    return null;
   }
-
-  const normalizedUrl = apiUrl.replace(/\/$/, '');
-
-  if (normalizedUrl.endsWith('/publish')) {
-    return normalizedUrl;
-  }
-
-  return `${normalizedUrl}/publish`;
-}
-
-function getCentrifugoApiKey() {
-  const apiKey = process.env.CENTRIFUGO_HTTP_API_KEY;
-
-  if (!apiKey) {
-    console.warn(
-      'CENTRIFUGO_HTTP_API_KEY is missing. Inventory realtime skipped.'
-    );
-    return null;
-  }
-
-  return apiKey;
-}
-
-function getInventoryChannel(hotelId: string) {
-  return `inventory-${hotelId}`;
 }
 
 async function publishInventoryEvent(data: InventoryPublication) {
-  const publishUrl = getCentrifugoApiUrl();
-  const apiKey = getCentrifugoApiKey();
+  validateInventoryPublication(data);
 
-  if (!publishUrl || !apiKey) {
-    return;
-  }
-
-  try {
-    const response = await fetch(publishUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-        'X-Centrifugo-Error-Mode': 'transport',
-      },
-      body: JSON.stringify({
-        channel: getInventoryChannel(data.hotelId),
-        data,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(
-        'Centrifugo inventory publish failed:',
-        response.status,
-        text
-      );
-    }
-  } catch (error) {
-    console.error('Centrifugo inventory publish error:', error);
-  }
+  await publishManyToCentrifugo([
+    {
+      channel: realtimeChannels.inventory(data.hotelId),
+      data,
+      debugLabel: 'hotel-inventory-stock-updated',
+    },
+    {
+      channel: realtimeChannels.inventoryGlobal(),
+      data,
+      debugLabel: 'global-inventory-stock-updated',
+    },
+  ]);
 }
 
 export async function triggerInventoryUpdated({
@@ -91,7 +52,7 @@ export async function triggerInventoryUpdated({
   await publishInventoryEvent({
     event: 'inventory-stock-updated',
     hotelId,
-    productIds,
+    productIds: Array.from(new Set(productIds.filter(Boolean))),
     source,
     updatedAt: new Date().toISOString(),
   });

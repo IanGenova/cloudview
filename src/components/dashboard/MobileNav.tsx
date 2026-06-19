@@ -18,6 +18,7 @@ const mobileLabelMap: Record<string, string> = {
   NFC_TAGS: 'NFC Tags',
   MENU: 'Menu',
   INVENTORY: 'Inventory',
+  GUEST_STAYS: 'Stays',
   ORDERS: 'Orders',
   KITCHEN_DISPLAY: 'Kitchen',
   SERVICES_MODULE: 'Services',
@@ -28,8 +29,37 @@ const mobileLabelMap: Record<string, string> = {
   USER_ACCOUNT_SETTINGS: 'Users',
 };
 
+const guestStaysNavItem: DashboardNavItem = {
+  module: 'GUEST_STAYS',
+  label: 'Guest Stays',
+  href: '/dashboard/guest-stays',
+};
+
 function getMobileLabel(item: DashboardNavItem) {
   return mobileLabelMap[item.module] ?? item.label;
+}
+
+function insertGuestStaysItem(items: DashboardNavItem[]) {
+  const hasGuestStays = items.some(
+    (item) =>
+      item.module === 'GUEST_STAYS' || item.href === '/dashboard/guest-stays'
+  );
+
+  if (hasGuestStays) {
+    return items;
+  }
+
+  const ordersIndex = items.findIndex((item) => item.module === 'ORDERS');
+
+  if (ordersIndex >= 0) {
+    return [
+      ...items.slice(0, ordersIndex),
+      guestStaysNavItem,
+      ...items.slice(ordersIndex),
+    ];
+  }
+
+  return [...items, guestStaysNavItem];
 }
 
 function isActiveRoute(pathname: string, href: string) {
@@ -51,14 +81,16 @@ export function MobileNav({
 }) {
   const pathname = usePathname();
 
-  if (!navItems.length) {
-    return null;
-  }
+ if (!navItems.length) {
+  return null;
+}
 
-  return (
+const mobileNavItems = insertGuestStaysItem(navItems);
+
+return (
     <div className="sticky top-0 z-40 border-b border-[#2b2416] bg-[#090806]/95 p-3 shadow-[0_14px_35px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden">
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
-        {navItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const active = isActiveRoute(pathname, item.href);
 
           return (

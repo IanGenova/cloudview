@@ -1,8 +1,12 @@
 import { cookies } from 'next/headers';
-import { OrderStatus, ServiceRequestStatus, TagType } from '@prisma/client';
+import {
+  GuestStayStatus,
+  OrderStatus,
+  ServiceRequestStatus,
+  TagType,
+} from '@prisma/client';
 import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
 import { db } from '@/lib/db';
-
 
 export const ACTIVE_ORDER_STATUSES = [
   OrderStatus.PENDING,
@@ -24,8 +28,39 @@ const nfcGuestSessionSelect = {
   roomId: true,
   locationId: true,
   guestMemberId: true,
+  guestStayId: true,
   endedAt: true,
 } as const;
+
+type BasicNfcGuestSession = {
+  id: string;
+  sessionKey: string;
+  hotelId: string;
+  tagId: string;
+  roomId: string | null;
+  locationId: string | null;
+  guestMemberId: string | null;
+  guestStayId: string | null;
+  endedAt: Date | null;
+};
+
+function getActiveGuestStayDateFilter() {
+  const now = new Date();
+
+  return {
+    status: GuestStayStatus.ACTIVE,
+    OR: [
+      {
+        expectedCheckOutAt: null,
+      },
+      {
+        expectedCheckOutAt: {
+          gte: now,
+        },
+      },
+    ],
+  };
+}
 
 export function getNfcGuestSessionCookieName(tagCode: string) {
   const safeTagCode = tagCode.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -61,18 +96,78 @@ export async function getNfcGuestSessionPendingCounts(sessionId: string) {
   };
 }
 
+/**
+ * If a session is linked to a GuestStay, the stay must still be ACTIVE.
+ * This prevents an old guest's room session from surviving after checkout.
+ */
+async function normalizeSessionGuestStay(
+  session: BasicNfcGuestSession
+): Promise<BasicNfcGuestSession | null> {
+  if (!session.guestStayId) {
+    return session;
+  }
+
+  const activeStay = await db.guestStay.findFirst({
+    where: {
+      id: session.guestStayId,
+      hotelId: session.hotelId,
+      ...getActiveGuestStayDateFilter(),
+    },
+    select: {
+      id: true,
+      roomId: true,
+      guestMemberId: true,
+    },
+  });
+
+  if (!activeStay) {
+    await db.nfcGuestSession.updateMany({
+      where: {
+        id: session.id,
+        endedAt: null,
+      },
+      data: {
+        endedAt: new Date(),
+      },
+    });
+
+    return null;
+  }
+
+  const needsSync =
+    session.guestMemberId !== activeStay.guestMemberId ||
+    session.roomId !== activeStay.roomId;
+
+  if (!needsSync) {
+    return session;
+  }
+
+  return db.nfcGuestSession.update({
+    where: {
+      id: session.id,
+    },
+    data: {
+      guestMemberId: activeStay.guestMemberId,
+      roomId: activeStay.roomId,
+    },
+    select: nfcGuestSessionSelect,
+  });
+}
+
 export async function getReusableNfcGuestSessionForTag({
   tagId,
   hotelId,
   tagType,
   roomId,
   locationId,
+  guestStayId,
 }: {
   tagId: string;
   hotelId: string;
   tagType: TagType;
   roomId?: string | null;
   locationId?: string | null;
+  guestStayId?: string | null;
 }) {
   const policy = getNfcSessionPolicy({
     tagType,
@@ -91,12 +186,27 @@ export async function getReusableNfcGuestSessionForTag({
   }
 
   /**
-   * Existing reusable-session logic remains for private ROOM tags only.
+   * Important for private ROOM tags:
+   * If GuestStay is enabled, only reuse a session from the SAME active stay.
+   *
+   * This prevents:
+   * Old Guest A in Room 305
+   * New Guest B in Room 305
+   * → Guest B accidentally reusing Guest A's pending room session.
    */
+  if (policy.mode === 'PRIVATE_ROOM' && !guestStayId) {
+    return null;
+  }
+
   const sessionWithPendingWork = await db.nfcGuestSession.findFirst({
     where: {
       tagId,
       hotelId,
+      ...(guestStayId
+        ? {
+            guestStayId,
+          }
+        : {}),
       OR: [
         {
           orders: {
@@ -133,9 +243,17 @@ export async function getReusableNfcGuestSessionForTag({
     return null;
   }
 
+  const normalizedSession = await normalizeSessionGuestStay(
+    sessionWithPendingWork
+  );
+
+  if (!normalizedSession) {
+    return null;
+  }
+
   return db.nfcGuestSession.update({
     where: {
-      id: sessionWithPendingWork.id,
+      id: normalizedSession.id,
     },
     data: {
       endedAt: null,
@@ -165,8 +283,16 @@ export async function getCurrentNfcGuestSession(tagCode: string) {
     return null;
   }
 
-  if (session.endedAt) {
-    const pendingCounts = await getNfcGuestSessionPendingCounts(session.id);
+  const normalizedSession = await normalizeSessionGuestStay(session);
+
+  if (!normalizedSession) {
+    return null;
+  }
+
+  if (normalizedSession.endedAt) {
+    const pendingCounts = await getNfcGuestSessionPendingCounts(
+      normalizedSession.id
+    );
 
     if (pendingCounts.totalPending <= 0) {
       return null;
@@ -174,7 +300,7 @@ export async function getCurrentNfcGuestSession(tagCode: string) {
 
     return db.nfcGuestSession.update({
       where: {
-        id: session.id,
+        id: normalizedSession.id,
       },
       data: {
         endedAt: null,
@@ -186,7 +312,7 @@ export async function getCurrentNfcGuestSession(tagCode: string) {
 
   return db.nfcGuestSession.update({
     where: {
-      id: session.id,
+      id: normalizedSession.id,
     },
     data: {
       lastSeenAt: new Date(),
@@ -275,4 +401,100 @@ export async function requireCurrentNfcGuestSession(tagCode: string) {
   }
 
   return session;
+}
+
+/**
+ * Use this in guest portal actions.
+ *
+ * This gives the order/service action a clean way to know:
+ * - current NFC session
+ * - guestStayId
+ * - guestMemberId
+ * - guest display name
+ */
+export async function getCurrentNfcGuestIdentity(tagCode: string) {
+  const session = await getCurrentNfcGuestSession(tagCode);
+
+  if (!session) {
+    return {
+      session: null,
+      guestStay: null,
+      guestMember: null,
+      guestStayId: null,
+      guestMemberId: null,
+      guestName: null,
+    };
+  }
+
+  if (session.guestStayId) {
+    const guestStay = await db.guestStay.findFirst({
+      where: {
+        id: session.guestStayId,
+        hotelId: session.hotelId,
+        ...getActiveGuestStayDateFilter(),
+      },
+      select: {
+        id: true,
+        hotelId: true,
+        roomId: true,
+        guestMemberId: true,
+        status: true,
+        guestMember: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (guestStay) {
+      return {
+        session,
+        guestStay,
+        guestMember: guestStay.guestMember,
+        guestStayId: guestStay.id,
+        guestMemberId: guestStay.guestMemberId,
+        guestName: guestStay.guestMember.name,
+      };
+    }
+  }
+
+  if (session.guestMemberId) {
+    const guestMember = await db.guestMember.findFirst({
+      where: {
+        id: session.guestMemberId,
+        hotelId: session.hotelId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+      },
+    });
+
+    if (guestMember) {
+      return {
+        session,
+        guestStay: null,
+        guestMember,
+        guestStayId: null,
+        guestMemberId: guestMember.id,
+        guestName: guestMember.name,
+      };
+    }
+  }
+
+  return {
+    session,
+    guestStay: null,
+    guestMember: null,
+    guestStayId: null,
+    guestMemberId: null,
+    guestName: null,
+  };
 }

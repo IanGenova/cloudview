@@ -14,7 +14,7 @@ import { OrderItemStatus, OrderStatus, PaymentStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
-import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 import { getGuestRewardsContextForTag } from '@/lib/nfc-rewards';
 
 export const dynamic = 'force-dynamic';
@@ -277,7 +277,9 @@ export default async function MyOrdersPage({
     notFound();
   }
 
-  const guestSession = await getCurrentNfcGuestSession(tagCode);
+ const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
+  const guestSession = guestIdentity.session;
+  const guestDisplayName = guestIdentity.guestName || 'Guest';
   const rewardsContext = await getGuestRewardsContextForTag(tagCode);
 
   const location = tag.room
@@ -326,7 +328,9 @@ export default async function MyOrdersPage({
 
           <div className="text-center">
             <h1 className="text-xl font-black">My Orders</h1>
-            <p className="text-sm text-white/45">{location}</p>
+            <p className="text-sm text-white/45">
+                  {location} · {guestDisplayName}
+                </p>
           </div>
 
           <div />
@@ -340,10 +344,13 @@ export default async function MyOrdersPage({
 
             <div>
               <h2 className="font-black text-white">Food Order History</h2>
-              <p className="mt-1 text-sm leading-6 text-white/50">
-                View your current and previous food orders. Pending orders can
-                still be managed from the tracking page.
-              </p>
+                    <p className="mt-1 text-sm font-bold text-gold">
+                      Guest: {guestDisplayName}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-white/50">
+                      View your current and previous food orders. Pending orders can
+                      still be managed from the tracking page.
+                    </p>
             </div>
           </div>
         </section>

@@ -2,8 +2,22 @@ import { NextResponse } from 'next/server';
 import { Role } from '@prisma/client';
 import { requireUser } from '@/lib/auth';
 import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
+
+function noStoreJson(data: unknown, init?: ResponseInit) {
+  const response = NextResponse.json(data, init);
+
+  response.headers.set(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate'
+  );
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+
+  return response;
+}
 
 function getChannelsForUser(user: {
   id: string;
@@ -11,7 +25,10 @@ function getChannelsForUser(user: {
   hotelId: string | null;
 }) {
   if (user.role === Role.SUPER_ADMIN) {
-    return ['dashboard:global:inventory', 'dashboard:global:orders'];
+    return [
+      realtimeChannels.dashboardGlobalInventory(),
+      realtimeChannels.dashboardGlobalOrders(),
+    ];
   }
 
   if (!user.hotelId) {
@@ -19,33 +36,68 @@ function getChannelsForUser(user: {
   }
 
   return [
-    `dashboard:hotel:${user.hotelId}:inventory`,
-    `dashboard:hotel:${user.hotelId}:orders`,
+    realtimeChannels.dashboardHotelInventory(user.hotelId),
+    realtimeChannels.dashboardHotelOrders(user.hotelId),
   ];
 }
 
 export async function GET() {
-  const user = await requireUser();
-  const channels = getChannelsForUser(user);
+  try {
+    const user = await requireUser();
+    const channels = getChannelsForUser(user);
 
-  if (!channels.length) {
-    return NextResponse.json(
+    if (!channels.length) {
+      return noStoreJson(
+        {
+          error: 'No realtime operations channel access found.',
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const subject = `dashboard:${user.id}:operations`;
+
+    const token = createCentrifugoConnectionToken({
+      subject,
+      ttlSeconds: 60 * 60,
+    });
+
+    return noStoreJson({
+      token,
+      channels: Array.from(new Set(channels)),
+      debug:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : {
+              subject,
+              userId: user.id,
+              role: user.role,
+              hotelId: user.hotelId,
+              channels,
+              issuedAt: new Date().toISOString(),
+              tokenSecretConfigured: Boolean(
+                process.env.CENTRIFUGO_TOKEN_HMAC_SECRET
+              ),
+            },
+    });
+  } catch (error) {
+    console.error('Operations realtime token route failed:', error);
+
+    return noStoreJson(
       {
-        error: 'No realtime operations channel access found.',
+        error: 'Unable to create operations realtime token.',
+        detail:
+          process.env.NODE_ENV === 'production'
+            ? undefined
+            : error instanceof Error
+              ? error.message
+              : String(error),
       },
       {
-        status: 403,
+        status: 500,
       }
     );
   }
-
-  const token = createCentrifugoConnectionToken({
-    subject: `dashboard-operations:${user.id}`,
-    ttlSeconds: 60 * 60,
-  });
-
-  return NextResponse.json({
-    token,
-    channels,
-  });
 }

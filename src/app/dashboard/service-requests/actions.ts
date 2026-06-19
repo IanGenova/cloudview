@@ -13,7 +13,10 @@ import { assertHotelScope } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
 import { triggerServiceRequestUpdated } from '@/lib/realtime/service-request-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
-import { awardServiceRequestPointsIfEligible } from '@/lib/nfc-rewards';
+import {
+  syncServiceRequestPoints,
+  voidSyncedServiceRequestPoints,
+} from '@/lib/guest-point-sync';
 
 function generateChargeCode() {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -81,11 +84,33 @@ function revalidateServiceRequestPaths() {
   revalidatePath('/t/[tagCode]/requests', 'page');
 }
 
-async function safelyAwardServiceRequestPoints(serviceRequestId: string) {
+async function safelySyncServiceRequestPoints(serviceRequestId: string) {
   try {
-    await awardServiceRequestPointsIfEligible(serviceRequestId);
+    const result = await syncServiceRequestPoints(serviceRequestId);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('Service request point sync result:', {
+        serviceRequestId,
+        result,
+      });
+    }
   } catch (error) {
-    console.warn('Failed to award service request reward points:', error);
+    console.warn('Failed to sync service request reward points:', error);
+  }
+}
+
+async function safelyVoidSyncedServiceRequestPoints(serviceRequestId: string) {
+  try {
+    const result = await voidSyncedServiceRequestPoints(serviceRequestId);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('Service request point void result:', {
+        serviceRequestId,
+        result,
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to void service request reward points:', error);
   }
 }
 
@@ -480,27 +505,31 @@ for (const id of idsToCharge) {
     });
   }
 
-if (status === ServiceRequestStatus.IN_PROGRESS) {
-  redirectToServiceRequests('request-started');
-}
+  if (status === ServiceRequestStatus.IN_PROGRESS) {
+    redirectToServiceRequests('request-started');
+  }
 
-if (status === ServiceRequestStatus.COMPLETED) {
-  await Promise.allSettled(
-    requestIds.map((id) => safelyAwardServiceRequestPoints(id))
-  );
+  if (status === ServiceRequestStatus.COMPLETED) {
+    await Promise.allSettled(
+      requestIds.map((id: string) => safelySyncServiceRequestPoints(id))
+    );
 
-  redirectToServiceRequests('request-completed');
-}
+    redirectToServiceRequests('request-completed');
+  }
 
-if (status === ServiceRequestStatus.CANCELLED) {
-  redirectToServiceRequests('request-cancelled');
-}
+  if (status === ServiceRequestStatus.CANCELLED) {
+    await Promise.allSettled(
+      requestIds.map((id: string) => safelyVoidSyncedServiceRequestPoints(id))
+    );
 
-if (shouldPostCharge) {
-  redirectToServiceRequests('charge-updated');
-}
+    redirectToServiceRequests('request-cancelled');
+  }
 
-redirectToServiceRequests('request-updated');
+  if (shouldPostCharge) {
+    redirectToServiceRequests('charge-updated');
+  }
+
+  redirectToServiceRequests('request-updated');
 }
 
 export async function cancelServiceRequestItemAction(formData: FormData) {

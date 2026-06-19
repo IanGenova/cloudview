@@ -250,6 +250,69 @@ function getStepIndex(status: OrderStatus) {
   return trackingSteps.findIndex((step) => step.status === status);
 }
 
+function getTrackingProgressPercent({
+  status,
+  currentStepIndex,
+}: {
+  status: OrderStatus;
+  currentStepIndex: number;
+}) {
+  if (status === OrderStatus.CANCELLED) {
+    return Math.max(10, Math.min(95, (currentStepIndex + 1) * 20));
+  }
+
+  switch (status) {
+    case OrderStatus.PENDING:
+      return 15;
+    case OrderStatus.ACCEPTED:
+      return 35;
+    case OrderStatus.PREPARING:
+      return 60;
+    case OrderStatus.READY:
+      return 85;
+    case OrderStatus.DELIVERED:
+      return 100;
+    default:
+      return 10;
+  }
+}
+
+function getShortStepLabel(status: OrderStatus) {
+  switch (status) {
+    case OrderStatus.PENDING:
+      return 'Received';
+    case OrderStatus.ACCEPTED:
+      return 'Confirmed';
+    case OrderStatus.PREPARING:
+      return 'Preparing';
+    case OrderStatus.READY:
+      return 'Ready';
+    case OrderStatus.DELIVERED:
+      return 'Delivered';
+    default:
+      return status.replaceAll('_', ' ');
+  }
+}
+
+function getProgressStatusText(status: OrderStatus) {
+  switch (status) {
+    case OrderStatus.PENDING:
+      return 'Waiting for staff confirmation';
+    case OrderStatus.ACCEPTED:
+      return 'Confirmed by hotel staff';
+    case OrderStatus.PREPARING:
+      return 'Kitchen is preparing your order';
+    case OrderStatus.READY:
+      return 'Ready for delivery';
+    case OrderStatus.DELIVERED:
+      return 'Completed';
+    case OrderStatus.CANCELLED:
+      return 'Cancelled';
+    default:
+      return 'Tracking order';
+  }
+}
+
 function getHighestCompletedStepIndex(
   statusHistory: {
     status: OrderStatus;
@@ -814,6 +877,212 @@ async function cancelGuestOrderItemAction(formData: FormData) {
   redirect(`/t/${tagCode}/track/${order.orderCode}`);
 }
 
+function CompactOrderProgress({
+  orderStatus,
+  currentStepIndex,
+  historyByStatus,
+  statusContent,
+  timerStart,
+  timerEnd,
+}: {
+  orderStatus: OrderStatus;
+  currentStepIndex: number;
+  historyByStatus: Map<
+    OrderStatus,
+    {
+      createdAt: Date;
+    }
+  >;
+  statusContent: ReturnType<typeof getStatusContent>;
+  timerStart: Date;
+  timerEnd: Date | null;
+}) {
+  const isCancelled = orderStatus === OrderStatus.CANCELLED;
+  const isDelivered = orderStatus === OrderStatus.DELIVERED;
+  const progressPercent = getTrackingProgressPercent({
+    status: orderStatus,
+    currentStepIndex,
+  });
+
+  const currentHistory = historyByStatus.get(orderStatus);
+  const currentStepLabel =
+    orderStatus === OrderStatus.CANCELLED
+      ? 'Cancelled'
+      : trackingSteps[currentStepIndex]?.label ?? statusContent.title;
+
+  return (
+    <section
+      className={cx(
+        'mt-5 rounded-[2rem] border p-5 shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
+        isCancelled
+          ? 'border-red-500/25 bg-red-500/10'
+          : 'border-gold/25 bg-white/[0.055]'
+      )}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+            Live Progress
+          </p>
+          <h2 className="mt-1 text-lg font-black text-white">
+            {getProgressStatusText(orderStatus)}
+          </h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+            Updates automatically through realtime events.
+          </p>
+        </div>
+
+        <span
+          className={cx(
+            'shrink-0 rounded-full px-3 py-1 text-[10px] font-black',
+            isCancelled
+              ? 'bg-red-500/20 text-red-200'
+              : isDelivered
+                ? 'bg-emerald-500/20 text-emerald-200'
+                : 'bg-gold/15 text-gold'
+          )}
+        >
+          {orderStatus.replaceAll('_', ' ')}
+        </span>
+      </div>
+
+      <div className="mt-5 grid grid-cols-5 gap-1">
+        {trackingSteps.map((step, index) => {
+          const active =
+            !isCancelled && !isDelivered && orderStatus === step.status;
+
+          const reached =
+            isDelivered ||
+            (!isCancelled && currentStepIndex >= index) ||
+            (isCancelled && currentStepIndex >= index);
+
+          const completed = reached && !active;
+
+          return (
+            <div key={step.status} className="min-w-0 text-center">
+              <div className="relative flex items-center justify-center">
+                {index > 0 ? (
+                  <span
+                    className={cx(
+                      'absolute right-1/2 top-1/2 h-0.5 w-full -translate-y-1/2',
+                      reached ? 'bg-gold' : 'bg-white/10'
+                    )}
+                  />
+                ) : null}
+
+                <span
+                  className={cx(
+                    'relative z-10 grid size-9 place-items-center rounded-full border text-xs font-black transition',
+                    active
+                      ? 'animate-pulse border-gold bg-gold text-black shadow-[0_0_24px_rgba(201,156,56,0.45)]'
+                      : completed
+                        ? 'border-gold bg-gold text-black'
+                        : 'border-white/20 bg-black text-white/35'
+                  )}
+                >
+                  {completed ? (
+                    <Check className="size-4" />
+                  ) : active ? (
+                    <Clock className="size-4" />
+                  ) : (
+                    <Circle className="size-3" />
+                  )}
+                </span>
+              </div>
+
+              <p
+                className={cx(
+                  'mt-2 truncate text-[10px] font-black',
+                  active || completed ? 'text-white' : 'text-white/35'
+                )}
+              >
+                {getShortStepLabel(step.status)}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-5">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/35">
+            Order Progress
+          </p>
+
+          <p
+            className={cx(
+              'text-xs font-black',
+              isCancelled ? 'text-red-200' : 'text-gold'
+            )}
+          >
+            {progressPercent}% complete
+          </p>
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full bg-white/10">
+          <div
+            className={cx(
+              'h-full rounded-full transition-all duration-700',
+              isCancelled
+                ? 'bg-red-500'
+                : isDelivered
+                  ? 'bg-emerald-500'
+                  : 'bg-gradient-to-r from-[#8d641c] via-[#c99c38] to-[#f1c66a]'
+            )}
+            style={{
+              width: `${progressPercent}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-2">
+        <div className="rounded-2xl bg-black/30 p-3">
+          <p className="text-[10px] font-black uppercase text-white/35">
+            Current
+          </p>
+          <p className="mt-1 truncate text-sm font-black text-white">
+            {currentStepLabel}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-black/30 p-3">
+          <p className="text-[10px] font-black uppercase text-white/35">
+            Timer
+          </p>
+          <p className="mt-1 text-sm font-black text-white">
+            <LiveElapsedTimer from={timerStart} to={timerEnd} />
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-black/30 p-3">
+          <p className="text-[10px] font-black uppercase text-white/35">
+            Updated
+          </p>
+          <p className="mt-1 text-sm font-black text-white">
+            {currentHistory ? formatTime(currentHistory.createdAt) : 'Now'}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-black/25 p-3 text-center">
+        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/35">
+          {statusContent.etaLabel}
+        </p>
+
+        <p
+          className={cx(
+            'mt-1 text-xl font-black',
+            isCancelled ? 'text-red-200' : 'text-sand'
+          )}
+        >
+          {statusContent.eta}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function OrderItemLine({
   item,
   orderStatus,
@@ -1076,26 +1345,26 @@ export default async function OrderTrackingPage({
           <div />
         </div>
 
-        <section className="py-8 text-center">
-          <div className="mb-8 flex justify-center">
+        <section className="py-5 text-center">
+          <div className="mb-5 flex justify-center">
             <GuestLogo hotel={order.hotel} />
           </div>
 
           {isCancelled ? (
-            <div className="mx-auto mb-6 grid size-20 place-items-center rounded-[2rem] border border-red-500/40 bg-red-500/10 text-red-300">
-              <AlertTriangle className="size-9" />
+            <div className="mx-auto mb-5 grid size-16 place-items-center rounded-[2rem] border border-red-500/40 bg-red-500/10 text-red-300">
+              <AlertTriangle className="size-7" />
             </div>
           ) : isDelivered ? (
-            <div className="mx-auto mb-6 grid size-20 place-items-center rounded-[2rem] border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
-              <PackageCheck className="size-9" />
+            <div className="mx-auto mb-5 grid size-16 place-items-center rounded-[2rem] border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
+              <PackageCheck className="size-7" />
             </div>
           ) : (
-            <div className="mx-auto mb-6 grid size-20 place-items-center rounded-[2rem] border border-gold/40 bg-gold/10 text-gold">
-              <Utensils className="size-9" />
+            <div className="mx-auto mb-5 grid size-16 place-items-center rounded-[2rem] border border-gold/40 bg-gold/10 text-gold">
+              <Utensils className="size-7" />
             </div>
           )}
 
-          <h2 className="font-serif text-5xl leading-tight text-white">
+          <h2 className="font-serif text-4xl leading-tight text-white">
             {statusContent.title}
           </h2>
 
@@ -1119,130 +1388,15 @@ export default async function OrderTrackingPage({
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-gold/25 bg-gold/10 p-5 text-center">
-          <div className="mb-3 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.28em] text-gold">
-            <Timer className="size-4" />
-            Running Timer
-          </div>
+        <CompactOrderProgress
+        orderStatus={order.status}
+        currentStepIndex={currentStepIndex}
+        historyByStatus={historyByStatus}
+        statusContent={statusContent}
+        timerStart={timerStart}
+        timerEnd={timerEnd}
+      />
 
-          <p className="text-5xl font-black">
-            <LiveElapsedTimer from={timerStart} to={timerEnd} />
-          </p>
-
-          <p className="mt-3 text-sm text-white/45">
-            {statusContent.timerLabel}
-          </p>
-        </section>
-
-        <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/5 p-5">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-black">Live Progress</h2>
-              <p className="mt-1 text-xs text-white/45">
-                Updates automatically through realtime WebSocket events.
-              </p>
-            </div>
-
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white/70">
-              {order.status.replaceAll('_', ' ')}
-            </span>
-          </div>
-
-          <div className="space-y-5">
-            {trackingSteps.map((step, index) => {
-              const history = historyByStatus.get(step.status);
-              const active = order.status === step.status;
-              const done = currentStepIndex >= index && !isCancelled;
-
-              const cancelledButCompleted =
-                isCancelled && currentStepIndex >= index;
-
-              const completed = done || cancelledButCompleted;
-
-              return (
-                <div key={step.status} className="relative flex gap-4">
-                  {index < trackingSteps.length - 1 ? (
-                    <div
-                      className={cx(
-                        'absolute left-4 top-9 h-8 w-px',
-                        completed ? 'bg-gold' : 'bg-white/20'
-                      )}
-                    />
-                  ) : null}
-
-                  <div
-                    className={cx(
-                      'z-10 grid size-8 shrink-0 place-items-center rounded-full border',
-                      completed
-                        ? 'border-gold bg-gold text-ink'
-                        : 'border-white/25 bg-black text-white/40'
-                    )}
-                  >
-                    {completed && !active ? (
-                      <Check className="size-4" />
-                    ) : active ? (
-                      <Clock className="size-4" />
-                    ) : (
-                      <Circle className="size-3" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p
-                          className={cx(
-                            'font-black',
-                            completed || active ? 'text-white' : 'text-white/45'
-                          )}
-                        >
-                          {step.label}
-                        </p>
-
-                        <p className="mt-1 text-xs text-white/45">
-                          {step.description}
-                        </p>
-                      </div>
-
-                      {history ? (
-                        <p className="shrink-0 text-xs font-semibold text-white/45">
-                          {formatTime(history.createdAt)}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {isCancelled ? (
-              <div className="relative flex gap-4">
-                <div className="z-10 grid size-8 shrink-0 place-items-center rounded-full border border-red-500 bg-red-500 text-white">
-                  <AlertTriangle className="size-4" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-black text-red-200">Order Cancelled</p>
-                      <p className="mt-1 text-xs text-white/45">
-                        This order was cancelled.
-                      </p>
-                    </div>
-
-                    {historyByStatus.get(OrderStatus.CANCELLED) ? (
-                      <p className="shrink-0 text-xs font-semibold text-white/45">
-                        {formatTime(
-                          historyByStatus.get(OrderStatus.CANCELLED)!.createdAt
-                        )}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
 
         <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/5 p-5">
           <div className="mb-4 flex items-center gap-2">

@@ -243,6 +243,7 @@ export function GuestServiceOrderForm({
   tagCode,
   roomLabel,
   services,
+  defaultGuestName = '',
   error,
   success,
   count,
@@ -250,13 +251,14 @@ export function GuestServiceOrderForm({
   tagCode: string;
   roomLabel: string;
   services: GuestServiceItem[];
+  defaultGuestName?: string;
   error?: string;
   success?: string;
   count?: string;
 }) {
   const [screen, setScreen] = useState<'services' | 'cart'>('services');
   const [cart, setCart] = useState<ServiceCartItem[]>([]);
-  const [guestName, setGuestName] = useState('');
+  const [guestName, setGuestName] = useState(defaultGuestName);
   const [notes, setNotes] = useState('');
   const [chargeConsent, setChargeConsent] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -272,6 +274,11 @@ export function GuestServiceOrderForm({
           objectUrlsRef.current = [];
         };
       }, []);
+
+
+      useEffect(() => {
+      setGuestName(defaultGuestName);
+    }, [defaultGuestName]);
 
   const serviceMap = useMemo(
     () => new Map(services.map((service) => [service.code, service])),
@@ -661,12 +668,22 @@ function clearAttachments() {
               <h3 className="mb-3 font-black">Request Details</h3>
 
               <div className="space-y-3">
-                <Input
-                  name="guestName"
-                  placeholder="Guest name optional"
-                  value={guestName}
-                  onChange={(event) => setGuestName(event.target.value)}
-                />
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                    Requested By
+                  </label>
+
+                  <Input
+                    name="guestName"
+                    placeholder="Guest name"
+                    value={guestName}
+                    onChange={(event) => setGuestName(event.target.value)}
+                  />
+
+                  <p className="mt-1 text-xs font-semibold text-neutral-400">
+                    Auto-filled from the current stay. You may edit this if another guest is making the request.
+                  </p>
+                </div>
 
                 <Textarea
                   name="notes"
@@ -840,17 +857,21 @@ function clearAttachments() {
       ) : null}
 
       <div className="mb-4">
-        <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-sand">
-          Guest Name
-        </label>
+          <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-sand">
+            Requested By
+          </label>
 
-        <Input
-          placeholder="Guest name optional"
-          value={guestName}
-          onChange={(event) => setGuestName(event.target.value)}
-          className="h-14 rounded-2xl border-white/10 bg-white text-ink"
-        />
-      </div>
+          <Input
+            placeholder="Guest name"
+            value={guestName}
+            onChange={(event) => setGuestName(event.target.value)}
+            className="h-14 rounded-2xl border-white/10 bg-white text-ink"
+          />
+
+          <p className="mt-1 text-xs font-semibold text-white/45">
+            Auto-filled from your current stay. You may edit this name before submitting.
+          </p>
+        </div>
 
       <div className="mb-4 flex h-12 items-center gap-3 rounded-2xl bg-white/10 px-4">
         <Search className="size-5 text-white/40" />

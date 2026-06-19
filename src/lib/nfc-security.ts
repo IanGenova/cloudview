@@ -22,7 +22,6 @@ function getIdleTimeoutMinutes() {
 function appSecret() {
   return process.env.AUTH_SECRET || 'dev-change-this-secret';
 }
-
 function isPrivateLanHostname(hostname: string) {
   return (
     hostname.startsWith('192.168.') ||
@@ -32,75 +31,78 @@ function isPrivateLanHostname(hostname: string) {
 }
 
 function shouldForceHttpsForHost(hostname: string) {
-  if (process.env.NEXT_PUBLIC_FORCE_HTTPS === 'false') {
+  const forceHttps = process.env.NEXT_PUBLIC_FORCE_HTTPS;
+
+  if (forceHttps === 'false') {
     return false;
   }
 
-  if (process.env.NEXT_PUBLIC_FORCE_HTTPS === 'true') {
+  if (forceHttps === 'true') {
     return true;
   }
 
-  return (
-    process.env.NODE_ENV === 'production' ||
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '0.0.0.0' ||
-    isPrivateLanHostname(hostname)
-  );
+  /**
+   * Default:
+   * - Production should prefer HTTPS.
+   * - Local LAN development should NOT automatically force HTTPS.
+   */
+  if (process.env.NODE_ENV === 'production') {
+    return !isPrivateLanHostname(hostname);
+  }
+
+  return false;
 }
 
 export function getPublicAppUrl() {
-  const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000';
-  const lanIp = process.env.NEXT_PUBLIC_LAN_IP;
+  const lanIp = process.env.NEXT_PUBLIC_LAN_IP || 'localhost';
 
-  if (rawUrl.includes('0.0.0.0')) {
-    if (lanIp) {
-      return `https://${lanIp}:3000`;
-    }
-
-    return 'https://localhost:3000';
-  }
+  const rawUrl =
+    process.env.NEXT_PUBLIC_APP_URL || `http://${lanIp}:3000`;
 
   try {
     const url = new URL(rawUrl);
 
-    if (lanIp && url.hostname === 'localhost') {
+    if (['0.0.0.0', 'localhost', '127.0.0.1'].includes(url.hostname)) {
       url.hostname = lanIp;
     }
 
-    if (shouldForceHttpsForHost(url.hostname)) {
-      url.protocol = 'https:';
+    /**
+     * Force HTTP for local LAN testing.
+     * This prevents NFC links from becoming https:// again.
+     */
+    url.protocol = 'http:';
+
+    if (!url.port) {
+      url.port = '3000';
     }
 
     return url.toString().replace(/\/$/, '');
   } catch {
     const cleanedUrl = rawUrl.replace(/\/$/, '');
 
-    if (cleanedUrl.startsWith('http://')) {
-      return cleanedUrl.replace(/^http:\/\//i, 'https://');
+    if (cleanedUrl.startsWith('https://')) {
+      return cleanedUrl.replace(/^https:\/\//i, 'http://');
     }
 
-    return cleanedUrl;
+    if (cleanedUrl.startsWith('http://')) {
+      return cleanedUrl;
+    }
+
+    return `http://${cleanedUrl}:3000`;
   }
 }
 
 export function isHttpsPublicAppUrl() {
-  return getPublicAppUrl().startsWith('https://');
+  return false;
 }
 
 export async function shouldUseSecureNfcCookies() {
-  if (isHttpsPublicAppUrl()) {
-    return true;
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    return true;
-  }
-
-  const h = await headers();
-  const forwardedProto = h.get('x-forwarded-proto');
-
-  return forwardedProto === 'https';
+  /**
+   * HTTP mode:
+   * Cookies must NOT be secure, otherwise other LAN devices using HTTP
+   * will not save NFC access/session cookies.
+   */
+  return false;
 }
 
 export function randomSecret() {

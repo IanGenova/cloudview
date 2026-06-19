@@ -25,7 +25,10 @@ import {
 } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { publishCancelledItemAlert } from '@/lib/realtime/dashboard-alerts';
-import { awardOrderPointsIfEligible, voidOrderPoints } from '@/lib/rewards';
+import {
+  syncOrderPoints,
+  voidSyncedOrderPoints,
+} from '@/lib/guest-point-sync';
 
 type RestoreOrderItem = {
   id: string;
@@ -70,19 +73,33 @@ async function safelyPublishCancelledItemAlert(payload: {
   }
 }
 
-async function safelyAwardOrderPoints(orderId: string) {
+async function safelySyncOrderPoints(orderId: string) {
   try {
-    await awardOrderPointsIfEligible(orderId);
+    const result = await syncOrderPoints(orderId);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('Order point sync result:', {
+        orderId,
+        result,
+      });
+    }
   } catch (error) {
-    console.warn('Failed to award order reward points:', error);
+    console.warn('Failed to sync order reward points:', error);
   }
 }
 
-async function safelyVoidOrderPoints(orderId: string) {
+async function safelyVoidSyncedOrderPoints(orderId: string) {
   try {
-    await voidOrderPoints(orderId);
+    const result = await voidSyncedOrderPoints(orderId);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('Order point void result:', {
+        orderId,
+        result,
+      });
+    }
   } catch (error) {
-    console.warn('Failed to void order reward points:', error);
+    console.warn('Failed to void synced order reward points:', error);
   }
 }
 
@@ -770,7 +787,7 @@ export async function cancelOrderItemAction(formData: FormData) {
 });
 
       if (allItemsCancelled) {
-        await safelyVoidOrderPoints(order.id);
+        await safelyVoidSyncedOrderPoints(order.id);
       }
 
   
@@ -889,11 +906,11 @@ export async function updateOrderStatusAction(formData: FormData) {
     throw error;
   }
     if (status === OrderStatus.DELIVERED) {
-      await safelyAwardOrderPoints(order.id);
+      await safelySyncOrderPoints(order.id);
     }
 
     if (status === OrderStatus.CANCELLED) {
-      await safelyVoidOrderPoints(order.id);
+      await safelyVoidSyncedOrderPoints(order.id);
 
       await safelyPublishCancelledItemAlert({
         hotelId: order.hotelId,
@@ -976,7 +993,7 @@ export async function markOrderPaidAction(formData: FormData) {
       paymentStatus: PaymentStatus.PAID,
     },
   });
-  await safelyAwardOrderPoints(order.id);
+  await safelySyncOrderPoints(order.id);
 
   revalidateOrderPaths(order);
 

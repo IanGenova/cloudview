@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
 
@@ -17,12 +17,44 @@ type ServiceRequestRealtimePayload = {
   updatedAt?: string;
 };
 
+const VALID_SERVICE_REQUEST_EVENTS = new Set([
+  'service-request-created',
+  'service-request-updated',
+  'service-request-billed',
+]);
+
+function getEventKey(data: ServiceRequestRealtimePayload) {
+  return [
+    data.event || 'unknown-event',
+    data.hotelId || 'no-hotel',
+    data.requestCode || data.requestId || 'no-request',
+    data.status || 'no-status',
+    data.source || 'no-source',
+    data.updatedAt || 'no-time',
+  ].join(':');
+}
+
+function isRelevantServiceRequestEvent(data: ServiceRequestRealtimePayload) {
+  if (!data?.event) {
+    return false;
+  }
+
+  return VALID_SERVICE_REQUEST_EVENTS.has(data.event);
+}
+
 export function RealtimeServiceRequestsRefresh({
-  fallbackIntervalMs = 30_000,
+  fallbackIntervalMs = 120_000,
+  refreshDebounceMs = 700,
 }: {
   fallbackIntervalMs?: number;
+  refreshDebounceMs?: number;
 }) {
   const router = useRouter();
+
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const lastEventKeyRef = useRef('');
+  const activeChannelsRef = useRef<Set<string>>(new Set());
+  const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
     let disposed = false;
@@ -32,15 +64,79 @@ export function RealtimeServiceRequestsRefresh({
       unsubscribe: () => void;
     }> = [];
 
-    const refresh = () => {
-      router.refresh();
-    };
+    function clearScheduledRefresh() {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    }
 
-    const fallbackTimer = window.setInterval(refresh, fallbackIntervalMs);
+    function hasRealtimeConnection() {
+      return activeChannelsRef.current.size > 0;
+    }
+
+    function scheduleRefresh(reason: string, delayMs = refreshDebounceMs) {
+      if (disposed) {
+        return;
+      }
+
+      clearScheduledRefresh();
+
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        if (disposed) {
+          return;
+        }
+
+        lastRefreshAtRef.current = Date.now();
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.info('Refreshing service requests dashboard:', {
+            reason,
+          });
+        }
+
+        router.refresh();
+        refreshTimeoutRef.current = null;
+      }, delayMs);
+    }
+
+    const fallbackTimer = window.setInterval(() => {
+      if (disposed) {
+        return;
+      }
+
+      /**
+       * Do not poll while the browser tab is hidden.
+       */
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      /**
+       * Do not poll if Centrifugo subscriptions are active.
+       * Realtime events are already handling updates.
+       */
+      if (hasRealtimeConnection()) {
+        return;
+      }
+
+      const elapsedSinceLastRefresh = Date.now() - lastRefreshAtRef.current;
+
+      if (
+        lastRefreshAtRef.current > 0 &&
+        elapsedSinceLastRefresh < fallbackIntervalMs
+      ) {
+        return;
+      }
+
+      scheduleRefresh('fallback-polling', 0);
+    }, Math.max(30_000, fallbackIntervalMs));
 
     async function connect() {
       try {
-        const response = await fetch('/api/realtime/service-requests-token', {
+        const tokenEndpoint = '/api/realtime/service-requests-token';
+
+        const response = await fetch(tokenEndpoint, {
           cache: 'no-store',
         });
 
@@ -58,32 +154,57 @@ export function RealtimeServiceRequestsRefresh({
           return;
         }
 
-        centrifuge = createCentrifugoClient(payload.token);
+        centrifuge = createCentrifugoClient(payload.token, {
+          tokenEndpoint,
+          debugLabel: 'Service requests dashboard',
+        });
 
         if (!centrifuge) {
           return;
         }
 
-        for (const channelName of payload.channels) {
+        const uniqueChannels = Array.from(new Set(payload.channels));
+
+        for (const channelName of uniqueChannels) {
           const subscription = centrifuge.newSubscription(channelName);
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as ServiceRequestRealtimePayload;
 
-            if (
-              data?.event === 'service-request-created' ||
-              data?.event === 'service-request-updated' ||
-              data?.event === 'service-request-billed'
-            ) {
-              refresh();
+            if (!isRelevantServiceRequestEvent(data)) {
               return;
             }
 
-            refresh();
+            const eventKey = getEventKey(data);
+
+            /**
+             * Prevent duplicate refreshes.
+             * This matters when a SUPER_ADMIN is subscribed to both global and hotel channels,
+             * or when the same event is replayed after reconnect.
+             */
+            if (eventKey === lastEventKeyRef.current) {
+              return;
+            }
+
+            lastEventKeyRef.current = eventKey;
+
+            scheduleRefresh(data.event || 'service-request-publication');
           });
 
           subscription.on('subscribed', () => {
-            console.log(`Subscribed to ${channelName}`);
+            activeChannelsRef.current.add(channelName);
+
+            if (process.env.NODE_ENV !== 'production') {
+              console.info(`Subscribed to ${channelName}`);
+            }
+          });
+
+          subscription.on('unsubscribed', () => {
+            activeChannelsRef.current.delete(channelName);
+
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn(`Unsubscribed from ${channelName}`);
+            }
           });
 
           subscription.on('error', (ctx) => {
@@ -97,8 +218,13 @@ export function RealtimeServiceRequestsRefresh({
           subscriptions.push(subscription);
         }
 
+        centrifuge.on('disconnected', () => {
+          activeChannelsRef.current.clear();
+        });
+
         centrifuge.connect();
       } catch (error) {
+        activeChannelsRef.current.clear();
         console.error('Service request realtime connection error:', error);
       }
     }
@@ -107,7 +233,10 @@ export function RealtimeServiceRequestsRefresh({
 
     return () => {
       disposed = true;
+
       window.clearInterval(fallbackTimer);
+      clearScheduledRefresh();
+      activeChannelsRef.current.clear();
 
       for (const subscription of subscriptions) {
         try {
@@ -123,7 +252,7 @@ export function RealtimeServiceRequestsRefresh({
         // Ignore disconnect errors.
       }
     };
-  }, [fallbackIntervalMs, router]);
+  }, [fallbackIntervalMs, refreshDebounceMs, router]);
 
   return null;
 }

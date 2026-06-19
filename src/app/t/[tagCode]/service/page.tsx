@@ -5,6 +5,7 @@ import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
 import { GuestServiceOrderForm } from './GuestServiceOrderForm';
+import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,8 @@ export default async function ServicePage({
     ],
   });
 
+  const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
+  const defaultGuestName = guestIdentity.guestName || '';
   const guestServices = services.map((service) => ({
     id: service.id,
     code: service.code,
@@ -137,7 +140,19 @@ export default async function ServicePage({
         <GuestServiceOrderForm
           tagCode={tagCode}
           roomLabel={roomLabel}
-          services={guestServices}
+          services={services.map((service) => ({
+                id: service.id,
+                code: service.code,
+                name: service.name,
+                category: service.category,
+                description: service.description ?? '',
+                iconKey: service.iconKey,
+                billingMode: service.billingMode,
+                unitPrice: Number(service.unitPrice),
+                unitLabel: service.unitLabel ?? '',
+                sortOrder: service.sortOrder,
+              }))}
+          defaultGuestName={defaultGuestName}
           error={error}
           success={success}
           count={count}

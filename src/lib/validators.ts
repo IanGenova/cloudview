@@ -3,6 +3,19 @@ import { z } from 'zod';
 const MAX_GUEST_ORDER_ITEM_QTY = 999;
 const MAX_GUEST_ORDER_ITEMS = 30;
 
+function optionalText(maxLength: number) {
+  return z.preprocess(
+    (value) => {
+      if (value === null || value === undefined) {
+        return '';
+      }
+
+      return value;
+    },
+    z.string().trim().max(maxLength)
+  );
+}
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
@@ -18,23 +31,34 @@ export const guestCartItemSchema = z.object({
       MAX_GUEST_ORDER_ITEM_QTY,
       `Quantity cannot exceed ${MAX_GUEST_ORDER_ITEM_QTY} per item.`
     ),
-  notes: z.string().max(300).optional().nullable(),
+  notes: optionalText(300),
 });
 
 export const createGuestOrderSchema = z.object({
-  tagCode: z.string().min(2),
-  guestName: z.string().max(100).optional().nullable(),
-  notes: z.string().max(1000).optional().nullable(),
+  tagCode: z.string().trim().min(2),
+  /**
+   * Important:
+   * Guest name is optional because ROOM guests can be auto-filled from GuestStay.
+   * Public-area guests may still manually type their name.
+   */
+  guestName: optionalText(100),
+  notes: optionalText(1000),
   paymentMethod: z.enum(['ROOM_CHARGE', 'PAY_AT_COUNTER', 'CASH', 'POS']),
   items: z
     .array(guestCartItemSchema)
     .min(1, 'Please select at least one item.')
-    .max(MAX_GUEST_ORDER_ITEMS, `You can order up to ${MAX_GUEST_ORDER_ITEMS} different items only.`),
+    .max(
+      MAX_GUEST_ORDER_ITEMS,
+      `You can order up to ${MAX_GUEST_ORDER_ITEMS} different items only.`
+    ),
 });
 
 export const createServiceRequestSchema = z.object({
-  tagCode: z.string().min(2),
-  type: z.string().min(2).max(80),
-  guestName: z.string().max(100).optional().nullable(),
-  notes: z.string().max(1000).optional().nullable(),
+  tagCode: z.string().trim().min(2),
+  type: z.string().trim().min(2).max(80),
+  /**
+   * Also optional because service requests can use GuestStay guest name.
+   */
+  guestName: optionalText(100),
+  notes: optionalText(1000),
 });

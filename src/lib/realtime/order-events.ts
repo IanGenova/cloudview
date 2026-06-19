@@ -1,74 +1,32 @@
 import type { OrderStatus, PaymentStatus } from '@prisma/client';
+import { publishToCentrifugo } from '@/lib/realtime/centrifugo-publisher';
+import { realtimeChannels } from '@/lib/realtime/channels';
 
-type CentrifugoPublication = {
-  event: 'order-status-updated' | 'order-payment-updated';
-  orderCode: string;
-  status?: OrderStatus;
-  paymentStatus?: PaymentStatus;
-  updatedAt: string;
-};
+type OrderRealtimeEvent =
+  | {
+      event: 'order-status-updated';
+      orderCode: string;
+      status: OrderStatus;
+      updatedAt: string;
+    }
+  | {
+      event: 'order-payment-updated';
+      orderCode: string;
+      paymentStatus: PaymentStatus;
+      updatedAt: string;
+    };
 
-function getCentrifugoApiUrl() {
-  const apiUrl = process.env.CENTRIFUGO_HTTP_API_URL;
-
-  if (!apiUrl) {
-    console.warn('CENTRIFUGO_HTTP_API_URL is missing. Realtime events skipped.');
-    return null;
-  }
-
-  const normalizedUrl = apiUrl.replace(/\/$/, '');
-
-  if (normalizedUrl.endsWith('/publish')) {
-    return normalizedUrl;
-  }
-
-  return `${normalizedUrl}/publish`;
-}
-
-function getCentrifugoApiKey() {
-  const apiKey = process.env.CENTRIFUGO_HTTP_API_KEY;
-
-  if (!apiKey) {
-    console.warn('CENTRIFUGO_HTTP_API_KEY is missing. Realtime events skipped.');
-    return null;
-  }
-
-  return apiKey;
-}
-
-function getOrderChannel(orderCode: string) {
-  return `order-${orderCode}`;
-}
-
-async function publishOrderEvent(data: CentrifugoPublication) {
-  const publishUrl = getCentrifugoApiUrl();
-  const apiKey = getCentrifugoApiKey();
-
-  if (!publishUrl || !apiKey) {
+async function publishOrderEvent(data: OrderRealtimeEvent) {
+  if (!data.orderCode?.trim()) {
+    console.warn('Order realtime publish skipped. orderCode is missing.');
     return;
   }
 
-  try {
-    const response = await fetch(publishUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-        'X-Centrifugo-Error-Mode': 'transport',
-      },
-      body: JSON.stringify({
-        channel: getOrderChannel(data.orderCode),
-        data,
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('Centrifugo publish failed:', response.status, text);
-    }
-  } catch (error) {
-    console.error('Centrifugo publish error:', error);
-  }
+  await publishToCentrifugo({
+    channel: realtimeChannels.guestOrder(data.orderCode),
+    data,
+    debugLabel: data.event,
+  });
 }
 
 export async function triggerOrderStatusUpdate({

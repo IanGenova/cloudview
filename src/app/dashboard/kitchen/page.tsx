@@ -20,6 +20,7 @@ import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
+import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
 
 type KitchenToastMessage =
   | {
@@ -442,6 +443,7 @@ function KitchenOrderItemLine({ item }: { item: KitchenOrderItem }) {
     </div>
   );
 }
+const KITCHEN_VISIBLE_ITEM_LIMIT = 3;
 
 function KitchenOrderCard({
   order,
@@ -456,6 +458,9 @@ function KitchenOrderCard({
   const activeItemCount = getActiveItemCount(order.items);
   const cancelledItemCount = getCancelledItemCount(order.items);
 
+  const visibleItems = order.items.slice(0, KITCHEN_VISIBLE_ITEM_LIMIT);
+  const hiddenItemCount = Math.max(order.items.length - visibleItems.length, 0);
+
   const displayStatus =
     order.status === OrderStatus.ACCEPTED
       ? OrderStatus.PREPARING
@@ -464,15 +469,15 @@ function KitchenOrderCard({
   const historyParam = showHistory ? '1' : '';
 
   return (
-    <article className="flex h-full min-h-[300px] w-[82vw] max-w-[320px] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:w-[310px] md:w-[320px]">
-      <div className="shrink-0 border-b border-neutral-100 p-3 dark:border-neutral-800">
-        <div className="flex items-start justify-between gap-3">
+  <article className="grid w-full max-w-[380px] self-start overflow-hidden rounded-[1.25rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="min-h-0 border-b border-neutral-100 p-2.5 dark:border-neutral-800">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-black text-neutral-950 dark:text-white">
+            <h3 className="truncate text-sm font-black text-neutral-950 dark:text-white">
               {order.orderCode}
             </h3>
 
-            <p className="mt-0.5 truncate text-xs font-bold text-neutral-500 dark:text-neutral-400">
+            <p className="mt-0.5 truncate text-[11px] font-bold text-neutral-500 dark:text-neutral-400">
               {roomOrLocation(order)}
             </p>
           </div>
@@ -483,7 +488,7 @@ function KitchenOrderCard({
           </div>
         </div>
 
-        <div className="mt-3 grid gap-1 rounded-2xl bg-neutral-50 p-3 text-xs dark:bg-neutral-950">
+        <div className="mt-2 grid gap-1 rounded-xl bg-neutral-50 p-2 text-[11px] dark:bg-neutral-950">
           <p className="truncate">
             <span className="font-black text-neutral-950 dark:text-white">
               Guest:
@@ -504,7 +509,7 @@ function KitchenOrderCard({
 
           <div className="mt-1 flex flex-wrap gap-1">
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-              {activeItemCount} active item{activeItemCount === 1 ? '' : 's'}
+              {activeItemCount} active
             </span>
 
             {cancelledItemCount > 0 ? (
@@ -516,56 +521,58 @@ function KitchenOrderCard({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
-        {order.items.map((item) => (
+    <div className="space-y-1 overflow-hidden p-2.5">
+        {visibleItems.map((item) => (
           <KitchenOrderItemLine key={item.id} item={item} />
         ))}
 
+        {hiddenItemCount > 0 ? (
+          <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-center text-xs font-black text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
+            +{hiddenItemCount} more item{hiddenItemCount === 1 ? '' : 's'}
+          </div>
+        ) : null}
+
         {order.notes ? (
-          <div className="rounded-xl bg-yellow-50 p-2 text-xs text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200">
+          <div className="line-clamp-2 rounded-xl bg-yellow-50 p-2 text-xs text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200">
             <b>Guest note:</b> {order.notes}
           </div>
         ) : null}
       </div>
 
-      <div className="mt-auto shrink-0 border-t border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="border-t border-neutral-100 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
         {type === 'pending' ? (
           <div className="grid grid-cols-2 gap-2">
-            <OrderActionButton
+           <KitchenStatusActionButton
               orderId={order.id}
               status={OrderStatus.PREPARING}
               label="Accept"
               tone="dark"
-              history={historyParam}
             />
 
-            <OrderActionButton
-              orderId={order.id}
-              status={OrderStatus.CANCELLED}
-              label="Reject"
-              tone="danger"
-              history={historyParam}
-            />
+           <KitchenStatusActionButton
+            orderId={order.id}
+            status={OrderStatus.CANCELLED}
+            label="Reject"
+            tone="danger"
+          />
           </div>
         ) : null}
 
         {type === 'preparing' ? (
-          <OrderActionButton
-            orderId={order.id}
-            status={OrderStatus.READY}
-            label="Done / Ready"
-            tone="dark"
-            history={historyParam}
-          />
+          <KitchenStatusActionButton
+              orderId={order.id}
+              status={OrderStatus.READY}
+              label="Done / Ready"
+              tone="dark"
+            />
         ) : null}
 
         {type === 'ready' ? (
-          <OrderActionButton
+         <KitchenStatusActionButton
             orderId={order.id}
             status={OrderStatus.DELIVERED}
             label="Mark Delivered"
             tone="dark"
-            history={historyParam}
           />
         ) : null}
       </div>
@@ -587,8 +594,8 @@ function KitchenLane({
   showHistory: boolean;
 }) {
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="shrink-0 flex items-center justify-between gap-3 px-4 pt-4">
+    <section className="rounded-[2rem] border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <div>
           <h2 className="text-xl font-black text-neutral-950 dark:text-white md:text-2xl">
             {title}
@@ -604,25 +611,25 @@ function KitchenLane({
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-x-auto mt-4 px-4 pb-4">
-        <div className="flex h-full min-w-full items-stretch gap-3">
-          {orders.length === 0 ? (
-            <div className="grid h-full w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
-              <p className="font-black text-neutral-500 dark:text-neutral-400">
-                No {title.toLowerCase()} orders
-              </p>
-            </div>
-          ) : null}
-
-          {orders.map((order) => (
-            <KitchenOrderCard 
-              key={order.id} 
-              order={order} 
-              type={type} 
-              showHistory={showHistory} 
-            />
-          ))}
-        </div>
+      <div className="px-4 pb-4 pt-4">
+        {orders.length === 0 ? (
+          <div className="grid min-h-32 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
+            <p className="font-black text-neutral-500 dark:text-neutral-400">
+              No {title.toLowerCase()} orders
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,380px))] items-start justify-start gap-3">
+            {orders.map((order) => (
+              <KitchenOrderCard
+                key={order.id}
+                order={order}
+                type={type}
+                showHistory={showHistory}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -819,10 +826,17 @@ export default async function KitchenDisplayPage({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div
+            className={cn(
+              'min-h-0 flex-1 grid gap-4',
+              showHistory
+                ? 'xl:grid-cols-[minmax(0,1fr)_340px]'
+                : 'xl:grid-cols-1'
+            )}
+          >
         <main
           className={cn(
-            'min-h-0 flex-col gap-5',
+            'min-h-0 flex-col gap-3',
             showHistory ? 'hidden xl:flex' : 'flex'
           )}
         >
@@ -852,11 +866,11 @@ export default async function KitchenDisplayPage({
         </main>
 
         <aside
-          className={cn(
-            'min-h-0 h-full',
-            showHistory ? 'block' : 'hidden xl:block'
-          )}
-        >
+            className={cn(
+              'min-h-0 h-full',
+              showHistory ? 'block' : 'hidden'
+            )}
+          >
           <section className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="border-b border-neutral-100 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
               <div className="flex items-center justify-between gap-3">

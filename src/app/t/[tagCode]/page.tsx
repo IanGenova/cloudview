@@ -6,6 +6,7 @@ import {
   Hotel,
   KeyRound,
   Map,
+  ReceiptText,
   ShoppingBag,
   Waves,
   Wifi,
@@ -13,6 +14,7 @@ import {
 import { db } from '@/lib/db';
 import { GuestBottomNav, GuestLogo } from '@/components/guest/GuestShell';
 import { QuickAction } from '@/components/guest/QuickAction';
+import { getGuestPortalActivity } from '@/lib/guest-portal-activity';
 
 const fallbackResortImage =
   'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80';
@@ -49,14 +51,15 @@ function getGuestGreeting() {
 
 export default async function GuestHome({ params }: GuestHomeProps) {
   const { tagCode } = await params;
+  const normalizedTagCode = tagCode?.trim();
 
-  if (!tagCode?.trim()) {
+  if (!normalizedTagCode) {
     notFound();
   }
 
   const tag = await db.nfcTag.findUnique({
     where: {
-      code: tagCode.trim(),
+      code: normalizedTagCode,
     },
     select: {
       status: true,
@@ -86,6 +89,8 @@ export default async function GuestHome({ params }: GuestHomeProps) {
     notFound();
   }
 
+  const activity = await getGuestPortalActivity(normalizedTagCode);
+
   const greeting = getGuestGreeting();
 
   const locationName = tag.room
@@ -93,6 +98,12 @@ export default async function GuestHome({ params }: GuestHomeProps) {
     : tag.location?.name ?? tag.label;
 
   const guestGreeting = tag.room ? `Room ${tag.room.number}` : locationName;
+
+  const guestDisplayName = activity.guestName || 'Guest';
+
+  const activeActivityCount =
+    activity.currentActiveOrderCount +
+    activity.currentActiveServiceRequestCount;
 
   const heroImage =
     tag.hotel.settings?.guestPortalHeroImageUrl?.trim() || fallbackResortImage;
@@ -108,12 +119,13 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/30 to-black" />
 
-          <button
+          <Link
+            href={`/t/${normalizedTagCode}/activity`}
             className="absolute right-5 top-10 z-20 grid size-10 place-items-center rounded-full bg-black/30 backdrop-blur"
-            aria-label="Notifications"
+            aria-label="Guest activity"
           >
             <Bell className="size-5" />
-          </button>
+          </Link>
 
           <div className="relative z-10 flex justify-center pt-3">
             <div className="scale-[1.45]">
@@ -127,7 +139,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
             </p>
 
             <h1 className="font-serif text-4xl leading-tight text-white">
-              Guest
+              {guestDisplayName}
             </h1>
 
             <p className="mt-3 max-w-xs text-sm text-white/80">
@@ -153,7 +165,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
         <section className="grid grid-cols-4 gap-3 px-5 py-6">
           <QuickAction
             compact
-            href={`/t/${tagCode}/menu`}
+            href={`/t/${normalizedTagCode}/menu`}
             icon={ShoppingBag}
             title="Order Food"
             description=""
@@ -161,7 +173,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
           <QuickAction
             compact
-            href={`/t/${tagCode}/pool`}
+            href={`/t/${normalizedTagCode}/pool`}
             icon={Waves}
             title="Pool"
             description=""
@@ -169,7 +181,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
           <QuickAction
             compact
-            href={`/t/${tagCode}/service`}
+            href={`/t/${normalizedTagCode}/service`}
             icon={ConciergeBell}
             title="Request Service"
             description=""
@@ -177,7 +189,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
           <QuickAction
             compact
-            href={`/t/${tagCode}/guide`}
+            href={`/t/${normalizedTagCode}/guide`}
             icon={Map}
             title="Hotel Guide"
             description=""
@@ -199,7 +211,28 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
             <div className="grid gap-3 text-sm text-white/70">
               <Link
-                href={`/t/${tagCode}/guide`}
+                href={`/t/${normalizedTagCode}/activity`}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-[#c99c38]/25 bg-[#11100b] p-4 text-white"
+              >
+                <span className="flex items-center gap-3">
+                  <ReceiptText className="size-4 text-gold" />
+                  <span>
+                    <span className="block font-black">My Activity</span>
+                    <span className="mt-0.5 block text-xs text-white/50">
+                      Orders, requests, and past activity
+                    </span>
+                  </span>
+                </span>
+
+                {activeActivityCount > 0 ? (
+                  <span className="grid min-w-7 place-items-center rounded-full bg-gold px-2 py-1 text-xs font-black text-black">
+                    {activeActivityCount}
+                  </span>
+                ) : null}
+              </Link>
+
+              <Link
+                href={`/t/${normalizedTagCode}/guide`}
                 className="flex items-center gap-3 rounded-2xl bg-white/5 p-3"
               >
                 <Wifi className="size-4 text-gold" />
@@ -207,30 +240,33 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               </Link>
 
               <Link
-                href={`/t/${tagCode}/contact`}
+                href={`/t/${normalizedTagCode}/contact`}
                 className="flex items-center gap-3 rounded-2xl bg-white/5 p-3"
               >
                 <Hotel className="size-4 text-gold" />
                 Contact staff and front desk support
               </Link>
+
               <Link
-                  href={`/t/${tagCode}/rewards`}
-                  className="rounded-3xl border border-[#c99c38]/25 bg-[#11100b] p-5 text-white shadow-xl"
-                >
-                  <p className="text-xs font-black uppercase tracking-[0.25em] text-[#c99c38]">
-                    CloudView Rewards
-                  </p>
-                  <p className="mt-2 text-xl font-black">Claim points from your stay</p>
-                  <p className="mt-1 text-sm font-semibold text-white/60">
-                    Earn points from NFC visits, orders, and completed requests.
-                  </p>
-                </Link>
+                href={`/t/${normalizedTagCode}/rewards`}
+                className="rounded-3xl border border-[#c99c38]/25 bg-[#11100b] p-5 text-white shadow-xl"
+              >
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-[#c99c38]">
+                  CloudView Rewards
+                </p>
+                <p className="mt-2 text-xl font-black">
+                  Claim points from your stay
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white/60">
+                  Earn points from NFC visits, orders, and completed requests.
+                </p>
+              </Link>
             </div>
           </div>
         </section>
       </div>
 
-      <GuestBottomNav tagCode={tagCode} active="home" dark />
+      <GuestBottomNav tagCode={normalizedTagCode} active="home" dark />
     </main>
   );
 }

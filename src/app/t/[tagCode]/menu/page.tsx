@@ -7,6 +7,7 @@ import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { MenuClient } from '@/components/guest/MenuClient';
 import { getGuestRewardsContextForTag } from '@/lib/nfc-rewards';
+import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +127,8 @@ export default async function GuestMenuPage({
     : tag.location?.name ?? tag.label;
 
   const rewardsContext = await getGuestRewardsContextForTag(tagCode);
+  const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
+  const defaultGuestName = guestIdentity.guestName || '';
 
   if (tag.status !== 'ACTIVE') {
     return (
@@ -367,12 +370,13 @@ export default async function GuestMenuPage({
   )}
 </div>
         <MenuClient
-          tagCode={tagCode}
-          products={menuProducts}
-          currency={tag.hotel.settings?.currency ?? 'PHP'}
-          taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
-          serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
-        />
+            tagCode={tagCode}
+            products={menuProducts}
+            currency={tag.hotel.settings?.currency ?? 'PHP'}
+            taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
+            serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
+            defaultGuestName={defaultGuestName}
+          />
       </GuestShell>
 
       <GuestBottomNav tagCode={tagCode} active="order" dark />

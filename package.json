@@ -9,7 +9,7 @@
   "start:http": "next start -H 0.0.0.0 -p 3001",
   "start:https": "concurrently \"npm run start:http\" \"local-ssl-proxy --hostname 192.168.0.130 --source 3000 --target 3001\"",
   "start": "npm run start:https",
-  "lint": "next lint",
+  "lint": "eslint .",
   "db:seed": "tsx prisma/seed.ts"
 },
   "dependencies": {

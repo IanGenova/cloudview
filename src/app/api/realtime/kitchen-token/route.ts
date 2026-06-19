@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
+import { Role } from '@prisma/client';
 import { requireUser } from '@/lib/auth';
-import { db } from '@/lib/db';
 import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
-
-function getKitchenChannel(hotelId: string) {
-  return `kitchen-${hotelId}`;
-}
-
-function uniqueStrings(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean)));
-}
 
 function noStoreJson(data: unknown, init?: ResponseInit) {
   const response = NextResponse.json(data, init);
@@ -20,7 +13,6 @@ function noStoreJson(data: unknown, init?: ResponseInit) {
     'Cache-Control',
     'no-store, no-cache, must-revalidate, proxy-revalidate'
   );
-
   response.headers.set('Pragma', 'no-cache');
   response.headers.set('Expires', '0');
 
@@ -31,24 +23,14 @@ export async function GET() {
   try {
     const user = await requireUser();
 
-    const hotels =
-      user.role === 'SUPER_ADMIN'
-        ? await db.hotel.findMany({
-            select: {
-              id: true,
-            },
-          })
+    const channels =
+      user.role === Role.SUPER_ADMIN
+        ? [realtimeChannels.kitchenGlobal()]
         : user.hotelId
-          ? [
-              {
-                id: user.hotelId,
-              },
-            ]
+          ? [realtimeChannels.kitchen(user.hotelId)]
           : [];
 
-    const hotelIds = uniqueStrings(hotels.map((hotel) => hotel.id));
-
-    if (!hotelIds.length) {
+    if (!channels.length) {
       return noStoreJson(
         {
           error: 'No hotel access found.',
@@ -59,8 +41,7 @@ export async function GET() {
       );
     }
 
-    const subject = `dashboard:${user.id}`;
-    const channels = hotelIds.map(getKitchenChannel);
+    const subject = `dashboard:${user.id}:kitchen`;
 
     const token = createCentrifugoConnectionToken({
       subject,
@@ -77,7 +58,7 @@ export async function GET() {
               subject,
               userId: user.id,
               role: user.role,
-              hotelIds,
+              hotelId: user.hotelId,
               channels,
               issuedAt: new Date().toISOString(),
               tokenSecretConfigured: Boolean(

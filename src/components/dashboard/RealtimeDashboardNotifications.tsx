@@ -328,6 +328,7 @@ export function RealtimeDashboardNotifications() {
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const recentEventKeysRef = useRef<Set<string>>(new Set());
+  const notificationTimeoutsRef = useRef<number[]>([]);
 
   useEffect(() => {
     const savedValue = window.localStorage.getItem(
@@ -346,6 +347,14 @@ export function RealtimeDashboardNotifications() {
 
     setBrowserNotificationPermission(Notification.permission);
   }, []);
+
+  function scheduleNotificationRemoval(id: string) {
+  const timeoutId = window.setTimeout(() => {
+    removeNotification(id);
+  }, 15_000);
+
+  notificationTimeoutsRef.current.push(timeoutId);
+}
 
   function removeNotification(id: string) {
     setNotifications((current) =>
@@ -424,15 +433,16 @@ export function RealtimeDashboardNotifications() {
   }
 
   function pushNotification(notification: DashboardNotification) {
-    void playNotificationSound();
+  void playNotificationSound();
+
+  if (alertsEnabledRef.current) {
     showBrowserNotification(notification);
-
-    setNotifications((current) => [notification, ...current].slice(0, 6));
-
-    window.setTimeout(() => {
-      removeNotification(notification.id);
-    }, 15_000);
   }
+
+  setNotifications((current) => [notification, ...current].slice(0, 6));
+
+  scheduleNotificationRemoval(notification.id);
+}
 
   function pushSystemNotification(message: string) {
     const notification: DashboardNotification = {
@@ -446,9 +456,8 @@ export function RealtimeDashboardNotifications() {
 
     setNotifications((current) => [notification, ...current].slice(0, 6));
 
-    window.setTimeout(() => {
-      removeNotification(notification.id);
-    }, 15_000);
+    scheduleNotificationRemoval(notification.id);
+
   }
 
   function pushTestNotification() {
@@ -462,13 +471,13 @@ export function RealtimeDashboardNotifications() {
     };
 
     void playNotificationSound(true);
-    showBrowserNotification(notification);
+    if (alertsEnabledRef.current) {
+  showBrowserNotification(notification);
+}
 
     setNotifications((current) => [notification, ...current].slice(0, 6));
 
-    window.setTimeout(() => {
-      removeNotification(notification.id);
-    }, 15_000);
+    scheduleNotificationRemoval(notification.id);
   }
 
   async function enableAlerts() {
@@ -702,7 +711,7 @@ export function RealtimeDashboardNotifications() {
 
         kitchenCentrifuge.on('error', handleKitchenClientError);
 
-        for (const channelName of payload.channels) {
+        for (const channelName of Array.from(new Set(payload.channels))) {
           const subscription = kitchenCentrifuge.newSubscription(channelName);
 
           subscription.on('publication', (ctx) => {
@@ -812,7 +821,7 @@ export function RealtimeDashboardNotifications() {
 
         serviceCentrifuge.on('error', handleServiceClientError);
 
-        for (const channelName of payload.channels) {
+        for (const channelName of Array.from(new Set(payload.channels))) {
           const subscription = serviceCentrifuge.newSubscription(channelName);
 
           subscription.on('publication', (ctx) => {
@@ -925,7 +934,7 @@ export function RealtimeDashboardNotifications() {
 
         operationsCentrifuge.on('error', handleOperationsClientError);
 
-        for (const channelName of payload.channels) {
+        for (const channelName of Array.from(new Set(payload.channels))) {
           const subscription =
             operationsCentrifuge.newSubscription(channelName);
 
@@ -1079,7 +1088,7 @@ export function RealtimeDashboardNotifications() {
   const RealtimeIcon = realtimeConnected ? Wifi : WifiOff;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
+    <div className="pointer-events-none fixed bottom-5 right-5 z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
       <div className="w-full space-y-3">
         {notifications.map((notification) => {
           const Icon = getNotificationIcon(notification.type);
@@ -1087,9 +1096,9 @@ export function RealtimeDashboardNotifications() {
 
           return (
             <div
-              key={notification.id}
-              className={`overflow-hidden rounded-3xl border ${style.border} bg-white shadow-2xl`}
-            >
+            key={notification.id}
+            className={`pointer-events-auto overflow-hidden rounded-3xl border ${style.border} bg-white shadow-2xl`}
+          >
               <div className="flex items-start gap-3 p-4">
                 <span
                   className={`grid size-10 shrink-0 place-items-center rounded-2xl ${style.iconWrap}`}
@@ -1131,14 +1140,14 @@ export function RealtimeDashboardNotifications() {
         <button
           type="button"
           onClick={() => pushSystemNotification(lastRealtimeIssue)}
-          className="max-w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-800 shadow-lg"
+          className="pointer-events-auto max-w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-800 shadow-lg"
         >
           Realtime issue detected
         </button>
       ) : null}
 
       <div
-        className="flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-white shadow-2xl"
+  className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-white shadow-2xl"
         title={`Kitchen: ${kitchenStatus}. Service: ${serviceStatus}. Operations: ${operationsStatus}.${
           lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
         }`}

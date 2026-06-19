@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import {
   createNfcAccessSession,
   getPublicAppUrl,
-  isHttpsPublicAppUrl,
   verifyTagSecret,
 } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
@@ -15,42 +14,30 @@ import {
   getNfcGuestSessionPendingCounts,
 } from '@/lib/nfc-guest-session';
 import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
+import {
+  getActiveGuestStayForRoom,
+  getAuthorizedGuestStayDeviceFromRequest,
+} from '@/lib/guest-stay-device-auth';
 
 function publicUrl(path: string) {
   return new URL(path, getPublicAppUrl());
 }
 
-function shouldUseSecureCookie(request: Request) {
-  const requestUrl = new URL(request.url);
-  const forwardedProto = request.headers.get('x-forwarded-proto');
-
-  return (
-    process.env.NODE_ENV === 'production' ||
-    isHttpsPublicAppUrl() ||
-    requestUrl.protocol === 'https:' ||
-    forwardedProto === 'https'
-  );
+function shouldUseSecureCookie(_request: Request) {
+  /**
+   * HTTP LAN mode:
+   * Cookies must NOT be secure, otherwise they will not save on phones/devices
+   * accessing http://192.168.0.130:3000.
+   */
+  return false;
 }
 
-function redirectHttpRequestToHttps(request: Request) {
-  const requestUrl = new URL(request.url);
-  const forwardedProto = request.headers.get('x-forwarded-proto');
-
-  if (!isHttpsPublicAppUrl()) {
-    return null;
-  }
-
-  if (requestUrl.protocol !== 'http:' || forwardedProto === 'https') {
-    return null;
-  }
-
-  const publicBaseUrl = new URL(getPublicAppUrl());
-  const httpsUrl = new URL(
-    `${requestUrl.pathname}${requestUrl.search}`,
-    publicBaseUrl.origin
-  );
-
-  return NextResponse.redirect(httpsUrl, 308);
+function redirectHttpRequestToHttps(_request: Request) {
+  /**
+   * HTTP LAN mode:
+   * Never redirect NFC scans to HTTPS.
+   */
+  return null;
 }
 
 function getRequestCookie(request: Request, cookieName: string) {
@@ -224,9 +211,58 @@ export async function GET(
     locationId: tag.locationId,
   });
 
+  const activeGuestStay =
+    policy.mode === 'PRIVATE_ROOM' && tag.roomId
+      ? await getActiveGuestStayForRoom({
+          hotelId: tag.hotelId,
+          roomId: tag.roomId,
+        })
+      : null;
+
+  /**
+   * Private ROOM tags now require:
+   * 1. ACTIVE NFC tag
+   * 2. Active GuestStay for the room
+   * 3. Authorized device cookie from passcode verification
+   */
+  if (policy.mode === 'PRIVATE_ROOM') {
+    if (tag.status !== 'ACTIVE') {
+      return NextResponse.redirect(
+        publicUrl('/nfc-access-denied?reason=inactive-tag')
+      );
+    }
+
+    if (!tag.roomId) {
+      return NextResponse.redirect(
+        publicUrl('/nfc-access-denied?reason=room-required')
+      );
+    }
+
+    if (!activeGuestStay) {
+      return NextResponse.redirect(
+        publicUrl(
+          `/n/${tag.code}/verify?k=${encodeURIComponent(
+            inputSecret
+          )}&error=no_active_stay`
+        )
+      );
+    }
+
+    const authorizedDevice = await getAuthorizedGuestStayDeviceFromRequest({
+      request,
+      guestStayId: activeGuestStay.id,
+    });
+
+    if (!authorizedDevice) {
+      return NextResponse.redirect(
+        publicUrl(`/n/${tag.code}/verify?k=${encodeURIComponent(inputSecret)}`)
+      );
+    }
+  }
+
   /**
    * PRIVATE ROOM:
-   * - May reuse a pending room session.
+   * - May reuse a pending room session, but only for the same GuestStay.
    *
    * PUBLIC LOCATION:
    * - Does not reuse another guest's pending session.
@@ -239,6 +275,7 @@ export async function GET(
         tagType: tag.tagType,
         roomId: tag.roomId,
         locationId: tag.locationId,
+        guestStayId: activeGuestStay?.id ?? null,
       })
     : await getBrowserOwnedPublicGuestSession({
         request,
@@ -368,6 +405,8 @@ export async function GET(
         data: {
           endedAt: null,
           lastSeenAt: new Date(),
+          guestMemberId: activeGuestStay?.guestMemberId ?? undefined,
+          guestStayId: activeGuestStay?.id ?? undefined,
         },
       });
 
@@ -381,15 +420,18 @@ export async function GET(
         tagId: tag.id,
         roomId: tag.roomId,
         locationId: tag.locationId,
+        guestMemberId: activeGuestStay?.guestMemberId ?? null,
+        guestStayId: activeGuestStay?.id ?? null,
       },
     });
   });
 
   await createNfcAccessSession({
-  id: tag.id,
-  hotelId: tag.hotelId,
-  code: tag.code,
-});
+    id: tag.id,
+    hotelId: tag.hotelId,
+    code: tag.code,
+  });
+
   const redirectUrl =
     tag.status === 'ACTIVE'
       ? publicUrl(`/t/${tag.code}?nfcSession=1`)

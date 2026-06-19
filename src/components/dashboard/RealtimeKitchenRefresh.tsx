@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
 
@@ -14,29 +14,122 @@ type KitchenRealtimePayload = {
   updatedAt?: string;
 };
 
+const VALID_KITCHEN_EVENTS = new Set([
+  'kitchen-order-created',
+  'kitchen-order-updated',
+  'kitchen-order-paid',
+]);
+
+function getKitchenEventKey(data: KitchenRealtimePayload) {
+  return [
+    data.event || 'unknown-event',
+    data.hotelId || 'no-hotel',
+    data.orderCode || 'no-order',
+    data.status || data.paymentStatus || 'no-status',
+    data.source || 'no-source',
+    data.updatedAt || 'no-time',
+  ].join(':');
+}
+
+function isRelevantKitchenEvent(data: KitchenRealtimePayload) {
+  if (!data?.event) {
+    return false;
+  }
+
+  return VALID_KITCHEN_EVENTS.has(data.event);
+}
+
 export function RealtimeKitchenRefresh({
-  fallbackIntervalMs = 30_000,
+  fallbackIntervalMs = 120_000,
+  refreshDebounceMs = 700,
 }: {
   fallbackIntervalMs?: number;
+  refreshDebounceMs?: number;
 }) {
   const router = useRouter();
+
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const lastEventKeyRef = useRef('');
+  const activeChannelsRef = useRef<Set<string>>(new Set());
+  const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
     let disposed = false;
     let centrifuge: ReturnType<typeof createCentrifugoClient> | null = null;
+
     const subscriptions: Array<{
       unsubscribe: () => void;
     }> = [];
 
-    const refresh = () => {
-      router.refresh();
-    };
+    function clearScheduledRefresh() {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    }
 
-    const fallbackTimer = window.setInterval(refresh, fallbackIntervalMs);
+    function hasRealtimeConnection() {
+      return activeChannelsRef.current.size > 0;
+    }
+
+    function scheduleRefresh(reason: string, delayMs = refreshDebounceMs) {
+      if (disposed) {
+        return;
+      }
+
+      clearScheduledRefresh();
+
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        if (disposed) {
+          return;
+        }
+
+        lastRefreshAtRef.current = Date.now();
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.info('Refreshing kitchen dashboard:', {
+            reason,
+          });
+        }
+
+        router.refresh();
+        refreshTimeoutRef.current = null;
+      }, delayMs);
+    }
+
+    const fallbackTimer = window.setInterval(() => {
+      if (disposed) {
+        return;
+      }
+
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      /**
+       * If realtime is connected, do not poll.
+       */
+      if (hasRealtimeConnection()) {
+        return;
+      }
+
+      const elapsedSinceLastRefresh = Date.now() - lastRefreshAtRef.current;
+
+      if (
+        lastRefreshAtRef.current > 0 &&
+        elapsedSinceLastRefresh < fallbackIntervalMs
+      ) {
+        return;
+      }
+
+      scheduleRefresh('fallback-polling', 0);
+    }, Math.max(30_000, fallbackIntervalMs));
 
     async function connect() {
       try {
-        const response = await fetch('/api/realtime/kitchen-token', {
+        const tokenEndpoint = '/api/realtime/kitchen-token';
+
+        const response = await fetch(tokenEndpoint, {
           cache: 'no-store',
         });
 
@@ -54,32 +147,52 @@ export function RealtimeKitchenRefresh({
           return;
         }
 
-        centrifuge = createCentrifugoClient(payload.token);
+        centrifuge = createCentrifugoClient(payload.token, {
+          tokenEndpoint,
+          debugLabel: 'Kitchen dashboard',
+        });
 
         if (!centrifuge) {
           return;
         }
 
-        for (const channelName of payload.channels) {
+        const uniqueChannels = Array.from(new Set(payload.channels));
+
+        for (const channelName of uniqueChannels) {
           const subscription = centrifuge.newSubscription(channelName);
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as KitchenRealtimePayload;
 
-            if (
-              data?.event === 'kitchen-order-created' ||
-              data?.event === 'kitchen-order-updated' ||
-              data?.event === 'kitchen-order-paid'
-            ) {
-              refresh();
+            if (!isRelevantKitchenEvent(data)) {
               return;
             }
 
-            refresh();
+            const eventKey = getKitchenEventKey(data);
+
+            if (eventKey === lastEventKeyRef.current) {
+              return;
+            }
+
+            lastEventKeyRef.current = eventKey;
+
+            scheduleRefresh(data.event || 'kitchen-publication');
           });
 
           subscription.on('subscribed', () => {
-            console.log(`Subscribed to ${channelName}`);
+            activeChannelsRef.current.add(channelName);
+
+            if (process.env.NODE_ENV !== 'production') {
+              console.info(`Subscribed to ${channelName}`);
+            }
+          });
+
+          subscription.on('unsubscribed', () => {
+            activeChannelsRef.current.delete(channelName);
+
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn(`Unsubscribed from ${channelName}`);
+            }
           });
 
           subscription.on('error', (ctx) => {
@@ -90,8 +203,13 @@ export function RealtimeKitchenRefresh({
           subscriptions.push(subscription);
         }
 
+        centrifuge.on('disconnected', () => {
+          activeChannelsRef.current.clear();
+        });
+
         centrifuge.connect();
       } catch (error) {
+        activeChannelsRef.current.clear();
         console.error('Kitchen realtime connection error:', error);
       }
     }
@@ -100,7 +218,10 @@ export function RealtimeKitchenRefresh({
 
     return () => {
       disposed = true;
+
       window.clearInterval(fallbackTimer);
+      clearScheduledRefresh();
+      activeChannelsRef.current.clear();
 
       for (const subscription of subscriptions) {
         try {
@@ -116,7 +237,7 @@ export function RealtimeKitchenRefresh({
         // Ignore disconnect errors.
       }
     };
-  }, [fallbackIntervalMs, router]);
+  }, [fallbackIntervalMs, refreshDebounceMs, router]);
 
   return null;
 }
