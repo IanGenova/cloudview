@@ -104,7 +104,10 @@ function createInitialUserDraft({
           ? ''
           : hotels[0]?.id ?? ''
         : hotels[0]?.id ?? '',
-    permissions: createEmptyPermissionDraft(currentUserRole),
+    permissions: createDefaultPermissionDraftForRole({
+      role: defaultRole,
+      currentUserRole,
+    }),
   };
 }
 
@@ -197,6 +200,22 @@ type ToastMessage =
     label: 'User Account Settings',
     description: 'Manage dashboard users and access.',
   },
+
+  {
+  key: 'REPORTS' as DashboardModule,
+  label: 'Reports',
+  description: 'View operational reports and summaries.',
+},
+{
+  key: 'GUEST_STAYS' as DashboardModule,
+  label: 'Guest Stays',
+  description: 'Manage checked-in guests, passcodes, and stay records.',
+},
+{
+  key: 'REWARDS' as DashboardModule,
+  label: 'Rewards',
+  description: 'Manage guest rewards, points, and loyalty settings.',
+},
 ];
 
 const permissionColumns = [
@@ -218,6 +237,197 @@ const permissionColumns = [
   },
 ] as const;
 
+function getVisibleModuleOptions(currentUserRole: Role) {
+  return dashboardModuleOptions.filter((module) => {
+    if (currentUserRole === 'SUPER_ADMIN') {
+      return true;
+    }
+
+    return !module.superAdminOnly;
+  });
+}
+
+function emptyPermissionValue() {
+  return {
+    canView: false,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+}
+
+function fullPermissionValue() {
+  return {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+  };
+}
+
+function viewOnlyPermissionValue() {
+  return {
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+}
+
+function normalizePermissionValue(
+  current: PermissionDraft[string],
+  key: PermissionKey,
+  checked: boolean
+) {
+  const next = {
+    ...current,
+    [key]: checked,
+  };
+
+  if (key !== 'canView' && checked) {
+    next.canView = true;
+  }
+
+  if (key === 'canView' && !checked) {
+    next.canCreate = false;
+    next.canEdit = false;
+    next.canDelete = false;
+  }
+
+  return next;
+}
+
+function createPermissionDraftFromSaved({
+  permissions,
+  currentUserRole,
+}: {
+  permissions?: UserDashboardPermission[];
+  currentUserRole: Role;
+}) {
+  const draft = createEmptyPermissionDraft(currentUserRole);
+
+  const savedMap = new Map(
+    (permissions ?? []).map((permission) => [permission.module, permission])
+  );
+
+  for (const module of getVisibleModuleOptions(currentUserRole)) {
+    const saved = savedMap.get(module.key);
+
+    draft[module.key] = {
+      canView: Boolean(saved?.canView),
+      canCreate: Boolean(saved?.canCreate),
+      canEdit: Boolean(saved?.canEdit),
+      canDelete: Boolean(saved?.canDelete),
+    };
+  }
+
+  return draft;
+}
+
+function createDefaultPermissionDraftForRole({
+  role,
+  currentUserRole,
+}: {
+  role: Role;
+  currentUserRole: Role;
+}) {
+  const draft = createEmptyPermissionDraft(currentUserRole);
+
+  function setModule(moduleKey: string, value: PermissionDraft[string]) {
+    if (draft[moduleKey]) {
+      draft[moduleKey] = value;
+    }
+  }
+
+  if (role === 'SUPER_ADMIN' || role === 'HOTEL_ADMIN') {
+    for (const module of getVisibleModuleOptions(currentUserRole)) {
+      if (role === 'HOTEL_ADMIN' && module.key === ('HOTELS' as DashboardModule)) {
+        continue;
+      }
+
+      draft[module.key] = fullPermissionValue();
+    }
+
+    return draft;
+  }
+
+  if (role === 'KITCHEN') {
+    setModule('OVERVIEW', viewOnlyPermissionValue());
+    setModule('ORDERS', viewOnlyPermissionValue());
+    setModule('KITCHEN_DISPLAY', {
+      canView: true,
+      canCreate: false,
+      canEdit: true,
+      canDelete: false,
+    });
+    setModule('INVENTORY', viewOnlyPermissionValue());
+
+    return draft;
+  }
+
+  setModule('OVERVIEW', viewOnlyPermissionValue());
+  setModule('REPORTS', viewOnlyPermissionValue());
+  setModule('HOTEL_GUIDE', viewOnlyPermissionValue());
+  setModule('ROOMS_LOCATIONS', viewOnlyPermissionValue());
+  setModule('NFC_TAGS', viewOnlyPermissionValue());
+  setModule('GUEST_STAYS', viewOnlyPermissionValue());
+
+  setModule('MENU', {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('INVENTORY', {
+    canView: true,
+    canCreate: false,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('ORDERS', {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('KITCHEN_DISPLAY', viewOnlyPermissionValue());
+
+  setModule('SERVICES_MODULE', {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('SERVICE_REQUESTS', {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('REWARDS', {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('POS_TERMINAL', {
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: false,
+  });
+
+  setModule('ANALYTICS', viewOnlyPermissionValue());
+
+  return draft;
+}
+
 function PermissionMatrix({
   permissions,
   currentUserRole,
@@ -237,27 +447,193 @@ function PermissionMatrix({
 }) {
   const isControlled = Boolean(permissionDraft && onPermissionChange);
 
-  const permissionMap = new Map(
-    (permissions ?? []).map((permission) => [permission.module, permission])
+  const visibleModules = getVisibleModuleOptions(currentUserRole);
+
+  const [localDraft, setLocalDraft] = useState<PermissionDraft>(() =>
+    createPermissionDraftFromSaved({
+      permissions,
+      currentUserRole,
+    })
   );
 
-  const visibleModules = dashboardModuleOptions.filter((module) => {
-    if (currentUserRole === 'SUPER_ADMIN') {
-      return true;
+  useEffect(() => {
+    if (isControlled) {
+      return;
     }
 
-    return !module.superAdminOnly;
+    setLocalDraft(
+      createPermissionDraftFromSaved({
+        permissions,
+        currentUserRole,
+      })
+    );
+  }, [permissions, currentUserRole, isControlled]);
+
+  const activeDraft = isControlled ? permissionDraft ?? {} : localDraft;
+
+  function getModuleValue(module: DashboardModule) {
+    return activeDraft[module] ?? emptyPermissionValue();
+  }
+
+  function applyDraft(nextDraft: PermissionDraft) {
+    if (isControlled) {
+      for (const module of visibleModules) {
+        const currentValue = getModuleValue(module.key);
+        const nextValue = nextDraft[module.key] ?? emptyPermissionValue();
+
+        for (const column of permissionColumns) {
+          if (currentValue[column.key] !== nextValue[column.key]) {
+            onPermissionChange?.(
+              module.key,
+              column.key,
+              nextValue[column.key]
+            );
+          }
+        }
+      }
+
+      return;
+    }
+
+    setLocalDraft(nextDraft);
+  }
+
+  function cloneActiveDraft() {
+    const nextDraft: PermissionDraft = {
+      ...activeDraft,
+    };
+
+    for (const module of visibleModules) {
+      nextDraft[module.key] = {
+        ...getModuleValue(module.key),
+      };
+    }
+
+    return nextDraft;
+  }
+
+  function updatePermission(
+    module: DashboardModule,
+    key: PermissionKey,
+    checked: boolean
+  ) {
+    const nextDraft = cloneActiveDraft();
+
+    nextDraft[module] = normalizePermissionValue(
+      nextDraft[module] ?? emptyPermissionValue(),
+      key,
+      checked
+    );
+
+    applyDraft(nextDraft);
+  }
+
+  function setModulePreset(
+    module: DashboardModule,
+    value: PermissionDraft[string]
+  ) {
+    const nextDraft = cloneActiveDraft();
+
+    nextDraft[module] = value;
+
+    applyDraft(nextDraft);
+  }
+
+  function setAllModules(value: PermissionDraft[string]) {
+    const nextDraft = cloneActiveDraft();
+
+    for (const module of visibleModules) {
+      nextDraft[module.key] = {
+        ...value,
+      };
+    }
+
+    applyDraft(nextDraft);
+  }
+
+  function setColumnAll(key: PermissionKey, checked: boolean) {
+    const nextDraft = cloneActiveDraft();
+
+    for (const module of visibleModules) {
+      nextDraft[module.key] = normalizePermissionValue(
+        nextDraft[module.key] ?? emptyPermissionValue(),
+        key,
+        checked
+      );
+    }
+
+    applyDraft(nextDraft);
+  }
+
+  const allSelected = visibleModules.every((module) => {
+    const value = getModuleValue(module.key);
+
+    return (
+      value.canView &&
+      value.canCreate &&
+      value.canEdit &&
+      value.canDelete
+    );
   });
+
+  const visibleCount = visibleModules.filter(
+    (module) => getModuleValue(module.key).canView
+  ).length;
 
   return (
     <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4">
       <input type="hidden" name="permissionsEnabled" value="1" />
 
-      <div className="mb-4">
-        <p className="text-sm font-black">Dashboard Module Access</p>
-        <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
-          Select which dashboard pages and functions this user can access.
-        </p>
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <p className="text-sm font-black">Dashboard Module Access</p>
+          <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
+            Select which dashboard pages and functions this user can access.
+          </p>
+
+          <p className="mt-2 text-xs font-black text-neutral-600">
+            {visibleCount} of {visibleModules.length} modules visible
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setAllModules(fullPermissionValue())}
+            className="h-9 rounded-xl bg-black px-3 text-xs font-black text-white hover:bg-neutral-800"
+          >
+            Select All
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAllModules(viewOnlyPermissionValue())}
+            className="h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black hover:bg-neutral-100"
+          >
+            View Only All
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAllModules(emptyPermissionValue())}
+            className="h-9 rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black text-red-700 hover:bg-red-100"
+          >
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-4 grid gap-2 rounded-2xl border border-neutral-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
+        {permissionColumns.map((column) => (
+          <button
+            key={`select-column-${column.key}`}
+            type="button"
+            onClick={() => setColumnAll(column.key, true)}
+            className="h-9 rounded-xl bg-neutral-100 px-3 text-xs font-black text-neutral-700 hover:bg-neutral-200"
+          >
+            Select All {column.label}
+          </button>
+        ))}
       </div>
 
       <div
@@ -268,28 +644,59 @@ function PermissionMatrix({
         }
       >
         {visibleModules.map((module) => {
-          const savedPermission = permissionMap.get(module.key);
-          const draftPermission = permissionDraft?.[module.key];
+          const value = getModuleValue(module.key);
 
           return (
             <div
               key={module.key}
               className="rounded-2xl border border-neutral-200 bg-white p-4"
             >
-              <div>
-                <p className="text-sm font-black leading-tight">
-                  {module.label}
-                </p>
-                <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
-                  {module.description}
-                </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-black leading-tight">
+                    {module.label}
+                  </p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
+                    {module.description}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModulePreset(module.key, fullPermissionValue())
+                    }
+                    className="h-8 rounded-xl bg-black px-3 text-[11px] font-black text-white hover:bg-neutral-800"
+                  >
+                    All
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModulePreset(module.key, viewOnlyPermissionValue())
+                    }
+                    className="h-8 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-[11px] font-black hover:bg-neutral-100"
+                  >
+                    View Only
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModulePreset(module.key, emptyPermissionValue())
+                    }
+                    className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {permissionColumns.map((column) => {
-                  const checked = isControlled
-                    ? Boolean(draftPermission?.[column.key])
-                    : Boolean(savedPermission?.[column.key]);
+                  const checked = Boolean(value[column.key]);
 
                   return (
                     <label
@@ -301,19 +708,14 @@ function PermissionMatrix({
                       <input
                         type="checkbox"
                         name={`permission:${module.key}:${column.key}`}
-                        checked={isControlled ? checked : undefined}
-                        defaultChecked={!isControlled ? checked : undefined}
-                        onChange={
-                          isControlled
-                            ? (event) => {
-                                onPermissionChange?.(
-                                  module.key,
-                                  column.key,
-                                  event.target.checked
-                                );
-                              }
-                            : undefined
-                        }
+                        checked={checked}
+                        onChange={(event) => {
+                          updatePermission(
+                            module.key,
+                            column.key,
+                            event.target.checked
+                          );
+                        }}
                         className="size-4 cursor-pointer rounded border-neutral-300 accent-black"
                       />
                     </label>
@@ -324,6 +726,12 @@ function PermissionMatrix({
           );
         })}
       </div>
+
+      {allSelected ? (
+        <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-black text-emerald-700">
+          All permissions are currently selected.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -549,16 +957,20 @@ function CreateUserModal({
     }));
   }
 
-  function updateRole(role: Role) {
-    setDraft((current) => ({
-      ...current,
+ function updateRole(role: Role) {
+  setDraft((current) => ({
+    ...current,
+    role,
+    hotelId:
+      role === 'SUPER_ADMIN'
+        ? ''
+        : current.hotelId || hotels[0]?.id || '',
+    permissions: createDefaultPermissionDraftForRole({
       role,
-      hotelId:
-        role === 'SUPER_ADMIN'
-          ? ''
-          : current.hotelId || hotels[0]?.id || '',
-    }));
-  }
+      currentUserRole,
+    }),
+  }));
+}
 
   function updatePermission(
     module: DashboardModule,

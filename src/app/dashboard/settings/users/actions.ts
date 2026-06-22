@@ -31,23 +31,9 @@ const SUPER_ADMIN_ALLOWED_ROLES: readonly Role[] = [
 
 const HOTEL_ADMIN_ALLOWED_ROLES: readonly Role[] = [Role.STAFF, Role.KITCHEN];
 
-const ALL_DASHBOARD_MODULES: readonly DashboardModule[] = [
-  DashboardModule.OVERVIEW,
-  DashboardModule.HOTELS,
-  DashboardModule.HOTEL_GUIDE,
-  DashboardModule.ROOMS_LOCATIONS,
-  DashboardModule.NFC_TAGS,
-  DashboardModule.MENU,
-  DashboardModule.INVENTORY,
-  DashboardModule.ORDERS,
-  DashboardModule.KITCHEN_DISPLAY,
-  DashboardModule.SERVICES_MODULE,
-  DashboardModule.SERVICE_REQUESTS,
-  DashboardModule.POS_TERMINAL,
-  DashboardModule.ANALYTICS,
-  DashboardModule.HOTEL_SETTINGS,
-  DashboardModule.USER_ACCOUNT_SETTINGS,
-];
+const ALL_DASHBOARD_MODULES = Object.values(
+  DashboardModule
+) as DashboardModule[];
 
 const HOTEL_ADMIN_RESTRICTED_MODULES = new Set<DashboardModule>([
   DashboardModule.HOTELS,
@@ -158,6 +144,25 @@ function viewOnlyPermission(module: DashboardModule): DashboardPermissionInput {
   };
 }
 
+function getDashboardModule(value: string) {
+  return ALL_DASHBOARD_MODULES.find((module) => module === value) ?? null;
+}
+
+function optionalViewOnlyPermission(value: string): DashboardPermissionInput[] {
+  const module = getDashboardModule(value);
+
+  return module ? [viewOnlyPermission(module)] : [];
+}
+
+function optionalCustomPermission(
+  value: string,
+  permissions: Partial<Omit<DashboardPermissionInput, 'module'>>
+): DashboardPermissionInput[] {
+  const module = getDashboardModule(value);
+
+  return module ? [customPermission(module, permissions)] : [];
+}
+
 function customPermission(
   module: DashboardModule,
   permissions: Partial<Omit<DashboardPermissionInput, 'module'>>
@@ -240,6 +245,13 @@ function getDefaultDashboardPermissions(role: Role): DashboardPermissionInput[] 
       canEdit: true,
     }),
     viewOnlyPermission(DashboardModule.ANALYTICS),
+    ...optionalViewOnlyPermission('REPORTS'),
+    ...optionalViewOnlyPermission('GUEST_STAYS'),
+    ...optionalCustomPermission('REWARDS', {
+      canView: true,
+      canCreate: true,
+      canEdit: true,
+    }),
   ];
 }
 

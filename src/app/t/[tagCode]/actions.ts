@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import {
+  FulfillmentTiming,
   MenuAvailabilityMovementType,
   MenuProductType,
   PaymentMethod,
@@ -24,6 +25,11 @@ import {
   saveServiceRequestImageFiles,
   validateServiceRequestImageFile,
 } from '@/lib/service-request-attachments';
+import {
+  buildScheduledFulfillment,
+  parseFulfillmentTiming,
+  parseScheduledDate,
+} from '@/lib/scheduled-fulfillment';
 
 type StockRequirement = {
   productId: string;
@@ -293,6 +299,13 @@ const orderGuestName = getGuestNameSnapshot({
   const total = subtotal + serviceCharge + tax;
   const orderCode = randomCode('ORD');
 
+  const schedule = buildScheduledFulfillment({
+  fulfillmentTiming: parseFulfillmentTiming(parsed.fulfillmentTiming),
+  scheduledFor: parseScheduledDate(parsed.scheduledFor),
+  scheduledNote: parsed.scheduledNote,
+  releaseBufferMinutes: 20,
+});
+
   const order = await db.$transaction(async (tx) => {
     const stockByProductId = new Map<
       string,
@@ -350,6 +363,16 @@ const orderGuestName = getGuestNameSnapshot({
           guestName: orderGuestName,
         notes: cleanText(parsed.notes, 1000),
         paymentMethod: parsed.paymentMethod as PaymentMethod,
+
+        fulfillmentTiming: schedule.fulfillmentTiming,
+        scheduledFor: schedule.scheduledFor,
+        scheduledWindowStart: schedule.scheduledWindowStart,
+        scheduledWindowEnd: schedule.scheduledWindowEnd,
+        releaseAt: schedule.releaseAt,
+        releasedAt: schedule.releasedAt,
+        scheduledReleaseStatus: schedule.scheduledReleaseStatus,
+        scheduledNote: schedule.scheduledNote,
+
         subtotalCents: subtotal,
         serviceChargeCents: serviceCharge,
         taxCents: tax,
@@ -497,12 +520,14 @@ const orderGuestName = getGuestNameSnapshot({
     message: `New guest order ${order.orderCode}`,
   });
 
+  if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
   await triggerKitchenOrderCreated({
     hotelId: tag.hotelId,
     orderCode: order.orderCode,
     status: order.status,
     source: 'GUEST_PORTAL',
   });
+}
 
   await triggerInventoryUpdated({
     hotelId: tag.hotelId,
@@ -556,6 +581,21 @@ export async function createServiceRequestAction(formData: FormData) {
   const guestName = cleanText(formData.get('guestName'), 100);
   const notes = cleanText(formData.get('notes'), 1000);
   const chargeConsent = formData.get('chargeConsent') === 'true';
+
+  let schedule;
+
+    try {
+      schedule = buildScheduledFulfillment({
+        fulfillmentTiming: parseFulfillmentTiming(formData.get('fulfillmentTiming')),
+        scheduledFor: parseScheduledDate(formData.get('scheduledFor')),
+        scheduledNote: cleanText(formData.get('scheduledNote'), 300),
+        releaseBufferMinutes: 15,
+      });
+    } catch {
+      redirectToService(tagCode, {
+        error: 'invalid_schedule',
+      });
+    }
 
   const serviceCodes = Array.from(
     new Set(
@@ -813,6 +853,15 @@ export async function createServiceRequestAction(formData: FormData) {
             requestCode: groupedRequestCode,
             type: item.service.name,
             guestName: serviceGuestName || null,
+
+            fulfillmentTiming: schedule.fulfillmentTiming,
+            scheduledFor: schedule.scheduledFor,
+            scheduledWindowStart: schedule.scheduledWindowStart,
+            scheduledWindowEnd: schedule.scheduledWindowEnd,
+            releaseAt: schedule.releaseAt,
+            releasedAt: schedule.releasedAt,
+            scheduledReleaseStatus: schedule.scheduledReleaseStatus,
+            scheduledNote: schedule.scheduledNote,
             notes:
               [
                 `Grouped service request order ${groupedRequestCode}.`,
@@ -981,6 +1030,7 @@ export async function createServiceRequestAction(formData: FormData) {
     )
   );
 
+ if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
   await Promise.allSettled(
     createdRequests.map((request) =>
       triggerServiceRequestCreated({
@@ -991,6 +1041,7 @@ export async function createServiceRequestAction(formData: FormData) {
       })
     )
   );
+}
 
   if (serviceStockRequirements.size > 0) {
     await triggerInventoryUpdated({

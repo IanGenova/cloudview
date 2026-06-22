@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { OrderItemStatus, OrderStatus } from '@prisma/client';
+import {
+  FulfillmentTiming,
+  OrderItemStatus,
+  OrderStatus,
+  ScheduledReleaseStatus,
+} from '@prisma/client';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -58,6 +63,12 @@ type KitchenOrder = {
   room: { number: string } | null;
   location: { name: string } | null;
   items: KitchenOrderItem[];
+  fulfillmentTiming: FulfillmentTiming;
+  scheduledFor: Date | null;
+  releaseAt: Date | null;
+  releasedAt: Date | null;
+  scheduledReleaseStatus: ScheduledReleaseStatus;
+  scheduledNote: string | null;
 };
 
 function getKitchenSuccessCode(status: OrderStatus) {
@@ -469,7 +480,7 @@ function KitchenOrderCard({
   const historyParam = showHistory ? '1' : '';
 
   return (
-  <article className="grid w-full max-w-[380px] self-start overflow-hidden rounded-[1.25rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+  <article className="grid w-full overflow-hidden rounded-[1.25rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
       <div className="min-h-0 border-b border-neutral-100 p-2.5 dark:border-neutral-800">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -580,6 +591,106 @@ function KitchenOrderCard({
   );
 }
 
+function KitchenScheduledOrderCard({ order }: { order: KitchenOrder }) {
+  const guestName = order.guestName?.trim() || 'Guest name not provided';
+  const activeItemCount = getActiveItemCount(order.items);
+  const previewItems = order.items
+    .filter((item) => getActiveItemQuantity(item) > 0)
+    .slice(0, 2);
+
+  return (
+    <article className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate font-black">{order.orderCode}</h3>
+
+          <p className="mt-1 text-xs font-bold opacity-70">
+            {roomOrLocation(order)} · {guestName}
+          </p>
+        </div>
+
+        <span className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[10px] font-black uppercase text-white">
+          Scheduled
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 rounded-2xl bg-white/70 p-3 text-xs dark:bg-black/20">
+        <p>
+          <b>Scheduled For:</b>{' '}
+          {order.scheduledFor ? formatDateTime(order.scheduledFor) : '—'}
+        </p>
+
+        <p>
+          <b>Release At:</b>{' '}
+          {order.releaseAt ? formatDateTime(order.releaseAt) : '—'}
+        </p>
+
+        <p>
+          <b>Items:</b> {activeItemCount}
+        </p>
+      </div>
+
+      {previewItems.length > 0 ? (
+        <div className="mt-3 space-y-1">
+          {previewItems.map((item) => (
+            <p key={item.id} className="text-xs font-bold opacity-80">
+              {getActiveItemQuantity(item)}× {item.productNameSnapshot}
+            </p>
+          ))}
+
+          {order.items.length > previewItems.length ? (
+            <p className="text-xs font-black opacity-60">
+              +{order.items.length - previewItems.length} more item
+              {order.items.length - previewItems.length === 1 ? '' : 's'}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {order.scheduledNote ? (
+        <p className="mt-3 rounded-2xl bg-white/70 p-3 text-xs font-semibold dark:bg-black/20">
+          <b>Schedule note:</b> {order.scheduledNote}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function KitchenScheduledLane({
+  orders,
+}: {
+  orders: KitchenOrder[];
+}) {
+  if (!orders.length) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black text-amber-950 dark:text-amber-100">
+            Scheduled Orders
+          </h2>
+
+          <p className="mt-1 text-sm font-semibold text-amber-800/70 dark:text-amber-100/60">
+            Upcoming food pre-orders not yet released to the kitchen.
+          </p>
+        </div>
+
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-600 text-sm font-black text-white">
+          {orders.length}
+        </span>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        {orders.map((order) => (
+          <KitchenScheduledOrderCard key={order.id} order={order} />
+        ))}
+      </div>
+    </section>
+  );
+}
 function KitchenLane({
   title,
   description,
@@ -594,7 +705,7 @@ function KitchenLane({
   showHistory: boolean;
 }) {
   return (
-    <section className="rounded-[2rem] border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
+    <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <div>
           <h2 className="text-xl font-black text-neutral-950 dark:text-white md:text-2xl">
@@ -613,13 +724,19 @@ function KitchenLane({
 
       <div className="px-4 pb-4 pt-4">
         {orders.length === 0 ? (
-          <div className="grid min-h-32 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="grid min-h-24 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-5 text-center dark:border-neutral-800 dark:bg-neutral-950">
             <p className="font-black text-neutral-500 dark:text-neutral-400">
               No {title.toLowerCase()} orders
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,380px))] items-start justify-start gap-3">
+          <div
+            className="grid items-start justify-start gap-3"
+            style={{
+              gridTemplateColumns:
+                'repeat(auto-fit, minmax(min(100%, 300px), 380px))',
+            }}
+          >
             {orders.map((order) => (
               <KitchenOrderCard
                 key={order.id}
@@ -697,69 +814,118 @@ export default async function KitchenDisplayPage({
   const baseWhere =
     user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
-  const [liveOrders, historyOrders] = await Promise.all([
-    db.order.findMany({
-      where: {
-        ...baseWhere,
-        status: {
-          in: [
-            OrderStatus.PENDING,
-            OrderStatus.ACCEPTED,
-            OrderStatus.PREPARING,
-            OrderStatus.READY,
-          ],
-        },
+ const activeKitchenStatuses = [
+  OrderStatus.PENDING,
+  OrderStatus.ACCEPTED,
+  OrderStatus.PREPARING,
+  OrderStatus.READY,
+] as const;
+
+const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
+  db.order.findMany({
+    where: {
+      ...baseWhere,
+      status: {
+        in: [...activeKitchenStatuses],
       },
-      include: {
-        room: true,
-        location: true,
-        items: {
-          include: {
-            bundleComponents: {
-              orderBy: {
-                createdAt: 'asc',
-              },
+      OR: [
+        {
+          fulfillmentTiming: FulfillmentTiming.ASAP,
+        },
+        {
+          releasedAt: {
+            not: null,
+          },
+        },
+      ],
+    },
+    include: {
+      room: true,
+      location: true,
+      items: {
+        include: {
+          bundleComponents: {
+            orderBy: {
+              createdAt: 'asc',
             },
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
+        },
+        orderBy: {
+          createdAt: 'asc',
         },
       },
-      orderBy: {
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  }),
+
+  db.order.findMany({
+    where: {
+      ...baseWhere,
+      status: {
+        in: [...activeKitchenStatuses],
+      },
+      fulfillmentTiming: FulfillmentTiming.SCHEDULED,
+      releasedAt: null,
+      scheduledReleaseStatus: ScheduledReleaseStatus.SCHEDULED,
+    },
+    include: {
+      room: true,
+      location: true,
+      items: {
+        include: {
+          bundleComponents: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
+    },
+    orderBy: [
+      {
+        scheduledFor: 'asc',
+      },
+      {
         createdAt: 'asc',
       },
-    }),
+    ],
+    take: 30,
+  }),
 
-    db.order.findMany({
-      where: {
-        ...baseWhere,
-        status: {
-          in: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-        },
+  db.order.findMany({
+    where: {
+      ...baseWhere,
+      status: {
+        in: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
       },
-      include: {
-        room: true,
-        location: true,
-        items: {
-          include: {
-            bundleComponents: {
-              orderBy: {
-                createdAt: 'asc',
-              },
+    },
+    include: {
+      room: true,
+      location: true,
+      items: {
+        include: {
+          bundleComponents: {
+            orderBy: {
+              createdAt: 'asc',
             },
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
+        },
+        orderBy: {
+          createdAt: 'asc',
         },
       },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-      take: 30,
-    }),
-  ]);
+    },
+    orderBy: {
+      updatedAt: 'desc',
+    },
+    take: 30,
+  }),
+]);
 
   const pendingOrders = liveOrders.filter(
     (order) => order.status === OrderStatus.PENDING
@@ -780,13 +946,13 @@ export default async function KitchenDisplayPage({
 
   return (
     <div
-      id="kitchen-display-fullscreen"
-      className="flex h-screen flex-col overflow-hidden bg-white p-6 text-neutral-950 dark:bg-neutral-950 dark:text-white"
-    >
+          id="kitchen-display-fullscreen"
+          className="h-[100dvh] overflow-y-auto bg-white px-4 pb-28 pt-4 text-neutral-950 dark:bg-neutral-950 dark:text-white xl:px-6"
+        >
       <RealtimeKitchenRefresh />
       <KitchenToast message={message} showHistory={showHistory} />
 
-      <div className="mb-6 shrink-0 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <PageHeader
           title="Kitchen Display"
           description="Live kitchen workflow for pending, preparing, ready, and item-level cancellation updates."
@@ -828,15 +994,15 @@ export default async function KitchenDisplayPage({
 
       <div
             className={cn(
-              'min-h-0 flex-1 grid gap-4',
+              'grid gap-4',
               showHistory
-                ? 'xl:grid-cols-[minmax(0,1fr)_340px]'
+                ? 'xl:grid-cols-[minmax(0,1fr)_360px]'
                 : 'xl:grid-cols-1'
             )}
           >
         <main
-          className={cn(
-            'min-h-0 flex-col gap-3',
+           className={cn(
+            'flex flex-col gap-4',
             showHistory ? 'hidden xl:flex' : 'flex'
           )}
         >
@@ -863,15 +1029,18 @@ export default async function KitchenDisplayPage({
             type="ready"
             showHistory={showHistory}
           />
+
+          <KitchenScheduledLane orders={scheduledOrders} />
+
         </main>
 
         <aside
             className={cn(
-              'min-h-0 h-full',
-              showHistory ? 'block' : 'hidden'
-            )}
+                'h-fit',
+                showHistory ? 'block xl:sticky xl:top-4' : 'hidden'
+              )}
           >
-          <section className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+          <section className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="border-b border-neutral-100 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
               <div className="flex items-center justify-between gap-3">
                 <div>

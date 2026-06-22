@@ -66,6 +66,8 @@ type CartItem = {
 
 type OrderType = 'ROOM_SERVICE' | 'DINE_IN' | 'TAKE_OUT' | 'PICK_UP';
 
+type FulfillmentTimingValue = 'ASAP' | 'SCHEDULED';
+
 const orderTypeLabels: Record<OrderType, string> = {
   ROOM_SERVICE: 'Room Service / Deliver to Room',
   DINE_IN: 'Dine In',
@@ -409,6 +411,12 @@ export function MenuClient({
     'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS'
   >('ROOM_CHARGE');
 
+  const [fulfillmentTiming, setFulfillmentTiming] =
+  useState<FulfillmentTimingValue>('ASAP');
+const [scheduledDate, setScheduledDate] = useState('');
+const [scheduledTime, setScheduledTime] = useState('');
+const [scheduledNote, setScheduledNote] = useState('');
+
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -549,6 +557,24 @@ export function MenuClient({
     );
   }
 
+  function getScheduledForIso() {
+  if (fulfillmentTiming !== 'SCHEDULED') {
+    return '';
+  }
+
+  if (!scheduledDate || !scheduledTime) {
+    return null;
+  }
+
+  const date = new Date(`${scheduledDate}T${scheduledTime}:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
+}
+
   function submit() {
     setError(null);
 
@@ -583,6 +609,20 @@ export function MenuClient({
       return;
     }
 
+    const scheduledForIso = getScheduledForIso();
+
+      if (fulfillmentTiming === 'SCHEDULED') {
+        if (!scheduledForIso) {
+          setError('Please select a valid scheduled date and time.');
+          return;
+        }
+
+        if (new Date(scheduledForIso).getTime() <= Date.now() + 60_000) {
+          setError('Scheduled order time must be in the future.');
+          return;
+        }
+      }
+
     startTransition(async () => {
       try {
         const finalNotes = buildOrderNotes({
@@ -595,6 +635,9 @@ export function MenuClient({
           guestName,
           notes: finalNotes,
           paymentMethod,
+          fulfillmentTiming,
+          scheduledFor: scheduledForIso || '',
+          scheduledNote,
           items: cart,
         });
 
@@ -780,6 +823,56 @@ export function MenuClient({
                     <option value="PICK_UP">Pick Up at Counter</option>
                   </Select>
                 </div>
+
+                <div>
+                <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  Order Time
+                </label>
+
+                <Select
+                  value={fulfillmentTiming}
+                  onChange={(e) =>
+                    setFulfillmentTiming(e.target.value as FulfillmentTimingValue)
+                  }
+                >
+                  <option value="ASAP">ASAP / Send to kitchen now</option>
+                  <option value="SCHEDULED">Schedule for later</option>
+                </Select>
+              </div>
+
+              {fulfillmentTiming === 'SCHEDULED' ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+                    Scheduled Food Order
+                  </p>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <Input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(event) => setScheduledDate(event.target.value)}
+                    />
+
+                    <Input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(event) => setScheduledTime(event.target.value)}
+                    />
+                  </div>
+
+                  <Textarea
+                    className="mt-3"
+                    placeholder="Optional schedule note, e.g. Please deliver after 7:30 AM"
+                    value={scheduledNote}
+                    onChange={(event) => setScheduledNote(event.target.value)}
+                  />
+
+                  <p className="mt-2 text-xs font-semibold leading-5 text-amber-800">
+                    This order will be saved now, then released to the kitchen before the
+                    scheduled time.
+                  </p>
+                </div>
+              ) : null}
 
                 <div>
                   <label className="mb-1 block text-xs font-black uppercase text-neutral-500">

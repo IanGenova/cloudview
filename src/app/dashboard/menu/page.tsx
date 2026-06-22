@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
-import { MenuProductType } from '@prisma/client';
-import { Plus, Pencil, Trash2, X ,CheckCircle2 } from 'lucide-react';
+import { MenuProductType, type Prisma } from '@prisma/client';
+import { Plus, Pencil, X, CheckCircle2, Search, SlidersHorizontal } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -275,79 +275,188 @@ function getBundleNormalTotalCents(
   );
 }
 
+function parseProductType(value?: string) {
+  if (value === MenuProductType.SINGLE) {
+    return MenuProductType.SINGLE;
+  }
 
+  if (value === MenuProductType.BUNDLE) {
+    return MenuProductType.BUNDLE;
+  }
+
+  return '';
+}
+
+function parseAvailability(value?: string) {
+  if (value === 'available' || value === 'hidden') {
+    return value;
+  }
+
+  return '';
+}
 
 export default async function MenuManagementPage({
     searchParams,
 }: {
-  searchParams?: Promise<{
-    success?: string;
-    error?: string;
-  }>;
+ searchParams?: Promise<{
+  success?: string;
+  error?: string;
+  q?: string;
+  hotelId?: string;
+  categoryId?: string;
+  productType?: string;
+  availability?: string;
+}>;
+
 }) {
   const params = await searchParams;
   const message = getMenuMessage(params?.success, params?.error);
   const user = await requireUser();
 
-  const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
-  const itemWhere =
-    user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+ const searchTerm = (params?.q ?? '').trim();
+const selectedHotelId =
+  user.role === 'SUPER_ADMIN' ? (params?.hotelId ?? '').trim() : user.hotelId!;
+const selectedCategoryId = (params?.categoryId ?? '').trim();
+const selectedProductType = parseProductType(params?.productType);
+const selectedAvailability = parseAvailability(params?.availability);
 
-  const [hotels, categories, products] = await Promise.all([
-    db.hotel.findMany({
-      where: hotelWhere,
-      orderBy: { name: 'asc' },
-    }),
+const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
 
-    db.menuCategory.findMany({
-      where: itemWhere,
-      include: {
-        hotel: true,
-        _count: {
-          select: {
-            products: true,
+const itemWhere: Prisma.MenuCategoryWhereInput =
+  user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+
+const productWhere: Prisma.MenuProductWhereInput = {
+  ...(user.role === 'SUPER_ADMIN'
+    ? selectedHotelId
+      ? { hotelId: selectedHotelId }
+      : {}
+    : { hotelId: user.hotelId! }),
+
+  ...(selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
+
+  ...(selectedProductType ? { productType: selectedProductType } : {}),
+
+  ...(selectedAvailability === 'available' ? { isAvailable: true } : {}),
+  ...(selectedAvailability === 'hidden' ? { isAvailable: false } : {}),
+
+  ...(searchTerm
+    ? {
+        OR: [
+          {
+            name: {
+              contains: searchTerm,
+            },
           },
+          {
+            description: {
+              contains: searchTerm,
+            },
+          },
+          {
+            category: {
+              name: {
+                contains: searchTerm,
+              },
+            },
+          },
+          {
+            hotel: {
+              name: {
+                contains: searchTerm,
+              },
+            },
+          },
+        ],
+      }
+    : {}),
+};
+
+  const [hotels, categories, products, bundleProducts] = await Promise.all([
+  db.hotel.findMany({
+    where: hotelWhere,
+    orderBy: { name: 'asc' },
+  }),
+
+  db.menuCategory.findMany({
+    where: itemWhere,
+    include: {
+      hotel: true,
+      _count: {
+        select: {
+          products: true,
         },
       },
-      orderBy: [
-        { hotel: { name: 'asc' } },
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
-    }),
+    },
+    orderBy: [
+      { hotel: { name: 'asc' } },
+      { sortOrder: 'asc' },
+      { name: 'asc' },
+    ],
+  }),
 
-    db.menuProduct.findMany({
-      where: itemWhere,
-      include: {
-        hotel: true,
-        category: true,
-        images: {
-          orderBy: { sortOrder: 'asc' },
-          take: 1,
-        },
-        recipes: {
-          include: {
-            inventoryItem: true,
-          },
-        },
-        bundleComponents: {
-          include: {
-            componentProduct: true,
-          },
-          orderBy: {
-            sortOrder: 'asc',
-          },
+  db.menuProduct.findMany({
+    where: productWhere,
+    include: {
+      hotel: true,
+      category: true,
+      images: {
+        orderBy: { sortOrder: 'asc' },
+        take: 1,
+      },
+      recipes: {
+        include: {
+          inventoryItem: true,
         },
       },
-      orderBy: { createdAt: 'desc' },
-    }),
-  ]);
+      bundleComponents: {
+        include: {
+          componentProduct: true,
+        },
+        orderBy: {
+          sortOrder: 'asc',
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  }),
 
-  const componentOptions = products.filter(
-    (product) => product.productType === MenuProductType.SINGLE
-  );
+  db.menuProduct.findMany({
+    where: {
+      ...(user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! }),
+      productType: MenuProductType.SINGLE,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      name: true,
+      priceCents: true,
+      isAvailable: true,
+      productType: true,
+      hotel: {
+        select: {
+          name: true,
+        },
+      },
+      category: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        hotel: {
+          name: 'asc',
+        },
+      },
+      {
+        name: 'asc',
+      },
+    ],
+  }),
+]);
 
-  const bundleComponentOptions = componentOptions.map((product) => ({
+  const bundleComponentOptions = bundleProducts.map((product) => ({
   id: product.id,
   hotelId: product.hotelId,
   name: product.name,
@@ -362,6 +471,18 @@ export default async function MenuManagementPage({
   },
 }));
 
+const filterCategories = selectedHotelId
+  ? categories.filter((category) => category.hotelId === selectedHotelId)
+  : categories;
+
+const hasActiveFilters = Boolean(
+  searchTerm ||
+    (user.role === 'SUPER_ADMIN' && selectedHotelId) ||
+    selectedCategoryId ||
+    selectedProductType ||
+    selectedAvailability
+);
+
   return (
     <div>
        <Toast message={message} />
@@ -370,295 +491,298 @@ export default async function MenuManagementPage({
         description="Digital menu categories, products, images, pricing, availability, bundle menus, and recipe links."
       />
 
-      <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl font-black">Products</h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            These items appear in the Guest Portal and POS Terminal. Products
-            can now be single items or fixed bundles.
-          </p>
-        </div>
+      <div className="mb-4 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">
+  <div>
+    <h2 className="text-xl font-black">Products</h2>
+    <p className="mt-1 text-sm text-neutral-500">
+      These items appear in the Guest Portal and POS Terminal. Products
+      can now be single items or fixed bundles.
+    </p>
+  </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <ModalOpenButton
-            modalId="category-modal"
-            className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100"
-          >
-            <Plus className="size-4" />
-            Add / Manage Categories
-          </ModalOpenButton>
+  <div className="flex flex-col gap-2 sm:flex-row">
+    <ModalOpenButton
+      modalId="category-modal"
+      className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100"
+    >
+      <Plus className="size-4" />
+      Add / Manage Categories
+    </ModalOpenButton>
 
-          <ModalOpenButton
-            modalId="product-modal"
-            className="gap-2 bg-black text-white hover:bg-neutral-800"
-          >
-            <Plus className="size-4" />
-            Add Product
-          </ModalOpenButton>
-        </div>
+    <ModalOpenButton
+      modalId="product-modal"
+      className="gap-2 bg-black text-white hover:bg-neutral-800"
+    >
+      <Plus className="size-4" />
+      Add Product
+    </ModalOpenButton>
+  </div>
+</div>
+
+<form
+  action="/dashboard/menu"
+  method="get"
+  className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft"
+>
+  <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="grid size-9 place-items-center rounded-2xl bg-gold/15 text-gold">
+          <SlidersHorizontal className="size-4" />
+        </span>
+
+        <h3 className="text-lg font-black">Filter Menu Products</h3>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {products.map((product) => {
-          const imageUrl = getProductImage(product);
-          const editModalId = `edit-product-${product.id}`;
-          const isBundle = product.productType === MenuProductType.BUNDLE;
-          const bundleNormalTotalCents = getBundleNormalTotalCents(
-            product.bundleComponents
-          );
-          const bundleSavingsCents =
-            isBundle && bundleNormalTotalCents > product.priceCents
-              ? bundleNormalTotalCents - product.priceCents
-              : 0;
+      <p className="mt-1 text-sm font-semibold text-neutral-500">
+        Showing {products.length} product{products.length === 1 ? '' : 's'}
+        {hasActiveFilters ? ' matching your filters.' : '.'}
+      </p>
+    </div>
 
-          return (
-            <article
-              key={product.id}
-              className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft"
-            >
-              <div
-                className="h-44 bg-neutral-100 bg-cover bg-center"
-                style={{ backgroundImage: `url(${imageUrl})` }}
-              />
+    {hasActiveFilters ? (
+      <a
+        href="/dashboard/menu"
+        className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black hover:bg-neutral-100"
+      >
+        Clear Filters
+      </a>
+    ) : null}
+  </div>
 
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-lg font-black">
-                        {product.name}
-                      </h3>
-                      <StatusBadge
-                        status={product.isAvailable ? 'Available' : 'Hidden'}
-                      />
-                      <span
-                        className={
-                          isBundle
-                            ? 'rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800'
-                            : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600'
-                        }
-                      >
-                        {productTypeLabel(product.productType)}
-                      </span>
-                    </div>
+  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+    <label className="grid gap-2 xl:col-span-2">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+        Search
+      </span>
 
-                    <p className="mt-1 text-sm font-semibold text-neutral-500">
-                      {product.hotel.name} · {product.category.name} ·{' '}
-                      {product.prepTimeMinutes} min
-                    </p>
-                  </div>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
 
-                  <p className="shrink-0 text-xl font-black">
-                    {money(product.priceCents)}
-                  </p>
-                </div>
+        <Input
+          name="q"
+          defaultValue={searchTerm}
+          placeholder="Search product, category, or hotel..."
+          className="pl-11"
+        />
+      </div>
+    </label>
 
-                <p className="mt-3 line-clamp-3 text-sm leading-6 text-neutral-600">
-                  {product.description || 'No description provided.'}
-                </p>
+    {user.role === 'SUPER_ADMIN' ? (
+      <label className="grid gap-2">
+        <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+          Hotel
+        </span>
 
-                {isBundle ? (
-                  <div className="mt-4 rounded-2xl bg-amber-50 p-3">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
-                      Bundle / Combo Includes
-                    </p>
+        <Select name="hotelId" defaultValue={selectedHotelId}>
+          <option value="">All hotels</option>
+          {hotels.map((hotel) => (
+            <option key={hotel.id} value={hotel.id}>
+              {hotel.name}
+            </option>
+          ))}
+        </Select>
+      </label>
+    ) : null}
 
-                    {product.bundleComponents.length > 0 ? (
-                      <>
-                        <div className="mt-2 space-y-1">
-                          {product.bundleComponents.map((component) => (
-                            <p
-                              key={component.id}
-                              className="text-sm font-bold text-neutral-700"
-                            >
-                              {component.quantity}×{' '}
-                              {component.componentProduct.name}
-                            </p>
-                          ))}
-                        </div>
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+        Category
+      </span>
 
-                        {bundleNormalTotalCents > 0 ? (
-                          <div className="mt-3 rounded-xl bg-white/80 p-3 text-xs font-black text-amber-900">
-                            <p>
-                              Normal total: {money(bundleNormalTotalCents)}
-                            </p>
-                            {bundleSavingsCents > 0 ? (
-                              <p className="mt-1">
-                                Guest saves: {money(bundleSavingsCents)}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="mt-2 text-sm font-bold text-amber-800">
-                        No bundle components yet.
-                      </p>
-                    )}
-                  </div>
-                ) : product.recipes.length > 0 ? (
-                  <div className="mt-4 rounded-2xl bg-gold/10 p-3">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
-                      Recipe / Stock Deduction
-                    </p>
+      <Select name="categoryId" defaultValue={selectedCategoryId}>
+        <option value="">All categories</option>
+        {filterCategories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.hotel.name} · {category.name}
+            {!category.isActive ? ' (Hidden)' : ''}
+          </option>
+        ))}
+      </Select>
+    </label>
 
-                    <p className="mt-2 text-sm font-bold text-neutral-700">
-                      {product.recipes
-                        .map(
-                          (recipe) =>
-                            `${Number(recipe.quantity)} ${
-                              recipe.inventoryItem.unit
-                            } ${recipe.inventoryItem.name}`
-                        )
-                        .join(', ')}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="mt-4 rounded-2xl bg-neutral-50 p-3 text-xs font-semibold text-neutral-500">
-                    No recipe linked yet.
-                  </p>
-                )}
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+        Type
+      </span>
 
-                <div className="mt-5 grid grid-cols-2 gap-2">
-                  <ModalOpenButton
-                    modalId={editModalId}
-                    className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100"
-                  >
-                    <Pencil className="size-4" />
-                    Edit
-                  </ModalOpenButton>
+      <Select name="productType" defaultValue={selectedProductType}>
+        <option value="">All types</option>
+        <option value={MenuProductType.SINGLE}>Single Item</option>
+        <option value={MenuProductType.BUNDLE}>Bundle / Combo</option>
+      </Select>
+    </label>
 
-                  <form action={deleteProductAction}>
-                    <input type="hidden" name="productId" value={product.id} />
-                    <ConfirmSubmitButton
-                      label="Delete"
-                      message="Are you sure you want to delete this product?"
-                      className="bg-red-600 text-white hover:bg-red-700"
-                    />
-                  </form>
-                </div>
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+        Availability
+      </span>
+
+      <Select name="availability" defaultValue={selectedAvailability}>
+        <option value="">All availability</option>
+        <option value="available">Available only</option>
+        <option value="hidden">Hidden only</option>
+      </Select>
+    </label>
+  </div>
+
+  <div className="mt-4 flex justify-end">
+    <Button type="submit" className="min-w-36 gap-2">
+      <Search className="size-4" />
+      Apply Filters
+    </Button>
+  </div>
+</form>
+
+
+     {products.length === 0 ? (
+  <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center shadow-soft">
+    <h3 className="text-xl font-black text-neutral-800">
+      No products found
+    </h3>
+
+    <p className="mx-auto mt-2 max-w-xl text-sm font-semibold leading-6 text-neutral-500">
+      Try changing the search keyword, category, product type, hotel, or
+      availability filter.
+    </p>
+
+    {hasActiveFilters ? (
+      <a
+        href="/dashboard/menu"
+        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-black px-5 py-2 text-sm font-black text-white hover:bg-neutral-800"
+      >
+        Clear Filters
+      </a>
+    ) : null}
+  </div>
+) : (
+
+<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+  {products.map((product) => {
+    const imageUrl = getProductImage(product);
+    const editModalId = `edit-product-${product.id}`;
+    const isBundle = product.productType === MenuProductType.BUNDLE;
+    const bundleNormalTotalCents = getBundleNormalTotalCents(
+      product.bundleComponents
+    );
+    const bundleSavingsCents =
+      isBundle && bundleNormalTotalCents > product.priceCents
+        ? bundleNormalTotalCents - product.priceCents
+        : 0;
+
+    return (
+      <article
+        key={product.id}
+        className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-soft"
+      >
+        <div
+          className="h-32 bg-neutral-100 bg-cover bg-center"
+          style={{ backgroundImage: `url(${imageUrl})` }}
+        />
+
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-base font-black">
+                  {product.name}
+                </h3>
+
+                <StatusBadge
+                  status={product.isAvailable ? 'Available' : 'Hidden'}
+                />
+
+                <span
+                  className={
+                    isBundle
+                      ? 'rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800'
+                      : 'rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-black text-neutral-600'
+                  }
+                >
+                  {productTypeLabel(product.productType)}
+                </span>
               </div>
 
-              <Modal
-                id={editModalId}
-                title={`Edit ${product.name}`}
-                description="Update product details, pricing, image, availability, and bundle components."
-              >
-               <form
-  action={updateProductAction}
-          className="grid gap-5 md:grid-cols-2"
-        >
-          <input type="hidden" name="productId" value={product.id} />
-
-          <ProductBundleProvider defaultProductType={product.productType}>
-            <FormField label="Menu Category">
-              <Select
-                name="categoryId"
-                required
-                defaultValue={product.categoryId}
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.hotel.name} · {category.name}
-                    {!category.isActive ? ' (Hidden)' : ''}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <ProductTypeField helper="Use Single Item for normal products. Use Bundle / Combo for fixed sets." />
-
-            <FormField label="Product Name">
-              <Input name="name" defaultValue={product.name} required />
-            </FormField>
-
-            <FormField label="Price">
-              <Input
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={(product.priceCents / 100).toString()}
-                required
-              />
-            </FormField>
-
-            <FormField label="Preparation Time">
-              <Input
-                name="prepTimeMinutes"
-                type="number"
-                min="0"
-                defaultValue={product.prepTimeMinutes}
-              />
-            </FormField>
-
-            <FormField
-              label="Upload New Product Image"
-              helper="Leave blank to keep the current image."
-              className="md:col-span-2"
-            >
-              <MenuImageUploadPreview
-                name="imageFile"
-                currentImageUrl={imageUrl}
-                currentImageAlt={product.name}
-              />
-            </FormField>
-
-            <FormField
-              label="Image URL"
-              helper="Optional. If filled, this replaces the current image."
-              className="md:col-span-2"
-            >
-              <Input
-                name="imageUrl"
-                type="url"
-                placeholder="https://..."
-              />
-            </FormField>
-
-            <FormField label="Description" className="md:col-span-2">
-              <Textarea
-                name="description"
-                defaultValue={product.description || ''}
-              />
-            </FormField>
-
-            <DynamicBundleComponentFields
-              componentOptions={bundleComponentOptions}
-              currentProductId={product.id}
-              defaultComponents={product.bundleComponents.map((component) => ({
-                componentProductId: component.componentProductId,
-                quantity: component.quantity,
-              }))}
-            />
-
-            <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
-              <input
-                name="isAvailable"
-                type="checkbox"
-                defaultChecked={product.isAvailable}
-                className="size-4 accent-black"
-              />
-              <span>
-                <span className="block text-sm font-black">
-                  Available
-                </span>
-                <span className="text-xs font-medium text-neutral-500">
-                  Show this product in the guest portal and POS.
-                </span>
-              </span>
-            </label>
-
-            <div className="md:col-span-2">
-              <Button className="w-full">Save Product Changes</Button>
+              <p className="mt-1 text-xs font-semibold text-neutral-500">
+                {product.hotel.name} · {product.category.name} ·{' '}
+                {product.prepTimeMinutes} min
+              </p>
             </div>
-          </ProductBundleProvider>
-        </form>
-              </Modal>
-            </article>
-          );
-        })}
-      </div>
+
+            <p className="shrink-0 text-lg font-black">
+              {money(product.priceCents)}
+            </p>
+          </div>
+
+          <p className="mt-2 line-clamp-2 text-xs leading-5 text-neutral-600">
+            {product.description || 'No description provided.'}
+          </p>
+
+          {isBundle ? (
+            <div className="mt-3 rounded-xl bg-amber-50 p-2.5">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
+                Bundle / Combo Includes
+              </p>
+
+              {product.bundleComponents.length > 0 ? (
+                <>
+                  <div className="mt-2 space-y-1">
+                    {product.bundleComponents.map((component) => (
+                      <p
+                        key={component.id}
+                        className="text-xs font-bold text-neutral-700"
+                      >
+                        {component.quantity}× {component.componentProduct.name}
+                      </p>
+                    ))}
+                  </div>
+
+                  {bundleNormalTotalCents > 0 ? (
+                    <div className="mt-2 rounded-xl bg-white/80 p-2 text-[11px] font-black text-amber-900">
+                      <p>Normal total: {money(bundleNormalTotalCents)}</p>
+                      {bundleSavingsCents > 0 ? (
+                        <p className="mt-1">
+                          Guest saves: {money(bundleSavingsCents)}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <p className="mt-2 text-xs font-bold text-amber-800">
+                  No bundle components yet.
+                </p>
+              )}
+            </div>
+         ) : null}
+
+         
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <ModalOpenButton
+              modalId={editModalId}
+              className="gap-2 border border-neutral-200 bg-white px-3 py-2 text-sm text-black hover:bg-neutral-100"
+            >
+              <Pencil className="size-4" />
+              Edit
+            </ModalOpenButton>
+
+            <form action={deleteProductAction}>
+              <input type="hidden" name="productId" value={product.id} />
+              <ConfirmSubmitButton
+                label="Delete"
+                message="Are you sure you want to delete this product?"
+                className="px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700"
+              />
+            </form>
+          </div>
+        </div>
+      </article>
+    );
+  })}
+</div>
+
+)}
+
 
       <Modal
         id="product-modal"

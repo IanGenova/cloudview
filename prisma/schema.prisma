@@ -163,6 +163,20 @@ enum RewardRedemptionStatus {
   EXPIRED
 }
 
+enum FulfillmentTiming {
+  ASAP
+  SCHEDULED
+}
+
+enum ScheduledReleaseStatus {
+  NOT_SCHEDULED
+  SCHEDULED
+  RELEASED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
 model UserDashboardPermission {
   id     String          @id @default(cuid())
   userId String
@@ -534,12 +548,32 @@ model Order {
   guestStayId String?
   guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
 
+  fulfillmentTiming FulfillmentTiming @default(ASAP)
+
+  scheduledFor         DateTime?
+  scheduledWindowStart DateTime?
+  scheduledWindowEnd   DateTime?
+
+  releaseAt  DateTime?
+  releasedAt DateTime?
+
+  scheduledReleaseStatus ScheduledReleaseStatus @default(NOT_SCHEDULED)
+  scheduledNote          String?                @db.Text
+
   @@index([guestSessionId])
   @@index([guestMemberId])
   @@index([hotelId])
   @@index([status])
   @@index([createdAt])
   @@index([guestStayId])
+  @@index([fulfillmentTiming])
+  @@index([scheduledFor])
+  @@index([releaseAt])
+  @@index([releasedAt])
+  @@index([scheduledReleaseStatus])
+  @@index([hotelId, fulfillmentTiming])
+  @@index([hotelId, scheduledReleaseStatus])
+  @@index([hotelId, releaseAt])
 }
 
 model OrderItem {
@@ -644,6 +678,18 @@ model ServiceRequest {
   guestMemberId String?
   guestMember   GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
+  fulfillmentTiming FulfillmentTiming @default(ASAP)
+
+  scheduledFor         DateTime?
+  scheduledWindowStart DateTime?
+  scheduledWindowEnd   DateTime?
+
+  releaseAt  DateTime?
+  releasedAt DateTime?
+
+  scheduledReleaseStatus ScheduledReleaseStatus @default(NOT_SCHEDULED)
+  scheduledNote          String?                @db.Text
+
   @@index([guestSessionId])
   @@index([guestMemberId])
   @@index([hotelId])
@@ -651,6 +697,14 @@ model ServiceRequest {
   @@index([requestCode])
   @@index([hotelId, requestCode])
   @@index([guestStayId])
+  @@index([fulfillmentTiming])
+  @@index([scheduledFor])
+  @@index([releaseAt])
+  @@index([releasedAt])
+  @@index([scheduledReleaseStatus])
+  @@index([hotelId, fulfillmentTiming])
+  @@index([hotelId, scheduledReleaseStatus])
+  @@index([hotelId, releaseAt])
 }
 
 model ServiceRequestAttachment {

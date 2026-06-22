@@ -109,19 +109,52 @@ function normalizeValue(value?: string | null) {
   return String(value ?? '').trim().toUpperCase();
 }
 
+function normalizeEventName(value?: string | null) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, '.')
+    .replace(/\.+/g, '.')
+    .replace(/^\./, '')
+    .replace(/\.$/, '');
+}
+
+function eventHasWords(event: string, words: string[]) {
+  return words.every((word) => event.includes(word));
+}
+
+function getEventFromUnknown(data: unknown) {
+  if (!data || typeof data !== 'object' || !('event' in data)) {
+    return '';
+  }
+
+  const event = (data as { event?: unknown }).event;
+
+  return typeof event === 'string' ? event : '';
+}
+
 function formatSource(source?: string) {
   return source ? source.replace(/_/g, ' ') : '';
 }
 
 function isKitchenOrderCreatedEvent(data: KitchenPayload) {
-  const event = normalizeValue(data.event);
+  const event = normalizeEventName(data.event);
   const source = normalizeValue(data.source);
   const status = normalizeValue(data.status);
 
-  if (event === 'KITCHEN-ORDER-CREATED') {
+  const isCreatedEvent =
+    eventHasWords(event, ['kitchen', 'order', 'created']) ||
+    eventHasWords(event, ['order', 'created']) ||
+    event === 'kitchen.order.new' ||
+    event === 'order.new';
+
+  if (isCreatedEvent) {
     return true;
   }
 
+  /**
+   * Fallback for older publishers that do not send a clean event name.
+   */
   if (
     data.orderCode &&
     status === 'PENDING' &&
@@ -135,14 +168,23 @@ function isKitchenOrderCreatedEvent(data: KitchenPayload) {
 }
 
 function isServiceRequestCreatedEvent(data: ServiceRequestPayload) {
-  const event = normalizeValue(data.event);
+  const event = normalizeEventName(data.event);
   const source = normalizeValue(data.source);
   const status = normalizeValue(data.status);
 
-  if (event === 'SERVICE-REQUEST-CREATED') {
+  const isCreatedEvent =
+    eventHasWords(event, ['service', 'request', 'created']) ||
+    eventHasWords(event, ['service', 'created']) ||
+    event === 'service.request.new' ||
+    event === 'service.new';
+
+  if (isCreatedEvent) {
     return true;
   }
 
+  /**
+   * Fallback for older publishers that do not send a clean event name.
+   */
   if (
     (data.requestCode || data.requestId) &&
     (!status || status === 'PENDING' || status === 'NEW') &&
@@ -155,20 +197,23 @@ function isServiceRequestCreatedEvent(data: ServiceRequestPayload) {
 }
 
 function isLowStockEvent(data: unknown): data is LowStockPayload {
+  const event = normalizeEventName(getEventFromUnknown(data));
+
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    'event' in data &&
-    data.event === 'inventory.low_stock'
+    event === 'inventory.low.stock' ||
+    event === 'inventory.lowstock' ||
+    eventHasWords(event, ['inventory', 'low', 'stock'])
   );
 }
 
 function isCancelledItemEvent(data: unknown): data is CancelledItemPayload {
+  const event = normalizeEventName(getEventFromUnknown(data));
+
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    'event' in data &&
-    (data.event === 'order.item_cancelled' || data.event === 'order.cancelled')
+    event === 'order.item.cancelled' ||
+    event === 'order.cancelled' ||
+    eventHasWords(event, ['order', 'item', 'cancelled']) ||
+    eventHasWords(event, ['order', 'cancelled'])
   );
 }
 

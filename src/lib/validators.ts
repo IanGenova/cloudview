@@ -44,7 +44,10 @@ export const createGuestOrderSchema = z.object({
   guestName: optionalText(100),
   notes: optionalText(1000),
   paymentMethod: z.enum(['ROOM_CHARGE', 'PAY_AT_COUNTER', 'CASH', 'POS']),
-  items: z
+  fulfillmentTiming: z.enum(['ASAP', 'SCHEDULED']).optional().default('ASAP'),
+  scheduledFor: z.string().trim().max(120).optional().default(''),
+  scheduledNote: z.string().trim().max(300).optional().default(''),
+    items: z
     .array(guestCartItemSchema)
     .min(1, 'Please select at least one item.')
     .max(

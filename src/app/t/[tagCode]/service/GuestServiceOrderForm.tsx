@@ -69,6 +69,8 @@ type AttachmentPreview = {
   url: string;
 };
 
+type FulfillmentTimingValue = 'ASAP' | 'SCHEDULED';
+
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -166,6 +168,8 @@ function getErrorMessage(error?: string) {
     quantity_required: 'Please choose a valid quantity for every selected item.',
     request_failed: 'Unable to submit the request. Please try again.',
     invalid_attachment: 'Please upload JPG, PNG, or WEBP images only. Maximum 5 images, 5MB each.',
+    invalid_schedule:
+        'Please select a valid future date and time for the scheduled request.',
     
   };
 
@@ -261,6 +265,11 @@ export function GuestServiceOrderForm({
   const [guestName, setGuestName] = useState(defaultGuestName);
   const [notes, setNotes] = useState('');
   const [chargeConsent, setChargeConsent] = useState(false);
+  const [fulfillmentTiming, setFulfillmentTiming] =
+  useState<FulfillmentTimingValue>('ASAP');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [scheduledNote, setScheduledNote] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -504,20 +513,55 @@ function clearAttachments() {
   }
 }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    setLocalError(null);
+      function getScheduledForIso() {
+        if (fulfillmentTiming !== 'SCHEDULED') {
+          return '';
+        }
 
-    if (!cart.length) {
+        if (!scheduledDate || !scheduledTime) {
+          return null;
+        }
+
+        const date = new Date(`${scheduledDate}T${scheduledTime}:00`);
+
+        if (Number.isNaN(date.getTime())) {
+          return null;
+        }
+
+        return date.toISOString();
+      }
+
+ function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  setLocalError(null);
+
+  if (!cart.length) {
+    event.preventDefault();
+    setLocalError('Please add at least one service request.');
+    return;
+  }
+
+  const scheduledForIso = getScheduledForIso();
+
+  if (fulfillmentTiming === 'SCHEDULED') {
+    if (!scheduledForIso) {
       event.preventDefault();
-      setLocalError('Please add at least one service request.');
+      setLocalError('Please select a valid scheduled date and time.');
       return;
     }
 
-    if (hasFixedPriceItem && !chargeConsent) {
+    if (new Date(scheduledForIso).getTime() <= Date.now() + 60_000) {
       event.preventDefault();
-      setLocalError('Please confirm the room add-on charge before submitting.');
+      setLocalError('Scheduled service time must be in the future.');
+      return;
     }
   }
+
+  if (hasFixedPriceItem && !chargeConsent) {
+    event.preventDefault();
+    setLocalError('Please confirm the room add-on charge before submitting.');
+    return;
+  }
+}
 
   if (screen === 'cart') {
     return (
@@ -579,7 +623,10 @@ function clearAttachments() {
                   name={`quantity_${item.service.code}`}
                   value={item.quantity}
                 />
-              </div>
+                <input type="hidden" name="fulfillmentTiming" value={fulfillmentTiming} />
+                <input type="hidden" name="scheduledFor" value={getScheduledForIso() || ''} />
+                <input type="hidden" name="scheduledNote" value={scheduledNote} />
+                              </div>
             ))}
 
             <div className="rounded-[2rem] bg-white p-4 shadow-soft">
@@ -691,6 +738,57 @@ function clearAttachments() {
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                 />
+
+                <div>
+                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                    Request Time
+                  </label>
+
+                  <select
+                    value={fulfillmentTiming}
+                    onChange={(event) =>
+                      setFulfillmentTiming(event.target.value as FulfillmentTimingValue)
+                    }
+                    className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                  >
+                    <option value="ASAP">Now / Send request immediately</option>
+                    <option value="SCHEDULED">Schedule service for later</option>
+                  </select>
+                </div>
+
+                {fulfillmentTiming === 'SCHEDULED' ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+                      Scheduled Service Request
+                    </p>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <Input
+                            type="date"
+                            value={scheduledDate}
+                            onChange={(event) => setScheduledDate(event?.currentTarget?.value ?? '')}
+                          />
+
+                          <Input
+                            type="time"
+                            value={scheduledTime}
+                            onChange={(event) => setScheduledTime(event?.currentTarget?.value ?? '')}
+                          />
+                    </div>
+
+                    <Textarea
+                      className="mt-3"
+                      placeholder="Optional schedule note, e.g. Please clean the room after breakfast"
+                      value={scheduledNote}
+                      onChange={(event) => setScheduledNote(event?.currentTarget?.value ?? '')}
+                    />
+
+                    <p className="mt-2 text-xs font-semibold leading-5 text-amber-800">
+                      This request will be saved now, then released to staff before the
+                      scheduled time.
+                    </p>
+                  </div>
+                ) : null}
 
                 <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4">
   <div className="flex items-start gap-3">

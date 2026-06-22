@@ -1,24 +1,30 @@
+import type { ReactNode } from 'react';
 import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
+import {
+  BarChart3,
+  CircleDollarSign,
+  ClipboardList,
+  ConciergeBell,
+  CreditCard,
+  PackageCheck,
+  PieChart,
+  Sparkles,
+  TrendingUp,
+  Utensils,
+} from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { StatCard } from '@/components/dashboard/StatCard';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
 
-const pesoFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-});
-
 function formatMoneyFromCents(cents: number) {
   return money(cents);
 }
 
-function formatPeso(value: number) {
-  return pesoFormatter.format(value);
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('en-PH').format(value);
 }
 
 function getLastNDays(days: number) {
@@ -94,6 +100,441 @@ function getPaymentStatusTone(status: PaymentStatus) {
     default:
       return 'bg-amber-100 text-amber-700';
   }
+}
+
+function getOrderStatusColor(status: OrderStatus) {
+  switch (status) {
+    case OrderStatus.DELIVERED:
+      return '#10b981';
+    case OrderStatus.CANCELLED:
+      return '#ef4444';
+    case OrderStatus.PREPARING:
+      return '#f59e0b';
+    case OrderStatus.READY:
+      return '#22c55e';
+    case OrderStatus.ACCEPTED:
+      return '#3b82f6';
+    case OrderStatus.PENDING:
+      return '#71717a';
+    default:
+      return '#a3a3a3';
+  }
+}
+
+function getPaymentStatusColor(status: PaymentStatus) {
+  switch (status) {
+    case PaymentStatus.PAID:
+      return '#10b981';
+    case PaymentStatus.REFUNDED:
+      return '#737373';
+    case PaymentStatus.UNPAID:
+      return '#f59e0b';
+    default:
+      return '#eab308';
+  }
+}
+
+type DonutSegment = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+function AnalyticsCard({
+  title,
+  description,
+  children,
+  className = '',
+  right,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  className?: string;
+  right?: ReactNode;
+}) {
+  return (
+    <section
+      className={`overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft ${className}`}
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/70 px-5 py-4">
+        <div>
+          <h2 className="text-lg font-black text-neutral-950">{title}</h2>
+          {description ? (
+            <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
+              {description}
+            </p>
+          ) : null}
+        </div>
+
+        {right}
+      </div>
+
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function HeroMetric({
+  label,
+  value,
+  helper,
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/55">
+          {label}
+        </p>
+
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gold text-black">
+          {icon}
+        </span>
+      </div>
+
+      <p className="mt-4 text-2xl font-black tracking-tight text-white">
+        {value}
+      </p>
+
+      {helper ? (
+        <p className="mt-1 text-xs font-semibold text-white/55">{helper}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function DonutChart({
+  segments,
+  total,
+  centerLabel,
+  centerValue,
+}: {
+  segments: DonutSegment[];
+  total: number;
+  centerLabel: string;
+  centerValue: string | number;
+}) {
+  let offset = 0;
+
+  const visibleSegments = segments.filter((segment) => segment.value > 0);
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+      <div className="relative mx-auto size-56">
+        <svg viewBox="0 0 44 44" className="size-full -rotate-90">
+          <circle
+            cx="22"
+            cy="22"
+            r="15.9155"
+            fill="transparent"
+            stroke="#f4f4f5"
+            strokeWidth="7"
+          />
+
+          {visibleSegments.map((segment) => {
+            const percentage = total ? (segment.value / total) * 100 : 0;
+            const currentOffset = offset;
+
+            offset += percentage;
+
+            return (
+              <circle
+                key={segment.label}
+                cx="22"
+                cy="22"
+                r="15.9155"
+                fill="transparent"
+                stroke={segment.color}
+                strokeWidth="7"
+                strokeDasharray={`${percentage} ${100 - percentage}`}
+                strokeDashoffset={-currentOffset}
+              />
+            );
+          })}
+        </svg>
+
+        <div className="absolute inset-0 grid place-items-center text-center">
+          <div>
+            <p className="text-3xl font-black text-neutral-950">
+              {centerValue}
+            </p>
+            <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-neutral-400">
+              {centerLabel}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {segments.map((segment) => {
+          const percentage = getPercentage(segment.value, total);
+
+          return (
+            <div
+              key={segment.label}
+              className="rounded-2xl bg-neutral-50 p-3"
+            >
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="size-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: segment.color }}
+                  />
+
+                  <p className="truncate text-sm font-black">
+                    {segment.label}
+                  </p>
+                </div>
+
+                <p className="shrink-0 text-sm font-black">
+                  {segment.value} · {percentage}%
+                </p>
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${percentage}%`,
+                    backgroundColor: segment.color,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {!segments.some((segment) => segment.value > 0) ? (
+          <EmptyState text="No chart data yet." />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SalesAreaChart({
+  data,
+}: {
+  data: {
+    label: string;
+    salesCents: number;
+    orders: number;
+  }[];
+}) {
+  const width = 720;
+  const height = 260;
+  const padding = 28;
+  const maxSales = getMaxValue(data.map((item) => item.salesCents));
+  const innerWidth = width - padding * 2;
+  const innerHeight = height - padding * 2;
+
+  const points = data.map((item, index) => {
+    const x =
+      data.length === 1
+        ? width / 2
+        : padding + (index / (data.length - 1)) * innerWidth;
+
+    const y =
+      height -
+      padding -
+      (item.salesCents / maxSales) * innerHeight;
+
+    return {
+      x,
+      y,
+      ...item,
+    };
+  });
+
+  const linePoints = points.map((point) => `${point.x},${point.y}`).join(' ');
+
+  const areaPoints = points.length
+    ? `${points[0].x},${height - padding} ${linePoints} ${
+        points[points.length - 1].x
+      },${height - padding}`
+    : '';
+
+  return (
+    <div>
+      <div className="overflow-hidden rounded-[2rem] bg-neutral-950 p-4">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-72 w-full"
+          role="img"
+          aria-label="Sales trend area chart"
+        >
+          <defs>
+            <linearGradient id="salesGradient" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#d6a729" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="#d6a729" stopOpacity="0.05" />
+            </linearGradient>
+          </defs>
+
+          {[0.25, 0.5, 0.75].map((ratio) => (
+            <line
+              key={ratio}
+              x1={padding}
+              x2={width - padding}
+              y1={padding + innerHeight * ratio}
+              y2={padding + innerHeight * ratio}
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth="1"
+            />
+          ))}
+
+          {areaPoints ? (
+            <polygon points={areaPoints} fill="url(#salesGradient)" />
+          ) : null}
+
+          {linePoints ? (
+            <polyline
+              points={linePoints}
+              fill="none"
+              stroke="#d6a729"
+              strokeWidth="4"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ) : null}
+
+          {points.map((point) => (
+            <g key={point.label}>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="5"
+                fill="#ffffff"
+                stroke="#d6a729"
+                strokeWidth="3"
+              />
+
+              <title>
+                {point.label}: {formatMoneyFromCents(point.salesCents)}
+              </title>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      <div className="mt-3 grid grid-cols-7 gap-2 text-center text-[10px] font-black text-neutral-400 md:grid-cols-14">
+        {data.map((item) => (
+          <span key={item.label} className="truncate">
+            {item.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HorizontalBars({
+  items,
+  maxValue,
+  emptyText,
+  valueSuffix = '',
+}: {
+  items: {
+    label: string;
+    value: number;
+    helper?: string;
+  }[];
+  maxValue: number;
+  emptyText: string;
+  valueSuffix?: string;
+}) {
+  if (!items.length) {
+    return <EmptyState text={emptyText} />;
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item, index) => {
+        const width = Math.max((item.value / maxValue) * 100, 4);
+
+        return (
+          <div key={`${item.label}-${index}`} className="rounded-2xl bg-neutral-50 p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black">{item.label}</p>
+                {item.helper ? (
+                  <p className="mt-1 text-xs font-semibold text-neutral-400">
+                    {item.helper}
+                  </p>
+                ) : null}
+              </div>
+
+              <b className="shrink-0 text-sm">
+                {formatNumber(item.value)}
+                {valueSuffix}
+              </b>
+            </div>
+
+            <div className="h-2.5 overflow-hidden rounded-full bg-white">
+              <div
+                className="h-full rounded-full bg-black"
+                style={{
+                  width: `${width}%`,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MiniMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  tone?: 'green' | 'red' | 'amber';
+}) {
+  return (
+    <div
+      className={
+        tone === 'green'
+          ? 'rounded-2xl bg-emerald-50 p-4'
+          : tone === 'red'
+            ? 'rounded-2xl bg-red-50 p-4'
+            : tone === 'amber'
+              ? 'rounded-2xl bg-amber-50 p-4'
+              : 'rounded-2xl bg-neutral-50 p-4'
+      }
+    >
+      <p
+        className={
+          tone === 'green'
+            ? 'text-xs font-black uppercase text-emerald-700'
+            : tone === 'red'
+              ? 'text-xs font-black uppercase text-red-700'
+              : tone === 'amber'
+                ? 'text-xs font-black uppercase text-amber-700'
+                : 'text-xs font-black uppercase text-neutral-400'
+        }
+      >
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-black">{value}</p>
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-neutral-200 p-5 text-center text-sm font-bold text-neutral-400">
+      {text}
+    </div>
+  );
 }
 
 export default async function AnalyticsPage() {
@@ -301,7 +742,9 @@ export default async function AnalyticsPage() {
     }),
   ]);
 
-  const movementProductIds = stockMovementUsage.map((item) => item.productId);
+  const movementProductIds = stockMovementUsage
+    .map((item) => item.productId)
+    .filter(Boolean) as string[];
 
   const movementProducts = movementProductIds.length
     ? await db.menuProduct.findMany({
@@ -337,6 +780,12 @@ export default async function AnalyticsPage() {
   const completionRate = getPercentage(deliveredOrders, orders);
   const cancellationRate = getPercentage(cancelledOrders, orders);
 
+  const paidOrders =
+    paymentStatusGroups.find((item) => item.paymentStatus === PaymentStatus.PAID)
+      ?._count._all ?? 0;
+
+  const paidRate = getPercentage(paidOrders, orders);
+
   const salesTrend = days.map((day) => {
     const dayOrders = recentOrders.filter(
       (order) => order.createdAt.toISOString().slice(0, 10) === day.key
@@ -349,24 +798,66 @@ export default async function AnalyticsPage() {
     };
   });
 
-  const maxSales = getMaxValue(salesTrend.map((item) => item.salesCents));
-  const maxOrders = getMaxValue(salesTrend.map((item) => item.orders));
+  const totalTrendSalesCents = salesTrend.reduce(
+    (sum, item) => sum + item.salesCents,
+    0
+  );
+
+  const trendOrderCount = salesTrend.reduce((sum, item) => sum + item.orders, 0);
+
+  const orderStatusSegments = Object.values(OrderStatus).map((status) => {
+    const count =
+      orderStatusGroups.find((item) => item.status === status)?._count._all ??
+      0;
+
+    return {
+      label: statusLabel(status),
+      value: count,
+      color: getOrderStatusColor(status),
+    };
+  });
+
+  const paymentStatusSegments = Object.values(PaymentStatus).map((status) => {
+    const count =
+      paymentStatusGroups.find((item) => item.paymentStatus === status)?._count
+        ._all ?? 0;
+
+    return {
+      label: statusLabel(status),
+      value: count,
+      color: getPaymentStatusColor(status),
+    };
+  });
 
   const maxPopularQty = getMaxValue(
     popularItems.map((item) => item._sum.quantity ?? 0)
   );
 
+  const popularMenuItems = popularItems.map((item, index) => ({
+    label: item.productNameSnapshot,
+    value: item._sum.quantity ?? 0,
+    helper: `Rank #${index + 1}`,
+  }));
+
   const maxServiceQty = getMaxValue(
     serviceTypeGroups.map((item) => item._count._all)
   );
 
+  const serviceItems = serviceTypeGroups.map((item, index) => ({
+    label: item.type,
+    value: item._count._all,
+    helper: `Service rank #${index + 1}`,
+  }));
+
   const availableStockItems = menuStocks.filter(
     (stock) =>
-      stock.product.isAvailable && stock.availableQty > 0 && !stock.isSoldOut
+      stock.product.isAvailable &&
+      Number(stock.availableQty) > 0 &&
+      !stock.isSoldOut
   ).length;
 
   const soldOutStockItems = menuStocks.filter(
-    (stock) => stock.isSoldOut || stock.availableQty <= 0
+    (stock) => stock.isSoldOut || Number(stock.availableQty) <= 0
   ).length;
 
   const hiddenMenuItems = menuStocks.filter(
@@ -374,145 +865,289 @@ export default async function AnalyticsPage() {
   ).length;
 
   const totalAvailableQty = menuStocks.reduce(
-    (sum, stock) => sum + stock.availableQty,
+    (sum, stock) => sum + Number(stock.availableQty),
     0
   );
 
-  const totalSoldQty = menuStocks.reduce((sum, stock) => sum + stock.soldQty, 0);
+  const totalSoldQty = menuStocks.reduce(
+    (sum, stock) => sum + Number(stock.soldQty),
+    0
+  );
 
   const topStockUsage = stockMovementUsage.map((item) => ({
     productName: movementProductMap.get(item.productId)?.name ?? item.productId,
-    quantity: item._sum.quantity ?? 0,
+    quantity: Number(item._sum.quantity ?? 0),
   }));
 
   const maxStockUsage = getMaxValue(topStockUsage.map((item) => item.quantity));
 
   return (
-    <div>
+    <div className="space-y-8">
       <PageHeader
-        title="Business Analytics"
-        description="Sales performance, order flow, service requests, menu popularity, and stock availability insights."
+        title="Business Intelligence Center"
+        description="A visual command dashboard for sales, orders, services, menu performance, and inventory movement."
       />
 
+      <section className="relative overflow-hidden rounded-[2.5rem] bg-neutral-950 p-6 text-white shadow-2xl">
+        <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-gold/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-12 size-72 rounded-full bg-emerald-500/20 blur-3xl" />
+
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[1.1fr_1.5fr] xl:items-end">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-gold">
+              <Sparkles className="size-4" />
+              CloudView Analytics
+            </div>
+
+            <h1 className="mt-5 max-w-2xl text-4xl font-black tracking-tight md:text-5xl">
+              Real-time business pulse for hotel operations.
+            </h1>
+
+            <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-white/60">
+              Monitor revenue, order movement, service demand, and stock health
+              using visual dashboards built for fast decisions.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <HeroMetric
+              label="Total Sales"
+              value={formatMoneyFromCents(totalSalesCents)}
+              helper="All recorded order value"
+              icon={<CircleDollarSign className="size-5" />}
+            />
+
+            <HeroMetric
+              label="Orders"
+              value={formatNumber(orders)}
+              helper={`${completionRate}% completion`}
+              icon={<ClipboardList className="size-5" />}
+            />
+
+            <HeroMetric
+              label="Avg. Order"
+              value={formatMoneyFromCents(averageOrderValueCents)}
+              helper="Average basket value"
+              icon={<TrendingUp className="size-5" />}
+            />
+
+            <HeroMetric
+              label="Requests"
+              value={formatNumber(requests)}
+              helper="Guest service activity"
+              icon={<ConciergeBell className="size-5" />}
+            />
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total sales" value={formatMoneyFromCents(totalSalesCents)} />
-        <StatCard label="Total orders" value={orders} />
-        <StatCard label="Average order value" value={formatMoneyFromCents(averageOrderValueCents)} />
-        <StatCard label="Service requests" value={requests} />
+        <MiniMetric
+          label="Room Service Orders"
+          value={formatNumber(roomOrders)}
+          tone="green"
+        />
+        <MiniMetric
+          label="Poolside Orders"
+          value={formatNumber(poolOrders)}
+          tone="amber"
+        />
+        <MiniMetric
+          label="Paid Order Rate"
+          value={`${paidRate}%`}
+          tone="green"
+        />
+        <MiniMetric
+          label="Cancellation Rate"
+          value={`${cancellationRate}%`}
+          tone={cancellationRate > 10 ? 'red' : undefined}
+        />
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Room service orders" value={roomOrders} />
-        <StatCard label="Poolside orders" value={poolOrders} />
-        <StatCard label="Completion rate" value={`${completionRate}%`} />
-        <StatCard label="Cancellation rate" value={`${cancellationRate}%`} />
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+        <AnalyticsCard
+          title="Sales Performance Graph"
+          description="Revenue movement over the last 14 days."
+          right={
+            <span className="inline-flex items-center gap-2 rounded-full bg-black px-3 py-1 text-xs font-black text-white">
+              <BarChart3 className="size-4" />
+              {formatMoneyFromCents(totalTrendSalesCents)}
+            </span>
+          }
+        >
+          <SalesAreaChart data={salesTrend} />
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <MiniMetric
+              label="14-Day Revenue"
+              value={formatMoneyFromCents(totalTrendSalesCents)}
+              tone="green"
+            />
+            <MiniMetric
+              label="14-Day Orders"
+              value={formatNumber(trendOrderCount)}
+            />
+            <MiniMetric
+              label="Daily Avg."
+              value={formatMoneyFromCents(
+                Math.round(totalTrendSalesCents / Math.max(days.length, 1))
+              )}
+              tone="amber"
+            />
+          </div>
+        </AnalyticsCard>
+
+        <AnalyticsCard
+          title="Order Status Pie Chart"
+          description="Visual breakdown of all order statuses."
+          right={
+            <span className="grid size-10 place-items-center rounded-2xl bg-gold/15 text-gold">
+              <PieChart className="size-5" />
+            </span>
+          }
+        >
+          <DonutChart
+            segments={orderStatusSegments}
+            total={orders}
+            centerLabel="Orders"
+            centerValue={formatNumber(orders)}
+          />
+        </AnalyticsCard>
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-neutral-500">
-                  Last 14 days revenue
-                </p>
-                <p className="mt-1 text-2xl font-black">
-                  {formatMoneyFromCents(
-                    salesTrend.reduce((sum, item) => sum + item.salesCents, 0)
-                  )}
-                </p>
-              </div>
-              <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600">
-                Revenue
-              </span>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <AnalyticsCard
+          title="Payment Status Pie Chart"
+          description="Paid, unpaid, refunded, and payment movement."
+          right={
+            <span className="grid size-10 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <CreditCard className="size-5" />
+            </span>
+          }
+        >
+          <DonutChart
+            segments={paymentStatusSegments}
+            total={orders}
+            centerLabel="Payments"
+            centerValue={formatNumber(orders)}
+          />
+        </AnalyticsCard>
+
+        <AnalyticsCard
+          title="Menu Stock Health"
+          description="Availability and stock condition summary."
+          right={
+            <span className="grid size-10 place-items-center rounded-2xl bg-blue-100 text-blue-700">
+              <PackageCheck className="size-5" />
+            </span>
+          }
+        >
+          <div className="grid gap-3">
+            <MiniMetric
+              label="Available Menu Items"
+              value={formatNumber(availableStockItems)}
+              tone="green"
+            />
+            <MiniMetric
+              label="Sold Out Items"
+              value={formatNumber(soldOutStockItems)}
+              tone="red"
+            />
+            <MiniMetric
+              label="Hidden Menu Items"
+              value={formatNumber(hiddenMenuItems)}
+            />
+            <MiniMetric
+              label="Available Quantity"
+              value={formatNumber(totalAvailableQty)}
+            />
+            <MiniMetric
+              label="Sold Quantity"
+              value={formatNumber(totalSoldQty)}
+              tone="amber"
+            />
+          </div>
+        </AnalyticsCard>
+
+        <AnalyticsCard
+          title="Service Request Analytics"
+          description="Guest service demand by service type."
+          right={
+            <span className="grid size-10 place-items-center rounded-2xl bg-blue-100 text-blue-700">
+              <ConciergeBell className="size-5" />
+            </span>
+          }
+        >
+          <div className="mb-5 rounded-[1.5rem] bg-neutral-950 p-5 text-white">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/50">
+              Total Interactions
+            </p>
+            <p className="mt-2 text-5xl font-black">{formatNumber(requests)}</p>
+          </div>
+
+          <HorizontalBars
+            items={serviceItems}
+            maxValue={maxServiceQty}
+            emptyText="No service request data yet."
+          />
+
+          {serviceStatusGroups.length ? (
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              {serviceStatusGroups.map((item) => (
+                <div
+                  key={item.status}
+                  className="rounded-2xl bg-neutral-50 p-3"
+                >
+                  <p className="text-xs font-black uppercase text-neutral-400">
+                    {statusLabel(item.status)}
+                  </p>
+                  <p className="mt-1 text-xl font-black">
+                    {formatNumber(item._count._all)}
+                  </p>
+                </div>
+              ))}
             </div>
-
-            <div className="flex h-64 items-end gap-2 rounded-[2rem] bg-neutral-50 p-4">
-              {salesTrend.map((item) => {
-                const height = Math.max((item.salesCents / maxSales) * 100, 4);
-
-                return (
-                  <div
-                    key={item.label}
-                    className="flex h-full min-w-0 flex-1 flex-col justify-end"
-                  >
-                    <div className="group relative flex flex-1 items-end">
-                      <div
-                        className="w-full rounded-t-2xl bg-black transition hover:bg-gold"
-                        style={{
-                          height: `${height}%`,
-                        }}
-                      />
-
-                      <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 hidden -translate-x-1/2 rounded-xl bg-black px-3 py-2 text-xs font-bold text-white group-hover:block">
-                        {formatMoneyFromCents(item.salesCents)}
-                      </div>
-                    </div>
-
-                    <p className="mt-2 truncate text-center text-[10px] font-bold text-neutral-400">
-                      {item.label}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Order volume</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-neutral-500">
-                  Last 14 days orders
-                </p>
-                <p className="mt-1 text-2xl font-black">
-                  {salesTrend.reduce((sum, item) => sum + item.orders, 0)}
-                </p>
-              </div>
-              <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600">
-                Orders
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {salesTrend.map((item) => {
-                const width = Math.max((item.orders / maxOrders) * 100, 3);
-
-                return (
-                  <div key={item.label}>
-                    <div className="mb-1 flex justify-between text-xs font-bold text-neutral-500">
-                      <span>{item.label}</span>
-                      <span>{item.orders}</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-neutral-100">
-                      <div
-                        className="h-full rounded-full bg-gold"
-                        style={{
-                          width: `${width}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+          ) : null}
+        </AnalyticsCard>
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Order status breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+      <div className="grid gap-6 xl:grid-cols-3">
+        <AnalyticsCard
+          title="Popular Menu Items"
+          description="Top-selling food items by quantity ordered."
+          right={
+            <span className="grid size-10 place-items-center rounded-2xl bg-gold/15 text-gold">
+              <Utensils className="size-5" />
+            </span>
+          }
+        >
+          <HorizontalBars
+            items={popularMenuItems}
+            maxValue={maxPopularQty}
+            emptyText="No product sales yet."
+          />
+        </AnalyticsCard>
+
+        <AnalyticsCard
+          title="Stock Usage From Orders"
+          description="Highest stock deductions from guest orders."
+        >
+          <HorizontalBars
+            items={topStockUsage.map((item, index) => ({
+              label: item.productName,
+              value: item.quantity,
+              helper: `Usage rank #${index + 1}`,
+            }))}
+            maxValue={maxStockUsage}
+            emptyText="No order stock deductions yet."
+          />
+        </AnalyticsCard>
+
+        <AnalyticsCard
+          title="Operational Scoreboard"
+          description="Quick order and service health indicators."
+        >
+          <div className="space-y-3">
             {Object.values(OrderStatus).map((status) => {
               const count =
                 orderStatusGroups.find((item) => item.status === status)?._count
@@ -529,7 +1164,9 @@ export default async function AnalyticsPage() {
                     >
                       {statusLabel(status)}
                     </span>
-                    <b>{count}</b>
+                    <b>
+                      {count} · {percentage}%
+                    </b>
                   </div>
 
                   <div className="h-2 overflow-hidden rounded-full bg-white">
@@ -543,277 +1180,77 @@ export default async function AnalyticsPage() {
                 </div>
               );
             })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {Object.values(PaymentStatus).map((status) => {
-              const count =
-                paymentStatusGroups.find((item) => item.paymentStatus === status)
-                  ?._count._all ?? 0;
-              const percentage = getPercentage(count, orders);
-
-              return (
-                <div key={status} className="rounded-2xl bg-neutral-50 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${getPaymentStatusTone(
-                        status
-                      )}`}
-                    >
-                      {statusLabel(status)}
-                    </span>
-                    <b>{count}</b>
-                  </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-white">
-                    <div
-                      className="h-full rounded-full bg-gold"
-                      style={{
-                        width: `${percentage}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Menu stock health</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3">
-              <MiniMetric
-                label="Available menu items"
-                value={availableStockItems}
-                tone="green"
-              />
-              <MiniMetric
-                label="Sold out items"
-                value={soldOutStockItems}
-                tone="red"
-              />
-              <MiniMetric
-                label="Hidden menu items"
-                value={hiddenMenuItems}
-              />
-              <MiniMetric
-                label="Total available quantity"
-                value={totalAvailableQty}
-              />
-              <MiniMetric
-                label="Total sold quantity"
-                value={totalSoldQty}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </AnalyticsCard>
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Popular menu items</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {popularItems.map((item, index) => {
-              const qty = item._sum.quantity ?? 0;
-              const width = Math.max((qty / maxPopularQty) * 100, 4);
+      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+        <AnalyticsCard
+          title="Menu Stock Availability Table"
+          description="Live stock visibility for menu items."
+        >
+          <div className="overflow-hidden rounded-2xl border border-neutral-100">
+            <div className="grid grid-cols-[1fr_100px_100px_100px] bg-neutral-50 px-4 py-3 text-xs font-black uppercase text-neutral-500">
+              <span>Menu Item</span>
+              <span className="text-right">Available</span>
+              <span className="text-right">Sold</span>
+              <span className="text-right">Status</span>
+            </div>
+
+            {menuStocks.map((stock) => {
+              const available =
+                stock.product.isAvailable &&
+                Number(stock.availableQty) > 0 &&
+                !stock.isSoldOut;
 
               return (
                 <div
-                  key={item.productNameSnapshot}
-                  className="rounded-2xl bg-neutral-50 p-3"
+                  key={stock.id}
+                  className="grid grid-cols-[1fr_100px_100px_100px] border-t border-neutral-100 px-4 py-3 text-sm"
                 >
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-black">{item.productNameSnapshot}</p>
-                      <p className="text-xs text-neutral-400">Rank #{index + 1}</p>
-                    </div>
-                    <b>{qty}</b>
+                  <div>
+                    <p className="font-black">{stock.product.name}</p>
+                    <p className="text-xs text-neutral-400">
+                      {stock.hotel.name}
+                    </p>
                   </div>
 
-                  <div className="h-2 overflow-hidden rounded-full bg-white">
-                    <div
-                      className="h-full rounded-full bg-black"
-                      style={{
-                        width: `${width}%`,
-                      }}
-                    />
-                  </div>
+                  <span className="text-right font-bold">
+                    {formatNumber(Number(stock.availableQty))}
+                  </span>
+
+                  <span className="text-right font-bold">
+                    {formatNumber(Number(stock.soldQty))}
+                  </span>
+
+                  <span className="text-right">
+                    <span
+                      className={
+                        available
+                          ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700'
+                          : 'rounded-full bg-red-100 px-2 py-1 text-[10px] font-black text-red-700'
+                      }
+                    >
+                      {available ? 'OK' : 'SOLD OUT'}
+                    </span>
+                  </span>
                 </div>
               );
             })}
 
-            {!popularItems.length ? (
-              <EmptyState text="No product sales yet." />
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Service request analytics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-6xl font-black">{requests}</p>
-            <p className="mt-1 text-sm text-neutral-500">
-              Total guest service interactions
-            </p>
-
-            <div className="mt-5 space-y-3">
-              {serviceTypeGroups.map((item) => {
-                const count = item._count._all;
-                const width = Math.max((count / maxServiceQty) * 100, 4);
-
-                return (
-                  <div key={item.type}>
-                    <div className="mb-1 flex justify-between text-sm font-bold">
-                      <span>{item.type}</span>
-                      <span>{count}</span>
-                    </div>
-
-                    <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
-                      <div
-                        className="h-full rounded-full bg-gold"
-                        style={{
-                          width: `${width}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {serviceStatusGroups.length ? (
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                {serviceStatusGroups.map((item) => (
-                  <div
-                    key={item.status}
-                    className="rounded-2xl bg-neutral-50 p-3"
-                  >
-                    <p className="text-xs font-black uppercase text-neutral-400">
-                      {statusLabel(item.status)}
-                    </p>
-                    <p className="mt-1 text-xl font-black">
-                      {item._count._all}
-                    </p>
-                  </div>
-                ))}
+            {!menuStocks.length ? (
+              <div className="p-8 text-center">
+                <EmptyState text="No menu stock records yet." />
               </div>
             ) : null}
-          </CardContent>
-        </Card>
+          </div>
+        </AnalyticsCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Stock usage from orders</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topStockUsage.map((item) => {
-              const width = Math.max((item.quantity / maxStockUsage) * 100, 4);
-
-              return (
-                <div key={item.productName} className="rounded-2xl bg-neutral-50 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <p className="font-black">{item.productName}</p>
-                    <b>{item.quantity}</b>
-                  </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-white">
-                    <div
-                      className="h-full rounded-full bg-black"
-                      style={{
-                        width: `${width}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-            {!topStockUsage.length ? (
-              <EmptyState text="No order stock deductions yet." />
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_420px]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Menu stock availability table</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-hidden rounded-2xl border border-neutral-100">
-              <div className="grid grid-cols-[1fr_100px_100px_100px] bg-neutral-50 px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                <span>Menu Item</span>
-                <span className="text-right">Available</span>
-                <span className="text-right">Sold</span>
-                <span className="text-right">Status</span>
-              </div>
-
-              {menuStocks.map((stock) => {
-                const available =
-                  stock.product.isAvailable &&
-                  stock.availableQty > 0 &&
-                  !stock.isSoldOut;
-
-                return (
-                  <div
-                    key={stock.id}
-                    className="grid grid-cols-[1fr_100px_100px_100px] border-t border-neutral-100 px-4 py-3 text-sm"
-                  >
-                    <div>
-                      <p className="font-black">{stock.product.name}</p>
-                      <p className="text-xs text-neutral-400">
-                        {stock.hotel.name}
-                      </p>
-                    </div>
-
-                    <span className="text-right font-bold">
-                      {stock.availableQty}
-                    </span>
-
-                    <span className="text-right font-bold">{stock.soldQty}</span>
-
-                    <span className="text-right">
-                      <span
-                        className={
-                          available
-                            ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700'
-                            : 'rounded-full bg-red-100 px-2 py-1 text-[10px] font-black text-red-700'
-                        }
-                      >
-                        {available ? 'OK' : 'SOLD OUT'}
-                      </span>
-                    </span>
-                  </div>
-                );
-              })}
-
-              {!menuStocks.length ? (
-                <div className="p-8 text-center">
-                  <EmptyState text="No menu stock records yet." />
-                </div>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent stock movements</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <AnalyticsCard
+          title="Recent Stock Movements"
+          description="Latest inventory movement records."
+        >
+          <div className="space-y-3">
             {recentStockMovements.map((movement) => (
               <div
                 key={movement.id}
@@ -822,7 +1259,7 @@ export default async function AnalyticsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <b>{statusLabel(movement.type)}</b>
                   <span className="text-xs font-black text-neutral-500">
-                    Balance: {movement.balanceAfter}
+                    Balance: {formatNumber(Number(movement.balanceAfter))}
                   </span>
                 </div>
 
@@ -831,7 +1268,7 @@ export default async function AnalyticsPage() {
                 </p>
 
                 <p className="mt-1 text-xs text-neutral-400">
-                  Qty: {movement.quantity}
+                  Qty: {formatNumber(Number(movement.quantity))}
                   {movement.reason ? ` · ${movement.reason}` : ''}
                 </p>
               </div>
@@ -840,52 +1277,9 @@ export default async function AnalyticsPage() {
             {!recentStockMovements.length ? (
               <EmptyState text="No recent stock movements." />
             ) : null}
-          </CardContent>
-        </Card>
+          </div>
+        </AnalyticsCard>
       </div>
-    </div>
-  );
-}
-
-function MiniMetric({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  tone?: 'green' | 'red';
-}) {
-  return (
-    <div
-      className={
-        tone === 'green'
-          ? 'rounded-2xl bg-emerald-50 p-4'
-          : tone === 'red'
-            ? 'rounded-2xl bg-red-50 p-4'
-            : 'rounded-2xl bg-neutral-50 p-4'
-      }
-    >
-      <p
-        className={
-          tone === 'green'
-            ? 'text-xs font-black uppercase text-emerald-700'
-            : tone === 'red'
-              ? 'text-xs font-black uppercase text-red-700'
-              : 'text-xs font-black uppercase text-neutral-400'
-        }
-      >
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-black">{value}</p>
-    </div>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-neutral-200 p-5 text-center text-sm font-bold text-neutral-400">
-      {text}
     </div>
   );
 }

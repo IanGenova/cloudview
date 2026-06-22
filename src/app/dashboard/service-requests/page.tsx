@@ -1,4 +1,8 @@
-import { ServiceRequestStatus } from '@prisma/client';
+import {
+  FulfillmentTiming,
+  ScheduledReleaseStatus,
+  ServiceRequestStatus,
+} from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { RealtimeServiceRequestsRefresh } from '@/components/dashboard/RealtimeServiceRequestsRefresh';
 import { db } from '@/lib/db';
@@ -77,6 +81,147 @@ function getGroupStatus(statuses: ServiceRequestStatus[]) {
   }
 
   return statuses[0] ?? ServiceRequestStatus.NEW;
+}
+
+type ScheduledServiceRequestGroup = {
+  id: string;
+  hotelId: string;
+  requestCode: string;
+  hotelName: string;
+  roomLabel: string;
+  guestName: string;
+  status: ServiceRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  itemCount: number;
+  scheduledFor: string | null;
+  releaseAt: string | null;
+  releasedAt: string | null;
+  scheduledNote: string;
+  items: {
+    id: string;
+    type: string;
+    notes: string;
+    status: ServiceRequestStatus;
+  }[];
+};
+
+function formatScheduleDateTime(value: string | null) {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return new Intl.DateTimeFormat('en-PH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Manila',
+  }).format(date);
+}
+
+function ScheduledServiceRequestsPanel({
+  requests,
+}: {
+  requests: ScheduledServiceRequestGroup[];
+}) {
+  if (!requests.length) {
+    return null;
+  }
+
+  return (
+    <section className="mb-6 rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700 dark:text-amber-200">
+            Upcoming
+          </p>
+
+          <h2 className="mt-1 text-2xl font-black">
+            Scheduled Service Requests
+          </h2>
+
+          <p className="mt-1 text-sm font-semibold opacity-70">
+            These requests are saved but not yet released to staff workflow.
+          </p>
+        </div>
+
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-600 text-sm font-black text-white">
+          {requests.length}
+        </span>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        {requests.map((request) => (
+          <article
+            key={request.id}
+            className="rounded-[1.5rem] border border-amber-200 bg-white/75 p-4 shadow-sm dark:border-amber-500/20 dark:bg-black/20"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-lg font-black">
+                  {request.requestCode}
+                </h3>
+
+                <p className="mt-1 truncate text-xs font-bold opacity-70">
+                  {request.roomLabel} · {request.guestName || 'Guest'}
+                </p>
+
+                <p className="mt-1 truncate text-xs font-semibold opacity-60">
+                  {request.hotelName}
+                </p>
+              </div>
+
+              <span className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                Scheduled
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-2 rounded-2xl bg-amber-100/70 p-3 text-xs dark:bg-amber-500/10">
+              <p>
+                <b>Scheduled For:</b>{' '}
+                {formatScheduleDateTime(request.scheduledFor)}
+              </p>
+
+              <p>
+                <b>Release At:</b>{' '}
+                {formatScheduleDateTime(request.releaseAt)}
+              </p>
+
+              <p>
+                <b>Items:</b> {request.itemCount}
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-1">
+              {request.items.slice(0, 3).map((item) => (
+                <p key={item.id} className="text-xs font-bold opacity-80">
+                  • {item.type}
+                </p>
+              ))}
+
+              {request.items.length > 3 ? (
+                <p className="text-xs font-black opacity-60">
+                  +{request.items.length - 3} more item
+                  {request.items.length - 3 === 1 ? '' : 's'}
+                </p>
+              ) : null}
+            </div>
+
+            {request.scheduledNote ? (
+              <p className="mt-4 rounded-2xl bg-amber-100/70 p-3 text-xs font-semibold dark:bg-amber-500/10">
+                <b>Schedule note:</b> {request.scheduledNote}
+              </p>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export default async function ServiceRequestsPage({
@@ -227,9 +372,24 @@ export default async function ServiceRequestsPage({
     };
   }
 
+  function isUnreleasedScheduledRequest(request: (typeof requests)[number]) {
+  return (
+    request.fulfillmentTiming === FulfillmentTiming.SCHEDULED &&
+    request.releasedAt === null &&
+    request.scheduledReleaseStatus === ScheduledReleaseStatus.SCHEDULED
+  );
+}
+
+const activeSourceRequests = requests.filter(
+  (request) => !isUnreleasedScheduledRequest(request)
+);
+
+const scheduledSourceRequests = requests.filter(isUnreleasedScheduledRequest);
+
+function buildGroupedRequests(sourceRequests: typeof requests) {
   const groupedRequestsMap = new Map<string, typeof requests>();
 
-  for (const request of requests) {
+  for (const request of sourceRequests) {
     const groupKey = `${request.hotelId}:${request.requestCode}`;
     const group = groupedRequestsMap.get(groupKey) ?? [];
 
@@ -237,126 +397,136 @@ export default async function ServiceRequestsPage({
     groupedRequestsMap.set(groupKey, group);
   }
 
-  const groupedRequests = Array.from(groupedRequestsMap.entries()).map(
-    ([groupKey, group]) => {
-      const sortedGroup = [...group].sort(
-        (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-      );
+  return Array.from(groupedRequestsMap.entries()).map(([groupKey, group]) => {
+    const sortedGroup = [...group].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    );
 
-      const first = sortedGroup[0];
-      const statuses = sortedGroup.map((request) => request.status);
-      const groupStatus = getGroupStatus(statuses);
+    const first = sortedGroup[0];
+    const statuses = sortedGroup.map((request) => request.status);
+    const groupStatus = getGroupStatus(statuses);
 
-      const groupCharges = sortedGroup
-        .map((request) => chargesByRequestId.get(request.id))
-        .filter(Boolean);
+    const groupCharges = sortedGroup
+      .map((request) => chargesByRequestId.get(request.id))
+      .filter(Boolean);
 
-      const totalChargeAmount = groupCharges.reduce(
-        (sum, charge) => sum + Number(charge?.totalAmount ?? 0),
-        0
-      );
+    const totalChargeAmount = groupCharges.reduce(
+      (sum, charge) => sum + Number(charge?.totalAmount ?? 0),
+      0
+    );
 
-      const assignedNames = Array.from(
-        new Set(
-          sortedGroup
-            .map(
-              (request) =>
-                request.assignedTo?.name ?? request.assignedTo?.email ?? ''
-            )
-            .filter(Boolean)
-        )
-      );
-
-      const assignedIds = Array.from(
-        new Set(
-          sortedGroup
-            .map((request) => request.assignedToId ?? '')
-            .filter(Boolean)
-        )
-      );
-
-      const groupAttachments = Array.from(
-        new Map(
-          sortedGroup
-            .flatMap((request) => request.attachments.map(mapAttachment))
-            .map((attachment) => [attachment.id, attachment])
-        ).values()
-      );
-
-      return {
-        id: groupKey,
-        hotelId: first.hotelId,
-        requestCode: first.requestCode,
-        hotelName: first.hotel.name,
-        roomLabel: first.room
-          ? `Room ${first.room.number}`
-          : first.location?.name ?? 'Guest location',
-        guestName: first.guestName ?? '',
-        status: groupStatus,
-        assignedToId: assignedIds.length === 1 ? assignedIds[0] : '',
-        assignedToName:
-          assignedNames.length === 1
-            ? assignedNames[0]
-            : assignedNames.length > 1
-              ? 'Multiple staff'
-              : '',
-        createdAt: first.createdAt.toISOString(),
-        updatedAt: sortedGroup
-          .reduce(
-            (latest, request) =>
-              request.updatedAt.getTime() > latest.getTime()
-                ? request.updatedAt
-                : latest,
-            first.updatedAt
+    const assignedNames = Array.from(
+      new Set(
+        sortedGroup
+          .map(
+            (request) =>
+              request.assignedTo?.name ?? request.assignedTo?.email ?? ''
           )
-          .toISOString(),
-        itemCount: sortedGroup.length,
-        billedCount: groupCharges.length,
-        totalChargeAmount,
-        attachments: groupAttachments,
-        items: sortedGroup.map((request) => {
-          const charge = chargesByRequestId.get(request.id);
+          .filter(Boolean)
+      )
+    );
 
-          return {
-            id: request.id,
-            requestCode: request.requestCode,
-            type: request.type,
-            notes: request.notes ?? '',
-            status: request.status,
-            assignedToId: request.assignedToId ?? '',
-            assignedToName:
-              request.assignedTo?.name ?? request.assignedTo?.email ?? '',
-            createdAt: request.createdAt.toISOString(),
-            charge: charge
-              ? {
-                  id: charge.id,
-                  chargeCode: charge.chargeCode,
-                  itemName: charge.itemName,
-                  description: charge.description ?? '',
-                  quantity: charge.quantity,
-                  unitPrice: Number(charge.unitPrice),
-                  totalAmount: Number(charge.totalAmount),
-                  paymentStatus: 'POSTED',
-                }
-              : null,
-            statusHistory: request.statusHistory.map((history) => ({
-              id: history.id,
-              status: history.status,
-              note: history.note ?? '',
-              createdAt: history.createdAt.toISOString(),
-              userName: history.user?.name ?? history.user?.email ?? '',
-            })),
-            attachments: request.attachments.map(mapAttachment),
-          };
-        }),
-      };
-    }
-  );
+    const assignedIds = Array.from(
+      new Set(
+        sortedGroup
+          .map((request) => request.assignedToId ?? '')
+          .filter(Boolean)
+      )
+    );
 
-  const totalBilledAmount = charges.reduce(
-    (sum, charge) => sum + Number(charge.totalAmount),
-    0
-  );
+    const groupAttachments = Array.from(
+      new Map(
+        sortedGroup
+          .flatMap((request) => request.attachments.map(mapAttachment))
+          .map((attachment) => [attachment.id, attachment])
+      ).values()
+    );
+
+    return {
+      id: groupKey,
+      hotelId: first.hotelId,
+      requestCode: first.requestCode,
+      hotelName: first.hotel.name,
+      roomLabel: first.room
+        ? `Room ${first.room.number}`
+        : first.location?.name ?? 'Guest location',
+      guestName: first.guestName ?? '',
+      status: groupStatus,
+      assignedToId: assignedIds.length === 1 ? assignedIds[0] : '',
+      assignedToName:
+        assignedNames.length === 1
+          ? assignedNames[0]
+          : assignedNames.length > 1
+            ? 'Multiple staff'
+            : '',
+
+      fulfillmentTiming: first.fulfillmentTiming,
+      scheduledFor: first.scheduledFor?.toISOString() ?? null,
+      releaseAt: first.releaseAt?.toISOString() ?? null,
+      releasedAt: first.releasedAt?.toISOString() ?? null,
+      scheduledReleaseStatus: first.scheduledReleaseStatus,
+      scheduledNote: first.scheduledNote ?? '',
+
+      createdAt: first.createdAt.toISOString(),
+      updatedAt: sortedGroup
+        .reduce(
+          (latest, request) =>
+            request.updatedAt.getTime() > latest.getTime()
+              ? request.updatedAt
+              : latest,
+          first.updatedAt
+        )
+        .toISOString(),
+      itemCount: sortedGroup.length,
+      billedCount: groupCharges.length,
+      totalChargeAmount,
+      attachments: groupAttachments,
+      items: sortedGroup.map((request) => {
+        const charge = chargesByRequestId.get(request.id);
+
+        return {
+          id: request.id,
+          requestCode: request.requestCode,
+          type: request.type,
+          notes: request.notes ?? '',
+          status: request.status,
+          assignedToId: request.assignedToId ?? '',
+          assignedToName:
+            request.assignedTo?.name ?? request.assignedTo?.email ?? '',
+          createdAt: request.createdAt.toISOString(),
+          charge: charge
+            ? {
+                id: charge.id,
+                chargeCode: charge.chargeCode,
+                itemName: charge.itemName,
+                description: charge.description ?? '',
+                quantity: charge.quantity,
+                unitPrice: Number(charge.unitPrice),
+                totalAmount: Number(charge.totalAmount),
+                paymentStatus: 'POSTED',
+              }
+            : null,
+          statusHistory: request.statusHistory.map((history) => ({
+            id: history.id,
+            status: history.status,
+            note: history.note ?? '',
+            createdAt: history.createdAt.toISOString(),
+            userName: history.user?.name ?? history.user?.email ?? '',
+          })),
+          attachments: request.attachments.map(mapAttachment),
+        };
+      }),
+    };
+  });
+}
+
+const groupedRequests = buildGroupedRequests(activeSourceRequests);
+const scheduledGroupedRequests = buildGroupedRequests(scheduledSourceRequests);
+
+const totalBilledAmount = groupedRequests.reduce(
+  (sum, request) => sum + request.totalChargeAmount,
+  0
+);
 
   const billedCount = groupedRequests.filter(
     (request) => request.billedCount > 0
@@ -376,6 +546,11 @@ export default async function ServiceRequestsPage({
         title="Service Requests & Room Add-ons"
         description="Manage grouped guest service orders, staff assignment, and billable room add-ons in realtime."
       />
+
+      <ScheduledServiceRequestsPanel
+        requests={scheduledGroupedRequests as ScheduledServiceRequestGroup[]}
+      />
+
 
       <ServiceRequestsClient
         message={message}
