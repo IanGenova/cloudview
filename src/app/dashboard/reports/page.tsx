@@ -5,18 +5,16 @@ import {
   ClipboardList,
   Download,
   FileSpreadsheet,
-  Hotel,
-  Package,
   ReceiptText,
   RefreshCcw,
   ShieldCheck,
   ShoppingBag,
-  Users,
-  Wifi,
 } from 'lucide-react';
 import {
+  OrderItemStatus,
   OrderStatus,
   PaymentStatus,
+  Prisma,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -434,16 +432,19 @@ export default async function ReportsPage({
   });
 
   const accessibleHotelIds = hotels.map((hotel) => hotel.id);
-  const selectedHotelId =
-    hotelInput && accessibleHotelIds.includes(hotelInput) ? hotelInput : 'ALL';
+const selectedHotelId =
+      hotelInput && accessibleHotelIds.includes(hotelInput)
+        ? hotelInput
+        : user.role === 'SUPER_ADMIN'
+          ? 'ALL'
+          : accessibleHotelIds[0] ?? 'ALL';
 
-  const hotelFilter =
-    selectedHotelId === 'ALL'
-      ? {
-          in: accessibleHotelIds,
-        }
-      : selectedHotelId;
-
+    const hotelFilter =
+      selectedHotelId === 'ALL'
+        ? {
+            in: accessibleHotelIds,
+          }
+        : selectedHotelId;
   const dateRangeFilter = {
     gte: startDate,
     lte: endDate,
@@ -462,8 +463,8 @@ export default async function ReportsPage({
     );
   }
 
-  const [orders, serviceRequests, inventoryItems, nfcSessions, activityLogs] =
-    await Promise.all([
+  const [orders, serviceRequests, menuStocks, nfcSessions, activityLogs] =
+  await Promise.all([
       db.order.findMany({
         where: {
           hotelId: hotelFilter,
@@ -543,21 +544,36 @@ export default async function ReportsPage({
         },
       }),
 
-      db.inventoryItem.findMany({
-        where: {
-          hotelId: hotelFilter,
-        },
-        include: {
-          hotel: {
-            select: {
-              name: true,
-            },
-          },
-        },
-        orderBy: {
-          name: 'asc',
-        },
-      }),
+      db.menuAvailabilityStock.findMany({
+  where: {
+    hotelId: hotelFilter,
+  },
+  include: {
+    hotel: {
+      select: {
+        name: true,
+      },
+    },
+    product: {
+      select: {
+        name: true,
+        isAvailable: true,
+      },
+    },
+  },
+  orderBy: [
+    {
+      hotel: {
+        name: 'asc',
+      },
+    },
+    {
+      product: {
+        name: 'asc',
+      },
+    },
+  ],
+}),
 
       db.nfcGuestSession.findMany({
         where: {
@@ -671,29 +687,33 @@ export default async function ReportsPage({
     : 0;
 
   const cancelledItems = orders.flatMap((order) =>
-    order.items
-      .filter((item) => item.cancelledQty || item.status === 'CANCELLED')
-      .map((item) => ({
-        order,
-        item,
-      }))
-  );
+  order.items
+    .filter(
+      (item) =>
+        (item.cancelledQty ?? 0) > 0 ||
+        item.status === OrderItemStatus.CANCELLED ||
+        item.status === OrderItemStatus.PARTIALLY_CANCELLED
+    )
+    .map((item) => ({
+      order,
+      item,
+    }))
+);
 
-  const lowStockItems = inventoryItems.filter((item) => {
-    const stock = Number(item.stockQuantity);
-    const reorderLevel = Number(item.reorderLevel);
+          const soldOutItems = menuStocks.filter(
+          (stock) => stock.isSoldOut || Number(stock.availableQty) <= 0
+        );
 
-    if (reorderLevel <= 0) {
-      return stock <= 0;
-    }
+        const lowStockItems = menuStocks.filter((stock) => {
+          const availableQty = Number(stock.availableQty);
 
-    return stock <= reorderLevel;
-  });
-
-  const soldOutItems = inventoryItems.filter(
-    (item) => Number(item.stockQuantity) <= 0
-  );
-
+          return (
+            stock.product.isAvailable &&
+            !stock.isSoldOut &&
+            availableQty > 0 &&
+            availableQty <= 5
+          );
+        });
   const completedServiceRequests = serviceRequests.filter(
     (request) => request.status === ServiceRequestStatus.COMPLETED
   );
@@ -916,41 +936,49 @@ export default async function ReportsPage({
   }
 
   if (activeReport === 'inventory') {
-    columns = [
-      'Item',
-      'Hotel',
-      'Current Stock',
-      'Reorder Level',
-      'Unit',
-      'Supplier',
-      'Status',
-      'Last Updated',
+  columns = [
+    'Menu Item',
+    'Hotel',
+    'Available Qty',
+    'Sold Qty',
+    'Menu Visibility',
+    'Stock Status',
+    'Last Updated',
+  ];
+
+  rows = menuStocks.map((stock) => {
+    const availableQty = Number(stock.availableQty);
+    const soldQty = Number(stock.soldQty);
+
+    const isSoldOut = stock.isSoldOut || availableQty <= 0;
+
+    const isLow =
+      stock.product.isAvailable &&
+      !isSoldOut &&
+      availableQty > 0 &&
+      availableQty <= 5;
+
+    return [
+      stock.product.name,
+      stock.hotel.name,
+      formatNumber(availableQty),
+      formatNumber(soldQty),
+      stock.product.isAvailable ? (
+        <StatusPill tone="green">Visible</StatusPill>
+      ) : (
+        <StatusPill tone="neutral">Hidden</StatusPill>
+      ),
+      isSoldOut ? (
+        <StatusPill tone="red">Sold Out</StatusPill>
+      ) : isLow ? (
+        <StatusPill tone="amber">Low Stock</StatusPill>
+      ) : (
+        <StatusPill tone="green">Healthy</StatusPill>
+      ),
+      formatDateTime(stock.updatedAt),
     ];
-
-    rows = inventoryItems.map((item) => {
-      const stock = Number(item.stockQuantity);
-      const reorderLevel = Number(item.reorderLevel);
-      const isSoldOut = stock <= 0;
-      const isLow = reorderLevel > 0 ? stock <= reorderLevel : stock <= 0;
-
-      return [
-        item.name,
-        item.hotel.name,
-        formatNumber(stock),
-        formatNumber(reorderLevel),
-        item.unit,
-        item.supplier || '—',
-        isSoldOut ? (
-          <StatusPill tone="red">Sold Out</StatusPill>
-        ) : isLow ? (
-          <StatusPill tone="amber">Low Stock</StatusPill>
-        ) : (
-          <StatusPill tone="green">Healthy</StatusPill>
-        ),
-        formatDateTime(item.updatedAt),
-      ];
-    });
-  }
+  });
+}
 
   if (activeReport === 'services') {
     columns = [

@@ -2049,264 +2049,339 @@ export function HotelGuideClient({
       <Toast message={message} />
 
       <div className="space-y-6">
-        <section className="flex flex-wrap items-end justify-between gap-4 rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#c99c38]">
-              Guest Portal CMS
-            </p>
+  <section className="overflow-hidden rounded-[2.5rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.18)]">
+    <div className="relative p-6">
+      <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-[#c99c38]/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 left-10 size-64 rounded-full bg-emerald-500/10 blur-3xl" />
 
-            <h2 className="mt-2 text-2xl font-black">Dynamic Hotel Guide</h2>
+      <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_auto] xl:items-end">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+            <Sparkles className="size-4" />
+            Guest Portal CMS
+          </p>
 
-            <p className="mt-1 text-sm font-medium text-neutral-500">
-              Manage sections, guide items, and brochure images shown in the
-              Guest Portal.
-            </p>
-          </div>
+          <h2 className="mt-5 max-w-2xl text-4xl font-black tracking-tight">
+            Hotel Guide Builder
+          </h2>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setCreatingSection(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
-            >
-              <Plus className="size-4 text-[#c99c38]" />
-              Create Section
-            </button>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/60">
+            Build the guest-facing guide in a simple flow: create sections,
+            add guide items, upload photos, and publish them to the Guest Portal.
+          </p>
+        </div>
 
-            <button
-              type="button"
-              onClick={() => openCreateItem()}
-              disabled={!sections.length}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="size-4 text-[#c99c38]" />
-              Create Guide Item
-            </button>
-          </div>
-        </section>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setCreatingSection(true)}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#d6a738] px-5 py-3 text-sm font-black text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
+          >
+            <Plus className="size-4" />
+            Create Section
+          </button>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
-            label="Sections"
-            value={sections.length}
-            description="Total guide sections"
-            icon={Layers}
-          />
-
-          <SummaryCard
-            label="Guide Items"
-            value={totalItems}
-            description="Information cards and actions"
-            icon={FileText}
-          />
-
-          <SummaryCard
-            label="Gallery Images"
-            value={totalImages}
-            description="Uploaded section and item photos"
-            icon={ImageIcon}
-          />
-
-          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center gap-4">
-              <span className="grid size-13 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]">
-                <Sparkles className="size-6" />
-              </span>
-
-              <div>
-                <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
-                  Starter Content
-                </p>
-                <p className="mt-1 text-sm font-bold text-neutral-500">
-                  Seed default templates
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              <form
-                action={seedDefaultHotelGuideAction}
-                onSubmit={(event) => {
-                  if (
-                    !window.confirm(
-                      'Add the default hotel guide sections and items?'
-                    )
-                  ) {
-                    event.preventDefault();
-                  }
-                }}
-              >
-                <input type="hidden" name="hotelId" value={defaultHotelId} />
-                <Button className="w-full">Seed Defaults</Button>
-              </form>
-
-              <form
-                action={seedPoolGuideContentAction}
-                onSubmit={(event) => {
-                  if (
-                    !window.confirm(
-                      'Add or update the dynamic Pool & Amenities content?'
-                    )
-                  ) {
-                    event.preventDefault();
-                  }
-                }}
-              >
-                <input type="hidden" name="hotelId" value={defaultHotelId} />
-                <button
-                  type="submit"
-                  className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
-                >
-                  Seed / Update Pool
-                </button>
-              </form>
-            </div>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
-          <div className="border-b border-neutral-100 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-black">Content Manager</h3>
-                <p className="mt-1 text-sm font-medium text-neutral-500">
-                  Expand a section to edit its guide items.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-                  <input
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search sections or items..."
-                    className="h-11 w-72 rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
-                  />
-                </div>
-
-                <select
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as StatusFilter)
-                  }
-                  className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
-                >
-                  <option value="ALL">All Status</option>
-                  <option value="ACTIVE">Active Only</option>
-                  <option value="HIDDEN">Hidden Only</option>
-                </select>
-
-                <select
-                  value={sortMode}
-                  onChange={(event) =>
-                    setSortMode(event.target.value as SortMode)
-                  }
-                  className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
-                >
-                  <option value="custom">Sort: Custom Order</option>
-                  <option value="title-asc">Sort: Title A-Z</option>
-                  <option value="items-desc">Sort: Most Items</option>
-                </select>
-
-                <div className="flex rounded-2xl border border-neutral-200 bg-neutral-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('sections')}
-                    className={
-                      viewMode === 'sections'
-                        ? 'h-9 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white'
-                        : 'h-9 rounded-xl px-4 text-xs font-black text-neutral-500 hover:bg-white'
-                    }
-                  >
-                    Sections View
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('items')}
-                    className={
-                      viewMode === 'items'
-                        ? 'h-9 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white'
-                        : 'h-9 rounded-xl px-4 text-xs font-black text-neutral-500 hover:bg-white'
-                    }
-                  >
-                    Items View
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 p-5">
-            {viewMode === 'sections' ? (
-              <>
-                {visibleSections.map((section) => {
-                  const sectionItselfMatches = sectionMatches(
-                    {
-                      ...section,
-                      items: [],
-                    },
-                    normalizedQuery
-                  );
-
-                  const visibleItems =
-                    normalizedQuery && !sectionItselfMatches
-                      ? section.items.filter((item) =>
-                          itemMatches(item, normalizedQuery)
-                        )
-                      : section.items;
-
-                  return (
-                    <SectionAccordionRow
-                      key={section.id}
-                      section={section}
-                      visibleItems={visibleItems}
-                      expanded={expandedSectionIds.has(section.id)}
-                      onToggle={() => toggleSection(section.id)}
-                      onEditSection={setEditingSection}
-                      onUploadSection={setUploadSection}
-                      onCreateItem={openCreateItem}
-                      onEditItem={setEditingItem}
-                      onUploadItem={setUploadItem}
-                    />
-                  );
-                })}
-
-                {!visibleSections.length ? (
-                  <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
-                    <p className="font-black">No sections found.</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Adjust your search/filter or create a new guide section.
-                    </p>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="space-y-3">
-                {flatVisibleItems.map(({ section, item }) => (
-                  <GuideItemRow
-                    key={item.id}
-                    item={item}
-                    sectionTitle={section.title}
-                    onEdit={setEditingItem}
-                    onUpload={setUploadItem}
-                  />
-                ))}
-
-                {!flatVisibleItems.length ? (
-                  <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
-                    <p className="font-black">No guide items found.</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Adjust your search/filter or create a new guide item.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </section>
+          <button
+            type="button"
+            onClick={() => openCreateItem()}
+            disabled={!sections.length}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus className="size-4 text-[#d6a738]" />
+            Create Guide Item
+          </button>
+        </div>
       </div>
+    </div>
+
+    <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-3">
+      <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          Step 1
+        </p>
+        <p className="mt-1 font-black">Create Sections</p>
+        <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+          Example: Dining, Pool, Wi-Fi, Rules, Transportation.
+        </p>
+      </div>
+
+      <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          Step 2
+        </p>
+        <p className="mt-1 font-black">Add Guide Items</p>
+        <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+          Add content, hours, location, contact, buttons, and links.
+        </p>
+      </div>
+
+      <div className="p-5">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          Step 3
+        </p>
+        <p className="mt-1 font-black">Upload Photos</p>
+        <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+          Add gallery photos and 360° images for richer guest browsing.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <SummaryCard
+      label="Sections"
+      value={sections.length}
+      description="Main guide categories"
+      icon={Layers}
+    />
+
+    <SummaryCard
+      label="Guide Items"
+      value={totalItems}
+      description="Information cards and actions"
+      icon={FileText}
+    />
+
+    <SummaryCard
+      label="Gallery Images"
+      value={totalImages}
+      description="Section and item photos"
+      icon={ImageIcon}
+    />
+
+    <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center gap-4">
+        <span className="grid size-13 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]">
+          <Sparkles className="size-6" />
+        </span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+            Starter Templates
+          </p>
+          <p className="mt-1 text-sm font-bold text-neutral-500">
+            Quickly generate default guide content.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2">
+        <form
+          action={seedDefaultHotelGuideAction}
+          onSubmit={(event) => {
+            if (
+              !window.confirm(
+                'Add the default hotel guide sections and items?'
+              )
+            ) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input type="hidden" name="hotelId" value={defaultHotelId} />
+          <Button className="w-full">Seed Default Guide</Button>
+        </form>
+
+        <form
+          action={seedPoolGuideContentAction}
+          onSubmit={(event) => {
+            if (
+              !window.confirm(
+                'Add or update the dynamic Pool & Amenities content?'
+              )
+            ) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input type="hidden" name="hotelId" value={defaultHotelId} />
+          <button
+            type="submit"
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
+          >
+            Seed / Update Pool Guide
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+    <div className="border-b border-neutral-100 bg-neutral-50/70 p-5">
+      <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#c99c38]">
+            Content Workspace
+          </p>
+
+          <h3 className="mt-1 text-2xl font-black">
+            Manage Guest Portal Guide
+          </h3>
+
+          <p className="mt-1 text-sm font-medium text-neutral-500">
+            Use Sections View for structure. Use Items View when you want to
+            quickly find and edit individual guide items.
+          </p>
+        </div>
+
+        <div className="flex rounded-2xl border border-neutral-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setViewMode('sections')}
+            className={
+              viewMode === 'sections'
+                ? 'h-10 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white'
+                : 'h-10 rounded-xl px-4 text-xs font-black text-neutral-500 hover:bg-neutral-100'
+            }
+          >
+            Sections
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('items')}
+            className={
+              viewMode === 'items'
+                ? 'h-10 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white'
+                : 'h-10 rounded-xl px-4 text-xs font-black text-neutral-500 hover:bg-neutral-100'
+            }
+          >
+            Items
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_210px]">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search sections, guide items, content, hours, locations..."
+            className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+          />
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(event) =>
+            setStatusFilter(event.target.value as StatusFilter)
+          }
+          className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+        >
+          <option value="ALL">All Status</option>
+          <option value="ACTIVE">Active Only</option>
+          <option value="HIDDEN">Hidden Only</option>
+        </select>
+
+        <select
+          value={sortMode}
+          onChange={(event) => setSortMode(event.target.value as SortMode)}
+          className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+        >
+          <option value="custom">Custom Order</option>
+          <option value="title-asc">Title A-Z</option>
+          <option value="items-desc">Most Items</option>
+        </select>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-bold text-neutral-500">
+          {viewMode === 'sections'
+            ? `${visibleSections.length} section${
+                visibleSections.length === 1 ? '' : 's'
+              } shown`
+            : `${flatVisibleItems.length} item${
+                flatVisibleItems.length === 1 ? '' : 's'
+              } shown`}
+        </p>
+
+        {(searchQuery || statusFilter !== 'ALL' || sortMode !== 'custom') ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('ALL');
+              setSortMode('custom');
+            }}
+            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-black text-neutral-600 transition hover:bg-neutral-100"
+          >
+            Clear Filters
+          </button>
+        ) : null}
+      </div>
+    </div>
+
+    <div className="space-y-4 p-5">
+      {viewMode === 'sections' ? (
+        <>
+          {visibleSections.map((section) => {
+            const sectionItselfMatches = sectionMatches(
+              {
+                ...section,
+                items: [],
+              },
+              normalizedQuery
+            );
+
+            const visibleItems =
+              normalizedQuery && !sectionItselfMatches
+                ? section.items.filter((item) =>
+                    itemMatches(item, normalizedQuery)
+                  )
+                : section.items;
+
+            return (
+              <SectionAccordionRow
+                key={section.id}
+                section={section}
+                visibleItems={visibleItems}
+                expanded={expandedSectionIds.has(section.id)}
+                onToggle={() => toggleSection(section.id)}
+                onEditSection={setEditingSection}
+                onUploadSection={setUploadSection}
+                onCreateItem={openCreateItem}
+                onEditItem={setEditingItem}
+                onUploadItem={setUploadItem}
+              />
+            );
+          })}
+
+          {!visibleSections.length ? (
+            <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
+              <p className="font-black">No sections found.</p>
+              <p className="mt-1 text-sm text-neutral-500">
+                Adjust your search/filter or create a new guide section.
+              </p>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="space-y-3">
+          {flatVisibleItems.map(({ section, item }) => (
+            <GuideItemRow
+              key={item.id}
+              item={item}
+              sectionTitle={section.title}
+              onEdit={setEditingItem}
+              onUpload={setUploadItem}
+            />
+          ))}
+
+          {!flatVisibleItems.length ? (
+            <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
+              <p className="font-black">No guide items found.</p>
+              <p className="mt-1 text-sm text-neutral-500">
+                Adjust your search/filter or create a new guide item.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  </section>
+</div>
 
       {creatingSection ? (
         <Modal

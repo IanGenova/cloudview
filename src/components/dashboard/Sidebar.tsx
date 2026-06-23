@@ -1,10 +1,12 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   BedDouble,
+  BookOpen,
   Boxes,
   ChefHat,
   ChevronDown,
@@ -14,15 +16,14 @@ import {
   Gift,
   Home,
   Hotel,
-  BookOpen,
   LayoutDashboard,
   RadioTower,
-  Wrench,
   Settings,
   ShieldCheck,
   ShoppingBag,
+  UserCheck,
   Utensils,
-   UserCheck,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,6 +38,12 @@ type SidebarGroup = {
   label: string;
   modules: string[];
 };
+
+type BuiltSidebarGroup = SidebarGroup & {
+  items: DashboardNavItem[];
+};
+
+const SETTINGS_GROUP_KEY = '__settings__';
 
 const reportsNavItem: DashboardNavItem = {
   module: 'REPORTS',
@@ -169,7 +176,7 @@ function sortItemsByGroupOrder(items: DashboardNavItem[], modules: string[]) {
   });
 }
 
-function buildGroupedNavItems(items: DashboardNavItem[]) {
+function buildGroupedNavItems(items: DashboardNavItem[]): BuiltSidebarGroup[] {
   const usedModules = new Set<string>();
 
   const groups = navGroups
@@ -204,11 +211,9 @@ function buildGroupedNavItems(items: DashboardNavItem[]) {
 function SidebarLink({
   item,
   pathname,
-  compact = false,
 }: {
   item: DashboardNavItem;
   pathname: string;
-  compact?: boolean;
 }) {
   const Icon = getModuleIcon(item.module);
   const active = isActiveRoute(pathname, item.href);
@@ -216,34 +221,34 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
+      aria-current={active ? 'page' : undefined}
       className={cx(
-        'group relative flex items-center gap-3 overflow-hidden rounded-2xl border text-[12.5px] font-black transition-all duration-200',
-        compact ? 'px-2.5 py-2' : 'px-3 py-2.5',
+        'group/link relative flex min-h-11 items-center gap-3 overflow-hidden rounded-2xl px-3 py-2.5 text-[13px] font-black transition-all duration-200',
         active
-          ? 'border-[#d6a738]/55 bg-gradient-to-r from-[#d6a738] via-[#bd8f2d] to-[#8d641c] text-[#080604] shadow-[0_12px_26px_rgba(201,156,56,0.25)]'
-          : 'border-transparent text-[#ddd4bf] hover:border-[#c99c38]/35 hover:bg-[#191308] hover:text-[#f7e7bd]'
+          ? 'bg-gradient-to-r from-[#e0b84a] via-[#c9992f] to-[#a8751e] text-[#090806] shadow-[0_12px_30px_rgba(214,167,56,0.28)]'
+          : 'text-[#d8caa7] hover:bg-white/[0.065] hover:text-[#fff2c9]'
       )}
     >
-      {!active ? (
-        <span className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#c99c38]" />
-          <span className="absolute inset-0 bg-gradient-to-r from-[#c99c38]/12 via-[#c99c38]/5 to-transparent" />
-        </span>
-      ) : null}
+      {active ? (
+        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#090806]" />
+      ) : (
+        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#d6a738] opacity-0 transition-opacity group-hover/link:opacity-100" />
+      )}
 
       <span
         className={cx(
-          'relative z-10 grid shrink-0 place-items-center rounded-xl transition',
-          compact ? 'size-7' : 'size-8',
+          'relative z-10 grid size-8 shrink-0 place-items-center rounded-xl transition',
           active
-            ? 'bg-black/15 text-[#080604]'
-            : 'bg-white/[0.045] text-[#c99c38] group-hover:bg-[#c99c38]/15 group-hover:text-[#f1c66a]'
+            ? 'bg-black/15 text-[#090806]'
+            : 'bg-white/[0.055] text-[#d6a738] group-hover/link:bg-[#d6a738]/15 group-hover/link:text-[#ffd875]'
         )}
       >
-        <Icon className={compact ? 'size-3.5' : 'size-4'} />
+        <Icon className="size-4" />
       </span>
 
-      <span className="relative z-10 truncate">{item.label}</span>
+      <span className="relative z-10 min-w-0 flex-1 truncate">
+        {item.label}
+      </span>
     </Link>
   );
 }
@@ -251,42 +256,60 @@ function SidebarLink({
 function SidebarSection({
   group,
   pathname,
+  open,
+  onToggle,
 }: {
-  group: SidebarGroup & {
-    items: DashboardNavItem[];
-  };
+  group: BuiltSidebarGroup;
   pathname: string;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const hasActiveItem = group.items.some((item) =>
     isActiveRoute(pathname, item.href)
   );
 
   return (
-    <details
-      className="group/section"
-      open={hasActiveItem || group.label === 'Command Center'}
-    >
-      <summary className="mb-2 flex cursor-pointer list-none items-center justify-between rounded-2xl px-3 py-2 text-[#9d8f70] transition hover:bg-white/[0.045] hover:text-[#f1c66a] [&::-webkit-details-marker]:hidden">
+    <section className="rounded-[1.35rem]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className={cx(
+          'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
+          hasActiveItem
+            ? 'bg-white/[0.06] text-[#f7e7bd]'
+            : 'text-[#b6a780] hover:bg-white/[0.045] hover:text-[#f7e7bd]'
+        )}
+      >
         <span className="min-w-0">
-          <span className="block truncate text-[13px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[#d6a738]">
             {group.label}
+          </span>
+          <span className="mt-0.5 block text-[10px] font-bold text-[#74694e]">
+            {group.items.length} module{group.items.length === 1 ? '' : 's'}
           </span>
         </span>
 
-        <ChevronDown className="size-4 shrink-0 text-[#c99c38] transition-transform group-open/section:rotate-180" />
-      </summary>
+        <ChevronDown
+          className={cx(
+            'size-4 shrink-0 text-[#c99c38] transition-transform',
+            open && 'rotate-180'
+          )}
+        />
+      </button>
 
-      <div className="space-y-1.5 pb-3">
-        {group.items.map((item) => (
-          <SidebarLink
-            key={`${group.label}-${item.module}`}
-            item={item}
-            pathname={pathname}
-            compact
-          />
-        ))}
-      </div>
-    </details>
+      {open ? (
+        <div className="space-y-1.5 pb-3">
+          {group.items.map((item) => (
+            <SidebarLink
+              key={`${group.label}-${item.module}`}
+              item={item}
+              pathname={pathname}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -299,29 +322,109 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
 
-  const originalMainItems = navItems.filter((item) => item.group !== 'settings');
-  const mainItems = insertGuestStaysItem(insertReportsItem(originalMainItems));
-  const groupedMainItems = buildGroupedNavItems(mainItems);
+  const originalMainItems = useMemo(
+    () => navItems.filter((item) => item.group !== 'settings'),
+    [navItems]
+  );
 
-  const settingsItems = navItems.filter((item) => item.group === 'settings');
+  const mainItems = useMemo(
+    () => insertGuestStaysItem(insertReportsItem(originalMainItems)),
+    [originalMainItems]
+  );
 
-  const homeHref = navItems[0]?.href ?? '/dashboard';
+  const groupedMainItems = useMemo(
+    () => buildGroupedNavItems(mainItems),
+    [mainItems]
+  );
+
+  const settingsItems = useMemo(
+    () => navItems.filter((item) => item.group === 'settings'),
+    [navItems]
+  );
+
+  const homeHref =
+    navItems.find((item) => item.module === 'OVERVIEW')?.href ??
+    navItems[0]?.href ??
+    '/dashboard';
 
   const hasActiveSettings = settingsItems.some((item) =>
     isActiveRoute(pathname, item.href)
   );
 
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+
+    for (const group of groupedMainItems) {
+      const hasActiveItem = group.items.some((item) =>
+        isActiveRoute(pathname, item.href)
+      );
+
+      if (hasActiveItem || group.label === 'Command Center') {
+        initial.add(group.label);
+      }
+    }
+
+    if (hasActiveSettings) {
+      initial.add(SETTINGS_GROUP_KEY);
+    }
+
+    return initial;
+  });
+
+  useEffect(() => {
+    setOpenGroups((current) => {
+      const next = new Set(current);
+      let changed = false;
+
+      for (const group of groupedMainItems) {
+        const hasActiveItem = group.items.some((item) =>
+          isActiveRoute(pathname, item.href)
+        );
+
+        if (hasActiveItem && !next.has(group.label)) {
+          next.add(group.label);
+          changed = true;
+        }
+      }
+
+      if (hasActiveSettings && !next.has(SETTINGS_GROUP_KEY)) {
+        next.add(SETTINGS_GROUP_KEY);
+        changed = true;
+      }
+
+      return changed ? next : current;
+    });
+  }, [pathname, groupedMainItems, hasActiveSettings]);
+
+  function toggleGroup(key: string) {
+    setOpenGroups((current) => {
+      const next = new Set(current);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      return next;
+    });
+  }
+
+  const moduleCount = mainItems.length + settingsItems.length;
+
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 self-start overflow-hidden border-r border-[#2a2417] bg-[#080704] text-white shadow-[18px_0_55px_rgba(0,0,0,0.35)] lg:flex lg:flex-col">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,#2b210f_0%,#11100b_36%,#070604_100%)]" />
+    <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start overflow-hidden border-r border-[#272014] bg-[#070604] text-white shadow-[18px_0_55px_rgba(0,0,0,0.36)] lg:flex lg:flex-col">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,#39290f_0%,#15110a_38%,#070604_100%)]" />
+      <div className="pointer-events-none absolute -right-24 top-20 size-56 rounded-full bg-[#d6a738]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-20 size-56 rounded-full bg-[#d6a738]/8 blur-3xl" />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col p-4">
         <Link
           href={homeHref}
-          className="mb-4 shrink-0 overflow-hidden rounded-[1.5rem] border border-[#c99c38]/35 bg-[#0f0d09] p-3 shadow-[0_16px_38px_rgba(0,0,0,0.38)] transition hover:border-[#f1c66a]/60 hover:shadow-[0_20px_45px_rgba(201,156,56,0.14)]"
+          className="mb-4 shrink-0 overflow-hidden rounded-[1.75rem] border border-[#d6a738]/30 bg-white/[0.045] p-3.5 shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[#f1c66a]/60 hover:bg-white/[0.065]"
         >
           <div className="flex items-center gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#f1c66a] via-[#c99c38] to-[#8f6820] text-[#070604] shadow-[0_10px_22px_rgba(201,156,56,0.25)]">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#ffe08a] via-[#d6a738] to-[#9c6c18] text-[#080604] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
               <Home className="size-5" />
             </span>
 
@@ -329,18 +432,32 @@ export function Sidebar({
               <span className="block truncate text-base font-black tracking-tight text-white">
                 Cloud View
               </span>
-              <span className="block truncate text-xs font-semibold text-[#b9aa88]">
+              <span className="mt-0.5 block truncate text-xs font-semibold text-[#b9aa88]">
                 {hotelName || 'Super Admin'}
               </span>
             </span>
           </div>
 
-          <div className="mt-3 h-px bg-gradient-to-r from-transparent via-[#c99c38]/45 to-transparent" />
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#d6a738]/15 bg-black/20 px-3 py-2">
+            <p className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[#d6a738]">
+              Operations Suite
+            </p>
 
-          <p className="mt-2 text-[9px] font-black uppercase tracking-[0.24em] text-[#d6a738]">
-            Hotel Operations Suite
-          </p>
+            <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-300">
+              Online
+            </span>
+          </div>
         </Link>
+
+        <div className="mb-3 flex shrink-0 items-center justify-between px-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7e7255]">
+            Navigation
+          </p>
+
+          <span className="rounded-full border border-[#d6a738]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-black text-[#d6a738]">
+            {moduleCount}
+          </span>
+        </div>
 
         <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {groupedMainItems.length > 0 ? (
@@ -350,54 +467,59 @@ export function Sidebar({
                   key={group.label}
                   group={group}
                   pathname={pathname}
+                  open={openGroups.has(group.label)}
+                  onToggle={() => toggleGroup(group.label)}
                 />
               ))}
 
               {settingsItems.length > 0 ? (
-                <details
-                  className="group/settings pt-1"
-                  open={hasActiveSettings}
-                >
-                  <summary
+                <section className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(SETTINGS_GROUP_KEY)}
+                    aria-expanded={openGroups.has(SETTINGS_GROUP_KEY)}
                     className={cx(
-                      'flex cursor-pointer list-none items-center justify-between rounded-2xl border px-3 py-2.5 text-sm font-black transition [&::-webkit-details-marker]:hidden',
+                      'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
                       hasActiveSettings
-                        ? 'border-[#c99c38]/40 bg-[#191308] text-[#f7e7bd]'
-                        : 'border-transparent text-[#ddd4bf] hover:border-[#c99c38]/35 hover:bg-[#191308] hover:text-[#f7e7bd]'
+                        ? 'bg-white/[0.06] text-[#f7e7bd]'
+                        : 'text-[#b6a780] hover:bg-white/[0.045] hover:text-[#f7e7bd]'
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-3">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.045] text-[#c99c38]">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-[#d6a738]">
                         <Settings className="size-4" />
                       </span>
 
-                      <span className="truncate">Settings</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[#d6a738]">
+                          Settings
+                        </span>
+                        <span className="mt-0.5 block text-[10px] font-bold text-[#74694e]">
+                          System preferences
+                        </span>
+                      </span>
                     </span>
 
-                    <ChevronDown className="size-4 shrink-0 text-[#c99c38] transition-transform group-open/settings:rotate-180" />
-                  </summary>
+                    <ChevronDown
+                      className={cx(
+                        'size-4 shrink-0 text-[#c99c38] transition-transform',
+                        openGroups.has(SETTINGS_GROUP_KEY) && 'rotate-180'
+                      )}
+                    />
+                  </button>
 
-                  <div className="ml-5 mt-2 space-y-1 border-l border-[#c99c38]/20 pl-3">
-                    {settingsItems.map((item) => {
-                      const active = isActiveRoute(pathname, item.href);
-
-                      return (
-                        <Link
+                  {openGroups.has(SETTINGS_GROUP_KEY) ? (
+                    <div className="space-y-1.5 pb-3">
+                      {settingsItems.map((item) => (
+                        <SidebarLink
                           key={item.module}
-                          href={item.href}
-                          className={cx(
-                            'block rounded-xl px-3 py-2 text-xs font-black transition',
-                            active
-                              ? 'bg-[#c99c38] text-[#070604] shadow-[0_10px_22px_rgba(201,156,56,0.16)]'
-                              : 'text-[#c8bea7] hover:bg-[#191308] hover:text-[#f7e7bd]'
-                          )}
-                        >
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </details>
+                          item={item}
+                          pathname={pathname}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </section>
               ) : null}
             </div>
           ) : (
@@ -407,10 +529,10 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className="mt-3 shrink-0 rounded-2xl border border-[#c99c38]/20 bg-black/25 px-3 py-3">
+        <div className="mt-3 shrink-0 overflow-hidden rounded-[1.5rem] border border-[#d6a738]/20 bg-white/[0.045] p-3 backdrop-blur">
           <div className="flex items-center gap-3">
-            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.045] text-[#c99c38]">
-              <ShieldCheck className="size-4" />
+            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-black/35 text-[#d6a738]">
+              <ShieldCheck className="size-5" />
             </span>
 
             <div className="min-w-0">

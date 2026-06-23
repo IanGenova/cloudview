@@ -1,22 +1,34 @@
 import Link from 'next/link';
 import {
   DashboardModule,
+  FulfillmentTiming,
+  GuestStayStatus,
   OrderStatus,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { DashboardRangeSelect } from '@/components/dashboard/DashboardRangeSelect';
 import {
+  AlertTriangle,
   Boxes,
   CalendarDays,
+  ChefHat,
   ClipboardList,
   ChevronDown,
+  ConciergeBell,
   CreditCard,
+  DoorOpen,
+  FileBarChart2,
+  ShieldCheck,
   ShoppingBag,
+  Sparkles,
   TrendingDown,
   TrendingUp,
+  UserCheck,
+  Utensils,
   type LucideIcon,
 } from 'lucide-react';
+
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { money } from '@/lib/money';
 import { db } from '@/lib/db';
@@ -680,6 +692,144 @@ function DonutChart({ items }: { items: ServiceBreakdownItem[] }) {
   );
 }
 
+function CommandActionCard({
+  href,
+  title,
+  description,
+  icon: Icon,
+  tone = 'dark',
+}: {
+  href: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  tone?: 'dark' | 'gold' | 'light';
+}) {
+  const className =
+    tone === 'gold'
+      ? 'rounded-[1.5rem] bg-[#d6a738] p-4 text-black shadow-[0_18px_38px_rgba(214,167,56,0.22)] transition hover:bg-[#f1c66a]'
+      : tone === 'dark'
+        ? 'rounded-[1.5rem] bg-[#11100b] p-4 text-white shadow-[0_18px_38px_rgba(0,0,0,0.16)] transition hover:bg-black'
+        : 'rounded-[1.5rem] border border-neutral-200 bg-white p-4 text-[#11100b] shadow-[0_18px_45px_rgba(0,0,0,0.04)] transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]';
+
+  const iconClassName =
+    tone === 'gold'
+      ? 'bg-black/10 text-black'
+      : tone === 'dark'
+        ? 'bg-[#d6a738]/20 text-[#f1c66a]'
+        : 'bg-[#f7f1e5] text-[#c99c38]';
+
+  return (
+    <Link href={href} className={className}>
+      <span className={`grid size-11 place-items-center rounded-2xl ${iconClassName}`}>
+        <Icon className="size-5" />
+      </span>
+
+      <p className="mt-4 text-sm font-black">{title}</p>
+      <p
+        className={
+          tone === 'gold'
+            ? 'mt-1 text-xs font-bold leading-5 text-black/60'
+            : tone === 'dark'
+              ? 'mt-1 text-xs font-bold leading-5 text-white/50'
+              : 'mt-1 text-xs font-bold leading-5 text-neutral-500'
+        }
+      >
+        {description}
+      </p>
+    </Link>
+  );
+}
+
+function AttentionItemCard({
+  title,
+  value,
+  description,
+  href,
+  icon: Icon,
+  tone,
+}: {
+  title: string;
+  value: number | string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  tone: 'red' | 'amber' | 'green' | 'blue';
+}) {
+  const toneClass =
+    tone === 'red'
+      ? 'border-red-200 bg-red-50 text-red-900'
+      : tone === 'amber'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : tone === 'green'
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+          : 'border-blue-200 bg-blue-50 text-blue-900';
+
+  const iconClass =
+    tone === 'red'
+      ? 'bg-red-100 text-red-700'
+      : tone === 'amber'
+        ? 'bg-amber-100 text-amber-700'
+        : tone === 'green'
+          ? 'bg-emerald-100 text-emerald-700'
+          : 'bg-blue-100 text-blue-700';
+
+  return (
+    <Link
+      href={href}
+      className={`block rounded-[1.5rem] border p-4 transition hover:scale-[1.01] ${toneClass}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide opacity-70">
+            {title}
+          </p>
+          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-xs font-bold leading-5 opacity-70">
+            {description}
+          </p>
+        </div>
+
+        <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${iconClass}`}>
+          <Icon className="size-5" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function MiniProgressBar({
+  label,
+  value,
+  max,
+  helper,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  helper: string;
+}) {
+  const width = Math.max((value / Math.max(max, 1)) * 100, value > 0 ? 5 : 0);
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3 text-xs font-black text-neutral-500">
+        <span>{label}</span>
+        <span>{helper}</span>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-white/15">
+        <div
+          className="h-full rounded-full bg-[#d6a738]"
+          style={{
+            width: `${width}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function LuxuryStatCard({
   label,
   value,
@@ -789,19 +939,24 @@ export default async function DashboardHome({
     lt: analyticsRange.end,
   };
 
-  const [
-    ordersInRange,
-    pendingRequests,
-    salesAgg,
-    menuInventoryCount,
-    serviceInventoryCount,
-    menuInventory,
-    serviceInventory,
-    recentOrders,
-    popular,
-    analyticsOrders,
-    analyticsRequests,
-  ] = await Promise.all([
+const [
+  ordersInRange,
+  pendingRequests,
+  salesAgg,
+  menuInventoryCount,
+  serviceInventoryCount,
+  menuInventory,
+  serviceInventory,
+  recentOrders,
+  popular,
+  analyticsOrders,
+  analyticsRequests,
+  activeGuestStays,
+  checkoutsToday,
+  liveKitchenOrders,
+  scheduledOrders,
+] = await Promise.all([
+  
     db.order.count({
       where: {
         ...hotelWhere,
@@ -930,15 +1085,69 @@ export default async function DashboardHome({
     }),
 
     db.serviceRequest.findMany({
-      where: {
-        ...hotelWhere,
-        createdAt: analyticsCreatedAt,
+  where: {
+    ...hotelWhere,
+    createdAt: analyticsCreatedAt,
+  },
+  select: {
+    status: true,
+  },
+}),
+
+db.guestStay.count({
+  where: {
+    ...hotelWhere,
+    status: GuestStayStatus.ACTIVE,
+  },
+}),
+
+db.guestStay.count({
+  where: {
+    ...hotelWhere,
+    status: GuestStayStatus.ACTIVE,
+    expectedCheckOutAt: {
+      gte: startOfDay(new Date()),
+      lt: addDays(startOfDay(new Date()), 1),
+    },
+  },
+}),
+
+db.order.count({
+  where: {
+    ...hotelWhere,
+    status: {
+      in: [
+        OrderStatus.PENDING,
+        OrderStatus.ACCEPTED,
+        OrderStatus.PREPARING,
+        OrderStatus.READY,
+      ],
+    },
+    OR: [
+      {
+        fulfillmentTiming: FulfillmentTiming.ASAP,
       },
-      select: {
-        status: true,
+      {
+        releasedAt: {
+          not: null,
+        },
       },
-    }),
-  ]);
+    ],
+  },
+}),
+
+db.order.count({
+  where: {
+    ...hotelWhere,
+    fulfillmentTiming: FulfillmentTiming.SCHEDULED,
+    releasedAt: null,
+    status: {
+      in: [OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PREPARING],
+    },
+  },
+}),
+
+]);
 
   const menuInventoryAlerts = menuInventory.filter(
     (item) => item.isSoldOut || Number(item.availableQty) <= 5
@@ -949,9 +1158,43 @@ export default async function DashboardHome({
   );
 
   const totalInventoryAlerts =
-    menuInventoryAlerts.length + serviceInventoryAlerts.length;
+  menuInventoryAlerts.length + serviceInventoryAlerts.length;
 
- const analytics = buildOrderAnalytics(
+const attentionScore =
+  pendingRequests + liveKitchenOrders + totalInventoryAlerts + checkoutsToday;
+
+const quickActions = [
+  {
+    href: '/dashboard/guest-stays',
+    title: 'Check In Guest',
+    description: 'Create a room stay and guest access.',
+    icon: UserCheck,
+    tone: 'gold' as const,
+  },
+  {
+    href: '/dashboard/kitchen',
+    title: 'Open Kitchen',
+    description: 'View live food order workflow.',
+    icon: ChefHat,
+    tone: 'dark' as const,
+  },
+  {
+    href: '/dashboard/service-requests',
+    title: 'Service Desk',
+    description: 'Manage guest service requests.',
+    icon: ConciergeBell,
+    tone: 'light' as const,
+  },
+  {
+    href: '/dashboard/reports',
+    title: 'Reports',
+    description: 'Export and review operating reports.',
+    icon: FileBarChart2,
+    tone: 'light' as const,
+  },
+];
+
+const analytics = buildOrderAnalytics(
   analyticsOrders,
   analyticsRangeKey,
   analyticsRange.start,
@@ -1018,58 +1261,160 @@ const analyticsOptions = [
   },
 ];
 
-  return (
-    <div className="space-y-7">
-      <section>
-        <div className="flex flex-wrap items-end justify-between gap-4">
+return (
+  <div className="space-y-7">
+    <section className="overflow-hidden rounded-[2.5rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
+      <div className="relative p-6">
+        <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-[#c99c38]/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
+
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
-            <h1 className="text-4xl font-black tracking-tight text-[#11100b]">
-              Overview
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+              <Sparkles className="size-4" />
+              Command Center
+            </p>
+
+            <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
+              Today’s hotel operations pulse.
             </h1>
 
-            <p className="mt-2 text-base font-medium text-neutral-500">
-              Hotel operations summary for {operationRange.label.toLowerCase()}.
+            <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/60">
+              Monitor revenue, guest activity, kitchen flow, service requests,
+              inventory alerts, and front desk workload from one place.
             </p>
           </div>
 
-          <DashboardRangeSelect
-                paramName="range"
-                value={operationRangeKey}
-                options={operationOptions}
+          <div className="min-w-[260px] rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d6a738]">
+              Needs Attention
+            </p>
+
+            <p className="mt-2 text-5xl font-black">{attentionScore}</p>
+
+            <p className="mt-1 text-xs font-semibold text-white/45">
+              Live kitchen, services, checkouts, and inventory alerts.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              <MiniProgressBar
+                label="Kitchen"
+                value={liveKitchenOrders}
+                max={Math.max(attentionScore, 1)}
+                helper={`${liveKitchenOrders} live`}
               />
+              <MiniProgressBar
+                label="Services"
+                value={pendingRequests}
+                max={Math.max(attentionScore, 1)}
+                helper={`${pendingRequests} open`}
+              />
+              <MiniProgressBar
+                label="Inventory"
+                value={totalInventoryAlerts}
+                max={Math.max(attentionScore, 1)}
+                helper={`${totalInventoryAlerts} alerts`}
+              />
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <LuxuryStatCard
-          label={`${operationRange.label} orders`}
-          value={ordersInRange}
-          caption="Orders created in selected period"
-          icon={ShoppingBag}
-        />
+      <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
+        <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+            Sales
+          </p>
+          <p className="mt-1 text-3xl font-black">
+            {money(salesAgg._sum.totalCents ?? 0)}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-white/45">
+            {operationRange.label}, excluding cancelled orders
+          </p>
+        </div>
 
-        <LuxuryStatCard
-          label="Pending requests"
-          value={pendingRequests}
-          caption="New and in-progress requests"
-          icon={ClipboardList}
-        />
+        <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+            Orders
+          </p>
+          <p className="mt-1 text-3xl font-black">{ordersInRange}</p>
+          <p className="mt-1 text-xs font-semibold text-white/45">
+            Created in selected period
+          </p>
+        </div>
 
-        <LuxuryStatCard
-          label={`${operationRange.label} sales`}
-          value={money(salesAgg._sum.totalCents ?? 0)}
-          caption="Excludes cancelled orders"
-          icon={CreditCard}
-          dark
-        />
+        <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+            Active Stays
+          </p>
+          <p className="mt-1 text-3xl font-black">{activeGuestStays}</p>
+          <p className="mt-1 text-xs font-semibold text-white/45">
+            {checkoutsToday} checking out today
+          </p>
+        </div>
 
-        <LuxuryStatCard
-          label="Inventory alerts"
-          value={totalInventoryAlerts}
-          caption={`${menuInventoryCount} menu · ${serviceInventoryCount} service tracked`}
-          icon={Boxes}
+        <div className="p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+            Kitchen
+          </p>
+          <p className="mt-1 text-3xl font-black">{liveKitchenOrders}</p>
+          <p className="mt-1 text-xs font-semibold text-white/45">
+            {scheduledOrders} scheduled pre-orders
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <AttentionItemCard
+        title="Live Kitchen"
+        value={liveKitchenOrders}
+        description="Pending, preparing, and ready orders"
+        href="/dashboard/kitchen"
+        icon={ChefHat}
+        tone={liveKitchenOrders > 0 ? 'amber' : 'green'}
+      />
+
+      <AttentionItemCard
+        title="Open Services"
+        value={pendingRequests}
+        description="New and in-progress service requests"
+        href="/dashboard/service-requests"
+        icon={ConciergeBell}
+        tone={pendingRequests > 0 ? 'blue' : 'green'}
+      />
+
+      <AttentionItemCard
+        title="Inventory Alerts"
+        value={totalInventoryAlerts}
+        description={`${menuInventoryCount} menu · ${serviceInventoryCount} service tracked`}
+        href="/dashboard/inventory"
+        icon={AlertTriangle}
+        tone={totalInventoryAlerts > 0 ? 'red' : 'green'}
+      />
+
+      <AttentionItemCard
+        title="Checkout Today"
+        value={checkoutsToday}
+        description="Guest stays expected to check out today"
+        href="/dashboard/guest-stays"
+        icon={DoorOpen}
+        tone={checkoutsToday > 0 ? 'amber' : 'green'}
+      />
+    </section>
+
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {quickActions.map((action) => (
+        <CommandActionCard
+          key={action.href}
+          href={action.href}
+          title={action.title}
+          description={action.description}
+          icon={action.icon}
+          tone={action.tone}
         />
-      </section>
+      ))}
+    </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">

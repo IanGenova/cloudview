@@ -3,9 +3,12 @@
 import { type FormEvent, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  AlertTriangle,
   BedDouble,
+  CalendarClock,
   CheckCircle2,
   Coins,
+  DoorOpen,
   Eye,
   History,
   KeyRound,
@@ -133,6 +136,146 @@ function toDateTimeLocalValue(value?: string | null) {
   const localDate = new Date(date.getTime() - timezoneOffsetMs);
 
   return localDate.toISOString().slice(0, 16);
+}
+type FrontDeskStatusTone = 'green' | 'amber' | 'red' | 'neutral';
+
+function getDateKey(value: Date | string) {
+  const date = typeof value === 'string' ? new Date(value) : value;
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+  }).format(date);
+}
+
+function getStayFrontDeskStatus(stay: {
+  status: GuestStayStatusValue;
+  expectedCheckOutAt?: string | null;
+}) {
+  if (stay.status === 'CHECKED_OUT') {
+    return {
+      label: 'Checked Out',
+      tone: 'neutral' as FrontDeskStatusTone,
+    };
+  }
+
+  if (stay.status === 'CANCELLED') {
+    return {
+      label: 'Cancelled',
+      tone: 'red' as FrontDeskStatusTone,
+    };
+  }
+
+  if (stay.status === 'EXPIRED') {
+    return {
+      label: 'Expired',
+      tone: 'red' as FrontDeskStatusTone,
+    };
+  }
+
+  if (stay.expectedCheckOutAt) {
+    const todayKey = getDateKey(new Date());
+    const checkoutKey = getDateKey(stay.expectedCheckOutAt);
+
+    if (checkoutKey && checkoutKey < todayKey) {
+      return {
+        label: 'Overdue Checkout',
+        tone: 'red' as FrontDeskStatusTone,
+      };
+    }
+
+    if (checkoutKey && checkoutKey === todayKey) {
+      return {
+        label: 'Checking Out Today',
+        tone: 'amber' as FrontDeskStatusTone,
+      };
+    }
+  }
+
+  return {
+    label: 'Active Stay',
+    tone: 'green' as FrontDeskStatusTone,
+  };
+}
+
+function FrontDeskStatusBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: FrontDeskStatusTone;
+}) {
+  const className =
+    tone === 'green'
+      ? 'bg-emerald-100 text-emerald-700'
+      : tone === 'amber'
+        ? 'bg-amber-100 text-amber-800'
+        : tone === 'red'
+          ? 'bg-red-100 text-red-700'
+          : 'bg-neutral-100 text-neutral-600';
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ${className}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function FrontDeskMetricCard({
+  icon,
+  label,
+  value,
+  helper,
+  tone = 'neutral',
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: number | string;
+  helper: string;
+  tone?: FrontDeskStatusTone;
+}) {
+  const className =
+    tone === 'green'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : tone === 'amber'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : tone === 'red'
+          ? 'border-red-200 bg-red-50 text-red-900'
+          : 'border-neutral-200 bg-neutral-50 text-neutral-900';
+
+  const iconClassName =
+    tone === 'green'
+      ? 'bg-emerald-100 text-emerald-700'
+      : tone === 'amber'
+        ? 'bg-amber-100 text-amber-700'
+        : tone === 'red'
+          ? 'bg-red-100 text-red-700'
+          : 'bg-white text-[#b88938]';
+
+  return (
+    <div className={`rounded-[1.75rem] border p-5 ${className}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide opacity-70">
+            {label}
+          </p>
+          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
+        </div>
+
+        {icon ? (
+          <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${iconClassName}`}>
+            {icon}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function statusClass(status: GuestStayStatusValue) {
@@ -344,10 +487,33 @@ export function GuestStaysClient({
     return rooms.filter((room) => room.hotelId === selectedHotelId);
   }, [rooms, selectedHotelId]);
 
-  const activeCount = guestStays.filter((stay) => stay.status === 'ACTIVE').length;
-  const checkedOutCount = guestStays.filter(
-    (stay) => stay.status === 'CHECKED_OUT'
-  ).length;
+ const activeCount = guestStays.filter(
+  (stay) => stay.status === 'ACTIVE'
+).length;
+
+const checkedOutCount = guestStays.filter(
+  (stay) => stay.status === 'CHECKED_OUT'
+).length;
+
+const checkingOutTodayCount = guestStays.filter((stay) => {
+  if (stay.status !== 'ACTIVE' || !stay.expectedCheckOutAt) {
+    return false;
+  }
+
+  return getDateKey(stay.expectedCheckOutAt) === getDateKey(new Date());
+}).length;
+
+const overdueCheckoutCount = guestStays.filter((stay) => {
+  if (stay.status !== 'ACTIVE' || !stay.expectedCheckOutAt) {
+    return false;
+  }
+
+  const checkoutKey = getDateKey(stay.expectedCheckOutAt);
+  const todayKey = getDateKey(new Date());
+
+  return Boolean(checkoutKey) && checkoutKey < todayKey;
+}).length;
+
     const [revealedPasscodes, setRevealedPasscodes] = useState<
     Record<string, string>
     >({});
@@ -522,30 +688,140 @@ function handleResetPasscode(guestStayId: string) {
         </div>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Active Stays" value={activeCount} />
-        <StatCard label="Checked Out" value={checkedOutCount} />
-        <StatCard label="Rooms Available" value={rooms.length} />
-        <StatCard label="Recent Records" value={guestStays.length} />
-      </section>
+     <section className="overflow-hidden rounded-[2.25rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
+  <div className="relative p-6">
+    <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-[#c99c38]/25 blur-3xl" />
+    <div className="pointer-events-none absolute -bottom-24 left-10 size-64 rounded-full bg-emerald-500/10 blur-3xl" />
 
-      <section className="flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl font-black text-[#11100b]">Stay Records</h2>
-          <p className="mt-1 text-sm font-medium text-neutral-500">
-            View, edit, and manage active or recent guest room stays.
-          </p>
-        </div>
+    <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div>
+        <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+          <UserCheck className="size-4" />
+          Front Desk Console
+        </p>
 
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-[#2a2417]"
-        >
-          <Plus className="size-4" />
-          Create Guest Stay
-        </button>
-      </section>
+        <h2 className="mt-5 text-4xl font-black tracking-tight">
+          Guest Stay Management
+        </h2>
+
+        <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/60">
+          Monitor active room stays, guest passcodes, authorized devices,
+          orders, service requests, and loyalty points from one console.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={openCreateModal}
+        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#d6a738] px-5 py-3 text-sm font-black text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
+      >
+        <Plus className="size-4" />
+        Check In Guest
+      </button>
+    </div>
+  </div>
+
+  <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
+    <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+        Active
+      </p>
+      <p className="mt-1 text-3xl font-black">{activeCount}</p>
+      <p className="mt-1 text-xs font-semibold text-white/45">
+        Currently checked in
+      </p>
+    </div>
+
+    <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+        Checkout Today
+      </p>
+      <p className="mt-1 text-3xl font-black">{checkingOutTodayCount}</p>
+      <p className="mt-1 text-xs font-semibold text-white/45">
+        Needs front desk attention
+      </p>
+    </div>
+
+    <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+        Overdue
+      </p>
+      <p className="mt-1 text-3xl font-black">{overdueCheckoutCount}</p>
+      <p className="mt-1 text-xs font-semibold text-white/45">
+        Past expected checkout
+      </p>
+    </div>
+
+    <div className="p-5">
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+        Records
+      </p>
+      <p className="mt-1 text-3xl font-black">{guestStays.length}</p>
+      <p className="mt-1 text-xs font-semibold text-white/45">
+        Active and recent stays
+      </p>
+    </div>
+  </div>
+</section>
+
+<section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+  <FrontDeskMetricCard
+    icon={<UserCheck className="size-5" />}
+    label="Active Stays"
+    value={activeCount}
+    helper="Currently checked in"
+    tone="green"
+  />
+
+  <FrontDeskMetricCard
+    icon={<CalendarClock className="size-5" />}
+    label="Checking Out Today"
+    value={checkingOutTodayCount}
+    helper="Expected checkout is today"
+    tone="amber"
+  />
+
+  <FrontDeskMetricCard
+    icon={<AlertTriangle className="size-5" />}
+    label="Overdue Checkout"
+    value={overdueCheckoutCount}
+    helper="Past expected checkout"
+    tone="red"
+  />
+
+  <FrontDeskMetricCard
+    icon={<DoorOpen className="size-5" />}
+    label="Checked Out"
+    value={checkedOutCount}
+    helper="Completed stays"
+  />
+</section>
+
+<section className="flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+  <div>
+    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+      Stay Records
+    </p>
+
+    <h2 className="mt-1 text-xl font-black text-[#11100b]">
+      Room Stay List
+    </h2>
+
+    <p className="mt-1 text-sm font-medium text-neutral-500">
+      View, edit, check out, and manage active or recent guest room stays.
+    </p>
+  </div>
+
+  <button
+    type="button"
+    onClick={openCreateModal}
+    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-[#2a2417]"
+  >
+    <Plus className="size-4" />
+    Check In Guest
+  </button>
+</section>
+
 
       <section className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
         <div className="overflow-x-auto">
@@ -583,8 +859,11 @@ function handleResetPasscode(guestStayId: string) {
             </thead>
 
             <tbody>
-              {guestStays.map((stay) => (
-                <tr key={stay.id} className="border-t border-neutral-100">
+             {guestStays.map((stay) => {
+             const frontDeskStatus = getStayFrontDeskStatus(stay);
+
+          return (
+            <tr key={stay.id} className="border-t border-neutral-100">
                   <td className="px-5 py-4">
                     <p className="font-black">{stay.guestName}</p>
                     <p className="text-xs font-semibold text-neutral-500">
@@ -627,13 +906,16 @@ function handleResetPasscode(guestStayId: string) {
                   </td>
 
                   <td className="px-5 py-4">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${statusClass(
-                        stay.status
-                      )}`}
-                    >
-                      {formatStatus(stay.status)}
-                    </span>
+                    <div className="space-y-1">
+                    <FrontDeskStatusBadge
+                      label={frontDeskStatus.label}
+                      tone={frontDeskStatus.tone}
+                    />
+
+                    <p className="text-[11px] font-semibold text-neutral-400">
+                      System: {formatStatus(stay.status)}
+                    </p>
+                  </div>
                   </td>
 
                   <td className="px-5 py-4">
@@ -675,8 +957,9 @@ function handleResetPasscode(guestStayId: string) {
                       ) : null}
                     </div>
                   </td>
-                </tr>
-              ))}
+                    </tr>
+              );
+            })}
 
               {!guestStays.length ? (
                 <tr>

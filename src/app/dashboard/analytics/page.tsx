@@ -36,19 +36,28 @@ function getLastNDays(days: number) {
 
   const today = new Date();
 
+  /**
+   * Use noon to avoid timezone boundary issues between server and client.
+   */
+  today.setHours(12, 0, 0, 0);
+
+  const labelFormatter = new Intl.DateTimeFormat('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'Asia/Manila',
+  });
+
   for (let index = days - 1; index >= 0; index -= 1) {
     const date = new Date(today);
+
     date.setDate(today.getDate() - index);
-    date.setHours(0, 0, 0, 0);
+    date.setHours(12, 0, 0, 0);
 
     const key = date.toISOString().slice(0, 10);
 
     result.push({
       key,
-      label: new Intl.DateTimeFormat('en-PH', {
-        month: 'short',
-        day: 'numeric',
-      }).format(date),
+      label: labelFormatter.format(date),
       date,
     });
   }
@@ -403,22 +412,18 @@ function SalesAreaChart({
             />
           ) : null}
 
-          {points.map((point) => (
-            <g key={point.label}>
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="5"
-                fill="#ffffff"
-                stroke="#d6a729"
-                strokeWidth="3"
-              />
-
-              <title>
-                {point.label}: {formatMoneyFromCents(point.salesCents)}
-              </title>
-            </g>
-          ))}
+         {points.map((point) => (
+          <circle
+            key={point.label}
+            cx={point.x}
+            cy={point.y}
+            r="5"
+            fill="#ffffff"
+            stroke="#d6a729"
+            strokeWidth="3"
+            aria-label={`${point.label}: ${formatMoneyFromCents(point.salesCents)}`}
+          />
+        ))}
         </svg>
       </div>
 

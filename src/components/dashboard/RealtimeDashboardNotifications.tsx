@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Ban,
   BellRing,
+  CheckCheck,
   ChefHat,
   ConciergeBell,
   PackageMinus,
+  Trash2,
   Volume2,
+  VolumeX,
   Wifi,
   WifiOff,
   X,
@@ -20,6 +23,12 @@ const REALTIME_ENDPOINTS = {
   service: '/api/realtime/service-requests-token',
   operations: '/api/realtime/operations-token',
 };
+
+const NOTIFICATION_STORAGE_KEY = 'cloudview-dashboard-notifications';
+const SOUND_MUTED_STORAGE_KEY = 'cloudview-dashboard-sound-muted';
+const MAX_STORED_NOTIFICATIONS = 50;
+const TOAST_VISIBLE_MS = 15_000;
+
 
 type KitchenPayload = {
   event?: string;
@@ -79,6 +88,7 @@ type DashboardNotification = {
   message: string;
   href: string;
   createdAt: number;
+  readAt?: number | null;
 };
 
 type BrowserAudioContextConstructor = typeof AudioContext;
@@ -103,6 +113,70 @@ type NotificationPermissionState = NotificationPermission | 'unsupported';
 
 function createNotificationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parseStoredNotifications(value: string | null) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter((item) => {
+        return (
+          item &&
+          typeof item === 'object' &&
+          typeof item.id === 'string' &&
+          typeof item.title === 'string' &&
+          typeof item.message === 'string' &&
+          typeof item.href === 'string' &&
+          typeof item.createdAt === 'number'
+        );
+      })
+      .map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        message: item.message,
+        href: item.href,
+        createdAt: item.createdAt,
+        readAt: item.readAt ?? null,
+      })) as DashboardNotification[];
+  } catch {
+    return [];
+  }
+}
+
+function formatNotificationTime(createdAt: number) {
+  const diffMs = Date.now() - createdAt;
+  const diffSeconds = Math.max(0, Math.floor(diffMs / 1000));
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffSeconds < 60) {
+    return 'Just now';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  return new Intl.DateTimeFormat('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(createdAt));
 }
 
 function normalizeValue(value?: string | null) {
@@ -349,11 +423,21 @@ export function RealtimeDashboardNotifications() {
   const router = useRouter();
 
   const [notifications, setNotifications] = useState<DashboardNotification[]>(
-    []
-  );
+  []
+);
 
-  const [alertsEnabled, setAlertsEnabled] = useState(false);
-  const alertsEnabledRef = useRef(false);
+const [toastNotificationIds, setToastNotificationIds] = useState<string[]>(
+  []
+);
+
+const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+const [notificationsLoaded, setNotificationsLoaded] = useState(false);
+
+const [soundMuted, setSoundMuted] = useState(false);
+const soundMutedRef = useRef(false);
+
+const [alertsEnabled, setAlertsEnabled] = useState(false);
+const alertsEnabledRef = useRef(false);
 
   const [browserNotificationPermission, setBrowserNotificationPermission] =
     useState<NotificationPermissionState>('unsupported');
@@ -385,6 +469,18 @@ export function RealtimeDashboardNotifications() {
     setAlertsEnabled(enabled);
     alertsEnabledRef.current = enabled;
 
+    const savedNotifications = parseStoredNotifications(
+      window.localStorage.getItem(NOTIFICATION_STORAGE_KEY)
+    );
+
+    setNotifications(savedNotifications.slice(0, MAX_STORED_NOTIFICATIONS));
+    setNotificationsLoaded(true);
+
+    const muted = window.localStorage.getItem(SOUND_MUTED_STORAGE_KEY) === 'true';
+
+    setSoundMuted(muted);
+    soundMutedRef.current = muted;
+
     if (!canUseBrowserNotifications()) {
       setBrowserNotificationPermission('unsupported');
       return;
@@ -393,21 +489,86 @@ export function RealtimeDashboardNotifications() {
     setBrowserNotificationPermission(Notification.permission);
   }, []);
 
-  function scheduleNotificationRemoval(id: string) {
+  useEffect(() => {
+  if (!notificationsLoaded) {
+    return;
+  }
+
+  window.localStorage.setItem(
+    NOTIFICATION_STORAGE_KEY,
+    JSON.stringify(notifications.slice(0, MAX_STORED_NOTIFICATIONS))
+  );
+}, [notifications, notificationsLoaded]);
+
+  function scheduleToastRemoval(id: string) {
   const timeoutId = window.setTimeout(() => {
-    removeNotification(id);
-  }, 15_000);
+    dismissToast(id);
+  }, TOAST_VISIBLE_MS);
 
   notificationTimeoutsRef.current.push(timeoutId);
 }
 
-  function removeNotification(id: string) {
-    setNotifications((current) =>
-      current.filter((notification) => notification.id !== id)
-    );
-  }
+function dismissToast(id: string) {
+  setToastNotificationIds((current) =>
+    current.filter((notificationId) => notificationId !== id)
+  );
+}
+
+function removeNotification(id: string) {
+  setNotifications((current) =>
+    current.filter((notification) => notification.id !== id)
+  );
+
+  dismissToast(id);
+}
+
+function markNotificationRead(id: string) {
+  setNotifications((current) =>
+    current.map((notification) =>
+      notification.id === id
+        ? {
+            ...notification,
+            readAt: notification.readAt ?? Date.now(),
+          }
+        : notification
+    )
+  );
+}
+
+function markAllNotificationsRead() {
+  const now = Date.now();
+
+  setNotifications((current) =>
+    current.map((notification) => ({
+      ...notification,
+      readAt: notification.readAt ?? now,
+    }))
+  );
+}
+
+function clearNotifications() {
+  setNotifications([]);
+  setToastNotificationIds([]);
+}
+
+function toggleSoundMuted() {
+  setSoundMuted((current) => {
+    const next = !current;
+
+    soundMutedRef.current = next;
+    window.localStorage.setItem(SOUND_MUTED_STORAGE_KEY, String(next));
+
+    return next;
+  });
+}
+
 
   async function playNotificationSound(force = false) {
+
+      if (soundMutedRef.current) {
+        return;
+      }
+
     if (!force && !alertsEnabledRef.current) {
       return;
     }
@@ -477,53 +638,94 @@ export function RealtimeDashboardNotifications() {
     };
   }
 
-  function pushNotification(notification: DashboardNotification) {
-  void playNotificationSound();
+function addNotificationToCenter({
+  notification,
+  playSoundCue = true,
+  forceSoundCue = false,
+  showBrowser = true,
+  showToast = true,
+}: {
+  notification: DashboardNotification;
+  playSoundCue?: boolean;
+  forceSoundCue?: boolean;
+  showBrowser?: boolean;
+  showToast?: boolean;
+}) {
+  const normalizedNotification: DashboardNotification = {
+    ...notification,
+    readAt: notification.readAt ?? null,
+  };
 
-  if (alertsEnabledRef.current) {
-    showBrowserNotification(notification);
+  if (playSoundCue) {
+    void playNotificationSound(forceSoundCue);
   }
 
-  setNotifications((current) => [notification, ...current].slice(0, 6));
+  if (showBrowser && alertsEnabledRef.current) {
+    showBrowserNotification(normalizedNotification);
+  }
 
-  scheduleNotificationRemoval(notification.id);
+  setNotifications((current) => [
+    normalizedNotification,
+    ...current.filter((item) => item.id !== normalizedNotification.id),
+  ].slice(0, MAX_STORED_NOTIFICATIONS));
+
+  if (showToast) {
+    setToastNotificationIds((current) => [
+      normalizedNotification.id,
+      ...current.filter((id) => id !== normalizedNotification.id),
+    ].slice(0, 6));
+
+    scheduleToastRemoval(normalizedNotification.id);
+  }
 }
 
-  function pushSystemNotification(message: string) {
-    const notification: DashboardNotification = {
-      id: createNotificationId(),
-      type: 'SYSTEM',
-      title: 'Dashboard Realtime',
-      message,
-      href: '/dashboard/orders',
-      createdAt: Date.now(),
-    };
-
-    setNotifications((current) => [notification, ...current].slice(0, 6));
-
-    scheduleNotificationRemoval(notification.id);
-
-  }
-
-  function pushTestNotification() {
-    const notification: DashboardNotification = {
-      id: createNotificationId(),
-      type: 'SYSTEM',
-      title: 'Dashboard Alerts Test',
-      message: 'Sound cue, in-app alert, and browser notification test.',
-      href: '/dashboard/orders',
-      createdAt: Date.now(),
-    };
-
-    void playNotificationSound(true);
-    if (alertsEnabledRef.current) {
-  showBrowserNotification(notification);
+function pushNotification(notification: DashboardNotification) {
+  addNotificationToCenter({
+    notification,
+    playSoundCue: true,
+    showBrowser: true,
+    showToast: true,
+  });
 }
 
-    setNotifications((current) => [notification, ...current].slice(0, 6));
+function pushSystemNotification(message: string) {
+  const notification: DashboardNotification = {
+    id: createNotificationId(),
+    type: 'SYSTEM',
+    title: 'Dashboard Realtime',
+    message,
+    href: '/dashboard/orders',
+    createdAt: Date.now(),
+    readAt: null,
+  };
 
-    scheduleNotificationRemoval(notification.id);
-  }
+  addNotificationToCenter({
+    notification,
+    playSoundCue: false,
+    showBrowser: false,
+    showToast: true,
+  });
+}
+
+function pushTestNotification() {
+  const notification: DashboardNotification = {
+    id: createNotificationId(),
+    type: 'SYSTEM',
+    title: 'Dashboard Alerts Test',
+    message: 'Sound cue, in-app alert, and browser notification test.',
+    href: '/dashboard/orders',
+    createdAt: Date.now(),
+    readAt: null,
+  };
+
+  addNotificationToCenter({
+    notification,
+    playSoundCue: true,
+    forceSoundCue: true,
+    showBrowser: true,
+    showToast: true,
+  });
+}
 
   async function enableAlerts() {
     setAlertsEnabled(true);
@@ -1101,6 +1303,11 @@ export function RealtimeDashboardNotifications() {
       } catch {
         // Ignore disconnect errors.
       }
+      for (const timeoutId of notificationTimeoutsRef.current) {
+          window.clearTimeout(timeoutId);
+        }
+
+        notificationTimeoutsRef.current = [];
     };
   }, []);
 
@@ -1132,10 +1339,20 @@ export function RealtimeDashboardNotifications() {
 
   const RealtimeIcon = realtimeConnected ? Wifi : WifiOff;
 
+  const toastNotifications = notifications.filter((notification) =>
+  toastNotificationIds.includes(notification.id)
+);
+
+const unreadCount = notifications.filter(
+  (notification) => !notification.readAt
+).length;
+
+const latestNotifications = notifications.slice(0, 25);
+
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
       <div className="w-full space-y-3">
-        {notifications.map((notification) => {
+        {toastNotifications.map((notification) => {
           const Icon = getNotificationIcon(notification.type);
           const style = getNotificationStyle(notification.type);
 
@@ -1154,8 +1371,9 @@ export function RealtimeDashboardNotifications() {
                 <button
                   type="button"
                   onClick={() => {
+                    markNotificationRead(notification.id);
+                    dismissToast(notification.id);
                     router.push(notification.href);
-                    removeNotification(notification.id);
                   }}
                   className="min-w-0 flex-1 text-left"
                 >
@@ -1169,7 +1387,7 @@ export function RealtimeDashboardNotifications() {
 
                 <button
                   type="button"
-                  onClick={() => removeNotification(notification.id)}
+                  onClick={() => dismissToast(notification.id)}
                   className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200"
                   aria-label="Dismiss notification"
                 >
@@ -1180,6 +1398,164 @@ export function RealtimeDashboardNotifications() {
           );
         })}
       </div>
+
+      {notificationCenterOpen ? (
+  <div className="pointer-events-auto w-full overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl">
+    <div className="border-b border-neutral-100 bg-neutral-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-black text-neutral-950">
+            Notification Center
+          </p>
+          <p className="mt-1 text-xs font-bold text-neutral-500">
+            {unreadCount} unread · {notifications.length} total
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setNotificationCenterOpen(false)}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-neutral-500 hover:bg-neutral-100"
+          aria-label="Close notification center"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={markAllNotificationsRead}
+          disabled={!notifications.length}
+          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-black px-2 text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <CheckCheck className="size-3.5" />
+          Read all
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleSoundMuted}
+          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-100"
+        >
+          {soundMuted ? (
+            <VolumeX className="size-3.5" />
+          ) : (
+            <Volume2 className="size-3.5" />
+          )}
+          {soundMuted ? 'Unmute' : 'Mute'}
+        </button>
+
+        <button
+          type="button"
+          onClick={clearNotifications}
+          disabled={!notifications.length}
+          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Trash2 className="size-3.5" />
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <div className="max-h-[440px] overflow-y-auto p-3">
+      {latestNotifications.length ? (
+        <div className="space-y-2">
+          {latestNotifications.map((notification) => {
+            const Icon = getNotificationIcon(notification.type);
+            const style = getNotificationStyle(notification.type);
+            const isUnread = !notification.readAt;
+
+            return (
+              <div
+                key={`center-${notification.id}`}
+                className={`rounded-2xl border p-3 ${
+                  isUnread
+                    ? `${style.border} bg-neutral-50`
+                    : 'border-neutral-100 bg-white opacity-75'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`grid size-10 shrink-0 place-items-center rounded-2xl ${style.iconWrap}`}
+                  >
+                    <Icon className="size-5" />
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-neutral-950">
+                          {notification.title}
+                        </p>
+                        <p className="mt-0.5 text-[11px] font-bold text-neutral-400">
+                          {formatNotificationTime(notification.createdAt)}
+                        </p>
+                      </div>
+
+                      {isUnread ? (
+                        <span className="mt-1 size-2 shrink-0 rounded-full bg-emerald-500" />
+                      ) : null}
+                    </div>
+
+                    <p className="mt-2 text-sm font-semibold leading-5 text-neutral-600">
+                      {notification.message}
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          markNotificationRead(notification.id);
+                          setNotificationCenterOpen(false);
+                          router.push(notification.href);
+                        }}
+                        className="h-8 rounded-xl bg-black px-3 text-[11px] font-black text-white hover:bg-neutral-800"
+                      >
+                        View
+                      </button>
+
+                      {isUnread ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            markNotificationRead(notification.id)
+                          }
+                          className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-[11px] font-black text-neutral-700 hover:bg-neutral-100"
+                        >
+                          Mark read
+                        </button>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => removeNotification(notification.id)}
+                        className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-neutral-200 p-8 text-center">
+          <BellRing className="mx-auto size-8 text-neutral-300" />
+          <p className="mt-3 text-sm font-black text-neutral-500">
+            No notifications yet
+          </p>
+          <p className="mt-1 text-xs font-semibold text-neutral-400">
+            New orders, service requests, low stock, and cancellations will
+            appear here.
+          </p>
+        </div>
+      )}
+    </div>
+  </div>
+) : null}
 
       {lastRealtimeIssue ? (
         <button
@@ -1197,6 +1573,22 @@ export function RealtimeDashboardNotifications() {
           lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
         }`}
       >
+
+        <button
+            type="button"
+            onClick={() => setNotificationCenterOpen((current) => !current)}
+            className="relative inline-flex h-8 items-center gap-2 rounded-xl px-2 text-xs font-black transition hover:bg-white/15"
+          >
+            <BellRing className="size-4" />
+            Notifications
+
+            {unreadCount > 0 ? (
+              <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            ) : null}
+          </button>
+
         <button
           type="button"
           onClick={alertsEnabled ? disableAlerts : enableAlerts}

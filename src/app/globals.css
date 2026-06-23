@@ -23,3 +23,57 @@ body {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@layer utilities {
+  .dark .cloudview-dashboard-shell .bg-white {
+    background-color: #111111 !important;
+  }
+
+  .dark .cloudview-dashboard-shell .bg-neutral-50 {
+    background-color: #171717 !important;
+  }
+
+  .dark .cloudview-dashboard-shell .bg-neutral-100 {
+    background-color: #262626 !important;
+  }
+
+  .dark .cloudview-dashboard-shell .border-neutral-100,
+  .dark .cloudview-dashboard-shell .border-neutral-200,
+  .dark .cloudview-dashboard-shell .border-neutral-300 {
+    border-color: #262626 !important;
+  }
+
+  .dark .cloudview-dashboard-shell .text-neutral-950,
+  .dark .cloudview-dashboard-shell .text-neutral-900,
+  .dark .cloudview-dashboard-shell .text-neutral-800,
+  .dark .cloudview-dashboard-shell .text-neutral-700 {
+    color: #fafafa !important;
+  }
+
+  .dark .cloudview-dashboard-shell .text-neutral-600,
+  .dark .cloudview-dashboard-shell .text-neutral-500,
+  .dark .cloudview-dashboard-shell .text-neutral-400 {
+    color: #a3a3a3 !important;
+  }
+
+  .dark .cloudview-dashboard-shell input,
+  .dark .cloudview-dashboard-shell select,
+  .dark .cloudview-dashboard-shell textarea {
+    background-color: #0a0a0a !important;
+    color: #fafafa !important;
+    border-color: #262626 !important;
+  }
+
+  .dark .cloudview-dashboard-shell input::placeholder,
+  .dark .cloudview-dashboard-shell textarea::placeholder {
+    color: #737373 !important;
+  }
+
+  .dark .cloudview-dashboard-shell table {
+    color: #fafafa;
+  }
+
+  .dark .cloudview-dashboard-shell .shadow-soft {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important;
+  }
+}

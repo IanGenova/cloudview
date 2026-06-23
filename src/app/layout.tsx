@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
+
 export const metadata: Metadata = {
   title: 'Cloud View — Smart Hospitality, One Tap Away',
   description:
@@ -15,6 +16,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var theme = localStorage.getItem('cloudview-theme') || 'system';
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var shouldUseDark = theme === 'dark' || (theme === 'system' && prefersDark);
+
+                  document.documentElement.classList.toggle('dark', shouldUseDark);
+                  document.documentElement.style.colorScheme = shouldUseDark ? 'dark' : 'light';
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+
       <body
         suppressHydrationWarning
         className="bg-neutral-100 text-neutral-900 transition-colors duration-300 dark:bg-neutral-950 dark:text-white"
