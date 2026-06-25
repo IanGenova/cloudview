@@ -8,7 +8,7 @@ import { requireUser, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { scopedHotelId } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
-
+import { redirect } from 'next/navigation';
 const SETTINGS_UPLOAD_DIR = path.join(
   process.cwd(),
   'public',
@@ -193,4 +193,5 @@ export async function saveHotelSettingsAction(formData: FormData) {
 
   revalidatePath('/dashboard/settings');
   revalidatePath('/t/[tagCode]', 'page');
+  redirect('/dashboard/settings?saved=1');
 }

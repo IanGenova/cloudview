@@ -255,13 +255,13 @@ function SummaryCard({
     <div
       className={
         tone === 'green'
-          ? 'rounded-[2rem] border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10'
+          ? 'rounded-[2rem] border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10'
           : tone === 'amber'
-            ? 'rounded-[2rem] border border-amber-200 bg-amber-50 p-5 dark:border-amber-500/20 dark:bg-amber-500/10'
-            : 'rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900'
+            ? 'rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10'
+            : 'rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900'
       }
     >
-      <div className="mb-4 grid size-11 place-items-center rounded-2xl bg-black text-white dark:bg-gold dark:text-black">
+      <div className="mb-3 grid size-10 place-items-center rounded-xl bg-black text-white dark:bg-gold dark:text-black">
         <Icon className="size-5" />
       </div>
 
@@ -269,7 +269,7 @@ function SummaryCard({
         {label}
       </p>
 
-      <p className="mt-1 text-3xl font-black text-neutral-950 dark:text-white">
+      <p className="mt-1 text-2xl font-black text-neutral-950 dark:text-white">
         {value}
       </p>
     </div>
@@ -1237,7 +1237,7 @@ export function ServiceRequestsClient({
       </div>
 
       {activeTab === 'LIVE' || activeTab === 'ALL' ? (
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2">
           <RequestLane
             title="New"
             description="Grouped service request orders waiting for staff action."
@@ -1311,142 +1311,206 @@ function RequestLane({
   onOpen: (request: RequestGroup) => void;
   wide?: boolean;
 }) {
-  return (
-    <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-black text-neutral-950 dark:text-white">
-            {title}
-          </h3>
-          <p className="text-xs text-neutral-500">{description}</p>
-        </div>
+  const isNewLane = title.toLowerCase().includes('new');
+  const isProgressLane = title.toLowerCase().includes('progress');
 
-        <span className="grid size-9 place-items-center rounded-full bg-black text-sm font-black text-white dark:bg-gold dark:text-black">
-          {requests.length}
-        </span>
+  const laneToneClass = isNewLane
+    ? 'border-amber-200 bg-amber-50/50 dark:border-amber-500/20 dark:bg-amber-500/10'
+    : isProgressLane
+      ? 'border-blue-200 bg-blue-50/50 dark:border-blue-500/20 dark:bg-blue-500/10'
+      : 'border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900';
+
+  return (
+    <section
+      className={`flex min-h-[560px] flex-col overflow-hidden rounded-[2rem] border shadow-sm ${laneToneClass}`}
+    >
+      <div className="shrink-0 border-b border-black/5 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-neutral-950/70">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-xl font-black text-neutral-950 dark:text-white">
+              {title}
+            </h3>
+
+            <p className="mt-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              {description}
+            </p>
+          </div>
+
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-black text-sm font-black text-white dark:bg-gold dark:text-black">
+            {requests.length}
+          </span>
+        </div>
       </div>
 
       <div
         className={
           wide
-            ? 'grid gap-3 md:grid-cols-2 2xl:grid-cols-3'
-            : 'space-y-3'
+            ? 'min-h-0 flex-1 overflow-y-auto p-3'
+            : 'min-h-0 flex-1 overflow-y-auto p-3'
         }
       >
-        {requests.map((request) => {
-          const actions = nextActionsForStatus(request.status, statuses);
-          const itemPreview = request.items
-            .slice(0, 3)
-            .map((item) => item.type)
-            .join(', ');
+        {requests.length ? (
+          <div
+            className={
+              wide
+                ? 'grid gap-3 md:grid-cols-2 2xl:grid-cols-3'
+                : 'grid gap-3'
+            }
+          >
+            {requests.map((request) => {
+              const actions = nextActionsForStatus(request.status, statuses);
+              const primaryAction = actions[0];
 
-          return (
-            <article
-              key={request.id}
-              className="rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-black text-neutral-950 dark:text-white">
-                      {request.requestCode}
-                    </h4>
-                    <StatusPill status={request.status} />
-                    <BillingPill
-                      billedCount={request.billedCount}
-                      itemCount={request.itemCount}
-                    />
+              const itemPreview = request.items
+                .map((item) => item.type)
+                .join(', ');
+
+              const hasPhotos = request.attachments.length > 0;
+              const hasCharge = request.totalChargeAmount > 0;
+
+              return (
+                <article
+                  key={request.id}
+                  className="rounded-[1.25rem] border border-neutral-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="truncate text-sm font-black text-neutral-950 dark:text-white">
+                          {request.requestCode}
+                        </h4>
+
+                        <StatusPill status={request.status} />
+
+                        <BillingPill
+                          billedCount={request.billedCount}
+                          itemCount={request.itemCount}
+                        />
+                      </div>
+
+                      <p className="mt-1 truncate text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                        {request.roomLabel} · {request.guestName || 'Guest'}
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] font-semibold text-neutral-400">
+                        {formatDateTime(request.createdAt)}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpen(request)}
+                      className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
+                      aria-label="Open request order details"
+                    >
+                      <Eye className="size-4" />
+                    </button>
                   </div>
 
-                  <p className="mt-1 text-xs font-bold text-neutral-500">
-                    {request.roomLabel} · {formatDateTime(request.createdAt)}
-                  </p>
-                </div>
+                  <div className="mt-3 rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
+                        Service Items
+                      </p>
 
-                <button
-                  type="button"
-                  onClick={() => onOpen(request)}
-                  className="grid size-9 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
-                  aria-label="Open request order details"
-                >
-                  <Eye className="size-4" />
-                </button>
-              </div>
+                      <span className="rounded-full bg-black px-2.5 py-1 text-[10px] font-black text-white dark:bg-gold dark:text-black">
+                        {request.itemCount}
+                      </span>
+                    </div>
 
-              <div className="mt-4 rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">
-                <p className="text-xs font-black uppercase text-neutral-400">
-                  Service Items
-                </p>
-                <p className="mt-1 text-sm font-bold text-neutral-700 dark:text-neutral-300">
-                  {request.itemCount} item{request.itemCount === 1 ? '' : 's'} ·{' '}
-                  {itemPreview || 'No items'}
-                  {request.itemCount > 3
-                    ? ` +${request.itemCount - 3} more`
-                    : ''}
-                </p>
-              </div>
+                    <p className="mt-1 max-h-10 overflow-hidden text-xs font-bold leading-5 text-neutral-700 dark:text-neutral-300">
+                      {itemPreview || 'No service items'}
+                    </p>
+                  </div>
 
-              {request.attachments.length > 0 ? (
-  <div className="mt-3 flex items-center gap-2 rounded-2xl bg-blue-50 p-3 text-xs font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
-    <Images className="size-4" />
-    {request.attachments.length} photo
-    {request.attachments.length === 1 ? '' : 's'} attached
-  </div>
-) : null}
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
+                      <p className="text-[9px] font-black uppercase text-neutral-400">
+                        Assigned
+                      </p>
+                      <p className="mt-1 truncate text-xs font-black text-neutral-950 dark:text-white">
+                        {request.assignedToName || 'Unassigned'}
+                      </p>
+                    </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">
-                  <p className="text-[10px] font-black uppercase text-neutral-400">
-                    Assigned
-                  </p>
-                  <p className="mt-1 text-sm font-black">
-                    {request.assignedToName || 'Unassigned'}
-                  </p>
-                </div>
+                    <div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
+                      <p className="text-[9px] font-black uppercase text-neutral-400">
+                        Charge
+                      </p>
+                      <p
+                        className={
+                          hasCharge
+                            ? 'mt-1 truncate text-xs font-black text-emerald-700 dark:text-emerald-300'
+                            : 'mt-1 truncate text-xs font-black text-neutral-500'
+                        }
+                      >
+                        {money(request.totalChargeAmount)}
+                      </p>
+                    </div>
 
-                <div className="rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">
-                  <p className="text-[10px] font-black uppercase text-neutral-400">
-                    Charge
-                  </p>
-                  <p className="mt-1 text-sm font-black">
-                    {money(request.totalChargeAmount)}
-                  </p>
-                </div>
-              </div>
+                    <div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
+                      <p className="text-[9px] font-black uppercase text-neutral-400">
+                        Photos
+                      </p>
+                      <p
+                        className={
+                          hasPhotos
+                            ? 'mt-1 truncate text-xs font-black text-blue-700 dark:text-blue-300'
+                            : 'mt-1 truncate text-xs font-black text-neutral-500'
+                        }
+                      >
+                        {request.attachments.length}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="mt-3 grid gap-2">
-                {actions.slice(0, 2).map((action) => (
-                  <QuickStatusAction
-                    key={`${request.id}-${action.status}`}
-                    request={request}
-                    status={action.status}
-                    label={action.label}
-                    tone={action.tone}
-                  />
-                ))}
+                  {hasPhotos ? (
+                    <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 p-2 text-[11px] font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+                      <Images className="size-3.5" />
+                      {request.attachments.length} photo
+                      {request.attachments.length === 1 ? '' : 's'} attached
+                    </div>
+                  ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => onOpen(request)}
-                  className="h-10 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950"
-                >
-                  Open Details
-                </button>
-              </div>
-            </article>
-          );
-        })}
+                  <div className="mt-3 grid gap-2">
+                    {primaryAction ? (
+                      <QuickStatusAction
+                        request={request}
+                        status={primaryAction.status}
+                        label={primaryAction.label}
+                        tone={primaryAction.tone}
+                      />
+                    ) : null}
 
-        {!requests.length ? (
-          <div className="rounded-[1.5rem] border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-800">
-            <p className="font-black text-neutral-600 dark:text-neutral-300">
-              No request orders here.
-            </p>
-            <p className="mt-1 text-sm text-neutral-500">
-              Matching request orders will appear in this lane.
-            </p>
+                    <button
+                      type="button"
+                      onClick={() => onOpen(request)}
+                      className="h-9 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+                    >
+                      Open Details
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        ) : null}
+        ) : (
+          <div className="grid h-full min-h-64 place-items-center rounded-[1.5rem] border border-dashed border-neutral-300 bg-white/70 p-8 text-center dark:border-neutral-800 dark:bg-neutral-950/70">
+            <div>
+              <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+                <MessageCircle className="size-5" />
+              </div>
+
+              <p className="mt-4 font-black text-neutral-600 dark:text-neutral-300">
+                No request orders here.
+              </p>
+
+              <p className="mt-1 text-sm text-neutral-500">
+                Matching service requests will appear in this lane.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

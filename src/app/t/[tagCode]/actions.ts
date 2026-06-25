@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import type { Prisma } from '@prisma/client';
 import {
   FulfillmentTiming,
   MenuAvailabilityMovementType,
@@ -9,6 +10,7 @@ import {
   ServiceAvailabilityMovementType,
   ServiceRequestAttachmentType,
   ServiceRequestStatus,
+  SeriesCodeType,
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { createGuestOrderSchema } from '@/lib/validators';
@@ -30,6 +32,7 @@ import {
   parseFulfillmentTiming,
   parseScheduledDate,
 } from '@/lib/scheduled-fulfillment';
+import { generateSeriesCode } from '@/lib/series-code';
 
 type StockRequirement = {
   productId: string;
@@ -153,12 +156,13 @@ export async function createGuestOrder(input: unknown) {
       roomId: true,
       locationId: true,
       status: true,
-      hotel: {
-        select: {
-          settings: true,
-        },
-      },
-    },
+     hotel: {
+  select: {
+    name: true,
+    settings: true,
+  },
+},
+    }
   });
 
   if (!tag || tag.status !== 'ACTIVE') {
@@ -297,7 +301,6 @@ const orderGuestName = getGuestNameSnapshot({
 
   const tax = Math.round(subtotal * Number(settings?.taxRate ?? 0));
   const total = subtotal + serviceCharge + tax;
-  const orderCode = randomCode('ORD');
 
   const schedule = buildScheduledFulfillment({
   fulfillmentTiming: parseFulfillmentTiming(parsed.fulfillmentTiming),
@@ -306,7 +309,7 @@ const orderGuestName = getGuestNameSnapshot({
   releaseBufferMinutes: 20,
 });
 
-  const order = await db.$transaction(async (tx) => {
+  const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const stockByProductId = new Map<
       string,
       {
@@ -350,7 +353,13 @@ const orderGuestName = getGuestNameSnapshot({
       stockByProductId.set(requirement.productId, stock);
     }
 
+     const orderCode = await generateSeriesCode(tx, {
+      hotelName: tag.hotel.name,
+      type: SeriesCodeType.FOOD,
+    });
+
     const createdOrder = await tx.order.create({
+
         data: {
           hotelId: tag.hotelId,
           roomId: tag.roomId,
@@ -628,17 +637,22 @@ export async function createServiceRequestAction(formData: FormData) {
   }
 
   const tag = await db.nfcTag.findUnique({
-    where: {
-      code: tagCode,
+  where: {
+    code: tagCode,
+  },
+  select: {
+    id: true,
+    hotelId: true,
+    roomId: true,
+    locationId: true,
+    status: true,
+    hotel: {
+      select: {
+        name: true,
+      },
     },
-    select: {
-      id: true,
-      hotelId: true,
-      roomId: true,
-      locationId: true,
-      status: true,
-    },
-  });
+  },
+});
 
   if (!tag) {
     redirectToService(tagCode, {
@@ -778,7 +792,7 @@ export async function createServiceRequestAction(formData: FormData) {
    * requestCode, so dashboard Service Requests can display them under one
    * Service Request Order ID.
    */
-  const groupedRequestCode = randomCode('REQ');
+  let groupedRequestCode = '';
 
   let createdRequests: {
     id: string;
@@ -786,7 +800,7 @@ export async function createServiceRequestAction(formData: FormData) {
   }[] = [];
 
   try {
-    createdRequests = await db.$transaction(async (tx) => {
+    createdRequests = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const serviceStockByServiceId = new Map<
         string,
         {
@@ -834,6 +848,12 @@ export async function createServiceRequestAction(formData: FormData) {
 
         serviceStockByServiceId.set(requirement.serviceId, stock);
       }
+
+      groupedRequestCode = await generateSeriesCode(tx, {
+        hotelName: tag.hotel.name,
+        type: SeriesCodeType.SERVICE,
+      });
+
 
       const requests: {
         id: string;

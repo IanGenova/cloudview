@@ -2,16 +2,16 @@
   "name": "cloud-view-mvp",
   "version": "1.0.0",
   "private": true,
- "scripts": {
-  "dev": "next dev -H 0.0.0.0 -p 3000",
-  "dev:https": "next dev --experimental-https -H 0.0.0.0 -p 3000",
-  "build": "prisma generate && next build",
-  "start:http": "next start -H 0.0.0.0 -p 3001",
-  "start:https": "concurrently \"npm run start:http\" \"local-ssl-proxy --hostname 192.168.0.130 --source 3000 --target 3001\"",
-  "start": "npm run start:https",
-  "lint": "eslint .",
-  "db:seed": "tsx prisma/seed.ts"
-},
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "dev:https": "next dev --experimental-https -H 0.0.0.0 -p 3000",
+    "build": "prisma generate && next build",
+    "start:http": "next start -H 0.0.0.0 -p 3001",
+    "start:https": "concurrently \"npm run start:http\" \"local-ssl-proxy --hostname 192.168.0.130 --source 3000 --target 3001\"",
+    "start": "npm run start:https",
+    "lint": "eslint .",
+    "db:seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@photo-sphere-viewer/core": "^5.14.1",
     "@prisma/client": "^6.19.2",
@@ -19,6 +19,7 @@
     "centrifuge": "^5.6.0",
     "clsx": "latest",
     "exceljs": "^4.4.0",
+    "framer-motion": "^12.41.0",
     "jose": "^6.2.3",
     "lucide-react": "latest",
     "next": "latest",

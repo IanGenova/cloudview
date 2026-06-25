@@ -27,6 +27,11 @@ import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
 import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
 import { KitchenManualRefreshButton } from '@/components/dashboard/KitchenManualRefreshButton';
+import { KitchenTvPagedLane } from '@/components/dashboard/KitchenTvPagedLane';
+import {
+  KitchenRushLaneWithDrawer,
+  type KitchenRushOrderForClient,
+} from '@/components/dashboard/KitchenRushLaneWithDrawer';
 
 type KitchenToastMessage =
   | {
@@ -72,7 +77,40 @@ type KitchenOrder = {
   scheduledNote: string | null;
 };
 
-type KitchenDisplayMode = 'normal' | 'tv';
+type KitchenDisplayMode = 'normal' | 'tv' | 'rush';
+type KitchenViewMode = 'live' | 'scheduled';
+
+function toKitchenRushOrderForClient(
+  order: KitchenOrder
+): KitchenRushOrderForClient {
+  return {
+    id: order.id,
+    orderCode: order.orderCode,
+    status: order.status,
+    guestName: order.guestName,
+    notes: order.notes,
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+    room: order.room,
+    location: order.location,
+    items: order.items.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      productNameSnapshot: item.productNameSnapshot,
+      notes: item.notes,
+      isBundleSnapshot: item.isBundleSnapshot,
+      status: item.status,
+      cancelledQty: item.cancelledQty,
+      cancelledAt: item.cancelledAt?.toISOString() ?? null,
+      cancelReason: item.cancelReason,
+      bundleComponents: item.bundleComponents.map((component) => ({
+        id: component.id,
+        componentNameSnapshot: component.componentNameSnapshot,
+        quantity: component.quantity,
+      })),
+    })),
+  };
+}
 
 function getKitchenSuccessCode(status: OrderStatus) {
   if (status === OrderStatus.PREPARING) {
@@ -128,9 +166,11 @@ function getKitchenMessage(success?: string, error?: string): KitchenToastMessag
 function buildKitchenModeHref({
   history,
   mode,
+  view = 'live',
 }: {
   history?: boolean;
   mode?: KitchenDisplayMode;
+  view?: KitchenViewMode;
 }) {
   const query = new URLSearchParams();
 
@@ -138,8 +178,12 @@ function buildKitchenModeHref({
     query.set('history', '1');
   }
 
-  if (mode === 'tv') {
-    query.set('mode', 'tv');
+  if (mode && mode !== 'normal') {
+    query.set('mode', mode);
+  }
+
+  if (view !== 'live') {
+    query.set('view', view);
   }
 
   return query.toString()
@@ -328,6 +372,31 @@ function getCancelledItemCount(items: KitchenOrderItem[]) {
   return items.filter((item) => isCancelledKitchenItem(item)).length;
 }
 
+
+
+function getDisplayGuestNote(notes?: string | null) {
+  const rawNote = notes?.trim();
+
+  if (!rawNote) {
+    return '';
+  }
+
+  const cleanedNote = rawNote
+    .replace(
+      /Order Type:.*?Guest confirmed the selected order type before placing this order\.?/gis,
+      ''
+    )
+    .replace(/^Order Type:.*$/gim, '')
+    .replace(
+      /Guest confirmed the selected order type before placing this order\.?/gi,
+      ''
+    )
+    .replace(/^Guest note:\s*/gim, '')
+    .trim();
+
+  return cleanedNote;
+}
+
 function OrderActionButton({
   orderId,
   status,
@@ -479,7 +548,7 @@ function KitchenOrderItemLine({ item }: { item: KitchenOrderItem }) {
     </div>
   );
 }
-const KITCHEN_VISIBLE_ITEM_LIMIT = 3;
+
 
 function KitchenOrderCard({
   order,
@@ -496,11 +565,10 @@ function KitchenOrderCard({
   const activeItemCount = getActiveItemCount(order.items);
   const cancelledItemCount = getCancelledItemCount(order.items);
 
-  const isTvMode = displayMode === 'tv';
-  const visibleLimit = isTvMode ? 6 : 3;
+ const isTvMode = displayMode === 'tv';
 
-  const visibleItems = order.items.slice(0, visibleLimit);
-  const hiddenItemCount = Math.max(order.items.length - visibleItems.length, 0);
+    const visibleItems = order.items;
+    const guestNote = getDisplayGuestNote(order.notes);
 
   const displayStatus =
     order.status === OrderStatus.ACCEPTED
@@ -509,13 +577,13 @@ function KitchenOrderCard({
 
   return (
     <article
-      className={cn(
-        'grid w-full overflow-hidden border bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900',
-        isTvMode
-          ? 'rounded-[2rem] border-white/10 bg-white/95 shadow-2xl'
-          : 'rounded-[1.25rem] border-neutral-200'
-      )}
-    >
+        className={cn(
+          'grid w-full overflow-hidden border bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900',
+          isTvMode
+            ? 'rounded-[2rem] border-white/10 bg-white/95 shadow-2xl'
+            : 'rounded-[1.25rem] border-neutral-200'
+        )}
+      >
       <div
         className={cn(
           'border-b border-neutral-100 dark:border-neutral-800',
@@ -543,7 +611,7 @@ function KitchenOrderCard({
             </p>
           </div>
 
-          <div className="shrink-0 text-center">
+         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 whitespace-nowrap [&>*]:mt-0">
             <StatusBadge status={displayStatus} />
             <KitchenRunningTimer startedAt={order.createdAt.toISOString()} />
           </div>
@@ -592,25 +660,15 @@ function KitchenOrderCard({
           <KitchenOrderItemLine key={item.id} item={item} />
         ))}
 
-        {hiddenItemCount > 0 ? (
-          <div
-            className={cn(
-              'rounded-xl border border-dashed border-neutral-200 bg-neutral-50 text-center font-black text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400',
-              isTvMode ? 'px-4 py-3 text-base' : 'px-3 py-2 text-xs'
-            )}
-          >
-            +{hiddenItemCount} more item{hiddenItemCount === 1 ? '' : 's'}
-          </div>
-        ) : null}
 
-        {order.notes ? (
+        {guestNote ? (
           <div
             className={cn(
-              'line-clamp-2 rounded-xl bg-yellow-50 text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200',
+              'whitespace-pre-line rounded-xl bg-yellow-50 text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200',
               isTvMode ? 'p-4 text-base' : 'p-2 text-xs'
             )}
           >
-            <b>Guest note:</b> {order.notes}
+            <b>Guest note:</b> {guestNote}
           </div>
         ) : null}
       </div>
@@ -728,9 +786,7 @@ function KitchenScheduledLane({
 }: {
   orders: KitchenOrder[];
 }) {
-  if (!orders.length) {
-    return null;
-  }
+ 
 
   return (
     <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
@@ -751,10 +807,28 @@ function KitchenScheduledLane({
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-        {orders.map((order) => (
-          <KitchenScheduledOrderCard key={order.id} order={order} />
-        ))}
+  {orders.length > 0 ? (
+    orders.map((order) => (
+      <KitchenScheduledOrderCard key={order.id} order={order} />
+    ))
+  ) : (
+    <div className="md:col-span-2 2xl:col-span-3">
+      <div className="grid min-h-64 place-items-center rounded-[1.5rem] border border-dashed border-amber-200 bg-white/80 p-8 text-center dark:border-amber-500/20 dark:bg-neutral-950/70">
+        <div>
+          <Clock className="mx-auto size-10 text-amber-500" />
+
+          <p className="mt-3 font-black text-amber-900 dark:text-amber-100">
+            No scheduled orders
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-amber-700/70 dark:text-amber-100/60">
+            Upcoming pre-orders will appear here automatically.
+          </p>
+        </div>
       </div>
+    </div>
+  )}
+</div>
     </section>
   );
 }
@@ -785,18 +859,23 @@ function KitchenLane({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-[2rem] border',
+        'flex min-h-[420px] flex-col overflow-hidden rounded-[2rem] border',
         isTvMode
-          ? laneTheme
+          ? `${laneTheme} min-h-[calc(100dvh-220px)]`
           : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900'
       )}
     >
-      <div className={cn('flex items-center justify-between gap-3', isTvMode ? 'px-5 pt-5' : 'px-4 pt-4')}>
-        <div>
+      <div
+        className={cn(
+          'shrink-0 flex items-start justify-between gap-3 border-b border-black/5 dark:border-white/10',
+          isTvMode ? 'px-5 py-5' : 'px-4 py-4'
+        )}
+      >
+        <div className="min-w-0">
           <h2
             className={cn(
               'font-black text-neutral-950 dark:text-white',
-              isTvMode ? 'text-4xl' : 'text-xl md:text-2xl'
+              isTvMode ? 'text-4xl' : 'text-2xl'
             )}
           >
             {title}
@@ -805,7 +884,7 @@ function KitchenLane({
           <p
             className={cn(
               'mt-1 font-semibold text-neutral-500 dark:text-neutral-400',
-              isTvMode ? 'text-base' : 'text-xs md:text-sm'
+              isTvMode ? 'text-base' : 'text-sm'
             )}
           >
             {description}
@@ -815,19 +894,19 @@ function KitchenLane({
         <span
           className={cn(
             'grid shrink-0 place-items-center rounded-full bg-black font-black text-white dark:bg-gold dark:text-black',
-            isTvMode ? 'size-14 text-2xl' : 'size-9 text-sm'
+            isTvMode ? 'size-14 text-2xl' : 'size-10 text-sm'
           )}
         >
           {orders.length}
         </span>
       </div>
 
-      <div className={cn(isTvMode ? 'px-5 pb-5 pt-5' : 'px-4 pb-4 pt-4')}>
+      <div className={cn('min-h-0 flex-1', isTvMode ? 'p-5' : 'p-4')}>
         {orders.length === 0 ? (
           <div
             className={cn(
-              'grid w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white text-center dark:border-neutral-800 dark:bg-neutral-950',
-              isTvMode ? 'min-h-40 p-8' : 'min-h-24 p-5'
+              'grid h-full min-h-40 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white text-center dark:border-neutral-800 dark:bg-neutral-950',
+              isTvMode ? 'p-8' : 'p-5'
             )}
           >
             <p
@@ -840,14 +919,7 @@ function KitchenLane({
             </p>
           </div>
         ) : (
-          <div
-            className="grid items-start justify-start gap-4"
-            style={{
-              gridTemplateColumns: isTvMode
-                ? 'repeat(auto-fit, minmax(min(100%, 390px), 1fr))'
-                : 'repeat(auto-fit, minmax(min(100%, 300px), 380px))',
-            }}
-          >
+          <div className="grid gap-3">
             {orders.map((order) => (
               <KitchenOrderCard
                 key={order.id}
@@ -916,17 +988,27 @@ export default async function KitchenDisplayPage({
   history?: string;
   mode?: string;
   success?: string;
+  view?: string;
   error?: string;
 }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
+  const activeView: KitchenViewMode =
+  params?.view === 'scheduled' ? 'scheduled' : 'live';
+
+const isScheduledView = activeView === 'scheduled';
   const showHistory = params?.history === '1';
   const message = getKitchenMessage(params?.success, params?.error);
-  const displayMode: KitchenDisplayMode =
-  params?.mode === 'tv' ? 'tv' : 'normal';
+ const displayMode: KitchenDisplayMode =
+  params?.mode === 'tv'
+    ? 'tv'
+    : params?.mode === 'rush'
+      ? 'rush'
+      : 'normal';
 
-  const isTvMode = displayMode === 'tv';
+const isTvMode = displayMode === 'tv';
+const isRushMode = displayMode === 'rush';
 
   const baseWhere =
     user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
@@ -1064,16 +1146,16 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   );
 
   return (
-   <div
-            id="kitchen-display-fullscreen"
-            className={cn(
-              'min-h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white',
-              isTvMode
-                ? 'bg-neutral-950 p-5'
-                : 'bg-white px-4 pb-28 pt-4 dark:bg-neutral-950 xl:px-6'
-            )}
-          >
-                <RealtimeKitchenRefresh />
+      <div
+        id="kitchen-display-fullscreen"
+        className={cn(
+          'min-h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white',
+          isTvMode
+            ? 'bg-neutral-950 p-5'
+            : 'bg-white px-4 pb-28 pt-4 dark:bg-neutral-950 xl:px-6'
+        )}
+      >
+      <RealtimeKitchenRefresh fallbackIntervalMs={30_000} refreshDebounceMs={500} />
       <KitchenToast message={message} showHistory={showHistory} />
 
       <div
@@ -1103,21 +1185,24 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     />
   )}
 
-  <div className="flex flex-wrap gap-2">
-    <KitchenManualRefreshButton />
+<div className="flex flex-wrap gap-2">
+  <KitchenManualRefreshButton />
 
-    <KitchenFullscreenButton targetId="kitchen-display-fullscreen" />
+  <KitchenFullscreenButton targetId="kitchen-display-fullscreen" />
 
+  {activeView === 'live' ? (
     <Link
       href={
         isTvMode
           ? buildKitchenModeHref({
               history: showHistory,
               mode: 'normal',
+              view: 'live',
             })
           : buildKitchenModeHref({
               history: showHistory,
               mode: 'tv',
+              view: 'live',
             })
       }
       className={cn(
@@ -1129,37 +1214,99 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     >
       {isTvMode ? 'Normal Mode' : 'TV Mode'}
     </Link>
+  ) : null}
 
-    {!isTvMode ? (
+  {!isTvMode ? (
+    <>
       <Link
-        href={
-          showHistory
-            ? buildKitchenModeHref({
-                mode: displayMode,
-              })
-            : buildKitchenModeHref({
-                history: true,
-                mode: displayMode,
-              })
+        href={buildKitchenModeHref({
+          history: false,
+          mode: displayMode,
+          view: 'live',
+        })}
+        className={
+          activeView === 'live' && !showHistory
+            ? 'inline-flex min-h-11 items-center gap-2 rounded-2xl bg-black px-4 py-2 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+            : 'inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
         }
-        className={cn(
-          'inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black transition',
-          showHistory
-            ? 'bg-black text-white dark:bg-gold dark:text-black'
-            : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
-        )}
       >
-        <History className="size-4" />
-        {showHistory ? 'Live Orders' : 'History'}
+        Live Orders
       </Link>
-    ) : null}
-  </div>
+
+      <Link
+        href={buildKitchenModeHref({
+          history: false,
+          mode: 'normal',
+          view: 'scheduled',
+        })}
+        className={
+          activeView === 'scheduled'
+            ? 'inline-flex min-h-11 items-center gap-2 rounded-2xl bg-black px-4 py-2 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+            : 'inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+        }
+      >
+        <Clock className="size-4" />
+        Scheduled Orders
+
+        {scheduledOrders.length > 0 ? (
+          <span className="grid size-6 place-items-center rounded-full bg-amber-100 text-[11px] font-black text-amber-800">
+            {scheduledOrders.length}
+          </span>
+        ) : null}
+      </Link>
+
+      {activeView === 'live' ? (
+        <Link
+          href={
+            showHistory
+              ? buildKitchenModeHref({
+                  history: false,
+                  mode: displayMode,
+                  view: 'live',
+                })
+              : buildKitchenModeHref({
+                  history: true,
+                  mode: displayMode,
+                  view: 'live',
+                })
+          }
+          className={
+            showHistory
+              ? 'inline-flex min-h-11 items-center gap-2 rounded-2xl bg-black px-4 py-2 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+              : 'inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+          }
+        >
+          <History className="size-4" />
+          {showHistory ? 'Hide History' : 'History'}
+        </Link>
+      ) : null}
+
+      {activeView === 'live' ? (
+        <Link
+          href={buildKitchenModeHref({
+            history: showHistory,
+            mode: isRushMode ? 'normal' : 'rush',
+            view: 'live',
+          })}
+          className={cn(
+            'inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black transition',
+            isRushMode
+              ? 'bg-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+              : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+          )}
+        >
+          {isRushMode ? 'Normal Mode' : 'Rush Mode'}
+        </Link>
+      ) : null}
+    </>
+  ) : null}
+</div>
 </div>
 
       <div
         className={cn(
           'grid gap-4',
-          showHistory && !isTvMode
+          showHistory && !isTvMode && !isScheduledView
             ? 'xl:grid-cols-[minmax(0,1fr)_360px]'
             : 'xl:grid-cols-1'
         )}
@@ -1167,44 +1314,131 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
         <main
         className={cn(
           'flex flex-col',
-          isTvMode ? 'gap-5' : 'gap-4',
-          showHistory && !isTvMode ? 'hidden xl:flex' : 'flex'
+          isTvMode || isRushMode ? 'gap-5' : 'gap-4',
+          showHistory && !isTvMode && !isScheduledView ? 'hidden xl:flex' : 'flex'
         )}
       >
-          <KitchenLane
-            title="Pending"
-            description="New orders waiting for accept or reject."
-            orders={pendingOrders}
-            type="pending"
-            showHistory={showHistory}
-            displayMode={displayMode}
-          />
+    {isScheduledView ? (
+  <KitchenScheduledLane orders={scheduledOrders} />
+) : isRushMode ? (
+  <div className="grid gap-4 xl:grid-cols-3">
+    <KitchenRushLaneWithDrawer
+      title="Pending"
+      description="Oldest pending orders first."
+      orders={pendingOrders.map(toKitchenRushOrderForClient)}
+      type="pending"
+    />
 
-         <KitchenLane
-              title="Preparing"
-              description="Accepted orders and orders currently being prepared."
-              orders={preparingOrders}
-              type="preparing"
-              showHistory={showHistory}
-              displayMode={displayMode}
-            />
-          <KitchenLane
-          title="Ready"
-          description="Orders ready to be delivered to the guest."
-          orders={readyOrders}
+    <KitchenRushLaneWithDrawer
+      title="Preparing"
+      description="Accepted orders currently being prepared."
+      orders={preparingOrders.map(toKitchenRushOrderForClient)}
+      type="preparing"
+    />
+
+    <KitchenRushLaneWithDrawer
+      title="Ready"
+      description="Orders ready for delivery."
+      orders={readyOrders.map(toKitchenRushOrderForClient)}
+      type="ready"
+    />
+  </div>
+) : isTvMode ? (
+  <div className="grid gap-4 xl:grid-cols-3">
+    <KitchenTvPagedLane
+      title="Pending"
+      description="Auto-rotating pending orders."
+      type="pending"
+      totalOrders={pendingOrders.length}
+      pageSize={3}
+      intervalMs={10_000}
+    >
+      {pendingOrders.map((order) => (
+        <KitchenOrderCard
+          key={order.id}
+          order={order}
+          type="pending"
+          showHistory={showHistory}
+          displayMode={displayMode}
+        />
+      ))}
+    </KitchenTvPagedLane>
+
+    <KitchenTvPagedLane
+      title="Preparing"
+      description="Auto-rotating orders in preparation."
+      type="preparing"
+      totalOrders={preparingOrders.length}
+      pageSize={3}
+      intervalMs={10_000}
+    >
+      {preparingOrders.map((order) => (
+        <KitchenOrderCard
+          key={order.id}
+          order={order}
+          type="preparing"
+          showHistory={showHistory}
+          displayMode={displayMode}
+        />
+      ))}
+    </KitchenTvPagedLane>
+
+    <KitchenTvPagedLane
+      title="Ready"
+      description="Auto-rotating orders ready for delivery."
+      type="ready"
+      totalOrders={readyOrders.length}
+      pageSize={3}
+      intervalMs={10_000}
+    >
+      {readyOrders.map((order) => (
+        <KitchenOrderCard
+          key={order.id}
+          order={order}
           type="ready"
           showHistory={showHistory}
           displayMode={displayMode}
         />
+      ))}
+    </KitchenTvPagedLane>
+  </div>
+) : (
+  <div className="grid gap-4 xl:grid-cols-3">
+    <KitchenLane
+      title="Pending"
+      description="New orders waiting for accept or reject."
+      orders={pendingOrders}
+      type="pending"
+      showHistory={showHistory}
+      displayMode={displayMode}
+    />
 
-          <KitchenScheduledLane orders={scheduledOrders} />
+    <KitchenLane
+      title="Preparing"
+      description="Accepted orders and orders currently being prepared."
+      orders={preparingOrders}
+      type="preparing"
+      showHistory={showHistory}
+      displayMode={displayMode}
+    />
+
+    <KitchenLane
+      title="Ready"
+      description="Orders ready to be delivered to the guest."
+      orders={readyOrders}
+      type="ready"
+      showHistory={showHistory}
+      displayMode={displayMode}
+    />
+  </div>
+)}
 
         </main>
 
         <aside
             className={cn(
               'h-fit',
-              showHistory && !isTvMode ? 'block xl:sticky xl:top-4' : 'hidden'
+             showHistory && !isTvMode && !isScheduledView ? 'block xl:sticky xl:top-4' : 'hidden'
             )}
           >
           <section className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">

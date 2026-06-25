@@ -1,19 +1,19 @@
 import { type ReactNode } from 'react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { saveHotelSettingsAction } from './actions';
+import { HotelSettingsFormClient } from './HotelSettingsFormClient';
 
 function FormField({
   label,
   helper,
   children,
-  className = ''
+  className = '',
 }: {
   label: string;
   helper?: string;
@@ -21,19 +21,35 @@ function FormField({
   className?: string;
 }) {
   return (
-    <label className={`grid gap-2 ${className}`}>
-      <span className="text-sm font-black text-neutral-800">{label}</span>
+    <label className={`grid gap-2 rounded-[1.25rem] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 ${className}`}>
+      <span className="text-sm font-black text-neutral-900 dark:text-white">
+        {label}
+      </span>
       {children}
-      {helper ? <span className="text-xs font-medium leading-relaxed text-neutral-500">{helper}</span> : null}
+      {helper ? (
+        <span className="text-xs font-medium leading-relaxed text-neutral-500 dark:text-neutral-400">
+          {helper}
+        </span>
+      ) : null}
     </label>
   );
 }
 
-function SectionTitle({ title, description }: { title: string; description: string }) {
+function SectionTitle({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="md:col-span-2">
-      <h3 className="text-lg font-black text-neutral-950">{title}</h3>
-      <p className="mt-1 text-sm text-neutral-500">{description}</p>
+    <div className="md:col-span-2 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
+      <h3 className="text-lg font-black text-neutral-950 dark:text-white">
+        {title}
+      </h3>
+      <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+        {description}
+      </p>
     </div>
   );
 }
@@ -48,6 +64,27 @@ export default async function SettingsPage() {
   });
 
   const hotel = hotels[0];
+  const initialSettingsValues = {
+  hotelId: hotel?.id ?? '',
+  hotelName: hotel?.name ?? '',
+  logoUrl: hotel?.logoUrl ?? '',
+  guestPortalHeroImageUrl: hotel?.settings?.guestPortalHeroImageUrl ?? '',
+  brandColor: hotel?.brandColor ?? '',
+  accentColor: hotel?.accentColor ?? '',
+  currency: hotel?.settings?.currency ?? 'PHP',
+  taxRate: String(hotel?.settings?.taxRate ?? 0),
+  serviceChargeRate: String(hotel?.settings?.serviceChargeRate ?? 0),
+  wifiName: hotel?.settings?.wifiName ?? '',
+  wifiPassword: hotel?.settings?.wifiPassword ?? '',
+  checkInTime: hotel?.settings?.checkInTime ?? '2:00 PM',
+  checkOutTime: hotel?.settings?.checkOutTime ?? '12:00 PM',
+  poolHours: hotel?.settings?.poolHours ?? '7:00 AM - 9:00 PM',
+  contactPhone: hotel?.settings?.contactPhone ?? '',
+  contactEmail: hotel?.settings?.contactEmail ?? '',
+  poolRules: hotel?.settings?.poolRules ?? '',
+  policies: hotel?.settings?.policies ?? '',
+  guideText: hotel?.settings?.guideText ?? '',
+};
 
   return (
     <div>
@@ -65,7 +102,10 @@ export default async function SettingsPage() {
         </CardHeader>
 
         <CardContent>
-          <form action={saveHotelSettingsAction} className="grid gap-5 md:grid-cols-2">
+         <HotelSettingsFormClient
+            action={saveHotelSettingsAction}
+            initialValues={initialSettingsValues}
+          >
             <SectionTitle
               title="Property Identity"
               description="Basic hotel branding shown on the guest portal and dashboard."
@@ -236,10 +276,7 @@ export default async function SettingsPage() {
               />
             </FormField>
 
-            <div className="md:col-span-2">
-              <Button>Save Settings</Button>
-            </div>
-          </form>
+        </HotelSettingsFormClient>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,5 @@
 'use server';
-
+import type { Prisma } from '@prisma/client';
 import {
   MenuAvailabilityMovementType,
   MenuProductType,
@@ -8,7 +8,9 @@ import {
   ServiceAvailabilityMovementType,
   ServiceBillingMode,
   ServiceRequestStatus,
+  SeriesCodeType,
 } from '@prisma/client';
+import { generateSeriesCode } from '@/lib/series-code';
 import { revalidatePath } from 'next/cache';
 import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope } from '@/lib/access';
@@ -19,6 +21,7 @@ import { logActivity } from '@/lib/activity';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
+
 
 type POSOrderInput = {
   hotelId: string;
@@ -367,19 +370,30 @@ export async function createPOSOrder(input: POSOrderInput) {
     return sum + getServiceUnitPriceCents(service.unitPrice) * item.quantity;
   }, 0);
 
-  const orderCode = normalizedItems.length ? randomCode('ORD') : null;
+let orderCode: string | null = null;
 
-  /**
-   * Grouped POS service request order:
-   * Every service item submitted in this POS sale uses the same requestCode.
-   * This allows the Service Requests dashboard to show one request order card
-   * containing multiple service items.
-   */
-  const groupedServiceRequestCode = normalizedServices.length
-    ? randomCode('REQ')
-    : null;
+/**
+ * Grouped POS service request order:
+ * Every service item submitted in this POS sale uses the same requestCode.
+ * This allows the Service Requests dashboard to show one request order card
+ * containing multiple service items.
+ */
+let groupedServiceRequestCode: string | null = null;
 
-  const result = await db.$transaction(async (tx) => {
+ const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+
+  const hotel = await tx.hotel.findUnique({
+          where: {
+            id: hotelId,
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        if (!hotel) {
+          throw new Error('Hotel was not found.');
+        }
     const foodStockByProductId = new Map<
       string,
       {
@@ -462,6 +476,20 @@ export async function createPOSOrder(input: POSOrderInput) {
       }
 
       serviceStockByServiceId.set(requirement.serviceId, stock);
+    }
+
+      if (normalizedItems.length) {
+      orderCode = await generateSeriesCode(tx, {
+        hotelName: hotel.name,
+        type: SeriesCodeType.FOOD,
+      });
+    }
+
+    if (normalizedServices.length) {
+      groupedServiceRequestCode = await generateSeriesCode(tx, {
+        hotelName: hotel.name,
+        type: SeriesCodeType.SERVICE,
+      });
     }
 
     let createdOrder:

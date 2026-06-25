@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
 
 type KitchenRealtimePayload = {
-  event?: 'kitchen-order-created' | 'kitchen-order-updated' | 'kitchen-order-paid';
+  event?: string;
   hotelId?: string;
   orderCode?: string;
   status?: string;
@@ -18,11 +18,28 @@ const VALID_KITCHEN_EVENTS = new Set([
   'kitchen-order-created',
   'kitchen-order-updated',
   'kitchen-order-paid',
+  'kitchen-order-released',
+  'scheduled-order-created',
+  'scheduled-order-updated',
+  'scheduled-order-released',
+  'scheduled-order-cancelled',
+  'order-scheduled',
+  'order-released',
 ]);
+
+function normalizeKitchenEventName(value?: string | null) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_.\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-/, '')
+    .replace(/-$/, '');
+}
 
 function getKitchenEventKey(data: KitchenRealtimePayload) {
   return [
-    data.event || 'unknown-event',
+    normalizeKitchenEventName(data.event) || 'unknown-event',
     data.hotelId || 'no-hotel',
     data.orderCode || 'no-order',
     data.status || data.paymentStatus || 'no-status',
@@ -32,11 +49,22 @@ function getKitchenEventKey(data: KitchenRealtimePayload) {
 }
 
 function isRelevantKitchenEvent(data: KitchenRealtimePayload) {
-  if (!data?.event) {
+  const eventName = normalizeKitchenEventName(data?.event);
+
+  if (!eventName) {
     return false;
   }
 
-  return VALID_KITCHEN_EVENTS.has(data.event);
+  if (VALID_KITCHEN_EVENTS.has(eventName)) {
+    return true;
+  }
+
+  return (
+    eventName.includes('kitchen-order') ||
+    eventName.includes('scheduled-order') ||
+    eventName.includes('order-released') ||
+    eventName.includes('order-scheduled')
+  );
 }
 
 export function RealtimeKitchenRefresh({

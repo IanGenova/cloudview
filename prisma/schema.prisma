@@ -177,6 +177,26 @@ enum ScheduledReleaseStatus {
   FAILED
 }
 
+enum SeriesCodeType {
+  FOOD
+  SERVICE
+}
+
+model SeriesCodeCounter {
+  id String @id @default(cuid())
+
+  prefix String         @db.VarChar(16)
+  type   SeriesCodeType
+
+  nextNumber Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([prefix, type])
+  @@index([prefix])
+}
+
 model UserDashboardPermission {
   id     String          @id @default(cuid())
   userId String
