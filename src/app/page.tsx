@@ -36,6 +36,7 @@ import {
   motion,
   useMotionTemplate,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -194,6 +195,59 @@ const guestScreens = [
   },
 ];
 
+const heroSequence = [
+  {
+    step: '01',
+    label: 'Hero',
+    eyebrow: 'NFC-powered guest portal',
+    title: 'Hospitality.',
+    goldTitle: 'One tap away.',
+    text: 'CloudView turns every room into a seamless digital guest experience.',
+    src: images.hero,
+    alt: 'CloudView luxury NFC signage',
+  },
+  {
+    step: '02',
+    label: 'Crafted',
+    eyebrow: 'Crystal precision',
+    title: 'Crafted with',
+    goldTitle: 'crystal-clear precision.',
+    text: 'Polished glass edges and premium mounting bring modern hospitality to life.',
+    src: images.craftsmanship,
+    alt: 'CloudView crystal glass precision close-up',
+  },
+  {
+    step: '03',
+    label: 'Engineered',
+    eyebrow: 'Floating luxury',
+    title: 'Engineered to float',
+    goldTitle: 'with quiet luxury.',
+    text: 'Precision standoffs create a clean, elevated presence in every room.',
+    src: images.engineering,
+    alt: 'CloudView floating standoff detail',
+  },
+  {
+    step: '04',
+    label: 'Instant Access',
+    eyebrow: 'Tap your phone',
+    title: 'One tap.',
+    goldTitle: 'Everything, instantly.',
+    text: 'Hotel info, services, dining, pool details, and guidance at your fingertips.',
+    src: images.access,
+    alt: 'CloudView tap your phone instant access signage',
+  },
+  {
+    step: '05',
+    label: 'How it works',
+    eyebrow: 'NFC built in',
+    title: 'NFC, built in.',
+    goldTitle: 'Tap. Connect. Done.',
+    text: 'Secure instant access to hotel info, services, and guidance.',
+    src: images.flow,
+    alt: 'CloudView NFC built-in diagram',
+  },
+];
+
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
@@ -332,7 +386,7 @@ function GuestPortalShowcaseSection() {
         className="absolute right-[-15rem] top-28 size-[520px] rounded-full bg-[#C9A45C]/18 blur-[130px]"
       />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto w-full max-w-[1760px]">
         <Reveal className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
@@ -547,7 +601,7 @@ function FloatingNavbar() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease }}
           className={cn(
-            'mx-auto flex max-w-7xl items-center justify-between rounded-full border px-4 py-3 backdrop-blur-2xl transition duration-500',
+            'mx-auto flex w-full max-w-[1760px] items-center justify-between rounded-full border px-4 py-3 backdrop-blur-2xl transition duration-500',
             scrolled
               ? 'border-white/12 bg-[#030303]/72 shadow-[0_18px_60px_rgba(0,0,0,0.28)]'
               : 'border-white/8 bg-white/[0.035]'
@@ -794,7 +848,7 @@ function HeroSection() {
 
       <FloatingNavbar />
 
-      <div className="relative z-10 mx-auto grid min-h-screen max-w-7xl items-center gap-14 px-6 pb-20 pt-36 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:pb-24">
+      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1760px] items-center gap-14 px-6 pb-20 pt-36 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:pb-24">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 18 }}
@@ -877,141 +931,131 @@ function ScrollStory() {
   });
 
   const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 95,
+    stiffness: 90,
     damping: 24,
     mass: 0.35,
   });
 
-  /**
-   * Reversible scroll-scrubbed text animation.
-   * Scroll down: Tap -> Connect -> Done
-   * Scroll up: Done -> Connect -> Tap
-   */
   const tapOpacity = useTransform(
     smoothProgress,
-    [0, 0.1, 0.28, 0.38],
-    [1, 1, 0.2, 0.08]
+    [0, 0.14, 0.32, 0.46],
+    [1, 1, 0.34, 0.12]
   );
   const connectOpacity = useTransform(
     smoothProgress,
-    [0.18, 0.34, 0.5, 0.62],
-    [0.08, 1, 1, 0.12]
+    [0.18, 0.36, 0.56, 0.72],
+    [0.14, 1, 1, 0.16]
   );
   const doneOpacity = useTransform(
     smoothProgress,
-    [0.52, 0.68, 0.88, 1],
-    [0.08, 1, 1, 1]
+    [0.58, 0.78, 1],
+    [0.16, 1, 1]
   );
 
-  const tapY = useTransform(smoothProgress, [0, 0.38], [0, -44]);
+  const tapY = useTransform(smoothProgress, [0, 0.46], [0, -44]);
   const connectY = useTransform(
     smoothProgress,
-    [0.18, 0.36, 0.62],
-    [42, 0, -34]
+    [0.18, 0.46, 0.72],
+    [44, 0, -34]
   );
-  const doneY = useTransform(smoothProgress, [0.52, 0.76], [44, 0]);
+  const doneY = useTransform(smoothProgress, [0.58, 0.82], [42, 0]);
 
-  const tapScale = useTransform(smoothProgress, [0, 0.28], [1, 0.88]);
+  const tapScale = useTransform(smoothProgress, [0, 0.46], [1, 0.9]);
   const connectScale = useTransform(
     smoothProgress,
-    [0.18, 0.36, 0.62],
-    [0.88, 1, 0.9]
+    [0.18, 0.46, 0.72],
+    [0.9, 1, 0.92]
   );
-  const doneScale = useTransform(smoothProgress, [0.52, 0.76], [0.88, 1]);
+  const doneScale = useTransform(smoothProgress, [0.58, 0.82], [0.92, 1]);
 
-  /**
-   * Reversible visual animation.
-   */
   const imageScale = useTransform(
     smoothProgress,
-    [0, 0.35, 0.7, 1],
-    [0.94, 1, 1.035, 0.98]
+    [0, 0.35, 0.72, 1],
+    [0.96, 1.02, 1.04, 1]
   );
-  const imageY = useTransform(smoothProgress, [0, 0.5, 1], [32, -10, 24]);
+  const imageY = useTransform(
+    smoothProgress,
+    [0, 0.5, 1],
+    reduceMotion ? [0, 0, 0] : [18, -10, 8]
+  );
   const imageRotate = useTransform(
     smoothProgress,
     [0, 0.5, 1],
-    [-1.8, 0, 1.8]
+    reduceMotion ? [0, 0, 0] : [-1.2, 0, 1.2]
   );
+
   const imageGlowOpacity = useTransform(
     smoothProgress,
     [0, 0.5, 1],
-    [0.28, 0.62, 0.38]
+    [0.22, 0.62, 0.34]
   );
 
-  /**
-   * Reversible NFC rings.
-   */
   const ringScaleA = useTransform(
     smoothProgress,
     [0, 0.5, 1],
-    [0.82, 1.18, 0.92]
+    [0.86, 1.16, 0.96]
   );
   const ringScaleB = useTransform(
     smoothProgress,
     [0, 0.5, 1],
-    [0.94, 1.44, 1.05]
+    [0.98, 1.42, 1.06]
   );
   const ringScaleC = useTransform(
     smoothProgress,
     [0, 0.5, 1],
-    [1.08, 1.7, 1.18]
+    [1.1, 1.68, 1.16]
   );
 
-  const ringOpacityA = useTransform(
-    smoothProgress,
-    [0, 0.5, 1],
-    [0.18, 0.62, 0.2]
-  );
-  const ringOpacityB = useTransform(
-    smoothProgress,
-    [0, 0.5, 1],
-    [0.1, 0.4, 0.12]
-  );
-  const ringOpacityC = useTransform(
-    smoothProgress,
-    [0, 0.5, 1],
-    [0.05, 0.24, 0.08]
-  );
+ const ringOpacityA = useTransform(
+  smoothProgress,
+  [0, 0.5, 1],
+  [0.16, 0.65, 0.2]
+);
 
-  /**
-   * Reversible gold scan line.
-   */
+const ringOpacityB = useTransform(
+  smoothProgress,
+  [0, 0.5, 1],
+  [0.08, 0.42, 0.12]
+);
+
+const ringOpacityC = useTransform(
+  smoothProgress,
+  [0, 0.5, 1],
+  [0.04, 0.26, 0.08]
+);
+
   const scanX = useTransform(
     smoothProgress,
     [0, 0.5, 1],
-    ['-130%', '15%', '135%']
+    ['-130%', '10%', '135%']
   );
   const scanOpacity = useTransform(
     smoothProgress,
     [0, 0.18, 0.8, 1],
-    [0, 0.7, 0.7, 0]
+    [0, 0.75, 0.75, 0]
   );
 
-  /**
-   * Reversible mini step cards.
-   */
+  const progressScaleX = useTransform(smoothProgress, [0, 1], [0, 1]);
+
   const cardOneOpacity = useTransform(
     smoothProgress,
-    [0, 0.18, 0.38],
-    [1, 1, 0.28]
+    [0, 0.2, 0.42],
+    [1, 1, 0.3]
   );
   const cardTwoOpacity = useTransform(
     smoothProgress,
-    [0.22, 0.4, 0.62],
-    [0.28, 1, 0.28]
+    [0.22, 0.44, 0.68],
+    [0.3, 1, 0.3]
   );
   const cardThreeOpacity = useTransform(
     smoothProgress,
-    [0.55, 0.72, 1],
-    [0.28, 1, 1]
+    [0.56, 0.76, 1],
+    [0.3, 1, 1]
   );
 
-  const cardOneY = useTransform(smoothProgress, [0, 0.38], [0, -12]);
-  const cardTwoY = useTransform(smoothProgress, [0.22, 0.4, 0.62], [14, 0, -12]);
-  const cardThreeY = useTransform(smoothProgress, [0.55, 0.72, 1], [14, 0, 0]);
-
-  const progressScaleX = useTransform(smoothProgress, [0, 1], [0, 1]);
+  const cardOneY = useTransform(smoothProgress, [0, 0.42], [0, -8]);
+  const cardTwoY = useTransform(smoothProgress, [0.22, 0.44, 0.68], [12, 0, -8]);
+  const cardThreeY = useTransform(smoothProgress, [0.56, 0.76, 1], [12, 0, 0]);
 
   const stepCards = [
     {
@@ -1024,7 +1068,7 @@ function ScrollStory() {
     {
       step: '02',
       title: 'Secure connection',
-      text: 'The portal opens instantly.',
+      text: 'Portal opens instantly.',
       opacity: cardTwoOpacity,
       y: cardTwoY,
     },
@@ -1041,7 +1085,7 @@ function ScrollStory() {
     <section
       id="how-it-works"
       ref={sectionRef}
-      className="relative min-h-[215vh] bg-[#030303] text-[#F6F1E8]"
+      className="relative min-h-[105vh] bg-[#030303] text-[#F6F1E8]"
     >
       <div className="sticky top-0 flex min-h-screen items-center overflow-hidden px-6 py-24 sm:px-8 lg:px-10">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -1060,20 +1104,20 @@ function ScrollStory() {
           />
         </div>
 
-        <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
-          <div>
-            <div className="mb-10 max-w-3xl">
+        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] w-full w-full max-w-[1760px] gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+          <div className="flex h-full flex-col justify-center">
+            <div className="mb-8 max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
                 How it works
               </p>
 
-              <h2 className="mt-4 text-[clamp(2.8rem,6vw,5.7rem)] font-light leading-[0.92] tracking-[-0.06em] text-[#F6F1E8]">
+              <h2 className="mt-4 text-[clamp(2.8rem,6vw,5.4rem)] font-light leading-[0.92] tracking-[-0.06em] text-[#F6F1E8]">
                 Tap once.
                 <span className="block text-[#E7C878]">Everything moves.</span>
               </h2>
             </div>
 
-            <div className="relative space-y-10 lg:space-y-12">
+            <div className="relative grid gap-6 sm:gap-7">
               <motion.div
                 style={{
                   opacity: tapOpacity,
@@ -1082,10 +1126,10 @@ function ScrollStory() {
                 }}
                 className="origin-left"
               >
-                <p className="text-[clamp(3.6rem,9vw,7rem)] font-light leading-none tracking-[-0.08em] text-[#F6F1E8]">
+                <p className="text-[clamp(3.25rem,8vw,6.4rem)] font-light leading-none tracking-[-0.08em] text-[#F6F1E8]">
                   Tap.
                 </p>
-                <p className="mt-3 text-base font-light text-white/46 sm:text-lg">
+                <p className="mt-2 text-base font-light text-white/46 sm:text-lg">
                   Guests tap their phone.
                 </p>
               </motion.div>
@@ -1098,10 +1142,10 @@ function ScrollStory() {
                 }}
                 className="origin-left"
               >
-                <p className="text-[clamp(3.6rem,9vw,7rem)] font-light leading-none tracking-[-0.08em] text-[#F6F1E8]">
+                <p className="text-[clamp(3.25rem,8vw,6.4rem)] font-light leading-none tracking-[-0.08em] text-[#F6F1E8]">
                   Connect.
                 </p>
-                <p className="mt-3 text-base font-light text-white/46 sm:text-lg">
+                <p className="mt-2 text-base font-light text-white/46 sm:text-lg">
                   CloudView opens instantly.
                 </p>
               </motion.div>
@@ -1114,17 +1158,17 @@ function ScrollStory() {
                 }}
                 className="origin-left"
               >
-                <p className="text-[clamp(3.6rem,9vw,7rem)] font-light leading-none tracking-[-0.08em] text-[#F6F1E8]">
+                <p className="text-[clamp(3.25rem,8vw,6.4rem)] font-light leading-none tracking-[-0.08em] text-[#F6F1E8]">
                   Done.
                 </p>
-                <p className="mt-3 text-base font-light text-white/46 sm:text-lg">
+                <p className="mt-2 text-base font-light text-white/46 sm:text-lg">
                   Requests flow to your team.
                 </p>
               </motion.div>
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative flex h-full items-center">
             <motion.div
               style={
                 reduceMotion
@@ -1135,21 +1179,23 @@ function ScrollStory() {
                       rotate: imageRotate,
                     }
               }
-              className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))] p-4 shadow-[0_30px_120px_rgba(0,0,0,.55)] backdrop-blur-xl sm:p-5 lg:p-6"
+              className="relative w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))] p-4 shadow-[0_30px_120px_rgba(0,0,0,.55)] backdrop-blur-xl sm:p-5 lg:p-6"
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_74%_38%,rgba(231,200,120,.2),transparent_23%),radial-gradient(circle_at_28%_72%,rgba(201,164,92,.08),transparent_24%)]" />
 
               <motion.div
                 style={{ scale: ringScaleA, opacity: ringOpacityA }}
-                className="pointer-events-none absolute right-[16%] top-[18%] h-36 w-36 rounded-full border border-[#E7C878]/45 sm:h-44 sm:w-44"
+                className="pointer-events-none absolute right-[16%] top-[15%] h-36 w-36 rounded-full border border-[#E7C878]/45 sm:h-44 sm:w-44"
               />
+
               <motion.div
                 style={{ scale: ringScaleB, opacity: ringOpacityB }}
-                className="pointer-events-none absolute right-[12%] top-[14%] h-52 w-52 rounded-full border border-[#E7C878]/20 sm:h-64 sm:w-64"
+                className="pointer-events-none absolute right-[12%] top-[12%] h-52 w-52 rounded-full border border-[#E7C878]/20 sm:h-64 sm:w-64"
               />
+
               <motion.div
                 style={{ scale: ringScaleC, opacity: ringOpacityC }}
-                className="pointer-events-none absolute right-[8%] top-[10%] h-72 w-72 rounded-full border border-[#E7C878]/10 sm:h-80 sm:w-80"
+                className="pointer-events-none absolute right-[8%] top-[8%] h-72 w-72 rounded-full border border-[#E7C878]/10 sm:h-80 sm:w-80"
               />
 
               <motion.div
@@ -1157,36 +1203,18 @@ function ScrollStory() {
                 className="pointer-events-none absolute inset-y-0 left-0 z-20 w-28 rotate-12 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)] blur-lg"
               />
 
-              <motion.div
-                style={{
-                  scaleX: progressScaleX,
-                }}
-                className="pointer-events-none absolute right-0 top-[28%] h-px w-52 origin-right bg-gradient-to-l from-[#E7C878]/90 to-transparent"
-              />
-              <motion.div
-                style={{
-                  scaleX: progressScaleX,
-                }}
-                className="pointer-events-none absolute right-0 top-[38%] h-px w-40 origin-right bg-gradient-to-l from-[#E7C878]/55 to-transparent"
-              />
-              <motion.div
-                style={{
-                  scaleX: progressScaleX,
-                }}
-                className="pointer-events-none absolute right-0 top-[48%] h-px w-60 origin-right bg-gradient-to-l from-[#E7C878]/36 to-transparent"
-              />
-
-              <div className="relative aspect-[16/10] overflow-hidden rounded-[1.6rem] border border-white/6 bg-black/45">
+              <div className="relative overflow-hidden rounded-[1.6rem] border border-white/6 bg-black/45">
                 <Image
                   src="/cloudview/5.png"
                   alt="CloudView NFC workflow"
-                  fill
-                  className="object-contain object-center p-2 sm:p-4"
+                  width={1400}
+                  height={900}
+                  className="h-auto max-h-[500px] w-full object-contain object-center p-2 sm:p-4"
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {stepCards.map((item) => (
                   <motion.div
                     key={item.step}
@@ -1292,7 +1320,7 @@ function ExperienceCards() {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,164,92,.12),transparent_38%)]" />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto w-full max-w-[1760px]">
         <Reveal className="max-w-4xl">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
             Features
@@ -1364,7 +1392,7 @@ function CraftedSection() {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(201,164,92,.14),transparent_34%)]" />
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.82fr_1.18fr]">
+      <div className="relative mx-auto grid w-full max-w-[1760px] items-center gap-14 lg:grid-cols-[0.82fr_1.18fr]">
         <Reveal>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
             Craft
@@ -1470,7 +1498,7 @@ function InstantAccessSection() {
     <section className="relative overflow-hidden bg-[#0B0B0A] px-6 py-28 text-[#F6F1E8] sm:px-8">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_40%,rgba(201,164,92,.16),transparent_34%)]" />
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.12fr_0.88fr]">
+      <div className="relative mx-auto grid w-full max-w-[1760px] items-center gap-14 lg:grid-cols-[1.12fr_0.88fr]">
         <Reveal>
           <div className="relative overflow-hidden rounded-[2.25rem] border border-white/10 shadow-[0_50px_160px_rgba(0,0,0,.52)]">
             <Image
@@ -1514,7 +1542,7 @@ function BenefitsSection() {
     <section className="relative bg-[#030303] px-6 py-28 text-[#F6F1E8] sm:px-8">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,164,92,.12),transparent_34%)]" />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto w-full max-w-[1760px]">
         <Reveal className="max-w-4xl">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
             Operators
@@ -1554,7 +1582,7 @@ function BenefitsSection() {
 function GallerySection() {
   return (
     <section className="relative overflow-hidden bg-[#F6F1E8] px-6 py-28 text-[#111111] sm:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto w-full max-w-[1760px]">
         <Reveal className="max-w-4xl">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#927438]">
             Spaces
@@ -1789,7 +1817,7 @@ function PlatformSection() {
 
       <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,.28)_1px,transparent_0)] [background-size:32px_32px]" />
 
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto w-full max-w-[1760px]">
         <Reveal className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
@@ -1983,7 +2011,7 @@ export default function CloudViewLandingPage() {
       <FinalCTA />
 
       <footer className="border-t border-white/8 bg-[#030303] px-6 py-10 text-[#F6F1E8] sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <BrandMark />
 
           <div className="flex flex-wrap gap-6 text-sm font-light text-white/42">
