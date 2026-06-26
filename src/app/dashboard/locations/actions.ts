@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { TagType } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -59,31 +58,21 @@ async function assertHotelAccess(hotelId: string) {
   return user;
 }
 
-function redirectLocations({
+function finishDirectoryAction({
   success,
-  error,
   tab,
 }: {
-  success?: string;
-  error?: string;
+  success: string;
   tab: DirectoryTab;
-}): never {
+}) {
   revalidatePath('/dashboard/locations');
   revalidatePath('/dashboard/tags');
 
-  const params = new URLSearchParams();
-
-  params.set('tab', tab);
-
-  if (success) {
-    params.set('success', success);
-  }
-
-  if (error) {
-    params.set('error', error);
-  }
-
-  redirect(`/dashboard/locations?${params.toString()}`);
+  return {
+    ok: true,
+    success,
+    tab,
+  };
 }
 
 export async function createRoomAction(formData: FormData) {
@@ -113,10 +102,9 @@ export async function createRoomAction(formData: FormData) {
   });
 
   if (existingRoom && !existingRoom.deletedAt) {
-    redirectLocations({
-      error: 'room-number-exists',
-      tab: 'rooms',
-    });
+    throw new Error(
+      `Room number "${parsed.number}" already exists for this hotel.`
+    );
   }
 
   if (existingRoom?.deletedAt) {
@@ -132,7 +120,7 @@ export async function createRoomAction(formData: FormData) {
       },
     });
 
-    redirectLocations({
+    return finishDirectoryAction({
       success: 'room-created',
       tab: 'rooms',
     });
@@ -149,7 +137,7 @@ export async function createRoomAction(formData: FormData) {
     },
   });
 
-  redirectLocations({
+  return finishDirectoryAction({
     success: 'room-created',
     tab: 'rooms',
   });
@@ -165,10 +153,7 @@ export async function updateRoomAction(formData: FormData) {
   });
 
   if (!existing) {
-    redirectLocations({
-      error: 'room-not-found',
-      tab: 'rooms',
-    });
+    throw new Error('Room not found.');
   }
 
   const parsed = updateRoomSchema.parse({
@@ -196,10 +181,9 @@ export async function updateRoomAction(formData: FormData) {
   });
 
   if (duplicateRoom && duplicateRoom.id !== parsed.roomId) {
-    redirectLocations({
-      error: 'room-number-exists',
-      tab: 'rooms',
-    });
+    throw new Error(
+      `Room number "${parsed.number}" already exists for this hotel.`
+    );
   }
 
   await db.room.update({
@@ -215,7 +199,7 @@ export async function updateRoomAction(formData: FormData) {
     },
   });
 
-  redirectLocations({
+  return finishDirectoryAction({
     success: 'room-updated',
     tab: 'rooms',
   });
@@ -231,10 +215,7 @@ export async function deleteRoomAction(formData: FormData) {
   });
 
   if (!room) {
-    redirectLocations({
-      error: 'room-not-found',
-      tab: 'rooms',
-    });
+    throw new Error('Room not found.');
   }
 
   await assertHotelAccess(room.hotelId);
@@ -260,7 +241,7 @@ export async function deleteRoomAction(formData: FormData) {
     }),
   ]);
 
-  redirectLocations({
+  return finishDirectoryAction({
     success: 'room-deleted',
     tab: 'rooms',
   });
@@ -290,7 +271,7 @@ export async function createLocationAction(formData: FormData) {
     },
   });
 
-  redirectLocations({
+  return finishDirectoryAction({
     success: 'location-created',
     tab: 'locations',
   });
@@ -306,10 +287,7 @@ export async function updateLocationAction(formData: FormData) {
   });
 
   if (!existing) {
-    redirectLocations({
-      error: 'location-not-found',
-      tab: 'locations',
-    });
+    throw new Error('Location not found.');
   }
 
   const parsed = updateLocationSchema.parse({
@@ -337,7 +315,7 @@ export async function updateLocationAction(formData: FormData) {
     },
   });
 
-  redirectLocations({
+  return finishDirectoryAction({
     success: 'location-updated',
     tab: 'locations',
   });
@@ -353,10 +331,7 @@ export async function deleteLocationAction(formData: FormData) {
   });
 
   if (!location) {
-    redirectLocations({
-      error: 'location-not-found',
-      tab: 'locations',
-    });
+    throw new Error('Location not found.');
   }
 
   await assertHotelAccess(location.hotelId);
@@ -382,7 +357,7 @@ export async function deleteLocationAction(formData: FormData) {
     }),
   ]);
 
-  redirectLocations({
+  return finishDirectoryAction({
     success: 'location-deleted',
     tab: 'locations',
   });

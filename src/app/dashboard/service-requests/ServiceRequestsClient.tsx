@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+} from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Ban,
   CheckCircle2,
@@ -102,6 +109,41 @@ type ToastMessage =
     }
   | null;
 
+type ServiceRequestServerAction = (formData: FormData) => Promise<unknown>;
+
+type ServiceRequestClientAction = (formData: FormData) => Promise<boolean>;
+
+const serviceRequestSuccessText: Record<string, string> = {
+  'request-started': 'Service request order has been started.',
+  'request-completed': 'Service request order has been completed.',
+  'request-cancelled': 'Service request order has been cancelled.',
+  'request-updated': 'Service request order has been updated.',
+  'charge-updated': 'Room add-on charge has been posted or updated.',
+  'request-item-cancelled': 'Service request item has been cancelled.',
+};
+
+function getClientActionError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Something went wrong. Please try again.';
+}
+
+function getActionSuccessText(result: unknown, fallback: string) {
+  if (
+    result &&
+    typeof result === 'object' &&
+    'success' in result &&
+    typeof (result as { success?: unknown }).success === 'string'
+  ) {
+    const success = (result as { success: string }).success;
+    return serviceRequestSuccessText[success] ?? fallback;
+  }
+
+  return fallback;
+}
+
 const operationTabs: {
   value: TabValue;
   label: string;
@@ -134,21 +176,31 @@ const operationTabs: {
   },
 ];
 
+const moneyFormatter = new Intl.NumberFormat('en-PH', {
+  style: 'currency',
+  currency: 'PHP',
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat('en-PH', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
 function money(value: number) {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-  }).format(value);
+  return moneyFormatter.format(value);
 }
 
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('en-PH', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(value));
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Invalid date';
+  }
+
+  return dateTimeFormatter.format(date);
 }
 
 function formatFileSize(size: number) {
@@ -319,17 +371,27 @@ function QuickStatusAction({
   status,
   label,
   tone,
+  action,
+  isMutating,
 }: {
   request: RequestGroup;
   status: string;
   label: string;
   tone: 'primary' | 'danger';
+  action: ServiceRequestClientAction;
+  isMutating: boolean;
 }) {
+  async function handleSubmit(formData: FormData) {
+    await action(formData);
+  }
+
   return (
-    <form action={updateServiceRequestAction}>
+    <form action={handleSubmit}>
       <input type="hidden" name="hotelId" value={request.hotelId} />
       <input type="hidden" name="requestCode" value={request.requestCode} />
       <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="intent" value="status-only" />
+      <input type="hidden" name="postCharge" value="false" />
       <input type="hidden" name="assignedToId" value={request.assignedToId} />
       <input
         type="hidden"
@@ -339,13 +401,14 @@ function QuickStatusAction({
 
       <button
         type="submit"
+        disabled={isMutating}
         className={
           tone === 'danger'
-            ? 'h-10 w-full rounded-2xl bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700'
-            : 'h-10 w-full rounded-2xl bg-black px-4 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/90'
+            ? 'h-10 w-full rounded-2xl bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50'
+            : 'h-10 w-full rounded-2xl bg-black px-4 text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gold dark:text-black dark:hover:bg-gold/90'
         }
       >
-        {label}
+        {isMutating ? 'Updating...' : label}
       </button>
     </form>
   );
@@ -361,6 +424,42 @@ function extractQuantityFromNotes(notes: string) {
   const quantity = Number(match[1]);
 
   return Number.isInteger(quantity) && quantity > 0 ? quantity : 1;
+}
+
+function isServiceChargeFormKey(key: string) {
+  return (
+    key === 'postCharge' ||
+    key === 'chargeRequestId' ||
+    key === 'chargeItemName' ||
+    key === 'chargeDescription' ||
+    key === 'chargeQuantity' ||
+    key === 'chargeUnitPrice' ||
+    key.startsWith('chargeItemName_') ||
+    key.startsWith('chargeDescription_') ||
+    key.startsWith('chargeQuantity_') ||
+    key.startsWith('chargeUnitPrice_')
+  );
+}
+
+function normalizeServiceRequestFormData(formData: FormData) {
+  const intent = String(formData.get('intent') || '');
+
+  if (intent !== 'status-only') {
+    return formData;
+  }
+
+  const cleanFormData = new FormData();
+
+  formData.forEach((value, key) => {
+    if (!isServiceChargeFormKey(key)) {
+      cleanFormData.append(key, value);
+    }
+  });
+
+  cleanFormData.set('intent', 'status-only');
+  cleanFormData.set('postCharge', 'false');
+
+  return cleanFormData;
 }
 
 function AttachmentGallery({
@@ -610,10 +709,14 @@ function CancelServiceItemModal({
   item,
   requestCode,
   onClose,
+  action,
+  isMutating,
 }: {
   item: ServiceRequestOrderItem;
   requestCode: string;
   onClose: () => void;
+  action: ServiceRequestClientAction;
+  isMutating: boolean;
 }) {
   const cancelReasons = [
     'Guest cancelled this item',
@@ -629,6 +732,14 @@ function CancelServiceItemModal({
 
   const finalReason =
     reason === 'Other' ? customReason.trim() || 'Other' : reason;
+
+  async function handleCancelServiceItem(formData: FormData) {
+    const ok = await action(formData);
+
+    if (ok) {
+      onClose();
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-4">
@@ -654,7 +765,7 @@ function CancelServiceItemModal({
           </button>
         </div>
 
-        <form action={cancelServiceRequestItemAction} className="space-y-4">
+        <form action={handleCancelServiceItem} className="space-y-4">
           <input type="hidden" name="requestId" value={item.id} />
           <input type="hidden" name="reason" value={finalReason} />
 
@@ -704,9 +815,10 @@ function CancelServiceItemModal({
 
             <button
               type="submit"
-              className="h-11 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700"
+              disabled={isMutating}
+              className="h-11 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Confirm Cancel
+              {isMutating ? 'Cancelling...' : 'Confirm Cancel'}
             </button>
           </div>
         </form>
@@ -720,11 +832,17 @@ function DetailsModal({
   statuses,
   staff,
   onClose,
+  updateAction,
+  cancelItemAction,
+  isMutating,
 }: {
   request: RequestGroup;
   statuses: string[];
   staff: StaffOption[];
   onClose: () => void;
+  updateAction: ServiceRequestClientAction;
+  cancelItemAction: ServiceRequestClientAction;
+  isMutating: boolean;
 }) {
   const [selectedStatus, setSelectedStatus] = useState(request.status);
   const [selectedStaffId, setSelectedStaffId] = useState(request.assignedToId);
@@ -736,6 +854,14 @@ function DetailsModal({
   const chargeableItems = request.items.filter(
     (item) => item.status !== 'CANCELLED'
   );
+
+  async function handleSaveRequest(formData: FormData) {
+    const ok = await updateAction(formData);
+
+    if (ok) {
+      onClose();
+    }
+  }
 
   return (
     <>
@@ -822,13 +948,19 @@ function DetailsModal({
               </div>
 
               <form
-                action={updateServiceRequestAction}
+                action={handleSaveRequest}
                 className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800"
               >
                 <input
                   type="hidden"
                   name="requestCode"
                   value={request.requestCode}
+                />
+                <input type="hidden" name="hotelId" value={request.hotelId} />
+                <input
+                  type="hidden"
+                  name="intent"
+                  value={postCharge ? 'post-charge' : 'status-only'}
                 />
 
                 <div className="grid gap-3">
@@ -977,9 +1109,10 @@ function DetailsModal({
 
                   <button
                     type="submit"
-                    className="h-11 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/90"
+                    disabled={isMutating}
+                    className="h-11 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gold dark:text-black dark:hover:bg-gold/90"
                   >
-                    Save Request Order
+                    {isMutating ? 'Saving...' : 'Save Request Order'}
                   </button>
                 </div>
               </form>
@@ -993,6 +1126,8 @@ function DetailsModal({
           item={cancelItem}
           requestCode={request.requestCode}
           onClose={() => setCancelItem(null)}
+          action={cancelItemAction}
+          isMutating={isMutating}
         />
       ) : null}
     </>
@@ -1026,7 +1161,7 @@ function Toast({
   }
 
   return (
-    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+    <div className="fixed right-6 top-24 z-[140] w-[calc(100vw-2.5rem)] max-w-md">
       <div
         className={
           message.type === 'success'
@@ -1072,7 +1207,7 @@ export function ServiceRequestsClient({
   message,
   statuses,
   staff,
-  summary,
+  summary: _summary,
   requests,
 }: {
   message?: ToastMessage;
@@ -1087,17 +1222,220 @@ export function ServiceRequestsClient({
   };
   requests: RequestGroup[];
 }) {
+  const router = useRouter();
+
+  const [localRequests, setLocalRequests] = useState<RequestGroup[]>(requests);
+  const [toast, setToast] = useState<ToastMessage>(message ?? null);
+  const [isMutating, setIsMutating] = useState(false);
+
   const [activeTab, setActiveTab] = useState<TabValue>('LIVE');
   const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedRequest, setSelectedRequest] = useState<RequestGroup | null>(
     null
   );
 
-  const filteredRequests = useMemo(() => {
-    const search = query.trim().toLowerCase();
+  useEffect(() => {
+    setLocalRequests(requests);
+  }, [requests]);
 
-    return requests.filter((request) => {
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+
+    setToast(message);
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('success');
+    url.searchParams.delete('error');
+
+    window.history.replaceState(
+      null,
+      '',
+      `${url.pathname}${url.search}${url.hash}`
+    );
+  }, [message]);
+
+  function patchRequestGroupStatus(
+    request: RequestGroup,
+    formData: FormData
+  ): RequestGroup {
+    const requestCode = String(formData.get('requestCode') || '');
+    const requestId = String(formData.get('requestId') || '');
+    const nextStatus = String(formData.get('status') || request.status);
+    const assignedToId = String(formData.get('assignedToId') || '');
+
+    const matchesRequest =
+      (requestCode && request.requestCode === requestCode) ||
+      (requestId && request.items.some((item) => item.id === requestId));
+
+    if (!matchesRequest) {
+      return request;
+    }
+
+    const assignedToName = assignedToId
+      ? staff.find((staffMember) => staffMember.id === assignedToId)?.name ??
+        request.assignedToName
+      : '';
+
+    return {
+      ...request,
+      status: nextStatus,
+      assignedToId,
+      assignedToName,
+      updatedAt: new Date().toISOString(),
+      items: request.items.map((item) => ({
+        ...item,
+        status: nextStatus,
+        assignedToId,
+        assignedToName,
+      })),
+    };
+  }
+
+  function patchCancelledItem(
+    request: RequestGroup,
+    formData: FormData
+  ): RequestGroup {
+    const requestId = String(formData.get('requestId') || '');
+
+    if (!request.items.some((item) => item.id === requestId)) {
+      return request;
+    }
+
+    const nextItems = request.items.map((item) =>
+      item.id === requestId
+        ? {
+            ...item,
+            status: 'CANCELLED',
+            charge: null,
+          }
+        : item
+    );
+
+    const billedCount = nextItems.filter((item) => item.charge).length;
+    const totalChargeAmount = nextItems.reduce(
+      (total, item) => total + (item.charge?.totalAmount ?? 0),
+      0
+    );
+
+    return {
+      ...request,
+      status: nextItems.every((item) => item.status === 'CANCELLED')
+        ? 'CANCELLED'
+        : request.status,
+      billedCount,
+      totalChargeAmount,
+      updatedAt: new Date().toISOString(),
+      items: nextItems,
+    };
+  }
+
+  async function runServiceRequestAction({
+    formData,
+    action,
+    optimisticUpdate,
+    successText,
+  }: {
+    formData: FormData;
+    action: ServiceRequestServerAction;
+    optimisticUpdate: (request: RequestGroup) => RequestGroup;
+    successText: string;
+  }) {
+    if (isMutating) {
+      return false;
+    }
+
+    const previousRequests = localRequests;
+    const previousSelectedRequest = selectedRequest;
+
+    setToast(null);
+    setIsMutating(true);
+
+    setLocalRequests((currentRequests) =>
+      currentRequests.map((request) => optimisticUpdate(request))
+    );
+
+    setSelectedRequest((currentRequest) =>
+      currentRequest ? optimisticUpdate(currentRequest) : currentRequest
+    );
+
+    try {
+      const result = await action(formData);
+
+      setToast({
+        type: 'success',
+        text: getActionSuccessText(result, successText),
+      });
+
+      router.refresh();
+
+      return true;
+    } catch (error) {
+      setLocalRequests(previousRequests);
+      setSelectedRequest(previousSelectedRequest);
+
+      setToast({
+        type: 'error',
+        text: getClientActionError(error),
+      });
+
+      return false;
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function handleUpdateServiceRequest(formData: FormData) {
+    const normalizedFormData = normalizeServiceRequestFormData(formData);
+
+    return runServiceRequestAction({
+      formData: normalizedFormData,
+      action: updateServiceRequestAction,
+      optimisticUpdate: (request) =>
+        patchRequestGroupStatus(request, normalizedFormData),
+      successText: 'Service request order has been updated.',
+    });
+  }
+
+  async function handleCancelServiceRequestItem(formData: FormData) {
+    return runServiceRequestAction({
+      formData,
+      action: cancelServiceRequestItemAction,
+      optimisticUpdate: (request) => patchCancelledItem(request, formData),
+      successText: 'Service request item has been cancelled.',
+    });
+  }
+
+  const clientSummary = useMemo(() => {
+    const liveRequests = localRequests.filter(
+      (request) => request.status === 'NEW' || request.status === 'IN_PROGRESS'
+    ).length;
+
+    const billedRequests = localRequests.filter(
+      (request) => request.billedCount > 0
+    ).length;
+
+    const totalBilledAmount = localRequests.reduce(
+      (total, request) => total + request.totalChargeAmount,
+      0
+    );
+
+    return {
+      totalRequests: localRequests.length,
+      liveRequests,
+      billedRequests,
+      notBilledRequests: localRequests.length - billedRequests,
+      totalBilledAmount,
+    };
+  }, [localRequests]);
+
+  const filteredRequests = useMemo(() => {
+    const search = deferredQuery.trim().toLowerCase();
+
+    return localRequests.filter((request) => {
       const live =
         request.status === 'NEW' || request.status === 'IN_PROGRESS';
       const billed = request.billedCount > 0;
@@ -1126,7 +1464,7 @@ export function ServiceRequestsClient({
 
       return matchesTab && matchesStatus && matchesSearch;
     });
-  }, [activeTab, query, requests, statusFilter]);
+  }, [activeTab, deferredQuery, localRequests, statusFilter]);
 
   const newRequests = filteredRequests.filter(
     (request) => request.status === 'NEW'
@@ -1143,34 +1481,34 @@ export function ServiceRequestsClient({
 
   return (
     <>
-     <Toast message={message} />
+      <Toast message={toast} />
       <div className="mb-6 grid gap-3 md:grid-cols-5">
         <SummaryCard
           label="Total Request Orders"
-          value={summary.totalRequests}
+          value={clientSummary.totalRequests}
           icon={MessageCircle}
         />
         <SummaryCard
           label="Live Request Orders"
-          value={summary.liveRequests}
+          value={clientSummary.liveRequests}
           icon={Clock}
           tone="amber"
         />
         <SummaryCard
           label="Billed"
-          value={summary.billedRequests}
+          value={clientSummary.billedRequests}
           icon={CreditCard}
           tone="green"
         />
         <SummaryCard
           label="Not Billed"
-          value={summary.notBilledRequests}
+          value={clientSummary.notBilledRequests}
           icon={ReceiptText}
           tone="amber"
         />
         <SummaryCard
           label="Add-on Revenue"
-          value={money(summary.totalBilledAmount)}
+          value={money(clientSummary.totalBilledAmount)}
           icon={CheckCircle2}
           tone="green"
         />
@@ -1244,6 +1582,8 @@ export function ServiceRequestsClient({
             requests={newRequests}
             statuses={statuses}
             onOpen={setSelectedRequest}
+            updateAction={handleUpdateServiceRequest}
+            isMutating={isMutating}
           />
 
           <RequestLane
@@ -1252,6 +1592,8 @@ export function ServiceRequestsClient({
             requests={inProgressRequests}
             statuses={statuses}
             onOpen={setSelectedRequest}
+            updateAction={handleUpdateServiceRequest}
+            isMutating={isMutating}
           />
         </div>
       ) : (
@@ -1267,6 +1609,8 @@ export function ServiceRequestsClient({
           requests={filteredRequests}
           statuses={statuses}
           onOpen={setSelectedRequest}
+          updateAction={handleUpdateServiceRequest}
+          isMutating={isMutating}
           wide
         />
       )}
@@ -1279,6 +1623,8 @@ export function ServiceRequestsClient({
             requests={otherRequests}
             statuses={statuses}
             onOpen={setSelectedRequest}
+            updateAction={handleUpdateServiceRequest}
+            isMutating={isMutating}
             wide
           />
         </div>
@@ -1290,6 +1636,9 @@ export function ServiceRequestsClient({
           statuses={statuses}
           staff={staff}
           onClose={() => setSelectedRequest(null)}
+          updateAction={handleUpdateServiceRequest}
+          cancelItemAction={handleCancelServiceRequestItem}
+          isMutating={isMutating}
         />
       ) : null}
     </>
@@ -1302,6 +1651,8 @@ function RequestLane({
   requests,
   statuses,
   onOpen,
+  updateAction,
+  isMutating,
   wide,
 }: {
   title: string;
@@ -1309,6 +1660,8 @@ function RequestLane({
   requests: RequestGroup[];
   statuses: string[];
   onOpen: (request: RequestGroup) => void;
+  updateAction: ServiceRequestClientAction;
+  isMutating: boolean;
   wide?: boolean;
 }) {
   const isNewLane = title.toLowerCase().includes('new');
@@ -1343,11 +1696,7 @@ function RequestLane({
       </div>
 
       <div
-        className={
-          wide
-            ? 'min-h-0 flex-1 overflow-y-auto p-3'
-            : 'min-h-0 flex-1 overflow-y-auto p-3'
-        }
+        className="min-h-0 flex-1 overflow-y-auto p-3"
       >
         {requests.length ? (
           <div
@@ -1479,6 +1828,8 @@ function RequestLane({
                         status={primaryAction.status}
                         label={primaryAction.label}
                         tone={primaryAction.tone}
+                        action={updateAction}
+                        isMutating={isMutating}
                       />
                     ) : null}
 

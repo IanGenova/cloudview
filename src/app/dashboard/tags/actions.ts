@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { TagStatus, TagType } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -91,11 +90,14 @@ async function getAvailableTagCode(preferredCode?: string, excludeTagId?: string
     .slice(0, 160);
 }
 
-function redirectTags(success: string) {
+function finishTagAction(success: string) {
   revalidatePath('/dashboard/tags');
-  redirect(`/dashboard/tags?success=${success}`);
-}
 
+  return {
+    ok: true,
+    success,
+  };
+}
 async function assertHotelAccess(hotelId: string) {
   const user = await requireUser();
 
@@ -147,7 +149,7 @@ export async function toggleTagStatusAction(formData: FormData) {
     },
   });
 
-  redirectTags('tag-updated');
+  return finishTagAction('tag-updated');
 }
 
 export async function createTagAction(formData: FormData) {
@@ -194,7 +196,7 @@ export async function createTagAction(formData: FormData) {
       },
     });
 
-    redirectTags('tag-created');
+    return finishTagAction('tag-created');
   }
 
   await db.nfcTag.create({
@@ -210,7 +212,7 @@ export async function createTagAction(formData: FormData) {
     },
   });
 
-  redirectTags('tag-created');
+  return finishTagAction('tag-created');
 }
 
 export async function updateTagAction(formData: FormData) {
@@ -285,7 +287,7 @@ export async function updateTagAction(formData: FormData) {
     },
   });
 
-  redirectTags('tag-updated');
+  return finishTagAction('tag-updated');
 }
 
 export async function deleteTagAction(formData: FormData) {
@@ -328,7 +330,7 @@ export async function deleteTagAction(formData: FormData) {
     }),
   ]);
 
-  redirectTags('tag-deleted');
+  return finishTagAction('tag-deleted');
 }
 
 export async function rotateTagSecretAction(formData: FormData) {
@@ -366,5 +368,5 @@ export async function rotateTagSecretAction(formData: FormData) {
     }),
   ]);
 
-  redirectTags('tag-rotated');
+  return finishTagAction('tag-rotated');
 }

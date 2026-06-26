@@ -100,6 +100,56 @@ type CreatedStayResult = {
 const inputClass =
   'h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
+
+const GUEST_STAYS_PAGE_SIZE_OPTIONS = [5, 10, 15, 25] as const;
+
+type PaginationItem = number | 'ellipsis-start' | 'ellipsis-end';
+
+function getGuestStayPageItems(
+  currentPage: number,
+  totalPages: number
+): PaginationItem[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = new Set<number>([1, totalPages, currentPage]);
+
+  if (currentPage <= 4) {
+    pages.add(2);
+    pages.add(3);
+    pages.add(4);
+    pages.add(5);
+  } else if (currentPage >= totalPages - 3) {
+    pages.add(totalPages - 4);
+    pages.add(totalPages - 3);
+    pages.add(totalPages - 2);
+    pages.add(totalPages - 1);
+  } else {
+    pages.add(currentPage - 1);
+    pages.add(currentPage + 1);
+  }
+
+  const sortedPages = Array.from(pages)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
+
+  const items: PaginationItem[] = [];
+
+  for (let index = 0; index < sortedPages.length; index += 1) {
+    const page = sortedPages[index];
+    const previousPage = sortedPages[index - 1];
+
+    if (previousPage && page - previousPage > 1) {
+      items.push(page - previousPage === 2 ? previousPage + 1 : 'ellipsis-start');
+    }
+
+    items.push(page);
+  }
+
+  return items;
+}
+
 const labelClass =
   'text-xs font-black uppercase tracking-wide text-neutral-500';
 
@@ -481,11 +531,40 @@ export function GuestStaysClient({
   );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [guestStayPage, setGuestStayPage] = useState(1);
+  const [guestStayPageSize, setGuestStayPageSize] = useState<number>(5);
   const [isPending, startTransition] = useTransition();
 
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => room.hotelId === selectedHotelId);
   }, [rooms, selectedHotelId]);
+
+  const totalGuestStayPages = Math.max(
+  1,
+  Math.ceil(guestStays.length / guestStayPageSize)
+);
+
+const currentGuestStayPage = Math.min(guestStayPage, totalGuestStayPages);
+
+const paginatedGuestStays = useMemo(() => {
+  const startIndex = (currentGuestStayPage - 1) * guestStayPageSize;
+
+  return guestStays.slice(startIndex, startIndex + guestStayPageSize);
+}, [currentGuestStayPage, guestStayPageSize, guestStays]);
+
+const guestStayPaginationStart = guestStays.length
+  ? (currentGuestStayPage - 1) * guestStayPageSize + 1
+  : 0;
+
+const guestStayPaginationEnd = Math.min(
+  currentGuestStayPage * guestStayPageSize,
+  guestStays.length
+);
+
+const guestStayPageItems = getGuestStayPageItems(
+  currentGuestStayPage,
+  totalGuestStayPages
+);
 
  const activeCount = guestStays.filter(
   (stay) => stay.status === 'ACTIVE'
@@ -859,7 +938,7 @@ function handleResetPasscode(guestStayId: string) {
             </thead>
 
             <tbody>
-             {guestStays.map((stay) => {
+             {paginatedGuestStays.map((stay) => {
              const frontDeskStatus = getStayFrontDeskStatus(stay);
 
           return (
@@ -972,8 +1051,95 @@ function handleResetPasscode(guestStayId: string) {
                 </tr>
               ) : null}
             </tbody>
-          </table>
+                   </table>
         </div>
+
+        {guestStays.length > 0 ? (
+          <div className="flex flex-col gap-4 border-t border-neutral-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={currentGuestStayPage <= 1}
+                onClick={() =>
+                  setGuestStayPage((page) => Math.max(1, page - 1))
+                }
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+
+              {guestStayPageItems.map((item, index) =>
+                typeof item === 'number' ? (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-current={
+                      item === currentGuestStayPage ? 'page' : undefined
+                    }
+                    onClick={() => setGuestStayPage(item)}
+                    className={
+                      item === currentGuestStayPage
+                        ? 'grid size-10 place-items-center rounded-xl bg-[#11100b] text-xs font-black text-white shadow-sm'
+                        : 'grid size-10 place-items-center rounded-xl border border-neutral-200 bg-white text-xs font-black text-neutral-700 transition hover:bg-neutral-50'
+                    }
+                  >
+                    {item}
+                  </button>
+                ) : (
+                  <span
+                    key={`${item}-${index}`}
+                    className="grid size-10 place-items-center text-xs font-black text-neutral-400"
+                  >
+                    ...
+                  </span>
+                )
+              )}
+
+              <button
+                type="button"
+                disabled={currentGuestStayPage >= totalGuestStayPages}
+                onClick={() =>
+                  setGuestStayPage((page) =>
+                    Math.min(totalGuestStayPages, page + 1)
+                  )
+                }
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-neutral-500">
+              <span>
+                Showing{' '}
+                <b className="text-[#11100b]">{guestStayPaginationStart}</b>
+                {' '}to{' '}
+                <b className="text-[#11100b]">{guestStayPaginationEnd}</b>
+                {' '}of{' '}
+                <b className="text-[#11100b]">{guestStays.length}</b>
+              </span>
+
+              <label className="flex items-center gap-2">
+                <span>Rows</span>
+
+                <select
+                  value={guestStayPageSize}
+                  onChange={(event) => {
+                    setGuestStayPageSize(Number(event.target.value));
+                    setGuestStayPage(1);
+                  }}
+                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-[#11100b] outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                >
+                  {GUEST_STAYS_PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       {isCreateOpen ? (

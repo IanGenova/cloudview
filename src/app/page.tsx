@@ -325,7 +325,7 @@ function IPhoneFrame({
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="relative rounded-[2.8rem] border border-[#E7C878]/28 bg-[linear-gradient(135deg,#0b0b0a,#030303)] p-2.5 shadow-[0_42px_130px_rgba(0,0,0,.62)]"
+        className="relative rounded-[2.8rem] border border-[#E7C878]/45 bg-[linear-gradient(135deg,#0b0b0a,#030303)] p-2.5 shadow-[0_42px_130px_rgba(201,164,92,.18)]"
       >
         <div className="absolute left-1/2 top-2.5 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
 
@@ -387,7 +387,7 @@ function GuestPortalShowcaseSection() {
       />
 
       <div className="relative mx-auto w-full max-w-[1760px]">
-        <Reveal className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+        <Reveal className="grid gap-8 lg:grid-cols-[0.74fr_1.26fr] lg:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
               Guest Portal
@@ -768,47 +768,26 @@ function HeroImage() {
         rotateY,
         transformStyle: 'preserve-3d',
       }}
-      className="relative mx-auto w-full max-w-[760px] perspective-[1200px]"
+      className="relative mx-auto w-full max-w-[980px] perspective-[1200px]"
     >
       <div className="absolute -inset-10 rounded-full bg-[#C9A45C]/20 blur-[110px]" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 70, scale: 0.92 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 1.2, delay: 0.25, ease }}
-        className="group relative overflow-hidden rounded-[2.25rem] border border-white/12 bg-white/[0.045] shadow-[0_60px_180px_rgba(0,0,0,.6)] backdrop-blur-2xl"
+      <GoldImageFrame
+        src={images.hero}
+        alt="CloudView luxury NFC signage"
+        priority
+        className="aspect-[4/5] w-full sm:aspect-[16/12] lg:aspect-[14/11]"
+        imageClassName="object-contain object-center sm:object-cover"
+        sizes="(max-width: 768px) 100vw, 58vw"
       >
-        <motion.div
-          animate={
-            reduceMotion
-              ? undefined
-              : {
-                  scale: [1, 1.035, 1],
-                  y: [0, -8, 0],
-                }
-          }
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <Image
-            src={images.hero}
-            alt="CloudView luxury NFC signage"
-            width={1700}
-            height={1000}
-            priority
-            className="h-[500px] w-full object-cover md:h-[620px]"
-          />
-        </motion.div>
-
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(231,200,120,.18),transparent_32%)]" />
-
-        <div className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(110deg,transparent,rgba(255,255,255,.16),transparent)] transition duration-1000 group-hover:translate-x-full" />
 
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 1, ease }}
-          className="absolute bottom-5 left-5 right-5 rounded-[1.5rem] border border-white/12 bg-black/42 p-4 backdrop-blur-2xl"
+          className="absolute bottom-5 left-5 right-5 rounded-[1.5rem] border border-[#E7C878]/25 bg-black/50 p-4 backdrop-blur-2xl"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -832,11 +811,10 @@ function HeroImage() {
             </div>
           </div>
         </motion.div>
-      </motion.div>
+      </GoldImageFrame>
     </motion.div>
   );
 }
-
 function HeroSection() {
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#030303] text-[#F6F1E8]">
@@ -848,7 +826,7 @@ function HeroSection() {
 
       <FloatingNavbar />
 
-      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1760px] items-center gap-14 px-6 pb-20 pt-36 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:pb-24">
+      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-[1760px] items-center gap-14 px-6 pb-20 pt-36 sm:px-8 lg:grid-cols-[0.74fr_1.26fr] lg:pb-24">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 18 }}
@@ -1104,7 +1082,7 @@ const ringOpacityC = useTransform(
           />
         </div>
 
-        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] w-full w-full max-w-[1760px] gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] w-full w-full max-w-[1760px] gap-10 lg:grid-cols-[0.74fr_1.26fr] lg:items-center">
           <div className="flex h-full flex-col justify-center">
             <div className="mb-8 max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
@@ -1346,7 +1324,6 @@ function ExperienceCards() {
     </section>
   );
 }
-
 function ImageReveal({
   src,
   alt,
@@ -1357,30 +1334,13 @@ function ImageReveal({
   className?: string;
 }) {
   return (
-    <Reveal className={className}>
-      <motion.div
-        initial={{ clipPath: 'inset(18% 18% 18% 18% round 2rem)' }}
-        whileInView={{ clipPath: 'inset(0% 0% 0% 0% round 2rem)' }}
-        viewport={{ once: true, margin: '-120px' }}
-        transition={{ duration: 1.1, ease }}
-        className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_42px_140px_rgba(0,0,0,.45)]"
-      >
-        <motion.div
-          whileHover={{ scale: 1.045 }}
-          transition={{ duration: 0.8, ease }}
-        >
-          <Image
-            src={src}
-            alt={alt}
-            width={1400}
-            height={900}
-            className="h-full min-h-[360px] w-full object-cover"
-          />
-        </motion.div>
-
-        <div className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(110deg,transparent,rgba(231,200,120,.16),transparent)] transition duration-1000 group-hover:translate-x-full" />
-      </motion.div>
-    </Reveal>
+    <GoldImageFrame
+      src={src}
+      alt={alt}
+      className={cn('aspect-[4/5] w-full sm:aspect-[16/10]', className)}
+      imageClassName="object-cover object-center"
+      sizes="(max-width: 768px) 100vw, 60vw"
+    />
   );
 }
 
@@ -1392,7 +1352,7 @@ function CraftedSection() {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(201,164,92,.14),transparent_34%)]" />
 
-      <div className="relative mx-auto grid w-full max-w-[1760px] items-center gap-14 lg:grid-cols-[0.82fr_1.18fr]">
+      <div className="relative mx-auto grid w-full max-w-[1760px] items-center gap-14 lg:grid-cols-[0.74fr_1.26fr]">
         <Reveal>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#E7C878]">
             Craft
@@ -1500,16 +1460,15 @@ function InstantAccessSection() {
 
       <div className="relative mx-auto grid w-full max-w-[1760px] items-center gap-14 lg:grid-cols-[1.12fr_0.88fr]">
         <Reveal>
-          <div className="relative overflow-hidden rounded-[2.25rem] border border-white/10 shadow-[0_50px_160px_rgba(0,0,0,.52)]">
-            <Image
-              src={images.access}
-              alt="Tap your phone instant access signage"
-              width={1600}
-              height={1000}
-              className="h-[620px] w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/20 to-transparent" />
-          </div>
+         <GoldImageFrame
+                src={images.access}
+                alt="Tap your phone instant access signage"
+                className="aspect-[4/5] w-full sm:aspect-[16/10]"
+                imageClassName="object-contain object-center sm:object-cover"
+                sizes="(max-width: 768px) 100vw, 58vw"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/20 to-transparent" />
+              </GoldImageFrame>
         </Reveal>
 
         <div>
@@ -1594,37 +1553,30 @@ function GallerySection() {
         </Reveal>
 
         <Reveal className="mt-14">
-          <div className="group relative overflow-hidden rounded-[2.5rem] border border-black/10 bg-black shadow-[0_48px_140px_rgba(0,0,0,.2)]">
-            <motion.div
-              whileHover={{ scale: 1.035 }}
-              transition={{ duration: 0.9, ease }}
+                    <GoldImageFrame
+              src={images.gallery}
+              alt="CloudView room experience collage"
+              className="aspect-[5/6] w-full sm:aspect-[16/10]"
+              imageClassName="object-cover object-center"
+              sizes="100vw"
             >
-              <Image
-                src={images.gallery}
-                alt="CloudView room experience collage"
-                width={1800}
-                height={1100}
-                className="h-[760px] w-full object-cover"
-              />
-            </motion.div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/64 via-transparent to-black/10" />
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/64 via-transparent to-black/10" />
-
-            <div className="absolute bottom-6 left-6 right-6 flex flex-wrap gap-3">
-              {galleryLabels.map((label, index) => (
-                <motion.span
-                  key={label}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.55, delay: index * 0.08, ease }}
-                  className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-sm font-light text-white backdrop-blur-xl"
-                >
-                  {label}
-                </motion.span>
-              ))}
-            </div>
-          </div>
+              <div className="absolute bottom-6 left-6 right-6 flex flex-wrap gap-3">
+                {galleryLabels.map((label, index) => (
+                  <motion.span
+                    key={label}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.55, delay: index * 0.08, ease }}
+                    className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-sm font-light text-white backdrop-blur-xl"
+                  >
+                    {label}
+                  </motion.span>
+                ))}
+              </div>
+            </GoldImageFrame>
         </Reveal>
       </div>
     </section>
@@ -1672,11 +1624,18 @@ function AdminScreenFrame({
       <div className="absolute -inset-8 rounded-full bg-[#C9A45C]/20 blur-[110px]" />
 
       <motion.div
+        aria-hidden="true"
+        animate={{ opacity: [0.25, 0.75, 0.25] }}
+        transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
+        className="pointer-events-none absolute inset-0 z-20 rounded-[2.25rem] border border-[#E7C878]/30"
+      />
+
+      <motion.div
         key={screen.src}
         initial={{ opacity: 0, y: 34, scale: 0.96, filter: 'blur(14px)' }}
         animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
         transition={{ duration: 0.9, ease }}
-        className="group relative overflow-hidden rounded-[2.25rem] border border-white/12 bg-white/[0.05] shadow-[0_60px_180px_rgba(0,0,0,.55)] backdrop-blur-2xl"
+       className="group relative overflow-hidden rounded-[2.25rem] border border-[#E7C878]/35 bg-white/[0.05] shadow-[0_60px_180px_rgba(201,164,92,.16)] backdrop-blur-2xl"
       >
         <div className="flex items-center justify-between border-b border-white/10 bg-black/55 px-5 py-4 backdrop-blur-xl">
           <div className="flex items-center gap-2">
@@ -1976,6 +1935,106 @@ function FinalCTA() {
         </div>
       </Reveal>
     </section>
+  );
+}
+
+
+function GoldImageFrame({
+  src,
+  alt,
+  priority,
+  className = '',
+  imageClassName = '',
+  sizes = '(max-width: 768px) 100vw, 50vw',
+  children,
+}: {
+  src: string;
+  alt: string;
+  priority?: boolean;
+  className?: string;
+  imageClassName?: string;
+  sizes?: string;
+  children?: ReactNode;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 28, scale: 0.98 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={reduceMotion ? undefined : { y: -6, scale: 1.01 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.85, ease }}
+      className={cn(
+        'group relative overflow-hidden rounded-[2rem] p-[1px] shadow-[0_42px_140px_rgba(0,0,0,.45)]',
+        className
+      )}
+    >
+      <motion.div
+        aria-hidden="true"
+        animate={
+          reduceMotion
+            ? undefined
+            : {
+                rotate: 360,
+              }
+        }
+        transition={{
+          duration: 9,
+          repeat: Infinity,
+          ease: 'linear',
+        }}
+        className="absolute -inset-[45%] bg-[conic-gradient(from_90deg,transparent_0deg,rgba(201,164,92,.25)_60deg,rgba(231,200,120,.95)_105deg,rgba(255,255,255,.35)_130deg,rgba(201,164,92,.22)_165deg,transparent_220deg,transparent_360deg)]"
+      />
+
+      <motion.div
+        aria-hidden="true"
+        animate={
+          reduceMotion
+            ? undefined
+            : {
+                opacity: [0.28, 0.62, 0.28],
+                scale: [1, 1.04, 1],
+              }
+        }
+        transition={{
+          duration: 3.8,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+        className="absolute -inset-4 rounded-[2.35rem] bg-[#C9A45C]/20 blur-2xl"
+      />
+
+      <div className="relative z-10 h-full w-full overflow-hidden rounded-[calc(2rem-1px)] border border-[#E7C878]/35 bg-[#050505]">
+        <Image
+          src={src}
+          alt={alt}
+          priority={priority}
+          fill
+          sizes={sizes}
+          className={cn(
+            'object-cover object-center transition-transform duration-700 group-hover:scale-[1.035]',
+            imageClassName
+          )}
+        />
+
+        <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_top_right,rgba(231,200,120,.16),transparent bg-[radial-gradient(circle_at_top_right,rgba(231,200,120,.16),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,.05),transparent_28%,transparent_72%,rgba(201,164,92,.08))]" />
+
+        <motion.div
+          aria-hidden="true"
+          animate={reduceMotion ? undefined : { x: ['-140%', '150%'] }}
+          transition={{
+            duration: 4.8,
+            repeat: Infinity,
+            repeatDelay: 2.4,
+            ease: 'easeInOut',
+          }}
+          className="pointer-events-none absolute inset-y-0 left-0 z-20 w-28 rotate-12 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent)] blur-lg"
+        />
+
+        {children ? <div className="relative z-30">{children}</div> : null}
+      </div>
+    </motion.div>
   );
 }
 

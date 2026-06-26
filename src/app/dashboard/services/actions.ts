@@ -2,7 +2,6 @@
 
 import { Role, ServiceBillingMode } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope, scopedHotelId } from '@/lib/access';
 import { db } from '@/lib/db';
@@ -143,25 +142,15 @@ const DEFAULT_SERVICES = [
   },
 ];
 
-function redirectToServices(params: {
-  success?: string;
-  error?: string;
-}): never {
-  const query = new URLSearchParams();
+function finishServicesAction(success: string) {
+  revalidatePath('/dashboard/services');
+  revalidatePath('/dashboard/service-requests');
+  revalidatePath('/t/[tagCode]', 'page');
 
-  if (params.success) {
-    query.set('success', params.success);
-  }
-
-  if (params.error) {
-    query.set('error', params.error);
-  }
-
-  redirect(
-    query.toString()
-      ? `/dashboard/services?${query.toString()}`
-      : '/dashboard/services'
-  );
+  return {
+    ok: true,
+    success,
+  };
 }
 
 function normalizeCode(value: string) {
@@ -219,19 +208,35 @@ export async function createServiceCatalogItemAction(formData: FormData) {
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
 
-  if (!hotelId) redirectToServices({ error: 'hotel-required' });
-  if (!name) redirectToServices({ error: 'name-required' });
-  if (!category) redirectToServices({ error: 'category-required' });
-  if (!billingMode) redirectToServices({ error: 'billing-mode-required' });
-  if (unitPrice === null) redirectToServices({ error: 'unit-price-invalid' });
+  if (!hotelId) {
+    throw new Error('Hotel is required.');
+  }
+
+  if (!name) {
+    throw new Error('Service name is required.');
+  }
+
+  if (!category) {
+    throw new Error('Category is required.');
+  }
+
+  if (!billingMode) {
+    throw new Error('Billing mode is required.');
+  }
+
+  if (unitPrice === null) {
+    throw new Error('Unit price must be valid.');
+  }
 
   if (billingMode === ServiceBillingMode.FIXED_PRICE && unitPrice <= 0) {
-    redirectToServices({ error: 'unit-price-required' });
+    throw new Error('Fixed-price services must have a price greater than zero.');
   }
 
   const code = normalizeCode(rawCode || name);
 
-  if (!code) redirectToServices({ error: 'code-required' });
+  if (!code) {
+    throw new Error('Service code is required.');
+  }
 
   await db.serviceCatalogItem.create({
     data: {
@@ -249,8 +254,7 @@ export async function createServiceCatalogItemAction(formData: FormData) {
     },
   });
 
-  revalidatePath('/dashboard/services');
-  redirectToServices({ success: 'created' });
+  return finishServicesAction('created');
 }
 
 export async function updateServiceCatalogItemAction(formData: FormData) {
@@ -269,32 +273,52 @@ export async function updateServiceCatalogItemAction(formData: FormData) {
   const sortOrder = parseSortOrder(formData.get('sortOrder'));
   const isActive = formData.get('isActive') === 'true';
 
-  if (!itemId) redirectToServices({ error: 'item-required' });
-  if (!name) redirectToServices({ error: 'name-required' });
-  if (!category) redirectToServices({ error: 'category-required' });
-  if (!billingMode) redirectToServices({ error: 'billing-mode-required' });
+  if (!itemId) {
+    throw new Error('Service item is required.');
+  }
+
+  if (!name) {
+    throw new Error('Service name is required.');
+  }
+
+  if (!category) {
+    throw new Error('Category is required.');
+  }
+
+  if (!billingMode) {
+    throw new Error('Billing mode is required.');
+  }
+
   if (unitPrice === null) {
-  redirectToServices({ error: 'unit-price-invalid' });
-}
+    throw new Error('Unit price must be valid.');
+  }
 
-const validUnitPrice = unitPrice;
-
-if (billingMode === ServiceBillingMode.FIXED_PRICE && validUnitPrice <= 0) {
-  redirectToServices({ error: 'unit-price-required' });
-}
+  if (billingMode === ServiceBillingMode.FIXED_PRICE && unitPrice <= 0) {
+    throw new Error('Fixed-price services must have a price greater than zero.');
+  }
 
   const item = await db.serviceCatalogItem.findUnique({
-    where: { id: itemId },
+    where: {
+      id: itemId,
+    },
   });
 
-  if (!item) redirectToServices({ error: 'item-not-found' });
+  if (!item) {
+    throw new Error('Service item not found.');
+  }
 
   assertHotelScope(user, item.hotelId);
 
   const code = normalizeCode(rawCode || name);
 
+  if (!code) {
+    throw new Error('Service code is required.');
+  }
+
   await db.serviceCatalogItem.update({
-    where: { id: item.id },
+    where: {
+      id: item.id,
+    },
     data: {
       name,
       code,
@@ -309,8 +333,7 @@ if (billingMode === ServiceBillingMode.FIXED_PRICE && validUnitPrice <= 0) {
     },
   });
 
-  revalidatePath('/dashboard/services');
-  redirectToServices({ success: 'updated' });
+  return finishServicesAction('updated');
 }
 
 export async function deleteServiceCatalogItemAction(formData: FormData) {
@@ -319,22 +342,29 @@ export async function deleteServiceCatalogItemAction(formData: FormData) {
 
   const itemId = cleanText(formData.get('itemId'));
 
-  if (!itemId) redirectToServices({ error: 'item-required' });
+  if (!itemId) {
+    throw new Error('Service item is required.');
+  }
 
   const item = await db.serviceCatalogItem.findUnique({
-    where: { id: itemId },
+    where: {
+      id: itemId,
+    },
   });
 
-  if (!item) redirectToServices({ error: 'item-not-found' });
+  if (!item) {
+    throw new Error('Service item not found.');
+  }
 
   assertHotelScope(user, item.hotelId);
 
   await db.serviceCatalogItem.delete({
-    where: { id: item.id },
+    where: {
+      id: item.id,
+    },
   });
 
-  revalidatePath('/dashboard/services');
-  redirectToServices({ success: 'deleted' });
+  return finishServicesAction('deleted');
 }
 
 export async function seedDefaultServicesAction(formData: FormData) {
@@ -343,7 +373,9 @@ export async function seedDefaultServicesAction(formData: FormData) {
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
 
-  if (!hotelId) redirectToServices({ error: 'hotel-required' });
+  if (!hotelId) {
+    throw new Error('Hotel is required.');
+  }
 
   await Promise.all(
     DEFAULT_SERVICES.map((service) =>
@@ -372,6 +404,5 @@ export async function seedDefaultServicesAction(formData: FormData) {
     )
   );
 
-  revalidatePath('/dashboard/services');
-  redirectToServices({ success: 'seeded' });
+  return finishServicesAction('seeded');
 }

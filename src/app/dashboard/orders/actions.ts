@@ -8,7 +8,6 @@ import {
   Prisma,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
@@ -173,28 +172,14 @@ function addRestoreRequirement(
   requirements.set(key, input);
 }
 
-function redirectToOrdersWithMessage({
-  success,
-  error,
-}: {
-  success?: string;
-  error?: string;
-}): never {
-  const params = new URLSearchParams();
+function finishOrderAction(success: string) {
+  revalidatePath('/dashboard/orders');
+  revalidatePath('/dashboard/kitchen');
 
-  if (success) {
-    params.set('success', success);
-  }
-
-  if (error) {
-    params.set('error', error);
-  }
-
-  redirect(
-    params.toString()
-      ? `/dashboard/orders?${params.toString()}`
-      : '/dashboard/orders'
-  );
+  return {
+    ok: true,
+    success,
+  };
 }
 
 function getOrderStatusSuccessCode(status: OrderStatus) {
@@ -559,11 +544,9 @@ export async function cancelOrderItemAction(formData: FormData) {
   const orderItemId = cleanText(formData.get('orderItemId'));
   const reason = cleanText(formData.get('reason'), 300);
 
-  if (!orderId || !orderItemId) {
-    redirectToOrdersWithMessage({
-      error: 'order-item-required',
-    });
-  }
+if (!orderId || !orderItemId) {
+  throw new Error('Order item is required.');
+}
 
   const order = await db.order.findUnique({
     where: {
@@ -605,27 +588,21 @@ export async function cancelOrderItemAction(formData: FormData) {
     },
   });
 
-  if (!order) {
-    redirectToOrdersWithMessage({
-      error: 'order-not-found',
-    });
-  }
+ if (!order) {
+  throw new Error('Order not found.');
+}
 
   assertHotelScope(user, order.hotelId);
 
-  if (order.status !== OrderStatus.PENDING) {
-    redirectToOrdersWithMessage({
-      error: 'order-not-pending',
-    });
-  }
+if (order.status !== OrderStatus.PENDING) {
+  throw new Error('Only pending orders can have items cancelled.');
+}
 
   const item = order.items.find((orderItem) => orderItem.id === orderItemId);
 
-  if (!item) {
-    redirectToOrdersWithMessage({
-      error: 'order-item-not-found',
-    });
-  }
+ if (!item) {
+  throw new Error('Order item not found.');
+}
 
   const remainingQuantity = getRemainingOrderItemQuantity(item);
 
@@ -634,13 +611,11 @@ export async function cancelOrderItemAction(formData: FormData) {
    * Do not throw a 500 error if the user double-clicks, refreshes a stale modal,
    * or submits an already-cancelled item. Redirect with a safe message instead.
    */
-  if (remainingQuantity <= 0 || item.status === OrderItemStatus.CANCELLED) {
-    revalidateOrderPaths(order);
+    if (remainingQuantity <= 0 || item.status === OrderItemStatus.CANCELLED) {
+      revalidateOrderPaths(order);
 
-    redirectToOrdersWithMessage({
-      error: 'item-already-cancelled',
-    });
-  }
+      throw new Error('This food item is already cancelled.');
+    }
 
   let restoredProductIds: string[] = [];
   let finalOrderStatus: OrderStatus = order.status;
@@ -792,9 +767,9 @@ export async function cancelOrderItemAction(formData: FormData) {
 
   
 
-  redirectToOrdersWithMessage({
-    success: allItemsCancelled ? 'order-cancelled' : 'item-cancelled',
-  });
+      return finishOrderAction(
+        allItemsCancelled ? 'order-cancelled' : 'item-cancelled'
+      );
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
@@ -946,11 +921,7 @@ export async function updateOrderStatusAction(formData: FormData) {
     });
   }
 
-  if (redirectTarget === 'orders') {
-    redirectToOrdersWithMessage({
-      success: getOrderStatusSuccessCode(status),
-    });
-  }
+ return finishOrderAction(getOrderStatusSuccessCode(status));
 }
 
 export async function markOrderPaidAction(formData: FormData) {
@@ -1009,9 +980,5 @@ export async function markOrderPaidAction(formData: FormData) {
     paymentStatus: PaymentStatus.PAID,
   });
 
-  if (redirectTarget === 'orders') {
-    redirectToOrdersWithMessage({
-      success: 'order-paid',
-    });
-  }
+ return finishOrderAction('order-paid');
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import {
   Ban,
   CheckCircle2,
@@ -121,7 +122,8 @@ type Message =
       text: string;
     }
   | null;
-
+  
+  type ClientOrderAction = (formData: FormData) => Promise<void>;
 
 const statusOptions: StatusFilter[] = [
   'ALL',
@@ -863,16 +865,23 @@ function CancelOrderItemModal({
   order,
   item,
   onClose,
+  action,
 }: {
   order: DashboardOrder;
   item: OrderItem;
   onClose: () => void;
+  action: ClientOrderAction;
 }) {
   const [reason, setReason] = useState(cancelReasons[0]);
   const [customReason, setCustomReason] = useState('');
 
   const finalReason =
     reason === 'Other' ? customReason.trim() || 'Other' : reason;
+
+    async function handleCancelItem(formData: FormData) {
+  await action(formData);
+  onClose();
+}
 
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-4">
@@ -896,7 +905,7 @@ function CancelOrderItemModal({
           </button>
         </div>
 
-        <form action={cancelOrderItemAction} className="space-y-4">
+        <form action={handleCancelItem} className="space-y-4">
           <input type="hidden" name="orderId" value={order.id} />
           <input type="hidden" name="orderItemId" value={item.id} />
           <input type="hidden" name="reason" value={finalReason} />
@@ -957,9 +966,11 @@ function CancelOrderItemModal({
 function CancelOrderModal({
   order,
   onClose,
+  action,
 }: {
   order: DashboardOrder;
   onClose: () => void;
+  action: ClientOrderAction;
 }) {
   const wholeOrderReasons = [
     'Item unavailable',
@@ -976,6 +987,11 @@ function CancelOrderModal({
 
   const finalReason =
     reason === 'Other' ? customReason.trim() || 'Other' : reason;
+
+    async function handleCancelOrder(formData: FormData) {
+  await action(formData);
+  onClose();
+}
 
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 px-4">
@@ -998,7 +1014,7 @@ function CancelOrderModal({
           </button>
         </div>
 
-        <form action={updateOrderStatusAction} className="space-y-4">
+        <form action={handleCancelOrder} className="space-y-4">
           <input type="hidden" name="orderId" value={order.id} />
           <input type="hidden" name="redirectTo" value="orders" />
           <input type="hidden" name="status" value="CANCELLED" />
@@ -1066,11 +1082,17 @@ function OrderDetailsModal({
   now,
   onClose,
   onCancel,
+  onMarkPaid,
+  onStatusChange,
+  onCancelItemAction,
 }: {
   order: DashboardOrder;
   now: number;
   onClose: () => void;
   onCancel: (order: DashboardOrder) => void;
+  onMarkPaid: ClientOrderAction;
+  onStatusChange: ClientOrderAction;
+  onCancelItemAction: ClientOrderAction;
 }) {
   const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
   const nextActions = getNextActions(order.status);
@@ -1209,7 +1231,7 @@ function OrderDetailsModal({
               </button>
 
               {order.paymentStatus !== 'PAID' ? (
-                <form action={markOrderPaidAction}>
+                <form action={onMarkPaid}>
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="redirectTo" value="orders" />  
                   <button
@@ -1236,10 +1258,10 @@ function OrderDetailsModal({
                         {action.label}
                       </button>
                     ) : (
-                      <form
-                        key={`${order.id}-${action.status}`}
-                        action={updateOrderStatusAction}
-                      >
+                     <form
+                          key={`${order.id}-${action.status}`}
+                          action={onStatusChange}
+                        >
                         <input type="hidden" name="orderId" value={order.id} />
                         <input type="hidden" name="redirectTo" value="orders" />
                         <input
@@ -1288,10 +1310,11 @@ function OrderDetailsModal({
 
       {cancelItem ? (
         <CancelOrderItemModal
-          order={order}
-          item={cancelItem}
-          onClose={() => setCancelItem(null)}
-        />
+              order={order}
+              item={cancelItem}
+              onClose={() => setCancelItem(null)}
+              action={onCancelItemAction}
+            />
       ) : null}
     </>
   );
@@ -1308,9 +1331,15 @@ export function OrdersClient({
   statusCounts: StatusCounts;
   orders: DashboardOrder[];
 }) {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
+ const router = useRouter();
+
+const [localOrders, setLocalOrders] = useState<DashboardOrder[]>(orders);
+const [clientMessage, setClientMessage] = useState<Message>(null);
+const [isMutating, setIsMutating] = useState(false);
+
+const [search, setSearch] = useState('');
+const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(
     null
   );
@@ -1322,13 +1351,14 @@ export function OrdersClient({
       setNow(Date.now());
     }, 60_000);
 
+
     return () => window.clearInterval(interval);
   }, []);
 
   const filteredOrders = useMemo(() => {
     const searchText = search.trim().toLowerCase();
 
-    return orders.filter((order) => {
+    return localOrders.filter((order) => {
       const orderText = [
         order.orderCode,
         order.hotelName,
@@ -1360,11 +1390,157 @@ export function OrdersClient({
 
       return matchesSearch && matchesStatus && matchesPayment;
     });
-  }, [orders, paymentFilter, search, statusFilter]);
+ }, [localOrders, paymentFilter, search, statusFilter]);
+
+     useEffect(() => {
+  setLocalOrders(orders);
+}, [orders]);
+
+function getClientActionError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Something went wrong. Please try again.';
+}
+
+function updateLocalOrder(
+  orderId: string,
+  updater: (order: DashboardOrder) => DashboardOrder
+) {
+  setLocalOrders((currentOrders) =>
+    currentOrders.map((order) =>
+      order.id === orderId ? updater(order) : order
+    )
+  );
+
+  setSelectedOrder((currentOrder) =>
+    currentOrder?.id === orderId ? updater(currentOrder) : currentOrder
+  );
+
+  setCancelOrder((currentOrder) =>
+    currentOrder?.id === orderId ? updater(currentOrder) : currentOrder
+  );
+}
+
+async function runOrderClientAction({
+  formData,
+  action,
+  successText,
+  optimisticUpdate,
+}: {
+  formData: FormData;
+  action: (formData: FormData) => Promise<unknown>;
+  successText: string;
+  optimisticUpdate?: () => void;
+}) {
+  if (isMutating) {
+    return;
+  }
+
+  const previousOrders = localOrders;
+  const previousSelectedOrder = selectedOrder;
+  const previousCancelOrder = cancelOrder;
+
+  setClientMessage(null);
+  setIsMutating(true);
+
+  try {
+    optimisticUpdate?.();
+
+    await action(formData);
+
+    setClientMessage({
+      type: 'success',
+      text: successText,
+    });
+
+    /**
+     * This is not a full browser reload.
+     * It refreshes server data in-place.
+     */
+    router.refresh();
+  } catch (error) {
+    setLocalOrders(previousOrders);
+    setSelectedOrder(previousSelectedOrder);
+    setCancelOrder(previousCancelOrder);
+
+    setClientMessage({
+      type: 'error',
+      text: getClientActionError(error),
+    });
+
+    throw error;
+  } finally {
+    setIsMutating(false);
+  }
+}
+
+async function handleMarkPaid(formData: FormData) {
+  const orderId = String(formData.get('orderId') || '');
+
+  await runOrderClientAction({
+    formData,
+    action: markOrderPaidAction,
+    successText: 'Order payment marked as paid.',
+    optimisticUpdate: () => {
+      updateLocalOrder(orderId, (order) => ({
+        ...order,
+        paymentStatus: 'PAID',
+      }));
+    },
+  });
+}
+
+async function handleStatusChange(formData: FormData) {
+  const orderId = String(formData.get('orderId') || '');
+  const nextStatus = String(formData.get('status') || '') as OrderStatus;
+
+  await runOrderClientAction({
+    formData,
+    action: updateOrderStatusAction,
+    successText: `Order status updated to ${label(nextStatus)}.`,
+    optimisticUpdate: () => {
+      updateLocalOrder(orderId, (order) => ({
+        ...order,
+        status: nextStatus,
+        updatedAt: new Date().toISOString(),
+      }));
+    },
+  });
+}
+
+async function handleCancelOrderItem(formData: FormData) {
+  const orderId = String(formData.get('orderId') || '');
+  const orderItemId = String(formData.get('orderItemId') || '');
+  const reason = String(formData.get('reason') || 'Cancelled');
+
+  await runOrderClientAction({
+    formData,
+    action: cancelOrderItemAction,
+    successText: 'Food item cancelled.',
+    optimisticUpdate: () => {
+      updateLocalOrder(orderId, (order) => ({
+        ...order,
+        items: order.items.map((item) =>
+          item.id === orderItemId
+            ? {
+                ...item,
+                status: 'CANCELLED',
+                cancelledQty: item.quantity,
+                cancelReason: reason,
+                cancelledAt: new Date().toISOString(),
+              }
+            : item
+        ),
+      }));
+    },
+  });
+}
 
   return (
     <>
-     <Toast message={message} />
+    <Toast message={clientMessage ?? message} />
       <div className="mb-6 grid gap-3 md:grid-cols-4">
         <SummaryCard
           label="Active Orders"
@@ -1573,21 +1749,25 @@ export function OrdersClient({
 
       {selectedOrder ? (
         <OrderDetailsModal
-          order={selectedOrder}
-          now={now}
-          onClose={() => setSelectedOrder(null)}
-          onCancel={(order) => {
-            setSelectedOrder(null);
-            setCancelOrder(order);
-          }}
-        />
+            order={selectedOrder}
+            now={now}
+            onClose={() => setSelectedOrder(null)}
+            onCancel={(order) => {
+              setSelectedOrder(null);
+              setCancelOrder(order);
+            }}
+            onMarkPaid={handleMarkPaid}
+            onStatusChange={handleStatusChange}
+            onCancelItemAction={handleCancelOrderItem}
+          />
       ) : null}
 
       {cancelOrder ? (
-        <CancelOrderModal
-          order={cancelOrder}
-          onClose={() => setCancelOrder(null)}
-        />
+       <CancelOrderModal
+              order={cancelOrder}
+              onClose={() => setCancelOrder(null)}
+              action={handleStatusChange}
+            />
       ) : null}
     </>
   );

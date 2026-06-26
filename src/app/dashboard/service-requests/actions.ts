@@ -6,7 +6,6 @@ import {
   ServiceRequestStatus,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
@@ -45,43 +44,20 @@ function parsePositiveMoney(value: FormDataEntryValue | null) {
   return Math.round(parsed * 100) / 100;
 }
 
-function redirectWithMessage({
-  success,
-  error,
-}: {
-  success?: string;
-  error?: string;
-}): never {
-  const params = new URLSearchParams();
-
-  if (success) {
-    params.set('success', success);
-  }
-
-  if (error) {
-    params.set('error', error);
-  }
-
-  redirect(
-    params.toString()
-      ? `/dashboard/service-requests?${params.toString()}`
-      : '/dashboard/service-requests'
-  );
-}
-
-function redirectWithError(error: string): never {
-  redirectWithMessage({ error });
-}
-
-function redirectToServiceRequests(success = 'request-updated'): never {
-  redirectWithMessage({ success });
-}
-
 function revalidateServiceRequestPaths() {
   revalidatePath('/dashboard/service-requests');
   revalidatePath('/dashboard/inventory');
   revalidatePath('/t/[tagCode]/service', 'page');
   revalidatePath('/t/[tagCode]/requests', 'page');
+}
+
+function finishServiceRequestAction(success: string) {
+  revalidateServiceRequestPaths();
+
+  return {
+    ok: true,
+    success,
+  };
 }
 
 async function safelySyncServiceRequestPoints(serviceRequestId: string) {
@@ -250,13 +226,17 @@ export async function updateServiceRequestAction(formData: FormData) {
   const assignedToId = cleanText(formData.get('assignedToId'));
   const note = cleanText(formData.get('note'), 300);
 
-  const shouldPostCharge = formData.get('postCharge') === 'true';
+  const actionIntent = cleanText(formData.get('intent'));
+
+const shouldPostCharge =
+  actionIntent === 'post-charge' ||
+  (actionIntent !== 'status-only' && formData.get('postCharge') === 'true');
 
   if (
     (!requestId && !requestCode) ||
     !Object.values(ServiceRequestStatus).includes(status)
   ) {
-    redirectWithError('invalid-request-update');
+    throw new Error('Invalid service request update.');
   }
 
   const requestWhere: Prisma.ServiceRequestWhereInput = requestCode
@@ -293,11 +273,13 @@ export async function updateServiceRequestAction(formData: FormData) {
     },
   });
 
-  if (!requests.length) {
-    redirectWithError('request-not-found');
+  const firstRequest = requests[0];
+
+  if (!firstRequest) {
+    throw new Error('Service request not found.');
   }
 
-  const hotelId = requests[0].hotelId;
+  const hotelId = firstRequest.hotelId;
 
   assertHotelScope(user, hotelId);
 
@@ -306,7 +288,7 @@ export async function updateServiceRequestAction(formData: FormData) {
   );
 
   if (invalidHotelScope) {
-    redirectWithError('invalid-request-update');
+    throw new Error('Invalid service request hotel scope.');
   }
 
   const requestIds = requests.map((request) => request.id);
@@ -335,34 +317,39 @@ export async function updateServiceRequestAction(formData: FormData) {
       const request = requests.find((item) => item.id === id);
 
       if (!request) {
-        redirectWithError('invalid-charge-request');
+        throw new Error('Invalid charge request.');
       }
 
       if (!request.roomId) {
-        redirectWithError('no-room');
+        throw new Error(
+          'Cannot post a charge because this request is not linked to a room.'
+        );
       }
 
       const chargeItemName = cleanText(
         formData.get(`chargeItemName_${id}`) ?? formData.get('chargeItemName'),
         160
       );
+
       const chargeQuantity = parsePositiveInteger(
         formData.get(`chargeQuantity_${id}`) ?? formData.get('chargeQuantity')
       );
+
       const chargeUnitPrice = parsePositiveMoney(
-        formData.get(`chargeUnitPrice_${id}`) ?? formData.get('chargeUnitPrice')
+        formData.get(`chargeUnitPrice_${id}`) ??
+          formData.get('chargeUnitPrice')
       );
 
       if (!chargeItemName) {
-        redirectWithError('item-required');
+        throw new Error('Charge item name is required.');
       }
 
       if (!chargeQuantity) {
-        redirectWithError('quantity-required');
+        throw new Error('Charge quantity is required.');
       }
 
       if (!chargeUnitPrice) {
-        redirectWithError('unit-price-required');
+        throw new Error('Charge unit price is required.');
       }
     }
   }
@@ -417,36 +404,42 @@ export async function updateServiceRequestAction(formData: FormData) {
     }
 
     const idsToCharge = (
-  chargeRequestIds.length
-    ? chargeRequestIds
-    : requestId
-      ? [requestId]
-      : requestIds
-).filter((id): id is string => Boolean(id));
+      chargeRequestIds.length
+        ? chargeRequestIds
+        : requestId
+          ? [requestId]
+          : requestIds
+    ).filter((id): id is string => Boolean(id));
 
-for (const id of idsToCharge) {
-  const serviceRequestId = id;
+    for (const id of idsToCharge) {
+      const serviceRequestId = id;
 
-  const request = requests.find((item) => item.id === serviceRequestId);
+      const request = requests.find((item) => item.id === serviceRequestId);
 
-  if (!request?.roomId) {
-    continue;
-  }
+      if (!request?.roomId) {
+        continue;
+      }
 
       const chargeItemName = cleanText(
-        formData.get(`chargeItemName_${id}`) ?? formData.get('chargeItemName'),
+        formData.get(`chargeItemName_${serviceRequestId}`) ??
+          formData.get('chargeItemName'),
         160
       );
+
       const chargeDescription = cleanText(
-       formData.get(`chargeDescription_${serviceRequestId}`)??
+        formData.get(`chargeDescription_${serviceRequestId}`) ??
           formData.get('chargeDescription'),
         300
       );
+
       const chargeQuantity = parsePositiveInteger(
-        formData.get(`chargeQuantity_${serviceRequestId}`) ?? formData.get('chargeQuantity')
+        formData.get(`chargeQuantity_${serviceRequestId}`) ??
+          formData.get('chargeQuantity')
       );
+
       const chargeUnitPrice = parsePositiveMoney(
-        formData.get(`chargeUnitPrice_${serviceRequestId}`) ?? formData.get('chargeUnitPrice')
+        formData.get(`chargeUnitPrice_${serviceRequestId}`) ??
+          formData.get('chargeUnitPrice')
       );
 
       if (!chargeItemName || !chargeQuantity || !chargeUnitPrice) {
@@ -483,8 +476,6 @@ for (const id of idsToCharge) {
     }
   });
 
-  revalidateServiceRequestPaths();
-
   await Promise.allSettled(
     requests.map((request) =>
       triggerServiceRequestUpdated({
@@ -506,7 +497,7 @@ for (const id of idsToCharge) {
   }
 
   if (status === ServiceRequestStatus.IN_PROGRESS) {
-    redirectToServiceRequests('request-started');
+    return finishServiceRequestAction('request-started');
   }
 
   if (status === ServiceRequestStatus.COMPLETED) {
@@ -514,7 +505,7 @@ for (const id of idsToCharge) {
       requestIds.map((id: string) => safelySyncServiceRequestPoints(id))
     );
 
-    redirectToServiceRequests('request-completed');
+    return finishServiceRequestAction('request-completed');
   }
 
   if (status === ServiceRequestStatus.CANCELLED) {
@@ -522,14 +513,14 @@ for (const id of idsToCharge) {
       requestIds.map((id: string) => safelyVoidSyncedServiceRequestPoints(id))
     );
 
-    redirectToServiceRequests('request-cancelled');
+    return finishServiceRequestAction('request-cancelled');
   }
 
   if (shouldPostCharge) {
-    redirectToServiceRequests('charge-updated');
+    return finishServiceRequestAction('charge-updated');
   }
 
-  redirectToServiceRequests('request-updated');
+  return finishServiceRequestAction('request-updated');
 }
 
 export async function cancelServiceRequestItemAction(formData: FormData) {
@@ -539,7 +530,7 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
   const reason = cleanText(formData.get('reason'), 300);
 
   if (!requestId) {
-    redirectWithError('request-required');
+    throw new Error('Service request is required.');
   }
 
   const request = await db.serviceRequest.findUnique({
@@ -558,13 +549,13 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
   });
 
   if (!request) {
-    redirectWithError('request-not-found');
+    throw new Error('Service request not found.');
   }
 
   assertHotelScope(user, request.hotelId);
 
   if (request.status !== ServiceRequestStatus.NEW) {
-    redirectWithError('request-item-not-cancellable');
+    throw new Error('Only new service requests can be cancelled.');
   }
 
   let restoredServiceIds: string[] = [];
@@ -608,8 +599,6 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
     });
   });
 
-  revalidateServiceRequestPaths();
-
   await triggerServiceRequestUpdated({
     hotelId: request.hotelId,
     requestId: request.id,
@@ -626,5 +615,5 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
     });
   }
 
-  redirectToServiceRequests('request-item-cancelled');
+  return finishServiceRequestAction('request-item-cancelled');
 }

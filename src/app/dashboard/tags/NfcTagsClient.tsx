@@ -1,6 +1,11 @@
 'use client';
-
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Copy,
   ExternalLink,
@@ -71,6 +76,20 @@ type NfcTagItem = {
   secureLaunchUrl: string;
   lockedDestinationUrl: string;
 };
+
+type NfcConfirmAction = 'rotate' | 'delete';
+
+type NfcConfirmDialog = {
+  action: NfcConfirmAction;
+  tag: NfcTagItem;
+  title: string;
+  description: string;
+  confirmLabel: string;
+};
+
+
+
+type ClientFormAction = (formData: FormData) => void | Promise<void>;
 
 const TAG_CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const TAG_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -211,6 +230,14 @@ function toHttpAppUrl(value: string) {
   } catch {
     return value.replace(/^https:\/\//i, 'http://');
   }
+}
+
+function getActionErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Something went wrong. Please try again.';
 }
 
 function getRandomIndex(length: number) {
@@ -419,6 +446,109 @@ function NfcMetricCard({
   );
 }
 
+function NfcActionConfirmDialog({
+  dialog,
+  onCancel,
+  onConfirm,
+}: {
+  dialog: NfcConfirmDialog | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!dialog) {
+    return null;
+  }
+
+  const isDelete = dialog.action === 'delete';
+
+  return (
+    <div className="fixed inset-0 z-[140] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+        <div
+          className={
+            isDelete
+              ? 'border-b border-red-100 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10'
+              : 'border-b border-amber-100 bg-amber-50 p-6 dark:border-amber-500/20 dark:bg-amber-500/10'
+          }
+        >
+          <div className="flex items-start gap-4">
+            <div
+              className={
+                isDelete
+                  ? 'grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200'
+                  : 'grid size-12 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
+              }
+            >
+              {isDelete ? (
+                <Trash2 className="size-5" />
+              ) : (
+                <RotateCcw className="size-5" />
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xl font-black text-neutral-950 dark:text-white">
+                {dialog.title}
+              </p>
+
+              <p className="mt-2 text-sm font-semibold leading-6 text-neutral-600 dark:text-neutral-400">
+                {dialog.description}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onCancel}
+              className="grid size-9 shrink-0 place-items-center rounded-full bg-white/70 text-neutral-500 transition hover:bg-white dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
+              aria-label="Close confirmation"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+              NFC Tag
+            </p>
+
+            <p className="mt-2 truncate text-lg font-black text-neutral-950 dark:text-white">
+              {dialog.tag.label}
+            </p>
+
+            <p className="mt-1 truncate text-sm font-bold text-neutral-500 dark:text-neutral-400">
+              {dialog.tag.code} · {dialog.tag.hotelName}
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={onConfirm}
+              className={
+                isDelete
+                  ? 'h-11 rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700'
+                  : 'h-11 rounded-2xl bg-amber-500 text-sm font-black text-white transition hover:bg-amber-600'
+              }
+            >
+              {dialog.confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CopyButton({
   value,
   label = 'Copy',
@@ -546,6 +676,7 @@ function CreateTagForm({
   canChangeHotel,
   currentHotelId,
   existingCodes,
+  action,
 }: {
   hotels: HotelOption[];
   rooms: RoomOption[];
@@ -554,7 +685,9 @@ function CreateTagForm({
   canChangeHotel: boolean;
   currentHotelId: string;
   existingCodes: string[];
+  action: ClientFormAction;
 }) {
+
   const defaultTagType = tagTypes.includes('ROOM') ? 'ROOM' : tagTypes[0] ?? '';
 
   const [selectedHotelId, setSelectedHotelId] = useState(currentHotelId);
@@ -581,6 +714,9 @@ function CreateTagForm({
   const selectedLocation = filteredLocations.find(
     (location) => location.id === selectedLocationId
   );
+
+
+  
 
   function regenerateCode() {
     setGeneratedCode(getUniqueShortTagCode(existingCodes));
@@ -616,6 +752,7 @@ function CreateTagForm({
     }
   }
 
+  
   function handleLocationChange(value: string) {
     setSelectedLocationId(value);
     setSelectedRoomId('');
@@ -641,7 +778,7 @@ function CreateTagForm({
   }, [label, selectedLocation, selectedRoom, tagType]);
 
   return (
-    <form action={createTagAction} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <form action={action} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {canChangeHotel ? (
         <FormField
           label="Hotel / Property"
@@ -755,6 +892,7 @@ function EditTagForm({
   tagTypes,
   tagStatuses,
   existingCodes,
+  action,
 }: {
   tag: NfcTagItem;
   rooms: RoomOption[];
@@ -762,6 +900,7 @@ function EditTagForm({
   tagTypes: string[];
   tagStatuses: string[];
   existingCodes: string[];
+  action: ClientFormAction;
 }) {
   const [tagType, setTagType] = useState(tag.tagType);
   const [roomId, setRoomId] = useState(tag.roomId ?? '');
@@ -793,7 +932,7 @@ function EditTagForm({
   }
 
   return (
-    <form action={updateTagAction} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <form action={action} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <input type="hidden" name="tagId" value={tag.id} />
       <input type="hidden" name="hotelId" value={tag.hotelId} />
 
@@ -905,20 +1044,95 @@ export function NfcTagsClient({
   tagTypes: string[];
   tagStatuses: string[];
 }) {
-  const [creating, setCreating] = useState(false);
-  const [editingTag, setEditingTag] = useState<NfcTagItem | null>(null);
 
-  const [search, setSearch] = useState('');
-  const [hotelFilter, setHotelFilter] = useState('ALL');
-  const [typeFilter, setTypeFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+ const [toast, setToast] = useState<{
+  type: 'success' | 'error';
+  message: string;
+} | null>(null);
 
-  const message = successMessage(success);
+const router = useRouter();
 
- const filteredTags = useMemo(() => {
+const [creating, setCreating] = useState(false);
+const [editingTag, setEditingTag] = useState<NfcTagItem | null>(null);
+
+const [localTags, setLocalTags] = useState<NfcTagItem[]>(tags);
+const [actionMessage, setActionMessage] = useState('');
+const [actionError, setActionError] = useState('');
+const [pendingTagAction, setPendingTagAction] = useState<string | null>(null);
+const [isMutating, setIsMutating] = useState(false);
+const [confirmDialog, setConfirmDialog] =
+  useState<NfcConfirmDialog | null>(null);
+const [search, setSearch] = useState('');
+const [hotelFilter, setHotelFilter] = useState('ALL');
+const [typeFilter, setTypeFilter] = useState('ALL');
+const [statusFilter, setStatusFilter] = useState('ALL');
+
+useEffect(() => {
+  setLocalTags(tags);
+}, [tags]);
+
+useEffect(() => {
+  const urlSuccessMessage = successMessage(success);
+
+  if (!urlSuccessMessage) {
+    return;
+  }
+
+  setToast({
+    type: 'success',
+    message: urlSuccessMessage,
+  });
+
+  const url = new URL(window.location.href);
+  url.searchParams.delete('success');
+
+  window.history.replaceState(
+    null,
+    '',
+    `${url.pathname}${url.search}${url.hash}`
+  );
+}, [success]);
+
+useEffect(() => {
+  if (!actionMessage) {
+    return;
+  }
+
+  setToast({
+    type: 'success',
+    message: actionMessage,
+  });
+}, [actionMessage]);
+
+useEffect(() => {
+  if (!actionError) {
+    return;
+  }
+
+  setToast({
+    type: 'error',
+    message: actionError,
+  });
+}, [actionError]);
+
+useEffect(() => {
+  if (!toast) {
+    return;
+  }
+
+  const timeout = window.setTimeout(() => {
+    setToast(null);
+  }, 3500);
+
+  return () => window.clearTimeout(timeout);
+}, [toast]);
+
+
+
+const filteredTags = useMemo(() => {
   const searchText = search.trim().toLowerCase();
 
-  return tags.filter((tag) => {
+  return localTags.filter((tag) => {
     const matchesSearch =
       !searchText ||
       tag.label.toLowerCase().includes(searchText) ||
@@ -936,15 +1150,20 @@ export function NfcTagsClient({
 
     return matchesSearch && matchesHotel && matchesType && matchesStatus;
   });
-}, [hotelFilter, search, statusFilter, tags, typeFilter]);
+}, [hotelFilter, search, statusFilter, localTags, typeFilter]);
 
-const activeTagCount = tags.filter((tag) => tag.status === 'ACTIVE').length;
-const inactiveTagCount = tags.length - activeTagCount;
+const activeTagCount = localTags.filter(
+  (tag) => tag.status === 'ACTIVE'
+).length;
 
-const roomTagCount = tags.filter((tag) => tag.tagType === 'ROOM').length;
-const publicTagCount = tags.length - roomTagCount;
+const inactiveTagCount = localTags.length - activeTagCount;
 
-const neverScannedCount = tags.filter((tag) => !tag.lastScannedAt).length;
+const roomTagCount = localTags.filter((tag) => tag.tagType === 'ROOM').length;
+const publicTagCount = localTags.length - roomTagCount;
+
+const neverScannedCount = localTags.filter(
+  (tag) => !tag.lastScannedAt
+).length;
 
 const hasActiveFilters =
   search.trim() !== '' ||
@@ -952,13 +1171,181 @@ const hasActiveFilters =
   typeFilter !== 'ALL' ||
   statusFilter !== 'ALL';
 
+  async function handleCreateTag(formData: FormData) {
+  if (isMutating) {
+    return;
+  }
+
+  setActionMessage('');
+  setActionError('');
+  setIsMutating(true);
+
+  try {
+    await createTagAction(formData);
+
+    setCreating(false);
+    setActionMessage('NFC tag successfully created.');
+    router.refresh();
+  } catch (error) {
+    setActionError(getActionErrorMessage(error));
+  } finally {
+    setIsMutating(false);
+  }
+}
+
+async function handleUpdateTag(formData: FormData) {
+  if (isMutating) {
+    return;
+  }
+
+  setActionMessage('');
+  setActionError('');
+  setIsMutating(true);
+
+  try {
+    await updateTagAction(formData);
+
+    setEditingTag(null);
+    setActionMessage('NFC tag successfully updated.');
+    router.refresh();
+  } catch (error) {
+    setActionError(getActionErrorMessage(error));
+  } finally {
+    setIsMutating(false);
+  }
+}
+
+
+ async function runTagMutation({
+  tagId,
+  actionName,
+  successText,
+  formAction,
+  optimisticUpdate,
+}: {
+  tagId: string;
+  actionName: 'toggle' | 'rotate' | 'delete';
+  successText: string;
+  formAction: (formData: FormData) => Promise<unknown>;
+  optimisticUpdate?: (currentTags: NfcTagItem[]) => NfcTagItem[];
+}) {
+  if (isMutating) {
+    return;
+  }
+
+  const previousTags = localTags;
+
+  setActionMessage('');
+  setActionError('');
+  setPendingTagAction(`${actionName}:${tagId}`);
+  setIsMutating(true);
+
+  if (optimisticUpdate) {
+    setLocalTags((currentTags) => optimisticUpdate(currentTags));
+  }
+
+  try {
+    const formData = new FormData();
+    formData.set('tagId', tagId);
+
+    await formAction(formData);
+
+    setActionMessage(successText);
+
+    /**
+     * This is not a full browser reload.
+     * It quietly syncs fresh server data in-place.
+     */
+    router.refresh();
+  } catch (error) {
+    setLocalTags(previousTags);
+    setActionError(getActionErrorMessage(error));
+  } finally {
+    setPendingTagAction(null);
+    setIsMutating(false);
+  }
+}
+
+
+function handleToggleTagStatus(tag: NfcTagItem) {
+  const nextStatus = tag.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+  runTagMutation({
+    tagId: tag.id,
+    actionName: 'toggle',
+    successText:
+      nextStatus === 'ACTIVE'
+        ? 'NFC tag has been activated.'
+        : 'NFC tag has been set inactive.',
+    formAction: toggleTagStatusAction,
+    optimisticUpdate: (currentTags) =>
+      currentTags.map((item) =>
+        item.id === tag.id
+          ? {
+              ...item,
+              status: nextStatus,
+            }
+          : item
+      ),
+  });
+}
+
+function handleDeleteTag(tag: NfcTagItem) {
+  setConfirmDialog({
+    action: 'delete',
+    tag,
+    title: 'Delete NFC Tag?',
+    description:
+      'This will archive the tag, revoke active NFC sessions, and remove it from the active NFC tag list.',
+    confirmLabel: 'Delete Tag',
+  });
+}
+
+function handleRotateTagSecret(tag: NfcTagItem) {
+  setConfirmDialog({
+    action: 'rotate',
+    tag,
+    title: 'Rotate NFC Secret?',
+    description:
+      'This will revoke existing NFC access sessions. Reprint or rewrite the NFC card after rotating the secret.',
+    confirmLabel: 'Rotate Secret',
+  });
+}
+
+function handleConfirmTagAction() {
+  if (!confirmDialog) {
+    return;
+  }
+
+  const { action, tag } = confirmDialog;
+
+  setConfirmDialog(null);
+
+  if (action === 'rotate') {
+    runTagMutation({
+      tagId: tag.id,
+      actionName: 'rotate',
+      successText: 'NFC tag secret has been rotated.',
+      formAction: rotateTagSecretAction,
+    });
+
+    return;
+  }
+
+  runTagMutation({
+    tagId: tag.id,
+    actionName: 'delete',
+    successText: 'NFC tag has been deleted.',
+    formAction: deleteTagAction,
+    optimisticUpdate: (currentTags) =>
+      currentTags.filter((item) => item.id !== tag.id),
+  });
+}
+
+
 return (
     <>
-      {message ? (
-        <div className="mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
-          {message}
-        </div>
-      ) : null}
+
 
      <section className="mb-6 overflow-hidden rounded-[2.25rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
   <div className="relative p-6">
@@ -998,7 +1385,7 @@ return (
       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
         Total Tags
       </p>
-      <p className="mt-1 text-3xl font-black">{tags.length}</p>
+      <p className="mt-1 text-3xl font-black">{localTags.length}</p>
       <p className="mt-1 text-xs font-semibold text-white/45">
         Registered NFC access points
       </p>
@@ -1086,7 +1473,7 @@ return (
     </div>
 
     <span className="w-fit rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-      Showing {filteredTags.length} of {tags.length}
+      Showing {filteredTags.length} of {localTags.length}
     </span>
   </div>
 
@@ -1310,19 +1697,22 @@ return (
       />
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <form action={toggleTagStatusAction}>
-          <input type="hidden" name="tagId" value={tag.id} />
-          <button
-            type="submit"
+       <button
+            type="button"
+            disabled={pendingTagAction === `toggle:${tag.id}` || isMutating}
+            onClick={() => handleToggleTagStatus(tag)}
             className={
               tag.status === 'ACTIVE'
-                ? 'inline-flex h-9 w-full items-center justify-center rounded-xl bg-neutral-900 text-xs font-black text-white hover:bg-neutral-800 dark:bg-neutral-800 dark:hover:bg-neutral-700'
-                : 'inline-flex h-9 w-full items-center justify-center rounded-xl bg-emerald-600 text-xs font-black text-white hover:bg-emerald-700'
+                ? 'inline-flex h-9 w-full items-center justify-center rounded-xl bg-neutral-900 text-xs font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:hover:bg-neutral-700'
+                : 'inline-flex h-9 w-full items-center justify-center rounded-xl bg-emerald-600 text-xs font-black text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50'
             }
           >
-            {tag.status === 'ACTIVE' ? 'Set Inactive' : 'Set Active'}
+            {pendingTagAction === `toggle:${tag.id}`
+              ? 'Updating...'
+              : tag.status === 'ACTIVE'
+                ? 'Set Inactive'
+                : 'Set Active'}
           </button>
-        </form>
 
         <button
           type="button"
@@ -1333,27 +1723,25 @@ return (
           Edit
         </button>
 
-        <form action={rotateTagSecretAction}>
-          <input type="hidden" name="tagId" value={tag.id} />
           <button
-            type="submit"
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-xs font-black text-white hover:bg-amber-600"
-          >
-            <RotateCcw className="size-3.5" />
-            Rotate
-          </button>
-        </form>
+        type="button"
+        disabled={pendingTagAction === `rotate:${tag.id}` || isMutating}
+        onClick={() => handleRotateTagSecret(tag)}
+        className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-xs font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <RotateCcw className="size-3.5" />
+        {pendingTagAction === `rotate:${tag.id}` ? 'Rotating...' : 'Rotate'}
+      </button>
 
-        <form action={deleteTagAction}>
-          <input type="hidden" name="tagId" value={tag.id} />
-          <button
-            type="submit"
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
+        <button
+            type="button"
+            disabled={pendingTagAction === `delete:${tag.id}` || isMutating}
+            onClick={() => handleDeleteTag(tag)}
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="size-3.5" />
-            Delete
+            {pendingTagAction === `delete:${tag.id}` ? 'Deleting...' : 'Delete'}
           </button>
-        </form>
       </div>
 
       <a
@@ -1399,15 +1787,16 @@ return (
           description="Create a secure NFC launch URL with an automatically generated Unique Tag ID."
           onClose={() => setCreating(false)}
         >
-          <CreateTagForm
-            hotels={hotels}
-            rooms={rooms}
-            locations={locations}
-            tagTypes={tagTypes}
-            canChangeHotel={canChangeHotel}
-            currentHotelId={currentHotelId}
-            existingCodes={tags.map((tag) => tag.code)}
-          />
+         <CreateTagForm
+              hotels={hotels}
+              rooms={rooms}
+              locations={locations}
+              tagTypes={tagTypes}
+              canChangeHotel={canChangeHotel}
+              currentHotelId={currentHotelId}
+              existingCodes={localTags.map((tag) => tag.code)}
+              action={handleCreateTag}
+            />
         </Modal>
       ) : null}
 
@@ -1417,16 +1806,56 @@ return (
           description="Update assignment, status, and regenerate the Unique Tag ID when needed."
           onClose={() => setEditingTag(null)}
         >
-          <EditTagForm
-            tag={editingTag}
-            rooms={rooms}
-            locations={locations}
-            tagTypes={tagTypes}
-            tagStatuses={tagStatuses}
-            existingCodes={tags.map((tag) => tag.code)}
-          />
+         <EditTagForm
+              tag={editingTag}
+              rooms={rooms}
+              locations={locations}
+              tagTypes={tagTypes}
+              tagStatuses={tagStatuses}
+              existingCodes={localTags.map((tag) => tag.code)}
+              action={handleUpdateTag}
+            />
         </Modal>
       ) : null}
+
+      {toast ? (
+  <div className="fixed right-6 top-24 z-[120] w-[calc(100%-3rem)] max-w-sm">
+    <div
+      className={
+        toast.type === 'success'
+          ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-sm font-black text-emerald-800 shadow-2xl backdrop-blur-xl'
+          : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-sm font-black text-red-800 shadow-2xl backdrop-blur-xl'
+      }
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] opacity-70">
+            {toast.type === 'success' ? 'Success' : 'Error'}
+          </p>
+          <p className="mt-1">{toast.message}</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setToast(null)}
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+          aria-label="Close notification"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+) : null}
+
+    <NfcActionConfirmDialog
+      dialog={confirmDialog}
+      onCancel={() => setConfirmDialog(null)}
+      onConfirm={handleConfirmTagAction}
+    />
+
     </>
+
+    
   );
 }
