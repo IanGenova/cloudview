@@ -33,6 +33,7 @@ import {
   parseScheduledDate,
 } from '@/lib/scheduled-fulfillment';
 import { generateSeriesCode } from '@/lib/series-code';
+import { createDashboardNotification } from '@/lib/dashboard-notifications';
 
 type StockRequirement = {
   productId: string;
@@ -528,6 +529,31 @@ const orderGuestName = getGuestNameSnapshot({
     entityId: order.id,
     message: `New guest order ${order.orderCode}`,
   });
+
+  await Promise.allSettled([
+    createDashboardNotification({
+      hotelId: tag.hotelId,
+      type: 'ORDER_CREATED',
+      title:
+        schedule.fulfillmentTiming === FulfillmentTiming.SCHEDULED
+          ? 'New Scheduled Food Order'
+          : 'New Food Order',
+      message:
+        schedule.fulfillmentTiming === FulfillmentTiming.SCHEDULED
+          ? `${order.orderCode} was scheduled by a guest and is waiting for release.`
+          : `${order.orderCode} is waiting for kitchen review.`,
+      url:
+        schedule.fulfillmentTiming === FulfillmentTiming.SCHEDULED
+          ? '/dashboard/kitchen?view=scheduled'
+          : '/dashboard/orders',
+      payload: {
+        orderId: order.id,
+        orderCode: order.orderCode,
+        fulfillmentTiming: schedule.fulfillmentTiming,
+        source: 'GUEST_PORTAL',
+      },
+    }),
+  ]);
 
   if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
   await triggerKitchenOrderCreated({
@@ -1049,6 +1075,29 @@ export async function createServiceRequestAction(formData: FormData) {
       })
     )
   );
+
+  await Promise.allSettled([
+    createDashboardNotification({
+      hotelId: tag.hotelId,
+      type: 'SERVICE_REQUEST_CREATED',
+      title:
+        schedule.fulfillmentTiming === FulfillmentTiming.SCHEDULED
+          ? 'New Scheduled Service Request'
+          : 'New Service Request',
+      message:
+        schedule.fulfillmentTiming === FulfillmentTiming.SCHEDULED
+          ? `${groupedRequestCode} was scheduled by a guest and is waiting for release.`
+          : `${groupedRequestCode} needs staff attention.`,
+      url: '/dashboard/service-requests',
+      payload: {
+        requestCode: groupedRequestCode,
+        requestIds: createdRequests.map((request) => request.id),
+        count: createdRequests.length,
+        fulfillmentTiming: schedule.fulfillmentTiming,
+        source: 'GUEST_PORTAL',
+      },
+    }),
+  ]);
 
  if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
   await Promise.allSettled(

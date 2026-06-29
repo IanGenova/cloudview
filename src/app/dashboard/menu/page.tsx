@@ -13,8 +13,12 @@ import { ModalOpenButton } from '@/components/dashboard/ModalOpenButton';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { money } from '@/lib/money';
-
-import { ConfirmSubmitButton } from '@/components/dashboard/ConfirmSubmitButton';
+import {
+  MenuActionForm,
+  MenuConfirmDeleteButton,
+  MenuPageToast,
+  MenuToastListener,
+} from './MenuClientActions';
 import {
   createCategoryAction,
   createProductAction,
@@ -485,7 +489,8 @@ const hasActiveFilters = Boolean(
 
   return (
     <div>
-       <Toast message={message} />
+      <MenuPageToast initialMessage={message} />
+      <MenuToastListener />
       <PageHeader
         title="Menu Management"
         description="Digital menu categories, products, images, pricing, availability, bundle menus, and recipe links."
@@ -669,12 +674,10 @@ const hasActiveFilters = Boolean(
       isBundle && bundleNormalTotalCents > product.priceCents
         ? bundleNormalTotalCents - product.priceCents
         : 0;
+return (
+  <div key={product.id} className="contents">
+    <article className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-soft">
 
-    return (
-      <article
-        key={product.id}
-        className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-soft"
-      >
         <div
           className="h-32 bg-neutral-100 bg-cover bg-center"
           style={{ backgroundImage: `url(${imageUrl})` }}
@@ -766,33 +769,132 @@ const hasActiveFilters = Boolean(
               Edit
             </ModalOpenButton>
 
-            <form action={deleteProductAction}>
-              <input type="hidden" name="productId" value={product.id} />
-              <ConfirmSubmitButton
-                label="Delete"
-                message="Are you sure you want to delete this product?"
-                className="px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700"
-              />
-            </form>
+           <MenuConfirmDeleteButton
+              id={product.id}
+              fieldName="productId"
+              itemName={product.name}
+              itemType="product"
+              action={deleteProductAction}
+              successMessage="Menu item was deleted successfully."
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            />
           </div>
         </div>
-      </article>
-    );
-  })}
+         </article>
+
+      <Modal
+        id={editModalId}
+        title={`Edit ${product.name}`}
+        description="Update product details, image, price, availability, and menu category."
+      >
+        <MenuActionForm
+          action={updateProductAction}
+          successMessage="Menu item was updated successfully."
+          className="grid gap-5 md:grid-cols-2"
+        >
+          <ProductBundleProvider defaultProductType={product.productType}>
+            <input type="hidden" name="productId" value={product.id} />
+
+            <FormField
+              label="Menu Category"
+              helper="Select where this product will appear."
+            >
+              <Select name="categoryId" defaultValue={product.categoryId} required>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.hotel.name} · {category.name}
+                    {!category.isActive ? ' (Hidden)' : ''}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            <ProductTypeField helper="Choose Single Item or Bundle / Combo." />
+
+            <FormField label="Product Name">
+              <Input name="name" defaultValue={product.name} required />
+            </FormField>
+
+            <FormField label="Price" helper="Example: 280 means ₱280.00.">
+              <Input
+                name="price"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue={(product.priceCents / 100).toFixed(2)}
+                required
+              />
+            </FormField>
+
+            <FormField label="Preparation Time">
+              <Input
+                name="prepTimeMinutes"
+                type="number"
+                min="0"
+                defaultValue={product.prepTimeMinutes}
+              />
+            </FormField>
+
+            <FormField label="Upload Product Image" className="md:col-span-2">
+              <MenuImageUploadPreview name="imageFile" />
+            </FormField>
+
+            <FormField label="Image URL" className="md:col-span-2">
+              <Input
+                name="imageUrl"
+                type="url"
+                defaultValue={product.images[0]?.url ?? ''}
+                placeholder="https://..."
+              />
+            </FormField>
+
+            <FormField label="Description" className="md:col-span-2">
+              <Textarea
+                name="description"
+                defaultValue={product.description ?? ''}
+                placeholder="Short product description."
+              />
+            </FormField>
+
+            <DynamicBundleComponentFields componentOptions={bundleComponentOptions} />
+
+            <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+              <input
+                name="isAvailable"
+                type="checkbox"
+                defaultChecked={product.isAvailable}
+                className="size-4 accent-black"
+              />
+              <span>
+                <span className="block text-sm font-black">Available</span>
+                <span className="text-xs font-medium text-neutral-500">
+                  Show this product in the guest portal and POS.
+                </span>
+              </span>
+            </label>
+
+            <div className="md:col-span-2">
+              <Button className="w-full">Save Product</Button>
+            </div>
+          </ProductBundleProvider>
+        </MenuActionForm>
+      </Modal>
+    </div>
+  );
+})}
 </div>
 
 )}
-
-
       <Modal
         id="product-modal"
         title="Add Product"
         description="Create a single menu item or a fixed bundle/combo."
       >
-       <form
+      <MenuActionForm
   action={createProductAction}
-            className="grid gap-5 md:grid-cols-2"
-          >
+  successMessage="Menu item was created successfully."
+  className="grid gap-5 md:grid-cols-2"
+>
             <ProductBundleProvider defaultProductType="SINGLE">
               <FormField
                 label="Menu Category"
@@ -870,7 +972,7 @@ const hasActiveFilters = Boolean(
                 <Button className="w-full">Create Product</Button>
               </div>
             </ProductBundleProvider>
-          </form>
+          </MenuActionForm>
       </Modal>
 
       <Modal
@@ -890,7 +992,12 @@ const hasActiveFilters = Boolean(
             </CardHeader>
 
             <CardContent>
-              <form action={createCategoryAction} className="space-y-5">
+             <MenuActionForm
+              action={createCategoryAction}
+              successMessage="Menu category was created successfully."
+              className="space-y-5"
+              closeDialog={false}
+            >
                 {user.role === 'SUPER_ADMIN' ? (
                   <FormField
                     label="Hotel / Property"
@@ -928,7 +1035,7 @@ const hasActiveFilters = Boolean(
                 </FormField>
 
                 <Button className="w-full">Create Category</Button>
-              </form>
+             </MenuActionForm>
             </CardContent>
           </Card>
 
@@ -990,10 +1097,12 @@ const hasActiveFilters = Boolean(
                             </p>
                           </div>
 
-                          <form
+                          <MenuActionForm
                             id={updateFormId}
                             action={updateCategoryAction}
+                            successMessage="Menu category was updated successfully."
                             className="contents"
+                            closeDialog={false}
                           >
                             <input
                               type="hidden"
@@ -1029,7 +1138,7 @@ const hasActiveFilters = Boolean(
                                 Active
                               </label>
                             </div>
-                          </form>
+                          </MenuActionForm>
 
                           <div>
                             <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-black">
@@ -1046,18 +1155,15 @@ const hasActiveFilters = Boolean(
                               Save
                             </button>
 
-                            <form action={deleteCategoryAction}>
-                              <input
-                                type="hidden"
-                                name="categoryId"
-                                value={category.id}
-                              />
-                              <ConfirmSubmitButton
-                                label="Delete"
-                                message="Are you sure you want to delete this category?"
-                                className="bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-500"
-                              />
-                            </form>
+                            <MenuConfirmDeleteButton
+                              id={category.id}
+                              fieldName="categoryId"
+                              itemName={category.name}
+                              itemType="category"
+                              action={deleteCategoryAction}
+                              successMessage="Menu category was deleted successfully."
+                              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            />
                           </div>
                         </div>
                       );

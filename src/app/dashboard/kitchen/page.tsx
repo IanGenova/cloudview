@@ -220,23 +220,12 @@ function buildKitchenRedirectUrl({
 }
 
 // Ensure the cache busts so the data updates without a hard reload
-async function updateKitchenOrderStatusAction(formData: FormData) {
+async function updateKitchenOrderStatusAction(formData: FormData): Promise<void> {
   'use server';
 
-  const status = formData.get('status') as OrderStatus;
-  const history = String(formData.get('history') || '');
-
   await updateOrderStatusAction(formData);
-  
-  // Revalidate the path to clear Next.js cache and show fresh DB data instantly
-  revalidatePath('/dashboard/kitchen');
 
-  redirect(
-    buildKitchenRedirectUrl({
-      success: getKitchenSuccessCode(status),
-      history,
-    })
-  );
+  revalidatePath('/dashboard/kitchen');
 }
 
 // Server action specifically for soft-refreshing the kitchen board
@@ -789,7 +778,7 @@ function KitchenScheduledLane({
  
 
   return (
-    <section className="rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+   <section className="max-h-[calc(100dvh-190px)] overflow-y-auto rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black text-amber-950 dark:text-amber-100">
@@ -857,9 +846,9 @@ function KitchenLane({
         : 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10';
 
   return (
-    <section
+      <section
       className={cn(
-        'flex min-h-[420px] flex-col overflow-hidden rounded-[2rem] border',
+        'flex min-h-[420px] flex-col overflow-hidden rounded-[2rem] border xl:h-full',
         isTvMode
           ? `${laneTheme} min-h-[calc(100dvh-220px)]`
           : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900'
@@ -901,7 +890,12 @@ function KitchenLane({
         </span>
       </div>
 
-      <div className={cn('min-h-0 flex-1', isTvMode ? 'p-5' : 'p-4')}>
+      <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+            isTvMode ? 'p-5 pr-3' : 'p-4 pr-2'
+          )}
+        >
         {orders.length === 0 ? (
           <div
             className={cn(
@@ -1149,11 +1143,11 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       <div
         id="kitchen-display-fullscreen"
         className={cn(
-          'min-h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white',
-          isTvMode
-            ? 'bg-neutral-950 p-5'
-            : 'bg-white px-4 pb-28 pt-4 dark:bg-neutral-950 xl:px-6'
-        )}
+            'h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white xl:overflow-hidden',
+            isTvMode
+              ? 'bg-neutral-950 p-5'
+              : 'bg-white px-4 pb-28 pt-4 dark:bg-neutral-950 xl:px-6'
+          )}
       >
       <RealtimeKitchenRefresh fallbackIntervalMs={30_000} refreshDebounceMs={500} />
       <KitchenToast message={message} showHistory={showHistory} />
@@ -1304,47 +1298,51 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
 </div>
 
       <div
-        className={cn(
-          'grid gap-4',
-          showHistory && !isTvMode && !isScheduledView
-            ? 'xl:grid-cols-[minmax(0,1fr)_360px]'
-            : 'xl:grid-cols-1'
-        )}
-      >
-        <main
-        className={cn(
-          'flex flex-col',
-          isTvMode || isRushMode ? 'gap-5' : 'gap-4',
-          showHistory && !isTvMode && !isScheduledView ? 'hidden xl:flex' : 'flex'
-        )}
-      >
+          className={cn(
+            'grid min-h-0 gap-4 xl:h-[calc(100dvh-170px)]',
+            showHistory && !isTvMode && !isScheduledView
+              ? 'xl:grid-cols-[minmax(0,1fr)_360px]'
+              : 'xl:grid-cols-1'
+          )}
+        >
+            <main
+          className={cn(
+            'min-h-0 flex-col overflow-hidden',
+            isTvMode || isRushMode ? 'gap-5' : 'gap-4',
+            showHistory && !isTvMode && !isScheduledView ? 'hidden xl:flex' : 'flex'
+          )}
+        >
     {isScheduledView ? (
   <KitchenScheduledLane orders={scheduledOrders} />
 ) : isRushMode ? (
-  <div className="grid gap-4 xl:grid-cols-3">
-    <KitchenRushLaneWithDrawer
-      title="Pending"
-      description="Oldest pending orders first."
-      orders={pendingOrders.map(toKitchenRushOrderForClient)}
-      type="pending"
-    />
+ <div className="grid min-h-0 gap-4 xl:grid-cols-3">
 
     <KitchenRushLaneWithDrawer
+        title="Pending"
+        description="Oldest pending orders first."
+        orders={pendingOrders.map(toKitchenRushOrderForClient)}
+        type="pending"
+        statusAction={updateKitchenOrderStatusAction}
+      />
+
+      <KitchenRushLaneWithDrawer
       title="Preparing"
       description="Accepted orders currently being prepared."
       orders={preparingOrders.map(toKitchenRushOrderForClient)}
       type="preparing"
+      statusAction={updateKitchenOrderStatusAction}
     />
 
-    <KitchenRushLaneWithDrawer
-      title="Ready"
-      description="Orders ready for delivery."
-      orders={readyOrders.map(toKitchenRushOrderForClient)}
-      type="ready"
-    />
+      <KitchenRushLaneWithDrawer
+        title="Ready"
+        description="Orders ready for delivery."
+        orders={readyOrders.map(toKitchenRushOrderForClient)}
+        type="ready"
+        statusAction={updateKitchenOrderStatusAction}
+      />
   </div>
 ) : isTvMode ? (
-  <div className="grid gap-4 xl:grid-cols-3">
+  <div className="grid min-h-0 gap-4 xl:grid-cols-3">
     <KitchenTvPagedLane
       title="Pending"
       description="Auto-rotating pending orders."
@@ -1403,7 +1401,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     </KitchenTvPagedLane>
   </div>
 ) : (
-  <div className="grid gap-4 xl:grid-cols-3">
+  <div className="grid min-h-0 gap-4 xl:grid-cols-3">
     <KitchenLane
       title="Pending"
       description="New orders waiting for accept or reject."
@@ -1441,7 +1439,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
              showHistory && !isTvMode && !isScheduledView ? 'block xl:sticky xl:top-4' : 'hidden'
             )}
           >
-          <section className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+        <section className="flex h-full max-h-full flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="border-b border-neutral-100 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
               <div className="flex items-center justify-between gap-3">
                 <div>

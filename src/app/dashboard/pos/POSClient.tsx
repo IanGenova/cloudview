@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   ArrowLeft,
+  CheckCircle2,
   ConciergeBell,
   Minus,
   Plus,
@@ -12,6 +13,7 @@ import {
   Search,
   ShoppingCart,
   Trash2,
+  X,
 } from 'lucide-react';
 import { ServiceBillingMode } from '@prisma/client';
 import { cn } from '@/lib/utils';
@@ -109,6 +111,65 @@ type ServiceAvailabilityFilter =
   | 'UNTRACKED';
 
 type POSMode = 'food' | 'services';
+
+type POSToast =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
+
+const POS_TOAST_STORAGE_KEY = 'cloudview-pos-toast';
+
+function readQueuedPOSToast() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const rawToast = window.sessionStorage.getItem(POS_TOAST_STORAGE_KEY);
+
+    if (!rawToast) {
+      return null;
+    }
+
+    window.sessionStorage.removeItem(POS_TOAST_STORAGE_KEY);
+
+    const parsed = JSON.parse(rawToast) as POSToast;
+
+    if (!parsed || !['success', 'error'].includes(parsed.type)) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function queuePOSToast(toast: Exclude<POSToast, null>) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(POS_TOAST_STORAGE_KEY, JSON.stringify(toast));
+  } catch {
+    // Ignore storage failures. The in-memory toast will still show.
+  }
+}
+
+function clearQueuedPOSToast() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(POS_TOAST_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
 
 function money(cents: number, currency = 'PHP') {
   return new Intl.NumberFormat('en-PH', {
@@ -393,6 +454,65 @@ function BundleSavings({
   );
 }
 
+function FloatingPOSToast({
+  toast,
+  onClose,
+}: {
+  toast: POSToast;
+  onClose: () => void;
+}) {
+  if (!toast) {
+    return null;
+  }
+
+  const isSuccess = toast.type === 'success';
+
+  return (
+    <div className="fixed right-6 top-24 z-[9999] w-[calc(100%-3rem)] max-w-sm">
+      <div
+        className={
+          isSuccess
+            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+        }
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={
+              isSuccess
+                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+            }
+          >
+            {isSuccess ? (
+              <CheckCircle2 className="size-5" />
+            ) : (
+              <AlertCircle className="size-5" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+              {isSuccess ? 'Success' : 'Action failed'}
+            </p>
+
+            <p className="mt-1 text-sm font-black leading-5">{toast.text}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            aria-label="Close notification"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function POSClient({
   selectedHotelId,
   hotels,
@@ -435,8 +555,53 @@ export function POSClient({
   const [cashTendered, setCashTendered] = useState('');
   const [lastReceiptLabel, setLastReceiptLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<POSToast>(null);
 
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const queuedToast = readQueuedPOSToast();
+
+    if (queuedToast) {
+      setToast(queuedToast);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setToast(null);
+      clearQueuedPOSToast();
+    }, 4500);
+
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  function showToast(nextToast: Exclude<POSToast, null>) {
+    clearQueuedPOSToast();
+    setToast(nextToast);
+  }
+
+  function showError(message: string) {
+    setError(message);
+    showToast({
+      type: 'error',
+      text: message,
+    });
+  }
+
+  function showSuccessAfterRefresh(message: string) {
+    const nextToast = {
+      type: 'success' as const,
+      text: message,
+    };
+
+    setToast(nextToast);
+    queuePOSToast(nextToast);
+  }
 
   const productMap = useMemo(() => {
     return new Map(products.map((product) => [product.id, product]));
@@ -764,19 +929,19 @@ export function POSClient({
     setError(null);
 
     if (foodCart.length === 0 && serviceCart.length === 0) {
-      setError('Please add at least one food item or service item.');
+      showError('Please add at least one food item or service item.');
       return;
     }
 
     const stockError = validateCartAgainstStock();
 
     if (stockError) {
-      setError(stockError);
+      showError(stockError);
       return;
     }
 
     if (paymentMethod === 'CASH' && cashValue < total) {
-      setError('Cash tendered is lower than the total amount.');
+      showError('Cash tendered is lower than the total amount.');
       return;
     }
 
@@ -800,13 +965,20 @@ export function POSClient({
               : null,
           ].filter(Boolean);
 
-          setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
+          const receiptLabel = parts.join(' · ') || 'Sale completed';
+
+          setLastReceiptLabel(receiptLabel);
           clearCart();
           setMobileView('products');
-          router.refresh();
+
+          showSuccessAfterRefresh(`POS sale completed. ${receiptLabel}`);
+
+          window.setTimeout(() => {
+            router.refresh();
+          }, 350);
         }
       } catch (err) {
-        setError(
+        showError(
           err instanceof Error ? err.message : 'Unable to complete POS sale.'
         );
       }
@@ -815,6 +987,14 @@ export function POSClient({
 
   return (
     <div className="relative pb-24 lg:pb-0">
+      <FloatingPOSToast
+        toast={toast}
+        onClose={() => {
+          setToast(null);
+          clearQueuedPOSToast();
+        }}
+      />
+
       <div className="mb-4 grid grid-cols-2 gap-2 lg:hidden">
         <button
           type="button"
@@ -891,7 +1071,7 @@ export function POSClient({
                 <select
                   value={selectedHotelId}
                   onChange={(event) => {
-                    router.push(`/dashboard/pos?hotelId=${event.target.value}`);
+                    router.replace(`/dashboard/pos?hotelId=${event.target.value}`, { scroll: false });
                   }}
                   className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
                 >

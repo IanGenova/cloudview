@@ -6,13 +6,11 @@ import {
   ServiceAvailabilityMovementType,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope } from '@/lib/access';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 import { publishLowStockAlert } from '@/lib/realtime/dashboard-alerts';
-
 
 const MENU_MANUAL_OPERATIONS: readonly MenuAvailabilityMovementType[] = [
   MenuAvailabilityMovementType.SET_STOCK,
@@ -32,6 +30,8 @@ const SERVICE_MANUAL_OPERATIONS: readonly ServiceAvailabilityMovementType[] = [
 
 const MENU_LOW_STOCK_THRESHOLD = 5;
 const SERVICE_LOW_STOCK_THRESHOLD = 3;
+
+type InventoryTab = 'menu' | 'services';
 
 async function publishMenuLowStockIfNeeded(payload: {
   hotelId: string;
@@ -85,28 +85,6 @@ async function publishServiceLowStockIfNeeded(payload: {
   }
 }
 
-type InventoryTab = 'menu' | 'services';
-
-function redirectToInventory(params: {
-  error?: string;
-  success?: string;
-  tab?: InventoryTab;
-}): never {
-  const query = new URLSearchParams();
-
-  query.set('tab', params.tab ?? 'menu');
-
-  if (params.error) {
-    query.set('error', params.error);
-  }
-
-  if (params.success) {
-    query.set('success', params.success);
-  }
-
-  redirect(`/dashboard/inventory?${query.toString()}`);
-}
-
 function parseWholeNumber(value: FormDataEntryValue | null) {
   const parsed = Number(value);
 
@@ -126,6 +104,22 @@ function revalidateInventoryPages() {
   revalidatePath('/dashboard/services');
   revalidatePath('/t/[tagCode]/menu', 'page');
   revalidatePath('/t/[tagCode]/service', 'page');
+}
+
+function finishInventoryAction({
+  success,
+  tab,
+}: {
+  success: string;
+  tab: InventoryTab;
+}) {
+  revalidateInventoryPages();
+
+  return {
+    ok: true,
+    success,
+    tab,
+  };
 }
 
 function getDefaultMenuMovementReason(operation: MenuAvailabilityMovementType) {
@@ -192,20 +186,14 @@ export async function controlMenuStockAction(formData: FormData) {
   const notes = cleanText(formData.get('notes'), 300);
 
   if (!productId) {
-    redirectToInventory({
-      error: 'product-required',
-      tab: 'menu',
-    });
+    throw new Error('Product is required.');
   }
 
   if (
     !Object.values(MenuAvailabilityMovementType).includes(operation) ||
     !MENU_MANUAL_OPERATIONS.includes(operation)
   ) {
-    redirectToInventory({
-      error: 'invalid-operation',
-      tab: 'menu',
-    });
+    throw new Error('Invalid inventory operation.');
   }
 
   const product = await db.menuProduct.findUnique({
@@ -221,19 +209,13 @@ export async function controlMenuStockAction(formData: FormData) {
   });
 
   if (!product) {
-    redirectToInventory({
-      error: 'product-not-found',
-      tab: 'menu',
-    });
+    throw new Error('Menu product not found.');
   }
 
   assertHotelScope(user, product.hotelId);
 
   if (product.productType === MenuProductType.BUNDLE) {
-    redirectToInventory({
-      error: 'bundle-stock-derived',
-      tab: 'menu',
-    });
+    throw new Error('Bundle stock is derived from its component items.');
   }
 
   const requiresPositiveQuantity =
@@ -246,17 +228,11 @@ export async function controlMenuStockAction(formData: FormData) {
     requiresPositiveQuantity;
 
   if (requiresQuantity && quantity === null) {
-    redirectToInventory({
-      error: 'invalid-quantity',
-      tab: 'menu',
-    });
+    throw new Error('Please enter a valid quantity.');
   }
 
   if (requiresPositiveQuantity && (!quantity || quantity <= 0)) {
-    redirectToInventory({
-      error: 'positive-quantity-required',
-      tab: 'menu',
-    });
+    throw new Error('Quantity must be greater than zero.');
   }
 
   const lowStockContext = await db.$transaction(async (tx) => {
@@ -344,9 +320,7 @@ export async function controlMenuStockAction(formData: FormData) {
 
   await publishMenuLowStockIfNeeded(lowStockContext);
 
-  revalidateInventoryPages();
-
-  redirectToInventory({
+  return finishInventoryAction({
     success: 'stock-updated',
     tab: 'menu',
   });
@@ -398,9 +372,7 @@ export async function initializeMenuStocksAction() {
     )
   );
 
-  revalidateInventoryPages();
-
-  redirectToInventory({
+  return finishInventoryAction({
     success: 'stocks-initialized',
     tab: 'menu',
   });
@@ -414,10 +386,7 @@ export async function enableServiceInventoryAction(formData: FormData) {
   const serviceId = cleanText(formData.get('serviceId'));
 
   if (!serviceId) {
-    redirectToInventory({
-      error: 'service-required',
-      tab: 'services',
-    });
+    throw new Error('Service is required.');
   }
 
   const service = await db.serviceCatalogItem.findUnique({
@@ -433,10 +402,7 @@ export async function enableServiceInventoryAction(formData: FormData) {
   });
 
   if (!service) {
-    redirectToInventory({
-      error: 'service-not-found',
-      tab: 'services',
-    });
+    throw new Error('Service item not found.');
   }
 
   assertHotelScope(user, service.hotelId);
@@ -470,9 +436,7 @@ export async function enableServiceInventoryAction(formData: FormData) {
     });
   });
 
-  revalidateInventoryPages();
-
-  redirectToInventory({
+  return finishInventoryAction({
     success: 'service-stock-enabled',
     tab: 'services',
   });
@@ -486,10 +450,7 @@ export async function disableServiceInventoryAction(formData: FormData) {
   const serviceId = cleanText(formData.get('serviceId'));
 
   if (!serviceId) {
-    redirectToInventory({
-      error: 'service-required',
-      tab: 'services',
-    });
+    throw new Error('Service is required.');
   }
 
   const service = await db.serviceCatalogItem.findUnique({
@@ -503,10 +464,7 @@ export async function disableServiceInventoryAction(formData: FormData) {
   });
 
   if (!service) {
-    redirectToInventory({
-      error: 'service-not-found',
-      tab: 'services',
-    });
+    throw new Error('Service item not found.');
   }
 
   assertHotelScope(user, service.hotelId);
@@ -520,9 +478,7 @@ export async function disableServiceInventoryAction(formData: FormData) {
     },
   });
 
-  revalidateInventoryPages();
-
-  redirectToInventory({
+  return finishInventoryAction({
     success: 'service-stock-disabled',
     tab: 'services',
   });
@@ -573,9 +529,7 @@ export async function initializeServiceStocksAction() {
     )
   );
 
-  revalidateInventoryPages();
-
-  redirectToInventory({
+  return finishInventoryAction({
     success: 'service-stocks-initialized',
     tab: 'services',
   });
@@ -595,20 +549,14 @@ export async function controlServiceStockAction(formData: FormData) {
   const notes = cleanText(formData.get('notes'), 300);
 
   if (!serviceId) {
-    redirectToInventory({
-      error: 'service-required',
-      tab: 'services',
-    });
+    throw new Error('Service is required.');
   }
 
   if (
     !Object.values(ServiceAvailabilityMovementType).includes(operation) ||
     !SERVICE_MANUAL_OPERATIONS.includes(operation)
   ) {
-    redirectToInventory({
-      error: 'invalid-operation',
-      tab: 'services',
-    });
+    throw new Error('Invalid service inventory operation.');
   }
 
   const service = await db.serviceCatalogItem.findUnique({
@@ -624,10 +572,7 @@ export async function controlServiceStockAction(formData: FormData) {
   });
 
   if (!service) {
-    redirectToInventory({
-      error: 'service-not-found',
-      tab: 'services',
-    });
+    throw new Error('Service item not found.');
   }
 
   assertHotelScope(user, service.hotelId);
@@ -642,17 +587,11 @@ export async function controlServiceStockAction(formData: FormData) {
     requiresPositiveQuantity;
 
   if (requiresQuantity && quantity === null) {
-    redirectToInventory({
-      error: 'invalid-quantity',
-      tab: 'services',
-    });
+    throw new Error('Please enter a valid quantity.');
   }
 
   if (requiresPositiveQuantity && (!quantity || quantity <= 0)) {
-    redirectToInventory({
-      error: 'positive-quantity-required',
-      tab: 'services',
-    });
+    throw new Error('Quantity must be greater than zero.');
   }
 
   const lowStockContext = await db.$transaction(async (tx) => {
@@ -749,9 +688,7 @@ export async function controlServiceStockAction(formData: FormData) {
 
   await publishServiceLowStockIfNeeded(lowStockContext);
 
-  revalidateInventoryPages();
-
-  redirectToInventory({
+  return finishInventoryAction({
     success: 'service-stock-updated',
     tab: 'services',
   });

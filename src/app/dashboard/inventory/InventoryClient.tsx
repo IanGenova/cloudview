@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, X } from 'lucide-react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { CheckCircle2, Loader2, X } from 'lucide-react';
 import {
   MenuAvailabilityMovementType,
   MenuProductType,
@@ -107,6 +109,83 @@ type Message =
     }
   | null;
 
+type InventoryServerAction = (formData: FormData) => Promise<unknown>;
+
+type InventoryFormAction = (formData: FormData) => void | Promise<void>;
+
+function getInventoryActionError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Something went wrong. Please try again.';
+}
+
+const INVENTORY_TOAST_STORAGE_KEY = 'cloudview-inventory-toast';
+
+function isInventoryToast(value: unknown): value is Exclude<Message, null> {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const toast = value as { type?: unknown; text?: unknown };
+
+  return (
+    (toast.type === 'success' || toast.type === 'error') &&
+    typeof toast.text === 'string' &&
+    toast.text.trim().length > 0
+  );
+}
+
+function readQueuedInventoryToast() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const rawToast = window.sessionStorage.getItem(INVENTORY_TOAST_STORAGE_KEY);
+
+    if (!rawToast) {
+      return null;
+    }
+
+    window.sessionStorage.removeItem(INVENTORY_TOAST_STORAGE_KEY);
+
+    const parsedToast = JSON.parse(rawToast);
+
+    return isInventoryToast(parsedToast) ? parsedToast : null;
+  } catch {
+    return null;
+  }
+}
+
+function queueInventoryToast(toast: Exclude<Message, null>) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      INVENTORY_TOAST_STORAGE_KEY,
+      JSON.stringify(toast)
+    );
+  } catch {
+    // Ignore storage failures. The in-memory toast still works.
+  }
+}
+
+function clearQueuedInventoryToast() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(INVENTORY_TOAST_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 type MenuSummary = {
   totalMenuItems: number;
   activeMenuItems: number;
@@ -143,39 +222,36 @@ type ServiceFilterValue =
   | 'HIDDEN';
 
 
-  function Toast({
+function Toast({
   message,
+  onClose,
 }: {
   message?: Message;
+  onClose: () => void;
 }) {
-  const [visible, setVisible] = useState(Boolean(message));
-
   useEffect(() => {
     if (!message) {
-      setVisible(false);
       return;
     }
 
-    setVisible(true);
-
     const timeout = window.setTimeout(() => {
-      setVisible(false);
+      onClose();
     }, 4500);
 
     return () => window.clearTimeout(timeout);
   }, [message?.text, message?.type]);
 
-  if (!message || !visible) {
+  if (!message) {
     return null;
   }
 
   return (
-    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+    <div className="fixed right-6 top-24 z-[9999] w-[calc(100vw-3rem)] max-w-md">
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div
@@ -201,7 +277,7 @@ type ServiceFilterValue =
 
         <button
           type="button"
-          onClick={() => setVisible(false)}
+          onClick={onClose}
           className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
@@ -563,9 +639,13 @@ function BundleDerivedStockModal({
 function ControlMenuStockModal({
   item,
   onClose,
+  action,
+  pending,
 }: {
   item: MenuItem;
   onClose: () => void;
+  action: InventoryFormAction;
+  pending?: boolean;
 }) {
   if (item.isDerivedStock) {
     return <BundleDerivedStockModal item={item} onClose={onClose} />;
@@ -591,7 +671,7 @@ function ControlMenuStockModal({
         </div>
       </div>
 
-      <form action={controlMenuStockAction} className="space-y-4">
+      <form action={action} className="space-y-4">
         <input type="hidden" name="productId" value={item.id} />
 
         <div>
@@ -666,7 +746,7 @@ function ControlMenuStockModal({
             Cancel
           </button>
 
-          <Button>Save Stock Control</Button>
+          <Button disabled={pending}>{pending ? 'Saving...' : 'Save Stock Control'}</Button>
         </div>
       </form>
     </Modal>
@@ -676,9 +756,13 @@ function ControlMenuStockModal({
 function ControlServiceStockModal({
   item,
   onClose,
+  action,
+  pending,
 }: {
   item: ServiceItem;
   onClose: () => void;
+  action: InventoryFormAction;
+  pending?: boolean;
 }) {
   return (
     <Modal
@@ -702,7 +786,7 @@ function ControlServiceStockModal({
         </div>
       </div>
 
-      <form action={controlServiceStockAction} className="space-y-4">
+      <form action={action} className="space-y-4">
         <input type="hidden" name="serviceId" value={item.id} />
 
         <div>
@@ -777,7 +861,7 @@ function ControlServiceStockModal({
             Cancel
           </button>
 
-          <Button>Save Service Stock</Button>
+          <Button disabled={pending}>{pending ? 'Saving...' : 'Save Service Stock'}</Button>
         </div>
       </form>
     </Modal>
@@ -923,7 +1007,24 @@ export function InventoryClient({
   menuSummary: MenuSummary;
   serviceSummary: ServiceSummary;
 }) {
-  const [activeTab] = useState<InventoryTab>(initialTab);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const activeTab = initialTab;
+
+  const [localMenuItems, setLocalMenuItems] = useState<MenuItem[]>(menuItems);
+  const [localServiceItems, setLocalServiceItems] =
+    useState<ServiceItem[]>(serviceItems);
+  const [clientToast, setClientToast] = useState<Message>(() => {
+    if (typeof window === 'undefined') {
+      return message;
+    }
+
+    return readQueuedInventoryToast() ?? message;
+  });
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const [menuSearch, setMenuSearch] = useState('');
   const [menuFilter, setMenuFilter] = useState<MenuFilterValue>('ALL');
@@ -938,10 +1039,202 @@ export function InventoryClient({
     useState<ServiceItem | null>(null);
   const [showServiceMovements, setShowServiceMovements] = useState(false);
 
+  useEffect(() => {
+    setLocalMenuItems(menuItems);
+  }, [menuItems]);
+
+  useEffect(() => {
+    setLocalServiceItems(serviceItems);
+  }, [serviceItems]);
+
+  useEffect(() => {
+    const queuedToast = readQueuedInventoryToast();
+
+    if (queuedToast) {
+      setClientToast(queuedToast);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+
+    setClientToast(message);
+
+    const params = new URLSearchParams(searchParams.toString());
+    const hadMessageParam = params.has('success') || params.has('error');
+
+    params.delete('success');
+    params.delete('error');
+
+    if (hadMessageParam) {
+      router.replace(
+        params.toString() ? `${pathname}?${params.toString()}` : pathname,
+        { scroll: false }
+      );
+    }
+  }, [message, pathname, router, searchParams]);
+
+  function runInventoryAction({
+    formData,
+    action,
+    successText,
+    pendingKey,
+    optimisticMenuUpdate,
+    optimisticServiceUpdate,
+    onSuccess,
+  }: {
+    formData: FormData;
+    action: InventoryServerAction;
+    successText: string;
+    pendingKey: string;
+    optimisticMenuUpdate?: (items: MenuItem[]) => MenuItem[];
+    optimisticServiceUpdate?: (items: ServiceItem[]) => ServiceItem[];
+    onSuccess?: () => void;
+  }) {
+    if (pendingAction) {
+      return;
+    }
+
+    const previousMenuItems = localMenuItems;
+    const previousServiceItems = localServiceItems;
+
+    setClientToast(null);
+    setPendingAction(pendingKey);
+
+    if (optimisticMenuUpdate) {
+      setLocalMenuItems((items) => optimisticMenuUpdate(items));
+    }
+
+    if (optimisticServiceUpdate) {
+      setLocalServiceItems((items) => optimisticServiceUpdate(items));
+    }
+
+    startTransition(() => {
+      void (async () => {
+        try {
+          await action(formData);
+
+          onSuccess?.();
+
+          const successToast = {
+            type: 'success',
+            text: successText,
+          } as const;
+
+          setClientToast(successToast);
+          queueInventoryToast(successToast);
+
+          router.refresh();
+        } catch (error) {
+          setLocalMenuItems(previousMenuItems);
+          setLocalServiceItems(previousServiceItems);
+
+          setClientToast({
+            type: 'error',
+            text: getInventoryActionError(error),
+          });
+        } finally {
+          setPendingAction(null);
+        }
+      })();
+    });
+  }
+
+  function handleInitializeMenuStocks(formData: FormData) {
+    runInventoryAction({
+      formData,
+      action: initializeMenuStocksAction,
+      successText: 'Missing menu stocks were initialized.',
+      pendingKey: 'initialize-menu',
+    });
+  }
+
+  function handleInitializeServiceStocks(formData: FormData) {
+    runInventoryAction({
+      formData,
+      action: initializeServiceStocksAction,
+      successText: 'Missing service stocks were initialized.',
+      pendingKey: 'initialize-services',
+    });
+  }
+
+  function handleControlMenuStock(formData: FormData) {
+    const productId = String(formData.get('productId') || '');
+
+    runInventoryAction({
+      formData,
+      action: controlMenuStockAction,
+      successText: 'Menu stock was updated successfully.',
+      pendingKey: `control-menu:${productId}`,
+      onSuccess: () => setControllingMenuItem(null),
+    });
+  }
+
+  function handleControlServiceStock(formData: FormData) {
+    const serviceId = String(formData.get('serviceId') || '');
+
+    runInventoryAction({
+      formData,
+      action: controlServiceStockAction,
+      successText: 'Service inventory was updated successfully.',
+      pendingKey: `control-service:${serviceId}`,
+      onSuccess: () => setControllingServiceItem(null),
+    });
+  }
+
+  function handleDisableServiceInventory(formData: FormData) {
+    const serviceId = String(formData.get('serviceId') || '');
+
+    runInventoryAction({
+      formData,
+      action: disableServiceInventoryAction,
+      successText: 'Service inventory tracking was disabled.',
+      pendingKey: `disable-service:${serviceId}`,
+      optimisticServiceUpdate: (items) =>
+        items.map((item) =>
+          item.id === serviceId
+            ? {
+                ...item,
+                inventoryTracked: false,
+                stockId: null,
+                availableQty: 0,
+                usedQty: 0,
+                isSoldOut: false,
+                updatedAt: new Date().toISOString(),
+              }
+            : item
+        ),
+    });
+  }
+
+  function handleEnableServiceInventory(formData: FormData) {
+    const serviceId = String(formData.get('serviceId') || '');
+
+    runInventoryAction({
+      formData,
+      action: enableServiceInventoryAction,
+      successText: 'Service inventory tracking was enabled.',
+      pendingKey: `enable-service:${serviceId}`,
+      optimisticServiceUpdate: (items) =>
+        items.map((item) =>
+          item.id === serviceId
+            ? {
+                ...item,
+                inventoryTracked: true,
+                isSoldOut: false,
+                updatedAt: new Date().toISOString(),
+              }
+            : item
+        ),
+    });
+  }
+
   const filteredMenuItems = useMemo(() => {
     const searchText = menuSearch.trim().toLowerCase();
 
-    return menuItems.filter((item) => {
+    return localMenuItems.filter((item) => {
       const matchesSearch =
         !searchText ||
         item.name.toLowerCase().includes(searchText) ||
@@ -965,12 +1258,12 @@ export function InventoryClient({
 
       return matchesSearch && matchesFilter;
     });
-  }, [menuItems, menuSearch, menuFilter]);
+  }, [localMenuItems, menuSearch, menuFilter]);
 
   const filteredServiceItems = useMemo(() => {
     const searchText = serviceSearch.trim().toLowerCase();
 
-    return serviceItems.filter((item) => {
+    return localServiceItems.filter((item) => {
       const matchesSearch =
         !searchText ||
         item.name.toLowerCase().includes(searchText) ||
@@ -991,15 +1284,23 @@ export function InventoryClient({
 
       return matchesSearch && matchesFilter;
     });
-  }, [serviceFilter, serviceItems, serviceSearch]);
+  }, [localServiceItems, serviceFilter, serviceSearch]);
 
   return (
     <>
-      <Toast message={message} />
+      <Toast
+        message={clientToast}
+        onClose={() => {
+          clearQueuedInventoryToast();
+          setClientToast(null);
+        }}
+      />
 
       <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-3 shadow-sm md:flex-row">
-        <a
+        <Link
           href="/dashboard/inventory?tab=menu"
+          replace
+          scroll={false}
           className={
             activeTab === 'menu'
               ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
@@ -1007,10 +1308,12 @@ export function InventoryClient({
           }
         >
           Food Menu Inventory
-        </a>
+        </Link>
 
-        <a
+        <Link
           href="/dashboard/inventory?tab=services"
+          replace
+          scroll={false}
           className={
             activeTab === 'services'
               ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
@@ -1018,7 +1321,7 @@ export function InventoryClient({
           }
         >
           Service Request Inventory
-        </a>
+        </Link>
       </div>
 
       {activeTab === 'menu' ? (
@@ -1060,12 +1363,18 @@ export function InventoryClient({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <form action={initializeMenuStocksAction}>
+                  <form action={handleInitializeMenuStocks}>
                     <button
                       type="submit"
-                      className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                      disabled={pendingAction === 'initialize-menu'}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Initialize Missing Stocks
+                      {pendingAction === 'initialize-menu' ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      {pendingAction === 'initialize-menu'
+                        ? 'Initializing...'
+                        : 'Initialize Missing Stocks'}
                     </button>
                   </form>
 
@@ -1305,12 +1614,18 @@ export function InventoryClient({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <form action={initializeServiceStocksAction}>
+                  <form action={handleInitializeServiceStocks}>
                     <button
                       type="submit"
-                      className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                      disabled={pendingAction === 'initialize-services'}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Initialize Service Stocks
+                      {pendingAction === 'initialize-services' ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      {pendingAction === 'initialize-services'
+                        ? 'Initializing...'
+                        : 'Initialize Service Stocks'}
                     </button>
                   </form>
 
@@ -1463,7 +1778,7 @@ export function InventoryClient({
                               Control Stock
                             </button>
 
-                            <form action={disableServiceInventoryAction}>
+                            <form action={handleDisableServiceInventory}>
                               <input
                                 type="hidden"
                                 name="serviceId"
@@ -1471,15 +1786,21 @@ export function InventoryClient({
                               />
                               <button
                                 type="submit"
-                                className="h-10 w-full rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-50"
+                                disabled={pendingAction === `disable-service:${item.id}`}
+                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                Disable Tracking
+                                {pendingAction === `disable-service:${item.id}` ? (
+                                  <Loader2 className="size-4 animate-spin" />
+                                ) : null}
+                                {pendingAction === `disable-service:${item.id}`
+                                  ? 'Disabling...'
+                                  : 'Disable Tracking'}
                               </button>
                             </form>
                           </>
                         ) : (
                           <form
-                            action={enableServiceInventoryAction}
+                            action={handleEnableServiceInventory}
                             className="sm:col-span-2"
                           >
                             <input
@@ -1489,9 +1810,15 @@ export function InventoryClient({
                             />
                             <button
                               type="submit"
-                              className="h-10 w-full rounded-2xl bg-blue-600 text-sm font-black text-white hover:bg-blue-700"
+                              disabled={pendingAction === `enable-service:${item.id}`}
+                              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              Enable Inventory
+                              {pendingAction === `enable-service:${item.id}` ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : null}
+                              {pendingAction === `enable-service:${item.id}`
+                                ? 'Enabling...'
+                                : 'Enable Inventory'}
                             </button>
                           </form>
                         )}
@@ -1518,6 +1845,8 @@ export function InventoryClient({
         <ControlMenuStockModal
           item={controllingMenuItem}
           onClose={() => setControllingMenuItem(null)}
+          action={handleControlMenuStock}
+          pending={pendingAction === `control-menu:${controllingMenuItem.id}`}
         />
       ) : null}
 
@@ -1525,6 +1854,8 @@ export function InventoryClient({
         <ControlServiceStockModal
           item={controllingServiceItem}
           onClose={() => setControllingServiceItem(null)}
+          action={handleControlServiceStock}
+          pending={pendingAction === `control-service:${controllingServiceItem.id}`}
         />
       ) : null}
 

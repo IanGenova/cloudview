@@ -1744,15 +1744,7 @@ return (
           </button>
       </div>
 
-      <a
-        href={lockedDestinationUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-black text-xs font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
-      >
-        <Link2 className="size-3.5" />
-        View Guest Portal
-      </a>
+
     </div>
   </article>
 );

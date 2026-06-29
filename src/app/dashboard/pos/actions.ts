@@ -869,6 +869,7 @@ let groupedServiceRequestCode: string | null = null;
 
   return {
     ok: true,
+    success: 'pos-sale-created',
     orderCode: result.order?.orderCode ?? null,
     serviceRequestCodes: Array.from(
       new Set(result.serviceRequests.map((request) => request.requestCode))

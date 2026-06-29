@@ -22,6 +22,12 @@ import {
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { getGuestPortalActivity } from '@/lib/guest-portal-activity';
+import {
+  GuestAnimatedBackground,
+  GuestPressable,
+  GuestReveal,
+  GuestShimmer,
+} from './GuestPortalMotion';
 
 const fallbackResortImage =
   'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80';
@@ -70,14 +76,15 @@ function PrimaryActionCard({
   gold?: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className={
-        gold
-          ? 'group block rounded-[1.75rem] bg-gold p-4 text-black shadow-[0_18px_40px_rgba(214,167,56,0.24)] active:scale-[0.99]'
-          : 'group block rounded-[1.75rem] border border-white/10 bg-white/10 p-4 text-white shadow-sm backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]'
-      }
-    >
+    <GuestPressable className="h-full">
+      <Link
+        href={href}
+        className={
+          gold
+            ? 'group block h-full rounded-[1.75rem] bg-gold p-4 text-black shadow-[0_18px_40px_rgba(214,167,56,0.24)] transition hover:shadow-[0_24px_55px_rgba(214,167,56,0.34)] active:scale-[0.99]'
+            : 'group block h-full rounded-[1.75rem] border border-white/10 bg-white/10 p-4 text-white shadow-sm backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]'
+        }
+      >
       <div className="flex items-start justify-between gap-3">
         <span
           className={
@@ -118,6 +125,7 @@ function PrimaryActionCard({
         {description}
       </p>
     </Link>
+    </GuestPressable>
   );
 }
 
@@ -131,10 +139,11 @@ function MiniActionCard({
   title: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex min-h-24 flex-col justify-between rounded-[1.5rem] border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
-    >
+    <GuestPressable className="h-full">
+      <Link
+        href={href}
+        className="group flex min-h-24 flex-col justify-between rounded-[1.5rem] border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
+      >
       <div className="flex items-center justify-between">
         <span className="grid size-10 place-items-center rounded-2xl bg-gold/20 text-gold">
           <Icon className="size-5" />
@@ -145,6 +154,7 @@ function MiniActionCard({
 
       <p className="mt-3 text-sm font-black leading-tight">{title}</p>
     </Link>
+    </GuestPressable>
   );
 }
 
@@ -189,10 +199,11 @@ function ActivityCard({
   const total = activeOrderCount + activeRequestCount;
 
   return (
-    <Link
-      href={href}
-      className="block rounded-[2rem] border border-gold/25 bg-[#11100b] p-5 text-white shadow-xl active:scale-[0.99]"
-    >
+    <GuestPressable>
+      <Link
+        href={href}
+        className="block rounded-[2rem] border border-gold/25 bg-[#11100b] p-5 text-white shadow-xl transition hover:border-gold/45 hover:shadow-[0_24px_60px_rgba(214,167,56,0.18)] active:scale-[0.99]"
+      >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
@@ -233,6 +244,7 @@ function ActivityCard({
         </div>
       </div>
     </Link>
+    </GuestPressable>
   );
 }
 
@@ -250,10 +262,11 @@ function RecommendedCard({
   description: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/8 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
-    >
+    <GuestPressable>
+      <Link
+        href={href}
+        className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/8 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
+      >
       <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
         <Icon className="size-5" />
       </span>
@@ -274,6 +287,7 @@ function RecommendedCard({
 
       <ChevronRight className="size-5 shrink-0 text-white/25 transition group-hover:translate-x-1 group-hover:text-gold" />
     </Link>
+    </GuestPressable>
   );
 }
 
@@ -379,11 +393,14 @@ export default async function GuestHome({ params }: GuestHomeProps) {
             style={{ backgroundImage: `url(${heroImage})` }}
           />
 
+          <GuestAnimatedBackground />
+          <GuestShimmer />
+
           <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-[#050505]" />
           <div className="absolute inset-y-0 left-0 w-3/4 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#050505] via-[#050505]/90 to-transparent" />
 
-          <div className="relative z-10 flex justify-center pt-2">
+          <GuestReveal delay={0.05} className="relative z-10 flex justify-center pt-2">
               <DynamicHotelLogo hotelName={tag.hotel.name} />
 
               <Link
@@ -399,8 +416,8 @@ export default async function GuestHome({ params }: GuestHomeProps) {
                   </span>
                 ) : null}
               </Link>
-            </div>
-          <div className="relative z-10 pt-24">
+            </GuestReveal>
+          <GuestReveal delay={0.14} className="relative z-10 pt-24">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
               {greeting}
             </p>
@@ -413,15 +430,15 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               Welcome to {tag.hotel.name}. Everything you need during your stay
               is just one tap away.
             </p>
-          </div>
+          </GuestReveal>
 
-          <div className="relative z-10 mt-6 grid grid-cols-2 gap-3">
+          <GuestReveal delay={0.24} className="relative z-10 mt-6 grid grid-cols-2 gap-3">
             <StayInfoCard icon={KeyRound} label="Location" value={locationName} />
             <StayInfoCard icon={Wifi} label="Wi-Fi" value={wifiName} />
-          </div>
+          </GuestReveal>
         </section>
 
-        <section className="px-5 pt-6">
+        <GuestReveal delay={0.12} className="px-5 pt-6">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
@@ -469,17 +486,17 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               title="Contact"
             />
           </div>
-        </section>
+        </GuestReveal>
 
-        <section className="px-5 pt-6">
+        <GuestReveal delay={0.18} className="px-5 pt-6">
           <ActivityCard
             href={`/t/${normalizedTagCode}/activity`}
             activeOrderCount={activity.currentActiveOrderCount}
             activeRequestCount={activity.currentActiveServiceRequestCount}
           />
-        </section>
+        </GuestReveal>
 
-        <section className="px-5 pt-6">
+        <GuestReveal delay={0.24} className="px-5 pt-6">
           <div className="mb-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
               Recommended
@@ -522,9 +539,9 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               description="Contact front desk or send a service request."
             />
           </div>
-        </section>
+        </GuestReveal>
 
-        <section className="px-5 pb-32 pt-6">
+        <GuestReveal delay={0.3} className="px-5 pb-32 pt-6">
           <div className="rounded-[2rem] border border-gold/25 bg-gold p-5 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
             <div className="flex items-start gap-4">
               <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-black/10">
@@ -547,7 +564,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               </div>
             </div>
           </div>
-        </section>
+        </GuestReveal>
       </div>
 
       <GuestBottomNav tagCode={normalizedTagCode} active="home" dark />

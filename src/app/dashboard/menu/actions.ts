@@ -3,7 +3,6 @@
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { MenuProductType, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -56,31 +55,49 @@ function slugify(value: string) {
     .slice(0, 80);
 }
 
-function redirectMenu(params: { success?: string; error?: string }): never {
+function finishMenuAction(success: string) {
   revalidatePath('/dashboard/menu');
   revalidatePath('/dashboard/inventory');
   revalidatePath('/dashboard/pos');
   revalidatePath('/t/[tagCode]/menu', 'page');
 
-  const query = new URLSearchParams();
-
-  if (params.success) {
-    query.set('success', params.success);
-  }
-
-  if (params.error) {
-    query.set('error', params.error);
-  }
-
-  redirect(
-    query.toString()
-      ? `/dashboard/menu?${query.toString()}`
-      : '/dashboard/menu'
-  );
+  return {
+    ok: true,
+    success,
+  };
 }
 
-function redirectMenuError(error: string): never {
-  redirectMenu({ error });
+function menuErrorMessage(error: string) {
+  switch (error) {
+    case 'category-required':
+      return 'Menu category details are required.';
+    case 'category-not-found':
+      return 'Menu category was not found.';
+    case 'category-has-products':
+      return 'This category still has products. Move or delete the products first.';
+    case 'product-required':
+      return 'Menu item details are required.';
+    case 'product-not-found':
+      return 'Menu item was not found.';
+    case 'invalid-image-type':
+      return 'Please upload a JPG, PNG, WEBP, or GIF image only.';
+    case 'image-too-large':
+      return 'Product image is too large. Maximum file size is 5 MB.';
+    case 'bundle-components-required':
+      return 'Bundle products must include at least one component item.';
+    case 'bundle-self-component':
+      return 'A bundle cannot include itself as a component.';
+    case 'nested-bundle-not-supported':
+      return 'Bundle products cannot be used inside another bundle.';
+    case 'unauthorized':
+      return 'You are not allowed to manage this hotel.';
+    default:
+      return 'Menu action failed. Please try again.';
+  }
+}
+
+function throwMenuError(error: string): never {
+  throw new Error(menuErrorMessage(error));
 }
 
 function parseCategoryForm(formData: FormData) {
@@ -91,7 +108,7 @@ function parseCategoryForm(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectMenuError('category-required');
+    throwMenuError('category-required');
   }
 
   return parsed.data;
@@ -106,7 +123,7 @@ function parseUpdateCategoryForm(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectMenuError('category-required');
+    throwMenuError('category-required');
   }
 
   return parsed.data;
@@ -125,7 +142,7 @@ function parseProductForm(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectMenuError('product-required');
+    throwMenuError('product-required');
   }
 
   return parsed.data;
@@ -145,7 +162,7 @@ function parseUpdateProductForm(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirectMenuError('product-required');
+    throwMenuError('product-required');
   }
 
   return parsed.data;
@@ -159,13 +176,13 @@ async function saveProductImage(file: File | null, productName: string) {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
   if (!allowedTypes.includes(file.type)) {
-    redirectMenuError('invalid-image-type');
+    throwMenuError('invalid-image-type');
   }
 
   const maxSize = 5 * 1024 * 1024;
 
   if (file.size > maxSize) {
-    redirectMenuError('image-too-large');
+    throwMenuError('image-too-large');
   }
 
   const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -187,7 +204,7 @@ async function assertHotelAccess(hotelId: string) {
   const user = await requireUser();
 
   if (user.role !== 'SUPER_ADMIN' && user.hotelId !== hotelId) {
-    redirectMenuError('unauthorized');
+    throwMenuError('unauthorized');
   }
 
   return user;
@@ -210,7 +227,7 @@ function readBundleComponentsFromFormData(formData: FormData) {
     const quantity = Number(rawQuantity || 1);
 
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      redirectMenuError('bundle-components-required');
+      throwMenuError('bundle-components-required');
     }
 
     const existing = componentMap.get(componentProductId);
@@ -248,7 +265,7 @@ async function validateBundleComponents({
   }
 
   if (!components.length) {
-    redirectMenuError('bundle-components-required');
+    throwMenuError('bundle-components-required');
   }
 
   const componentProductIds = components.map(
@@ -256,7 +273,7 @@ async function validateBundleComponents({
   );
 
   if (bundleProductId && componentProductIds.includes(bundleProductId)) {
-    redirectMenuError('bundle-self-component');
+    throwMenuError('bundle-self-component');
   }
 
   const componentProducts = await tx.menuProduct.findMany({
@@ -275,7 +292,7 @@ async function validateBundleComponents({
   });
 
   if (componentProducts.length !== componentProductIds.length) {
-    redirectMenuError('product-not-found');
+    throwMenuError('product-not-found');
   }
 
   const nestedBundle = componentProducts.find(
@@ -283,7 +300,7 @@ async function validateBundleComponents({
   );
 
   if (nestedBundle) {
-    redirectMenuError('nested-bundle-not-supported');
+    throwMenuError('nested-bundle-not-supported');
   }
 
   return components;
@@ -297,7 +314,7 @@ async function preventBundleProductFromBeingUsedAsComponent(productId: string) {
   });
 
   if (usedAsComponentCount > 0) {
-    redirectMenuError('nested-bundle-not-supported');
+    throwMenuError('nested-bundle-not-supported');
   }
 }
 
@@ -315,7 +332,7 @@ export async function createCategoryAction(formData: FormData) {
     },
   });
 
-  redirectMenu({ success: 'category-created' });
+  return finishMenuAction('category-created');
 }
 
 export async function updateCategoryAction(formData: FormData) {
@@ -328,7 +345,7 @@ export async function updateCategoryAction(formData: FormData) {
   });
 
   if (!category) {
-    redirectMenuError('category-not-found');
+    throwMenuError('category-not-found');
   }
 
   await assertHotelAccess(category.hotelId);
@@ -344,14 +361,14 @@ export async function updateCategoryAction(formData: FormData) {
     },
   });
 
-  redirectMenu({ success: 'category-updated' });
+  return finishMenuAction('category-updated');
 }
 
 export async function deleteCategoryAction(formData: FormData) {
   const categoryId = String(formData.get('categoryId') || '');
 
   if (!categoryId) {
-    redirectMenuError('category-required');
+    throwMenuError('category-required');
   }
 
   const category = await db.menuCategory.findUnique({
@@ -368,13 +385,13 @@ export async function deleteCategoryAction(formData: FormData) {
   });
 
   if (!category) {
-    redirectMenuError('category-not-found');
+    throwMenuError('category-not-found');
   }
 
   await assertHotelAccess(category.hotelId);
 
   if (category._count.products > 0) {
-    redirectMenuError('category-has-products');
+    throwMenuError('category-has-products');
   }
 
   await db.menuCategory.delete({
@@ -383,7 +400,7 @@ export async function deleteCategoryAction(formData: FormData) {
     },
   });
 
-  redirectMenu({ success: 'category-deleted' });
+  return finishMenuAction('category-deleted');
 }
 
 export async function createProductAction(formData: FormData) {
@@ -396,7 +413,7 @@ export async function createProductAction(formData: FormData) {
   });
 
   if (!category) {
-    redirectMenuError('category-not-found');
+    throwMenuError('category-not-found');
   }
 
   await assertHotelAccess(category.hotelId);
@@ -455,7 +472,7 @@ export async function createProductAction(formData: FormData) {
     }
   });
 
-  redirectMenu({ success: 'product-created' });
+  return finishMenuAction('product-created');
 }
 
 export async function updateProductAction(formData: FormData) {
@@ -468,7 +485,7 @@ export async function updateProductAction(formData: FormData) {
   });
 
   if (!product) {
-    redirectMenuError('product-not-found');
+    throwMenuError('product-not-found');
   }
 
   const category = await db.menuCategory.findUnique({
@@ -478,7 +495,7 @@ export async function updateProductAction(formData: FormData) {
   });
 
   if (!category) {
-    redirectMenuError('category-not-found');
+    throwMenuError('category-not-found');
   }
 
   await assertHotelAccess(product.hotelId);
@@ -564,14 +581,14 @@ export async function updateProductAction(formData: FormData) {
     }
   });
 
-  redirectMenu({ success: 'product-updated' });
+  return finishMenuAction('product-updated');
 }
 
 export async function deleteProductAction(formData: FormData) {
   const productId = String(formData.get('productId') || '');
 
   if (!productId) {
-    redirectMenuError('product-required');
+    throwMenuError('product-required');
   }
 
   const product = await db.menuProduct.findUnique({
@@ -586,7 +603,7 @@ export async function deleteProductAction(formData: FormData) {
   });
 
   if (!product) {
-    redirectMenuError('product-not-found');
+    throwMenuError('product-not-found');
   }
 
   await assertHotelAccess(product.hotelId);
@@ -607,7 +624,7 @@ export async function deleteProductAction(formData: FormData) {
       },
     });
 
-    redirectMenu({ success: 'product-deleted' });
+    return finishMenuAction('product-deleted');
   }
 
   try {
@@ -647,5 +664,5 @@ export async function deleteProductAction(formData: FormData) {
     });
   }
 
-  redirectMenu({ success: 'product-deleted' });
+  return finishMenuAction('product-deleted');
 }

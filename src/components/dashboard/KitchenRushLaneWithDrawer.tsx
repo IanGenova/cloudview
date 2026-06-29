@@ -1,19 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import {useEffect, useState, useTransition } from 'react';
 import type { OrderStatus } from '@prisma/client';
 import {
   ChevronRight,
   Clock3,
   MapPin,
+  AlertTriangle, CheckCircle2,
   ReceiptText,
   UserRound,
   X,
 } from 'lucide-react';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { KitchenRunningTimer } from '@/components/dashboard/KitchenRunningTimer';
-import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+
+type KitchenRushStatusAction = (formData: FormData) => Promise<unknown>;
+
+type KitchenRushActionStatus =
+  | 'PREPARING'
+  | 'READY'
+  | 'DELIVERED'
+  | 'CANCELLED';
+
+type KitchenRushToast =
+  | {
+      type: 'success' | 'error';
+      text: string;
+    }
+  | null;
 
 type KitchenLaneType = 'pending' | 'preparing' | 'ready';
 
@@ -235,11 +251,21 @@ function KitchenRushOrderDrawer({
   order,
   type,
   onClose,
+  onStatusAction,
+  pendingAction,
+  isPending,
 }: {
   order: KitchenRushOrderForClient;
   type: KitchenLaneType;
   onClose: () => void;
+  onStatusAction: (payload: {
+    order: KitchenRushOrderForClient;
+    status: KitchenRushActionStatus;
+  }) => void;
+  pendingAction: string | null;
+  isPending: boolean;
 }) {
+  
   const guestName = order.guestName?.trim() || 'Guest name not provided';
   const activeItemCount = getActiveItemCount(order.items);
   const cancelledItemCount = getCancelledItemCount(order.items);
@@ -381,43 +407,71 @@ function KitchenRushOrderDrawer({
           ) : null}
         </div>
 
-        <div className="shrink-0 border-t border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950">
-          {type === 'pending' ? (
-            <div className="grid grid-cols-2 gap-2">
-              <KitchenStatusActionButton
-                orderId={order.id}
-                status={ORDER_STATUS.PREPARING}
-                label="Accept"
-                tone="dark"
-              />
+       <div className="grid grid-cols-2 gap-2 border-t border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+            {type === 'pending' ? (
+              <>
+                <button
+                  type="button"
+                  disabled={isPending || pendingAction === `${order.id}:PREPARING`}
+                  onClick={() =>
+                    onStatusAction({
+                      order,
+                      status: 'PREPARING',
+                    })
+                  }
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {pendingAction === `${order.id}:PREPARING` ? 'Accepting...' : 'Accept'}
+                </button>
 
-              <KitchenStatusActionButton
-                orderId={order.id}
-                status={ORDER_STATUS.CANCELLED}
-                label="Reject"
-                tone="danger"
-              />
-            </div>
-          ) : null}
+                <button
+                  type="button"
+                  disabled={isPending || pendingAction === `${order.id}:CANCELLED`}
+                  onClick={() =>
+                    onStatusAction({
+                      order,
+                      status: 'CANCELLED',
+                    })
+                  }
+                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {pendingAction === `${order.id}:CANCELLED` ? 'Rejecting...' : 'Reject'}
+                </button>
+              </>
+            ) : null}
 
-          {type === 'preparing' ? (
-            <KitchenStatusActionButton
-              orderId={order.id}
-              status={ORDER_STATUS.READY}
-              label="Done / Ready"
-              tone="dark"
-            />
-          ) : null}
+            {type === 'preparing' ? (
+              <button
+                type="button"
+                disabled={isPending || pendingAction === `${order.id}:READY`}
+                onClick={() =>
+                  onStatusAction({
+                    order,
+                    status: 'READY',
+                  })
+                }
+                className="col-span-2 inline-flex h-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pendingAction === `${order.id}:READY` ? 'Marking ready...' : 'Done / Ready'}
+              </button>
+            ) : null}
 
-          {type === 'ready' ? (
-            <KitchenStatusActionButton
-              orderId={order.id}
-              status={ORDER_STATUS.DELIVERED}
-              label="Mark Delivered"
-              tone="dark"
-            />
-          ) : null}
-        </div>
+            {type === 'ready' ? (
+              <button
+                type="button"
+                disabled={isPending || pendingAction === `${order.id}:DELIVERED`}
+                onClick={() =>
+                  onStatusAction({
+                    order,
+                    status: 'DELIVERED',
+                  })
+                }
+                className="col-span-2 inline-flex h-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {pendingAction === `${order.id}:DELIVERED` ? 'Delivering...' : 'Mark Delivered'}
+              </button>
+            ) : null}
+          </div>
       </aside>
     </div>
   );
@@ -500,20 +554,180 @@ function KitchenRushOrderRow({
     </button>
   );
 }
+function getRushKitchenSuccessText(status: KitchenRushActionStatus) {
+  if (status === 'PREPARING') {
+    return 'Order accepted and moved to Preparing.';
+  }
+
+  if (status === 'READY') {
+    return 'Order marked as Ready.';
+  }
+
+  if (status === 'DELIVERED') {
+    return 'Order marked as Delivered.';
+  }
+
+  if (status === 'CANCELLED') {
+    return 'Order rejected successfully.';
+  }
+
+  return 'Kitchen order updated successfully.';
+}
+
+function getRushKitchenErrorText(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Unable to update the kitchen order. Please try again.';
+}
+
+function KitchenRushToast({
+  toast,
+  onClose,
+}: {
+  toast: KitchenRushToast;
+  onClose: () => void;
+}) {
+  if (!toast) {
+    return null;
+  }
+
+  const isSuccess = toast.type === 'success';
+
+  return (
+    <div className="fixed right-6 top-6 z-[9999] w-[calc(100%-3rem)] max-w-sm">
+      <div
+        className={
+          isSuccess
+            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+        }
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={
+              isSuccess
+                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+            }
+          >
+            {isSuccess ? (
+              <CheckCircle2 className="size-5" />
+            ) : (
+              <AlertTriangle className="size-5" />
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+              {isSuccess ? 'Success' : 'Action failed'}
+            </p>
+
+            <p className="mt-1 text-sm font-black">{toast.text}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            aria-label="Close notification"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 export function KitchenRushLaneWithDrawer({
   title,
   description,
   orders,
   type,
+  statusAction,
 }: {
   title: string;
   description: string;
   orders: KitchenRushOrderForClient[];
-  type: KitchenLaneType;
+  type: 'pending' | 'preparing' | 'ready';
+  statusAction: KitchenRushStatusAction;
 }) {
   const [selectedOrder, setSelectedOrder] =
     useState<KitchenRushOrderForClient | null>(null);
+
+    const router = useRouter();
+
+    const [toast, setToast] = useState<KitchenRushToast>(null);
+    const [pendingAction, setPendingAction] = useState<string | null>(null);
+    const [isPending, startTransition] = useTransition();
+
+    useEffect(() => {
+  if (!toast) {
+    return;
+  }
+
+  const timeout = window.setTimeout(() => {
+    setToast(null);
+  }, 3500);
+
+  return () => window.clearTimeout(timeout);
+}, [toast]);
+
+function runRushStatusAction({
+  order,
+  status,
+}: {
+  order: KitchenRushOrderForClient;
+  status: KitchenRushActionStatus;
+}) {
+  if (pendingAction) {
+    return;
+  }
+
+  const pendingKey = `${order.id}:${status}`;
+
+  setPendingAction(pendingKey);
+
+  startTransition(() => {
+    void (async () => {
+      try {
+        const formData = new FormData();
+
+        formData.set('orderId', order.id);
+        formData.set('status', status);
+        formData.set(
+          'note',
+          `Rush mode changed status to ${status.replaceAll('_', ' ')}`
+        );
+
+        await statusAction(formData);
+
+        /**
+         * Important:
+         * This closes the Rush Mode drawer after successful Accept / Reject / Ready / Delivered.
+         */
+        setSelectedOrder(null);
+
+        setToast({
+          type: 'success',
+          text: getRushKitchenSuccessText(status),
+        });
+
+        router.refresh();
+      } catch (error) {
+        setToast({
+          type: 'error',
+          text: getRushKitchenErrorText(error),
+        });
+      } finally {
+        setPendingAction(null);
+      }
+    })();
+  });
+}
 
   return (
     <>
@@ -562,13 +776,17 @@ export function KitchenRushLaneWithDrawer({
         </div>
       </section>
 
-      {selectedOrder ? (
+     {selectedOrder ? (
         <KitchenRushOrderDrawer
           order={selectedOrder}
           type={type}
           onClose={() => setSelectedOrder(null)}
+          onStatusAction={runRushStatusAction}
+          pendingAction={pendingAction}
+          isPending={isPending}
         />
       ) : null}
+       <KitchenRushToast toast={toast} onClose={() => setToast(null)} />
     </>
   );
 }

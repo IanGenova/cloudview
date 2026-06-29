@@ -89,6 +89,17 @@ type DashboardNotification = {
   href: string;
   createdAt: number;
   readAt?: number | null;
+  isPersisted?: boolean;
+};
+
+type PersistedDashboardNotification = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  url: string | null;
+  isRead: boolean;
+  createdAt: string;
 };
 
 type BrowserAudioContextConstructor = typeof AudioContext;
@@ -110,6 +121,7 @@ type RealtimeErrorContext = {
 };
 
 type NotificationPermissionState = NotificationPermission | 'unsupported';
+
 
 function createNotificationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -419,16 +431,68 @@ function getNotificationStyle(type: DashboardNotification['type']) {
   };
 }
 
+
+function toDashboardNotificationType(
+  value: string
+): DashboardNotification['type'] {
+  const normalizedType = normalizeValue(value);
+
+  if (normalizedType.includes('LOW_STOCK')) {
+    return 'LOW_STOCK';
+  }
+
+  if (
+    normalizedType.includes('SERVICE_REQUEST') ||
+    normalizedType.includes('SERVICE')
+  ) {
+    return 'SERVICE_REQUEST';
+  }
+
+  if (
+    normalizedType.includes('CANCELLED') ||
+    normalizedType.includes('CANCELED')
+  ) {
+    return 'CANCELLED_ITEM';
+  }
+
+  if (normalizedType.includes('ORDER')) {
+    return 'ORDER';
+  }
+
+  return 'SYSTEM';
+}
+
+function mapPersistedDashboardNotification(
+  notification: PersistedDashboardNotification
+): DashboardNotification {
+  return {
+    id: notification.id,
+    type: toDashboardNotificationType(notification.type),
+    title: notification.title,
+    message: notification.message,
+    href: notification.url || '/dashboard',
+    createdAt: Date.parse(notification.createdAt) || Date.now(),
+    readAt: notification.isRead ? Date.now() : null,
+    isPersisted: true,
+  };
+}
+
 export function RealtimeDashboardNotifications() {
   const router = useRouter();
 
   const [notifications, setNotifications] = useState<DashboardNotification[]>(
-  []
-);
+    []
+  );
 
-const [toastNotificationIds, setToastNotificationIds] = useState<string[]>(
-  []
-);
+  const [persistedNotifications, setPersistedNotifications] = useState<
+    DashboardNotification[]
+  >([]);
+
+  const [persistedUnreadCount, setPersistedUnreadCount] = useState(0);
+
+  const [toastNotificationIds, setToastNotificationIds] = useState<string[]>(
+    []
+  );
 
 const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
 const [notificationsLoaded, setNotificationsLoaded] = useState(false);
@@ -490,6 +554,50 @@ const alertsEnabledRef = useRef(false);
   }, []);
 
   useEffect(() => {
+    let disposed = false;
+
+    async function fetchUnreadNotifications() {
+      try {
+        const response = await fetch('/api/dashboard/notifications', {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as {
+          ok: boolean;
+          unreadCount: number;
+          notifications: PersistedDashboardNotification[];
+        };
+
+        if (!data.ok || disposed) {
+          return;
+        }
+
+        setPersistedUnreadCount(data.unreadCount);
+        setPersistedNotifications(
+          data.notifications.map(mapPersistedDashboardNotification)
+        );
+      } catch {
+        // Realtime/local notifications can still work.
+      }
+    }
+
+    void fetchUnreadNotifications();
+
+    const intervalId = window.setInterval(() => {
+      void fetchUnreadNotifications();
+    }, 30_000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
   if (!notificationsLoaded) {
     return;
   }
@@ -514,25 +622,82 @@ function dismissToast(id: string) {
   );
 }
 
+async function markPersistedNotificationsRead({
+  ids,
+  all = false,
+}: {
+  ids?: string[];
+  all?: boolean;
+}) {
+  try {
+    await fetch('/api/dashboard/notifications/read', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        all
+          ? {
+              all: true,
+            }
+          : {
+              ids: ids ?? [],
+            }
+      ),
+    });
+  } catch {
+    // Silent fail. Local state is still updated for responsiveness.
+  }
+}
+
 function removeNotification(id: string) {
+  const isPersistedNotification = persistedNotifications.some(
+    (notification) => notification.id === id
+  );
+
   setNotifications((current) =>
     current.filter((notification) => notification.id !== id)
   );
+
+  if (isPersistedNotification) {
+    setPersistedNotifications((current) =>
+      current.filter((notification) => notification.id !== id)
+    );
+
+    setPersistedUnreadCount((current) => Math.max(0, current - 1));
+
+    void markPersistedNotificationsRead({ ids: [id] });
+  }
 
   dismissToast(id);
 }
 
 function markNotificationRead(id: string) {
+  const now = Date.now();
+  const isPersistedNotification = persistedNotifications.some(
+    (notification) => notification.id === id
+  );
+
   setNotifications((current) =>
     current.map((notification) =>
       notification.id === id
         ? {
             ...notification,
-            readAt: notification.readAt ?? Date.now(),
+            readAt: notification.readAt ?? now,
           }
         : notification
     )
   );
+
+  if (isPersistedNotification) {
+    setPersistedNotifications((current) =>
+      current.filter((notification) => notification.id !== id)
+    );
+
+    setPersistedUnreadCount((current) => Math.max(0, current - 1));
+
+    void markPersistedNotificationsRead({ ids: [id] });
+  }
 }
 
 function markAllNotificationsRead() {
@@ -544,11 +709,20 @@ function markAllNotificationsRead() {
       readAt: notification.readAt ?? now,
     }))
   );
+
+  setPersistedNotifications([]);
+  setPersistedUnreadCount(0);
+
+  void markPersistedNotificationsRead({ all: true });
 }
 
 function clearNotifications() {
   setNotifications([]);
   setToastNotificationIds([]);
+  setPersistedNotifications([]);
+  setPersistedUnreadCount(0);
+
+  void markPersistedNotificationsRead({ all: true });
 }
 
 function toggleSoundMuted() {
@@ -1340,14 +1514,24 @@ function pushTestNotification() {
   const RealtimeIcon = realtimeConnected ? Wifi : WifiOff;
 
   const toastNotifications = notifications.filter((notification) =>
-  toastNotificationIds.includes(notification.id)
-);
+    toastNotificationIds.includes(notification.id)
+  );
 
-const unreadCount = notifications.filter(
-  (notification) => !notification.readAt
-).length;
+  const localUnreadCount = notifications.filter(
+    (notification) => !notification.readAt
+  ).length;
 
-const latestNotifications = notifications.slice(0, 25);
+  const unreadCount = persistedUnreadCount + localUnreadCount;
+
+  const latestNotifications = [
+    ...persistedNotifications,
+    ...notifications,
+  ]
+    .sort((first, second) => second.createdAt - first.createdAt)
+    .slice(0, 25);
+
+  const totalNotificationCount =
+    persistedNotifications.length + notifications.length;
 
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
@@ -1408,7 +1592,7 @@ const latestNotifications = notifications.slice(0, 25);
             Notification Center
           </p>
           <p className="mt-1 text-xs font-bold text-neutral-500">
-            {unreadCount} unread · {notifications.length} total
+            {unreadCount} unread · {totalNotificationCount} total
           </p>
         </div>
 
@@ -1426,7 +1610,7 @@ const latestNotifications = notifications.slice(0, 25);
         <button
           type="button"
           onClick={markAllNotificationsRead}
-          disabled={!notifications.length}
+          disabled={!unreadCount}
           className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-black px-2 text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <CheckCheck className="size-3.5" />
@@ -1449,13 +1633,23 @@ const latestNotifications = notifications.slice(0, 25);
         <button
           type="button"
           onClick={clearNotifications}
-          disabled={!notifications.length}
+          disabled={!totalNotificationCount}
           className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2 className="size-3.5" />
           Clear
         </button>
       </div>
+
+      {persistedUnreadCount > 0 ? (
+              <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-800">
+                <p className="font-black">Welcome back!</p>
+                <p>
+                  You have {persistedUnreadCount} unread dashboard notification
+                  {persistedUnreadCount === 1 ? '' : 's'} while you were away.
+                </p>
+              </div>
+            ) : null}
     </div>
 
     <div className="max-h-[440px] overflow-y-auto p-3">

@@ -1475,3 +1475,27 @@ model GuestPointSettings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model DashboardNotification {
+  id String @id @default(cuid())
+
+  hotelId String?
+  userId  String?
+
+  type    String @db.VarChar(80)
+  title   String @db.VarChar(180)
+  message String @db.Text
+  url     String? @db.VarChar(300)
+
+  payload Json?
+
+  isRead Boolean @default(false)
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId, isRead, createdAt])
+  @@index([userId, isRead, createdAt])
+  @@index([type])
+}
