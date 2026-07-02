@@ -104,17 +104,17 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     group: 'main',
   },
   {
-  module: DashboardModule.REWARDS,
-  label: 'Rewards',
-  href: '/dashboard/rewards',
-  group: 'main',
-},
-    {
-      module: DashboardModule.HOTEL_SETTINGS,
-      label: 'Hotel Settings',
-      href: '/dashboard/settings',
-      group: 'settings',
-    },
+    module: DashboardModule.REWARDS,
+    label: 'Rewards',
+    href: '/dashboard/rewards',
+    group: 'main',
+  },
+  {
+    module: DashboardModule.HOTEL_SETTINGS,
+    label: 'Hotel Settings',
+    href: '/dashboard/settings',
+    group: 'settings',
+  },
   {
     module: DashboardModule.USER_ACCOUNT_SETTINGS,
     label: 'User Account Settings',
@@ -122,6 +122,71 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     group: 'settings',
   },
 ];
+
+function fullPermission(module: DashboardModule): DashboardPermissionSnapshot {
+  return {
+    module,
+    canView: true,
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+  };
+}
+
+function viewOnlyPermission(module: DashboardModule): DashboardPermissionSnapshot {
+  return {
+    module,
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  };
+}
+
+function normalizeRuntimePermissions(
+  permissions: DashboardPermissionSnapshot[],
+  role: Role
+) {
+  if (role === Role.SUPER_ADMIN) {
+    return permissions;
+  }
+
+  const permissionMap = new Map(
+    permissions.map((permission) => [permission.module, permission])
+  );
+
+  /**
+   * Safe landing:
+   * Every non-super-admin account must always have Overview view access.
+   */
+  const overviewPermission =
+    permissionMap.get(DashboardModule.OVERVIEW) ??
+    viewOnlyPermission(DashboardModule.OVERVIEW);
+
+  permissionMap.set(DashboardModule.OVERVIEW, {
+    ...overviewPermission,
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  });
+
+  /**
+   * Global Rewards and Hotels are Super Admin-only.
+   */
+  permissionMap.delete(DashboardModule.REWARDS);
+  permissionMap.delete(DashboardModule.HOTELS);
+
+  /**
+   * Staff/Kitchen should not retain admin/settings pages from old saved rows.
+   */
+  if (role !== Role.HOTEL_ADMIN) {
+    permissionMap.delete(DashboardModule.HOTEL_SETTINGS);
+    permissionMap.delete(DashboardModule.USER_ACCOUNT_SETTINGS);
+  }
+
+  return Array.from(permissionMap.values());
+}
 
 function legacyRoleFallback(
   role: Role,
@@ -133,7 +198,7 @@ function legacyRoleFallback(
   }
 
   if (role === Role.HOTEL_ADMIN) {
-    return module !== DashboardModule.HOTELS;
+    return module !== DashboardModule.HOTELS && module !== DashboardModule.REWARDS;
   }
 
   if (role === Role.KITCHEN) {
@@ -154,22 +219,16 @@ function legacyRoleFallback(
       (module === DashboardModule.OVERVIEW ||
         module === DashboardModule.ORDERS ||
         module === DashboardModule.SERVICE_REQUESTS ||
-        module === DashboardModule.POS_TERMINAL ||
-        module === DashboardModule.REWARDS)
+        module === DashboardModule.POS_TERMINAL)
     );
   }
 
   return false;
 }
+
 export async function getUserDashboardPermissions(userId: string, role: Role) {
   if (role === Role.SUPER_ADMIN) {
-    return DASHBOARD_NAV_ITEMS.map((item) => ({
-      module: item.module,
-      canView: true,
-      canCreate: true,
-      canEdit: true,
-      canDelete: true,
-    }));
+    return DASHBOARD_NAV_ITEMS.map((item) => fullPermission(item.module));
   }
 
   const savedPermissions = await db.userDashboardPermission.findMany({
@@ -185,25 +244,19 @@ export async function getUserDashboardPermissions(userId: string, role: Role) {
     },
   });
 
-  /**
-   * Important:
-   * If custom permissions exist, use them as the source of truth.
-   * Do not add old role-based modules again.
-   */
   if (savedPermissions.length > 0) {
-    return savedPermissions;
+    return normalizeRuntimePermissions(savedPermissions, role);
   }
 
-  /**
-   * Fallback only for old users that do not have permission rows yet.
-   */
-  return DASHBOARD_NAV_ITEMS.map((item) => ({
+  const fallbackPermissions = DASHBOARD_NAV_ITEMS.map((item) => ({
     module: item.module,
     canView: legacyRoleFallback(role, item.module, 'canView'),
     canCreate: legacyRoleFallback(role, item.module, 'canCreate'),
     canEdit: legacyRoleFallback(role, item.module, 'canEdit'),
     canDelete: legacyRoleFallback(role, item.module, 'canDelete'),
   }));
+
+  return normalizeRuntimePermissions(fallbackPermissions, role);
 }
 
 export function hasDashboardPermission(
@@ -249,7 +302,7 @@ export async function requireDashboardPermission(
       user.role
     );
 
-    redirect(firstAllowedHref ?? '/login');
+    redirect(firstAllowedHref ?? '/dashboard/login');
   }
 
   return user;

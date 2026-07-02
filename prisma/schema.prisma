@@ -143,6 +143,43 @@ enum GuestStayStatus {
   EXPIRED
 }
 
+enum GuestStayCheckoutPaymentMethod {
+  CASH
+  CARD
+  GCASH
+  MAYA
+  QRPH
+  BANK_TRANSFER
+  COMPANY_ACCOUNT
+  COMPLIMENTARY
+  WAIVED
+  PAY_LATER
+}
+
+enum GuestStayFolioStatus {
+  OPEN
+  CLOSED
+  VOIDED
+}
+
+enum GuestStayFolioLineType {
+  FOOD_ORDER
+  SERVICE_CHARGE
+  MANUAL_CHARGE
+  DISCOUNT
+}
+
+enum GuestStayFolioLineStatus {
+  POSTED
+  VOIDED
+}
+
+enum GuestStayFolioPaymentStatus {
+  POSTED
+  VOIDED
+  REFUNDED
+}
+
 enum GuestPointLedgerStatus {
   PENDING
   CONFIRMED
@@ -237,6 +274,10 @@ model User {
   dashboardPermissions              UserDashboardPermission[]
   createdGuestPointLedgers          GuestPointLedger[]            @relation("GuestPointLedgerCreatedBy")
   uploadedServiceRequestAttachments ServiceRequestAttachment[]    @relation("ServiceRequestAttachmentUploadedBy")
+  createdGuestStayFolios            GuestStayFolio[]              @relation("GuestStayFolioCreatedBy")
+  closedGuestStayFolios             GuestStayFolio[]              @relation("GuestStayFolioClosedBy")
+  postedGuestStayFolioLines         GuestStayFolioLine[]          @relation("GuestStayFolioLinePostedBy")
+  receivedGuestStayFolioPayments    GuestStayFolioPayment[]       @relation("GuestStayFolioPaymentReceivedBy")
 
   @@index([hotelId])
 }
@@ -288,6 +329,9 @@ model Hotel {
 
   guideImages      HotelGuideImage[]
   nfcGuestSessions NfcGuestSession[]
+  guestStayFolios  GuestStayFolio[]
+  guestStayFolioLines GuestStayFolioLine[]
+  guestStayFolioPayments GuestStayFolioPayment[]
 }
 
 model HotelSettings {
@@ -557,6 +601,7 @@ model Order {
   updatedAt           DateTime      @updatedAt
 
   items              OrderItem[]
+  guestStayFolioLines GuestStayFolioLine[]
   statusHistory      OrderStatusHistory[]
   posLogs            PosSyncLog[]
   inventoryMovements InventoryMovement[]
@@ -923,13 +968,22 @@ model RoomAddOnCharge {
   unitPrice   Decimal @db.Decimal(10, 2)
   totalAmount Decimal @db.Decimal(10, 2)
 
+  paymentStatus    RoomAddOnPaymentStatus @default(UNPAID)
+  paidAt           DateTime?
+  paidById         String?
+  paymentReference String?                @db.VarChar(160)
+
   postedById String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  guestStayFolioLines GuestStayFolioLine[]
+
   @@index([hotelId])
   @@index([roomId])
   @@index([serviceRequestId])
+  @@index([paymentStatus])
+  @@index([paidAt])
 }
 
 enum RoomAddOnPaymentStatus {
@@ -1297,6 +1351,23 @@ model GuestStay {
   expectedCheckOutAt DateTime?
   checkedOutAt       DateTime?
 
+  checkoutFoodTotalCents    Int @default(0)
+  checkoutServiceTotalCents Int @default(0)
+  checkoutManualChargeCents Int @default(0)
+  checkoutDiscountCents     Int @default(0)
+  checkoutSubtotalCents     Int @default(0)
+  checkoutPaymentCents      Int @default(0)
+  checkoutBalanceDueCents   Int @default(0)
+
+  checkoutPaymentMethod    GuestStayCheckoutPaymentMethod?
+  checkoutPaymentReference String?                         @db.VarChar(160)
+  checkoutPaymentNote      String?                         @db.Text
+  checkoutManualChargeNote String?                         @db.Text
+  checkoutDiscountNote     String?                         @db.Text
+  checkoutSnapshot         Json?
+
+  checkedOutById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1305,6 +1376,9 @@ model GuestStay {
   orders           Order[]
   serviceRequests  ServiceRequest[]
   pointLedgers     GuestPointLedger[]
+  folio            GuestStayFolio?
+  folioLines       GuestStayFolioLine[]
+  folioPayments    GuestStayFolioPayment[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -1312,7 +1386,147 @@ model GuestStay {
   @@index([status])
   @@index([checkInAt])
   @@index([expectedCheckOutAt])
+  @@index([checkedOutAt])
+  @@index([checkedOutById])
 }
+
+
+model GuestStayFolio {
+  id String @id @default(cuid())
+
+  folioNumber String @unique @db.VarChar(40)
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  guestStayId String    @unique
+  guestStay   GuestStay @relation(fields: [guestStayId], references: [id], onDelete: Cascade)
+
+  status GuestStayFolioStatus @default(OPEN)
+
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+
+  receiptPrintedAt DateTime?
+  receiptPrintCount Int       @default(0)
+
+  guestSnapshot    Json?
+  checkoutSnapshot Json?
+
+  foodTotalCents         Int @default(0)
+  serviceTotalCents      Int @default(0)
+  manualChargeCents      Int @default(0)
+  discountCents          Int @default(0)
+  subtotalCents          Int @default(0)
+  paidCents              Int @default(0)
+  balanceDueCents        Int @default(0)
+
+  createdById String?
+  createdBy   User?   @relation("GuestStayFolioCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  closedById String?
+  closedBy   User?   @relation("GuestStayFolioClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+
+  lines    GuestStayFolioLine[]
+  payments GuestStayFolioPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId])
+  @@index([guestStayId])
+  @@index([status])
+  @@index([closedAt])
+  @@index([createdById])
+  @@index([closedById])
+}
+
+model GuestStayFolioLine {
+  id String @id @default(cuid())
+
+  folioId String
+  folio   GuestStayFolio @relation(fields: [folioId], references: [id], onDelete: Cascade)
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  guestStayId String
+  guestStay   GuestStay @relation(fields: [guestStayId], references: [id], onDelete: Cascade)
+
+  lineType   GuestStayFolioLineType
+  lineStatus GuestStayFolioLineStatus @default(POSTED)
+
+  sourceOrderId String?
+  sourceOrder   Order?  @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+
+  sourceRoomAddOnChargeId String?
+  sourceRoomAddOnCharge   RoomAddOnCharge? @relation(fields: [sourceRoomAddOnChargeId], references: [id], onDelete: SetNull)
+
+  title       String  @db.VarChar(180)
+  description String? @db.Text
+
+  quantity        Int @default(1)
+  unitAmountCents Int @default(0)
+  amountCents     Int @default(0)
+
+  metadata Json?
+
+  postedById String?
+  postedBy   User?   @relation("GuestStayFolioLinePostedBy", fields: [postedById], references: [id], onDelete: SetNull)
+
+  postedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([folioId])
+  @@index([hotelId])
+  @@index([guestStayId])
+  @@index([lineType])
+  @@index([lineStatus])
+  @@index([sourceOrderId])
+  @@index([sourceRoomAddOnChargeId])
+  @@index([postedById])
+  @@index([postedAt])
+}
+
+model GuestStayFolioPayment {
+  id String @id @default(cuid())
+
+  folioId String
+  folio   GuestStayFolio @relation(fields: [folioId], references: [id], onDelete: Cascade)
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  guestStayId String
+  guestStay   GuestStay @relation(fields: [guestStayId], references: [id], onDelete: Cascade)
+
+  paymentMethod GuestStayCheckoutPaymentMethod
+  paymentStatus GuestStayFolioPaymentStatus @default(POSTED)
+
+  amountCents Int
+
+  reference String? @db.VarChar(160)
+  note      String? @db.Text
+
+  receivedById String?
+  receivedBy   User?   @relation("GuestStayFolioPaymentReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
+
+  paidAt   DateTime  @default(now())
+  voidedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([folioId])
+  @@index([hotelId])
+  @@index([guestStayId])
+  @@index([paymentMethod])
+  @@index([paymentStatus])
+  @@index([receivedById])
+  @@index([paidAt])
+}
+
 
 model GuestStayDevice {
   id String @id @default(cuid())
@@ -1482,14 +1696,14 @@ model DashboardNotification {
   hotelId String?
   userId  String?
 
-  type    String @db.VarChar(80)
-  title   String @db.VarChar(180)
-  message String @db.Text
+  type    String  @db.VarChar(80)
+  title   String  @db.VarChar(180)
+  message String  @db.Text
   url     String? @db.VarChar(300)
 
   payload Json?
 
-  isRead Boolean @default(false)
+  isRead Boolean   @default(false)
   readAt DateTime?
 
   createdAt DateTime @default(now())

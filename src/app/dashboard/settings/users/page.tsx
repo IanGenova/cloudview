@@ -1,7 +1,8 @@
+import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { requireRole, requireUser } from '@/lib/auth';
+import { dashboardHomeForRole, requireUser } from '@/lib/auth';
 import { UserAccountSettingsClient } from './UserAccountSettingsClient';
 
 function getAllowedRoles(role: Role) {
@@ -15,7 +16,22 @@ function getAllowedRoles(role: Role) {
 export default async function UserAccountSettingsPage() {
   const currentUser = await requireUser();
 
-  requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  /**
+   * Critical fix:
+   * Do not throw a raw Forbidden error in the page render.
+   * Staff/Kitchen users can reach this page through a stale `next` URL after login,
+   * so send them to their safe dashboard landing page instead.
+   */
+  if (
+    currentUser.role !== Role.SUPER_ADMIN &&
+    currentUser.role !== Role.HOTEL_ADMIN
+  ) {
+    redirect(dashboardHomeForRole(currentUser.role));
+  }
+
+  if (currentUser.role !== Role.SUPER_ADMIN && !currentUser.hotelId) {
+    redirect(dashboardHomeForRole(currentUser.role));
+  }
 
   const allowedRoles = getAllowedRoles(currentUser.role);
 

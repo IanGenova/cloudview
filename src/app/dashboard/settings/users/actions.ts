@@ -1,9 +1,8 @@
 'use server';
 
 import { DashboardModule, Prisma, Role } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
-import { requireRole, requireUser } from '@/lib/auth';
+import { hashPassword, requireRole, requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 
@@ -37,6 +36,7 @@ const ALL_DASHBOARD_MODULES = Object.values(
 
 const HOTEL_ADMIN_RESTRICTED_MODULES = new Set<DashboardModule>([
   DashboardModule.HOTELS,
+  DashboardModule.REWARDS,
 ]);
 
 const PERMISSION_KEYS: readonly PermissionKey[] = [
@@ -77,20 +77,8 @@ function validatePassword(password: string) {
     return 'Password is required.';
   }
 
-  if (password.length < 8) {
-    return 'Password must be at least 8 characters.';
-  }
-
-  if (!/[A-Z]/.test(password)) {
-    return 'Password must contain at least one uppercase letter.';
-  }
-
-  if (!/[a-z]/.test(password)) {
-    return 'Password must contain at least one lowercase letter.';
-  }
-
-  if (!/[0-9]/.test(password)) {
-    return 'Password must contain at least one number.';
+  if (password.length < 5) {
+    return 'Password must be at least 5 characters.';
   }
 
   return null;
@@ -193,7 +181,9 @@ function getDefaultDashboardPermissions(role: Role): DashboardPermissionInput[] 
 
   if (role === Role.HOTEL_ADMIN) {
     return ALL_DASHBOARD_MODULES.filter(
-      (module) => module !== DashboardModule.HOTELS
+      (module) =>
+        module !== DashboardModule.HOTELS &&
+        module !== DashboardModule.REWARDS
     ).map(fullPermission);
   }
 
@@ -247,12 +237,45 @@ function getDefaultDashboardPermissions(role: Role): DashboardPermissionInput[] 
     viewOnlyPermission(DashboardModule.ANALYTICS),
     ...optionalViewOnlyPermission('REPORTS'),
     ...optionalViewOnlyPermission('GUEST_STAYS'),
-    ...optionalCustomPermission('REWARDS', {
-      canView: true,
-      canCreate: true,
-      canEdit: true,
-    }),
   ];
+}
+
+function normalizeDashboardPermissionsForSafeLogin(
+  permissions: DashboardPermissionInput[],
+  targetRole: Role
+) {
+  if (targetRole === Role.SUPER_ADMIN) {
+    return permissions;
+  }
+
+  const permissionMap = new Map(
+    permissions.map((permission) => [permission.module, permission])
+  );
+
+  const overviewPermission =
+    permissionMap.get(DashboardModule.OVERVIEW) ??
+    viewOnlyPermission(DashboardModule.OVERVIEW);
+
+  permissionMap.set(DashboardModule.OVERVIEW, {
+    ...overviewPermission,
+    canView: true,
+    canCreate: false,
+    canEdit: false,
+    canDelete: false,
+  });
+
+  permissionMap.delete(DashboardModule.REWARDS);
+
+  // targetRole is already narrowed to non-SUPER_ADMIN above,
+  // so delete HOTELS directly instead of comparing again.
+  permissionMap.delete(DashboardModule.HOTELS);
+
+  if (targetRole !== Role.HOTEL_ADMIN) {
+    permissionMap.delete(DashboardModule.HOTEL_SETTINGS);
+    permissionMap.delete(DashboardModule.USER_ACCOUNT_SETTINGS);
+  }
+
+  return Array.from(permissionMap.values());
 }
 
 function parseDashboardPermissionsFromForm(
@@ -274,7 +297,7 @@ function parseDashboardPermissionsFromForm(
     getAssignableDashboardModules(currentUserRole)
   );
 
-  return ALL_DASHBOARD_MODULES.filter((module) =>
+  const parsedPermissions = ALL_DASHBOARD_MODULES.filter((module) =>
     assignableModules.has(module)
   ).map((module) => {
     const canCreate = isChecked(
@@ -301,6 +324,11 @@ function parseDashboardPermissionsFromForm(
       canDelete,
     };
   });
+
+  return normalizeDashboardPermissionsForSafeLogin(
+    parsedPermissions,
+    targetRole
+  );
 }
 
 async function syncDashboardPermissions(
@@ -381,11 +409,13 @@ export async function createUserAccountAction(
       };
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
 
-    const permissions =
+    const permissions = normalizeDashboardPermissionsForSafeLogin(
       parseDashboardPermissionsFromForm(formData, currentUser.role, role) ??
-      getDefaultDashboardPermissions(role);
+        getDefaultDashboardPermissions(role),
+      role
+    );
 
     await db.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
@@ -537,7 +567,7 @@ export async function resetUserPasswordAction(
 
     const userId = cleanText(formData.get('userId'));
     const password = cleanText(formData.get('password'), 160) ?? '';
-    const confirmPassword = cleanText(formData.get('confirmPassword'), 120);
+    const confirmPassword = cleanText(formData.get('confirmPassword'), 160) ?? '';
 
     if (!userId) {
       return { ok: false, message: 'User account is required.' };
@@ -573,7 +603,7 @@ export async function resetUserPasswordAction(
       };
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
 
     await db.user.update({
       where: {
@@ -586,7 +616,7 @@ export async function resetUserPasswordAction(
 
     revalidatePath('/dashboard/settings/users');
 
-    return { ok: true, message: 'Password reset successfully.' };
+    return { ok: true, message: 'Password reset successfully. The new plain temporary password can now be used to sign in.' };
   } catch (error) {
     return { ok: false, message: getReadablePrismaError(error) };
   }

@@ -28,10 +28,6 @@ import { updateOrderStatusAction } from '../orders/actions';
 import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
 import { KitchenManualRefreshButton } from '@/components/dashboard/KitchenManualRefreshButton';
 import { KitchenTvPagedLane } from '@/components/dashboard/KitchenTvPagedLane';
-import {
-  KitchenRushLaneWithDrawer,
-  type KitchenRushOrderForClient,
-} from '@/components/dashboard/KitchenRushLaneWithDrawer';
 
 type KitchenToastMessage =
   | {
@@ -66,7 +62,7 @@ type KitchenOrder = {
   createdAt: Date;
   updatedAt: Date;
   totalCents: number;
-  room: { number: string } | null;
+  room: { number: string; name?: string | null } | null;
   location: { name: string } | null;
   items: KitchenOrderItem[];
   fulfillmentTiming: FulfillmentTiming;
@@ -79,38 +75,6 @@ type KitchenOrder = {
 
 type KitchenDisplayMode = 'normal' | 'tv' | 'rush';
 type KitchenViewMode = 'live' | 'scheduled';
-
-function toKitchenRushOrderForClient(
-  order: KitchenOrder
-): KitchenRushOrderForClient {
-  return {
-    id: order.id,
-    orderCode: order.orderCode,
-    status: order.status,
-    guestName: order.guestName,
-    notes: order.notes,
-    createdAt: order.createdAt.toISOString(),
-    updatedAt: order.updatedAt.toISOString(),
-    room: order.room,
-    location: order.location,
-    items: order.items.map((item) => ({
-      id: item.id,
-      quantity: item.quantity,
-      productNameSnapshot: item.productNameSnapshot,
-      notes: item.notes,
-      isBundleSnapshot: item.isBundleSnapshot,
-      status: item.status,
-      cancelledQty: item.cancelledQty,
-      cancelledAt: item.cancelledAt?.toISOString() ?? null,
-      cancelReason: item.cancelReason,
-      bundleComponents: item.bundleComponents.map((component) => ({
-        id: component.id,
-        componentNameSnapshot: component.componentNameSnapshot,
-        quantity: component.quantity,
-      })),
-    })),
-  };
-}
 
 function getKitchenSuccessCode(status: OrderStatus) {
   if (status === OrderStatus.PREPARING) {
@@ -130,6 +94,250 @@ function getKitchenSuccessCode(status: OrderStatus) {
   }
 
   return 'order-updated';
+}
+
+
+const rushMetaPillClass =
+  'inline-flex max-w-full items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200';
+
+function getKitchenDragFormId(orderId: string, targetStatus: OrderStatus) {
+  const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  return `kitchen-drag-status-${safeOrderId}-${targetStatus}`;
+}
+
+function KitchenDragStatusForm({
+  orderId,
+  targetStatus,
+  history,
+}: {
+  orderId: string;
+  targetStatus: OrderStatus;
+  history?: string;
+}) {
+  return (
+    <form
+      id={getKitchenDragFormId(orderId, targetStatus)}
+      action={updateKitchenOrderStatusAction}
+      className="hidden"
+      data-kitchen-status-form="true"
+      data-order-id={orderId}
+      data-target-status={targetStatus}
+    >
+      <input type="hidden" name="orderId" value={orderId} />
+      <input type="hidden" name="status" value={targetStatus} />
+      <input type="hidden" name="history" value={history ?? ''} />
+      <input
+        type="hidden"
+        name="note"
+        value={`Kitchen display swipe/drag moved order to ${targetStatus.replaceAll(
+          '_',
+          ' '
+        )}`}
+      />
+    </form>
+  );
+}
+
+function KitchenSwipeDragController() {
+  const script = `(() => {
+  if (window.__cloudViewKitchenSwipeDragBound) return;
+  window.__cloudViewKitchenSwipeDragBound = true;
+
+  function safeId(value) {
+    return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  }
+
+  function formId(orderId, targetStatus) {
+    return 'kitchen-drag-status-' + safeId(orderId) + '-' + targetStatus;
+  }
+
+  function canMove(sourceLane, targetStatus) {
+    if (!sourceLane || !targetStatus) return false;
+
+    if (sourceLane === 'pending') {
+      return targetStatus === 'PREPARING';
+    }
+
+    if (sourceLane === 'preparing') {
+      return targetStatus === 'READY';
+    }
+
+    return false;
+  }
+
+  function swipeTarget(sourceLane, distanceX) {
+    if (distanceX < 80) return '';
+
+    if (sourceLane === 'pending') {
+      return 'PREPARING';
+    }
+
+    if (sourceLane === 'preparing') {
+      return 'READY';
+    }
+
+    return '';
+  }
+
+  function submitStatus(orderId, targetStatus) {
+    const form = document.getElementById(formId(orderId, targetStatus));
+
+    if (!form || form.dataset.submitting === '1') return;
+
+    form.dataset.submitting = '1';
+    form.requestSubmit ? form.requestSubmit() : form.submit();
+  }
+
+  function setLaneHover(lane, active) {
+    if (!lane) return;
+
+    if (active) {
+      lane.style.outline = '3px solid rgba(17, 16, 11, 0.18)';
+      lane.style.outlineOffset = '3px';
+    } else {
+      lane.style.outline = '';
+      lane.style.outlineOffset = '';
+    }
+  }
+
+  let draggedCard = null;
+
+  document.addEventListener('dragstart', (event) => {
+    const card = event.target.closest('[data-kitchen-draggable-card="true"]');
+    if (!card || !event.dataTransfer) return;
+
+    draggedCard = card;
+    card.dataset.dragging = 'true';
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', card.dataset.orderId || '');
+  });
+
+  document.addEventListener('dragend', () => {
+    if (draggedCard) {
+      draggedCard.dataset.dragging = '';
+      draggedCard = null;
+    }
+
+    document
+      .querySelectorAll('[data-kitchen-drop-status]')
+      .forEach((lane) => setLaneHover(lane, false));
+  });
+
+  document.addEventListener('dragover', (event) => {
+    const lane = event.target.closest('[data-kitchen-drop-status]');
+    if (!lane || !draggedCard || !event.dataTransfer) return;
+
+    const targetStatus = lane.dataset.kitchenDropStatus;
+    const sourceLane = draggedCard.dataset.currentLane;
+
+    if (!canMove(sourceLane, targetStatus)) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setLaneHover(lane, true);
+  });
+
+  document.addEventListener('dragleave', (event) => {
+    const lane = event.target.closest('[data-kitchen-drop-status]');
+    if (!lane) return;
+
+    const related = event.relatedTarget;
+    if (related && lane.contains(related)) return;
+
+    setLaneHover(lane, false);
+  });
+
+  document.addEventListener('drop', (event) => {
+    const lane = event.target.closest('[data-kitchen-drop-status]');
+    if (!lane || !draggedCard) return;
+
+    const targetStatus = lane.dataset.kitchenDropStatus;
+    const sourceLane = draggedCard.dataset.currentLane;
+    const orderId = draggedCard.dataset.orderId;
+
+    if (!canMove(sourceLane, targetStatus)) return;
+
+    event.preventDefault();
+    setLaneHover(lane, false);
+    submitStatus(orderId, targetStatus);
+  });
+
+  let swipe = null;
+
+  document.addEventListener('pointerdown', (event) => {
+    const card = event.target.closest('[data-kitchen-swipe-card="true"]');
+    if (!card) return;
+
+    if (event.target.closest('button, a, input, textarea, select, summary, form')) {
+      return;
+    }
+
+    swipe = {
+      pointerId: event.pointerId,
+      card,
+      orderId: card.dataset.orderId,
+      sourceLane: card.dataset.currentLane,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+    };
+  });
+
+  document.addEventListener('pointermove', (event) => {
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - swipe.startX;
+    const dy = event.clientY - swipe.startY;
+
+    if (!swipe.active && Math.abs(dx) < 14) return;
+    if (!swipe.active && Math.abs(dx) < Math.abs(dy) * 1.15) return;
+
+    swipe.active = true;
+
+    const distance = Math.max(0, Math.min(dx, 260));
+    const targetStatus = swipeTarget(swipe.sourceLane, distance);
+
+    swipe.card.style.transform = 'translateX(' + distance + 'px)';
+    swipe.card.style.opacity = targetStatus ? '0.72' : '0.92';
+    swipe.card.style.boxShadow = targetStatus
+      ? '0 18px 42px rgba(17, 16, 11, 0.18)'
+      : '';
+  });
+
+  function resetSwipeCard(card) {
+    if (!card) return;
+    card.style.transform = '';
+    card.style.opacity = '';
+    card.style.boxShadow = '';
+  }
+
+  document.addEventListener('pointerup', (event) => {
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - swipe.startX;
+    const targetStatus = swipeTarget(swipe.sourceLane, dx);
+    const card = swipe.card;
+    const orderId = swipe.orderId;
+
+    swipe = null;
+    resetSwipeCard(card);
+
+    if (targetStatus && orderId) {
+      submitStatus(orderId, targetStatus);
+    }
+  });
+
+  document.addEventListener('pointercancel', () => {
+    if (swipe?.card) {
+      resetSwipeCard(swipe.card);
+    }
+
+    swipe = null;
+  });
+})();`;
+
+  return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }
 
 function getKitchenMessage(success?: string, error?: string): KitchenToastMessage {
@@ -319,10 +527,27 @@ function formatDateTime(date: Date) {
 }
 
 function roomOrLocation(order: {
-  room: { number: string } | null;
+  room: { number: string; name?: string | null } | null;
   location: { name: string } | null;
 }) {
-  if (order.room) return `Room ${order.room.number}`;
+  if (order.room) {
+    return `Room ${order.room.number}${
+      order.room.name ? ` — ${order.room.name}` : ''
+    }`;
+  }
+
+  if (order.location) return order.location.name;
+  return 'Guest location';
+}
+
+function roomNumberOnly(order: {
+  room: { number: string; name?: string | null } | null;
+  location: { name: string } | null;
+}) {
+  if (order.room) {
+    return `Room ${order.room.number}`;
+  }
+
   if (order.location) return order.location.name;
   return 'Guest location';
 }
@@ -351,6 +576,18 @@ function getItemStatusClass(item: KitchenOrderItem) {
   }
 
   return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200';
+}
+
+function getRushItemIndicatorClass(item: KitchenOrderItem) {
+  if (isCancelledKitchenItem(item)) {
+    return 'bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]';
+  }
+
+  if (item.status === OrderItemStatus.PARTIALLY_CANCELLED) {
+    return 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.12)]';
+  }
+
+  return 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]';
 }
 
 function getActiveItemCount(items: KitchenOrderItem[]) {
@@ -433,61 +670,100 @@ function OrderActionButton({
   );
 }
 
-function KitchenOrderItemLine({ item }: { item: KitchenOrderItem }) {
+function KitchenOrderItemLine({
+  item,
+  compact = false,
+}: {
+  item: KitchenOrderItem;
+  compact?: boolean;
+}) {
   const activeQty = getActiveItemQuantity(item);
   const isCancelled = isCancelledKitchenItem(item);
+  const shouldShowItemStatusBadge = !compact;
+  const indicatorLabel = isCancelled
+    ? 'Cancelled item'
+    : item.status === OrderItemStatus.PARTIALLY_CANCELLED
+      ? 'Partially cancelled item'
+      : 'Active item';
 
   return (
     <div
-      className={
+      className={cn(
         isCancelled
-          ? 'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
-          : 'rounded-xl bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-950'
-      }
+          ? 'border border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/10'
+          : 'bg-neutral-50 dark:bg-neutral-950',
+        compact ? 'rounded-md px-2 py-1 text-[10px]' : 'rounded-xl px-3 py-2 text-xs'
+      )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className={cn('flex flex-wrap items-center justify-between', compact ? 'gap-0.5' : 'gap-2')}>
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={cn('flex min-w-0 flex-wrap items-center', compact ? 'gap-1' : 'gap-2')}>
+            <span
+              className={cn(
+                'shrink-0 rounded-full',
+                compact ? 'size-2' : 'size-2.5',
+                compact
+                  ? getRushItemIndicatorClass(item)
+                  : isCancelled
+                    ? 'bg-red-500'
+                    : item.status === OrderItemStatus.PARTIALLY_CANCELLED
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+              )}
+              title={indicatorLabel}
+              aria-label={indicatorLabel}
+            />
+
             <b
-              className={
+              className={cn(
+                'min-w-0 leading-tight',
                 isCancelled
                   ? 'text-red-700 line-through decoration-red-400 dark:text-red-200'
                   : 'text-neutral-950 dark:text-white'
-              }
+              )}
             >
               {isCancelled ? item.quantity : activeQty}×{' '}
               {item.productNameSnapshot}
             </b>
 
             {item.isBundleSnapshot ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+              <span
+                className={cn(
+                  'rounded-full bg-amber-100 py-0.5 font-black leading-none text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
+                  compact ? 'px-1.5 text-[8px]' : 'px-2 text-[10px]'
+                )}
+              >
                 Bundle
               </span>
             ) : null}
 
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getItemStatusClass(
-                item
-              )}`}
-            >
-              {item.status.replaceAll('_', ' ')}
-            </span>
+            {shouldShowItemStatusBadge ? (
+              <span
+                className={cn(
+                  'rounded-full py-0.5 font-black leading-none',
+                  compact ? 'px-1.5 text-[8px]' : 'px-2 text-[10px]',
+                  getItemStatusClass(item)
+                )}
+              >
+                {item.status.replaceAll('_', ' ')}
+              </span>
+            ) : null}
           </div>
 
           {item.cancelledQty > 0 ? (
-            <p className="mt-1 text-[11px] font-black text-red-700 dark:text-red-200">
+            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-black leading-tight text-red-700 dark:text-red-200')}>
               Cancelled qty: {item.cancelledQty}
             </p>
           ) : null}
 
           {item.cancelReason ? (
-            <p className="mt-1 text-[11px] font-medium text-red-700 dark:text-red-200">
+            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-medium leading-tight text-red-700 dark:text-red-200')}>
               Reason: {item.cancelReason}
             </p>
           ) : null}
 
           {item.notes ? (
-            <p className="mt-1 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-medium leading-tight text-neutral-500 dark:text-neutral-400')}>
               Note: {item.notes}
             </p>
           ) : null}
@@ -496,45 +772,116 @@ function KitchenOrderItemLine({ item }: { item: KitchenOrderItem }) {
 
       {item.isBundleSnapshot ? (
         <div
-          className={
+          className={cn(
             isCancelled
-              ? 'mt-2 rounded-lg bg-red-100/80 p-2 dark:bg-red-500/10'
-              : 'mt-2 rounded-lg bg-amber-50 p-2 dark:bg-amber-500/10'
-          }
+              ? 'rounded-md bg-red-100/80 dark:bg-red-500/10'
+              : 'rounded-md bg-amber-50 dark:bg-amber-500/10',
+            compact ? 'mt-1 p-1' : 'mt-2 p-2'
+          )}
         >
           <p
-            className={
+            className={cn(
+              'font-black uppercase tracking-[0.12em]',
+              compact ? 'text-[8px]' : 'text-[10px]',
               isCancelled
-                ? 'text-[10px] font-black uppercase tracking-[0.14em] text-red-700 dark:text-red-200'
-                : 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-700 dark:text-amber-200'
-            }
+                ? 'text-red-700 dark:text-red-200'
+                : 'text-amber-700 dark:text-amber-200'
+            )}
           >
             Includes
           </p>
 
           {item.bundleComponents.length ? (
-            <div className="mt-1 space-y-0.5">
+            <div className={cn(compact ? 'mt-0.5 space-y-0' : 'mt-1 space-y-0.5')}>
               {item.bundleComponents.map((component) => (
                 <p
                   key={component.id}
-                  className={
+                  className={cn(
+                    'flex items-center gap-1 font-bold leading-tight',
+                    compact ? 'text-[10px]' : 'text-[11px]',
                     isCancelled
-                      ? 'text-[11px] font-bold text-red-800 dark:text-red-200'
-                      : 'text-[11px] font-bold text-amber-900 dark:text-amber-100'
-                  }
+                      ? 'text-red-800 dark:text-red-200'
+                      : 'text-amber-900 dark:text-amber-100'
+                  )}
                 >
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full',
+                      compact ? 'size-1.5' : 'size-1.5',
+                      compact
+                        ? getRushItemIndicatorClass(item)
+                        : isCancelled
+                          ? 'bg-red-500'
+                          : item.status === OrderItemStatus.PARTIALLY_CANCELLED
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                    )}
+                    title={indicatorLabel}
+                    aria-label={indicatorLabel}
+                  />
                   {component.quantity}× {component.componentNameSnapshot}
                 </p>
               ))}
             </div>
           ) : (
-            <p className="mt-1 text-[11px] font-bold text-neutral-500">
+            <p className="mt-0.5 text-[10px] font-bold leading-tight text-neutral-500">
               No bundle component snapshot.
             </p>
           )}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function KitchenRushReadyCard({ order }: { order: KitchenOrder }) {
+  const guestName = order.guestName?.trim() || 'Guest name not provided';
+
+  return (
+    <details className="group rounded-xl border border-neutral-200 bg-white p-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <summary className="list-none cursor-pointer rounded-lg outline-none transition hover:bg-neutral-50 focus-visible:ring-4 focus-visible:ring-emerald-500/15 dark:hover:bg-neutral-800/60 [&::-webkit-details-marker]:hidden">
+        <div className="flex min-w-0 items-start justify-between gap-2 p-1">
+          <div className="min-w-0 space-y-1">
+            <span className={cn(rushMetaPillClass, 'max-w-full')}>
+              {order.orderCode}
+            </span>
+
+            <span className={cn(rushMetaPillClass, 'max-w-full')}>
+              {roomNumberOnly(order)} · {guestName}
+            </span>
+
+            <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700 opacity-80 dark:text-emerald-200">
+              Tap to view items
+            </p>
+          </div>
+        </div>
+      </summary>
+
+      <div className="grid grid-rows-[0fr] transition-all duration-300 ease-out group-open:grid-rows-[1fr]">
+        <div className="overflow-hidden">
+          <div className="mt-2 grid gap-1 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+            {order.items.length ? (
+              order.items.map((item) => (
+                <KitchenOrderItemLine key={item.id} item={item} compact />
+              ))
+            ) : (
+              <p className="rounded-lg bg-neutral-50 px-2 py-1 text-[10px] font-bold text-neutral-500 dark:bg-neutral-950 dark:text-neutral-400">
+                No item snapshot.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-2 [&_button]:min-h-7 [&_button]:rounded-lg [&_button]:px-2 [&_button]:py-1 [&_button]:text-[10px]">
+        <KitchenStatusActionButton
+          orderId={order.id}
+          status={OrderStatus.DELIVERED}
+          label="Delivered"
+          tone="dark"
+        />
+      </div>
+    </details>
   );
 }
 
@@ -553,11 +900,24 @@ function KitchenOrderCard({
   const guestName = order.guestName?.trim() || 'Guest name not provided';
   const activeItemCount = getActiveItemCount(order.items);
   const cancelledItemCount = getCancelledItemCount(order.items);
-
- const isTvMode = displayMode === 'tv';
-
-    const visibleItems = order.items;
-    const guestNote = getDisplayGuestNote(order.notes);
+  const isTvMode = displayMode === 'tv';
+  const isRushMode = displayMode === 'rush';
+  const visibleItems = order.items;
+  const shouldUseRushFoodGrid =
+    isRushMode && (type === 'pending' || type === 'preparing');
+  const rushGridItems =
+    shouldUseRushFoodGrid && visibleItems.length > 9
+      ? visibleItems.slice(0, 8)
+      : visibleItems;
+  const hiddenRushItemCount = Math.max(
+    visibleItems.length - rushGridItems.length,
+    0
+  );
+  const guestNote = getDisplayGuestNote(order.notes);
+  const roomLocationLabel = roomOrLocation(order);
+  const rushHeaderMeta = `${roomLocationLabel} · ${guestName}`;
+  const canMoveWithRushGesture =
+    isRushMode && (type === 'pending' || type === 'preparing');
 
   const displayStatus =
     order.status === OrderStatus.ACCEPTED
@@ -566,60 +926,89 @@ function KitchenOrderCard({
 
   return (
     <article
-        className={cn(
-          'grid w-full overflow-hidden border bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900',
-          isTvMode
-            ? 'rounded-[2rem] border-white/10 bg-white/95 shadow-2xl'
+      draggable={canMoveWithRushGesture}
+      data-kitchen-draggable-card={canMoveWithRushGesture ? 'true' : undefined}
+      data-kitchen-swipe-card={canMoveWithRushGesture ? 'true' : undefined}
+      data-order-id={canMoveWithRushGesture ? order.id : undefined}
+      data-current-lane={canMoveWithRushGesture ? type : undefined}
+      className={cn(
+        'grid w-full overflow-hidden border bg-white shadow-soft transition-transform dark:border-neutral-800 dark:bg-neutral-900',
+        canMoveWithRushGesture &&
+          'cursor-grab active:cursor-grabbing [touch-action:pan-y] data-[dragging=true]:opacity-60',
+        isTvMode
+          ? 'rounded-[2rem] border-white/10 bg-white/95 shadow-2xl'
+          : isRushMode
+            ? 'rounded-2xl border-neutral-200 shadow-sm'
             : 'rounded-[1.25rem] border-neutral-200'
-        )}
-      >
+      )}
+    >
       <div
         className={cn(
           'border-b border-neutral-100 dark:border-neutral-800',
-          isTvMode ? 'p-5' : 'p-2.5'
+          isTvMode ? 'p-5' : isRushMode ? 'p-2' : 'p-2.5'
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3
-              className={cn(
-                'truncate font-black text-neutral-950 dark:text-white',
-                isTvMode ? 'text-3xl' : 'text-sm'
-              )}
-            >
-              {order.orderCode}
-            </h3>
+        <div className={cn('flex items-start justify-between', isRushMode ? 'gap-2' : 'gap-3')}>
+          <div className="min-w-0 flex-1">
+            {isRushMode ? (
+              <div className="min-w-0 space-y-1">
+                <span className={cn(rushMetaPillClass, 'max-w-full')}>
+                  {order.orderCode}
+                </span>
 
-            <p
-              className={cn(
-                'mt-1 truncate font-bold text-neutral-500 dark:text-neutral-400',
-                isTvMode ? 'text-lg' : 'text-[11px]'
-              )}
-            >
-              {roomOrLocation(order)}
-            </p>
+                <span className={cn(rushMetaPillClass, 'max-w-full')}>
+                  {rushHeaderMeta}
+                </span>
+              </div>
+            ) : (
+              <>
+                <h3
+                  className={cn(
+                    'truncate font-black text-neutral-950 dark:text-white',
+                    isTvMode ? 'text-3xl' : 'text-sm'
+                  )}
+                >
+                  {order.orderCode}
+                </h3>
+
+                <p
+                  className={cn(
+                    'mt-1 truncate font-bold text-neutral-500 dark:text-neutral-400',
+                    isTvMode ? 'text-lg' : 'text-[11px]'
+                  )}
+                >
+                  {roomLocationLabel} · {guestName}
+                </p>
+              </>
+            )}
           </div>
 
-         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 whitespace-nowrap [&>*]:mt-0">
-            <StatusBadge status={displayStatus} />
+          <div className={cn('flex shrink-0 flex-nowrap items-center justify-end whitespace-nowrap [&>*]:mt-0', isRushMode ? 'gap-1' : 'gap-2')}>
+            {!isRushMode ? <StatusBadge status={displayStatus} /> : null}
             <KitchenRunningTimer startedAt={order.createdAt.toISOString()} />
           </div>
         </div>
 
         <div
           className={cn(
-            'mt-3 grid gap-1 rounded-xl bg-neutral-50 dark:bg-neutral-950',
-            isTvMode ? 'p-4 text-base' : 'p-2 text-[11px]'
+            'grid gap-1 rounded-xl bg-neutral-50 dark:bg-neutral-950',
+            isTvMode
+              ? 'mt-3 p-4 text-base'
+              : isRushMode
+                ? 'mt-2 p-1.5 text-[10px]'
+                : 'mt-3 p-2 text-[11px]'
           )}
         >
-          <p className="truncate">
-            <span className="font-black text-neutral-950 dark:text-white">
-              Guest:
-            </span>{' '}
-            <span className="font-semibold text-neutral-600 dark:text-neutral-400">
-              {guestName}
-            </span>
-          </p>
+          {!isRushMode ? (
+            <p className="truncate">
+              <span className="font-black text-neutral-950 dark:text-white">
+                Guest:
+              </span>{' '}
+              <span className="font-semibold text-neutral-600 dark:text-neutral-400">
+                {guestName}
+              </span>
+            </p>
+          ) : null}
 
           <p>
             <span className="font-black text-neutral-950 dark:text-white">
@@ -630,31 +1019,56 @@ function KitchenOrderCard({
             </span>
           </p>
 
-          <div className="mt-2 flex flex-wrap gap-1">
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-              {activeItemCount} active
-            </span>
+          {!isRushMode || cancelledItemCount > 0 ? (
+            <div
+              className={cn(
+                'flex flex-wrap gap-1',
+                isRushMode ? 'mt-1' : 'mt-2'
+              )}
+            >
+              {!isRushMode ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                  {activeItemCount} active
+                </span>
+              ) : null}
 
-            {cancelledItemCount > 0 ? (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200">
-                {cancelledItemCount} cancelled
-              </span>
-            ) : null}
-          </div>
+              {cancelledItemCount > 0 ? (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200">
+                  {cancelledItemCount} cancelled
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <div className={cn('space-y-2', isTvMode ? 'p-5' : 'p-2.5')}>
-        {visibleItems.map((item) => (
-          <KitchenOrderItemLine key={item.id} item={item} />
+      <div
+        className={cn(
+          shouldUseRushFoodGrid
+            ? 'grid grid-cols-3 gap-1 p-1.5'
+            : isRushMode
+              ? 'space-y-1 p-1.5'
+              : 'space-y-2',
+          isTvMode ? 'p-5' : !isRushMode ? 'p-2.5' : ''
+        )}
+      >
+        {rushGridItems.map((item) => (
+          <KitchenOrderItemLine key={item.id} item={item} compact={isRushMode} />
         ))}
 
+        {hiddenRushItemCount > 0 ? (
+          <div className="grid min-h-[32px] place-items-center rounded-md border border-dashed border-neutral-200 bg-neutral-50 px-2 py-1 text-center text-[10px] font-black text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
+            +{hiddenRushItemCount} more item
+            {hiddenRushItemCount === 1 ? '' : 's'}
+          </div>
+        ) : null}
 
         {guestNote ? (
           <div
             className={cn(
               'whitespace-pre-line rounded-xl bg-yellow-50 text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200',
-              isTvMode ? 'p-4 text-base' : 'p-2 text-xs'
+              shouldUseRushFoodGrid ? 'col-span-3' : '',
+              isTvMode ? 'p-4 text-base' : isRushMode ? 'p-1.5 text-[11px]' : 'p-2 text-xs'
             )}
           >
             <b>Guest note:</b> {guestNote}
@@ -663,9 +1077,16 @@ function KitchenOrderCard({
       </div>
 
       {!isTvMode ? (
-        <div className="border-t border-neutral-100 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+        <div
+          className={cn(
+            'border-t border-neutral-100 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950',
+            isRushMode
+              ? 'p-1.5 [&_button]:min-h-8 [&_button]:rounded-lg [&_button]:px-2 [&_button]:py-1.5 [&_button]:text-[11px]'
+              : 'p-2.5'
+          )}
+        >
           {type === 'pending' ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className={cn('grid grid-cols-2', isRushMode ? 'gap-1.5' : 'gap-2')}>
               <KitchenStatusActionButton
                 orderId={order.id}
                 status={OrderStatus.PREPARING}
@@ -686,7 +1107,7 @@ function KitchenOrderCard({
             <KitchenStatusActionButton
               orderId={order.id}
               status={OrderStatus.READY}
-              label="Done / Ready"
+              label="Ready"
               tone="dark"
             />
           ) : null}
@@ -701,10 +1122,25 @@ function KitchenOrderCard({
           ) : null}
         </div>
       ) : null}
+
+      {isRushMode && type === 'pending' ? (
+        <KitchenDragStatusForm
+          orderId={order.id}
+          targetStatus={OrderStatus.PREPARING}
+          history={showHistory ? '1' : ''}
+        />
+      ) : null}
+
+      {isRushMode && type === 'preparing' ? (
+        <KitchenDragStatusForm
+          orderId={order.id}
+          targetStatus={OrderStatus.READY}
+          history={showHistory ? '1' : ''}
+        />
+      ) : null}
     </article>
   );
 }
-
 function KitchenScheduledOrderCard({ order }: { order: KitchenOrder }) {
   const guestName = order.guestName?.trim() || 'Guest name not provided';
   const activeItemCount = getActiveItemCount(order.items);
@@ -837,6 +1273,8 @@ function KitchenLane({
   displayMode: KitchenDisplayMode;
 }) {
   const isTvMode = displayMode === 'tv';
+  const isRushMode = displayMode === 'rush';
+  const usesLaneTheme = isTvMode || isRushMode;
 
   const laneTheme =
     type === 'pending'
@@ -845,26 +1283,39 @@ function KitchenLane({
         ? 'border-blue-200 bg-blue-50 dark:border-blue-500/20 dark:bg-blue-500/10'
         : 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10';
 
+  const dropStatus =
+    isRushMode && type === 'preparing'
+      ? OrderStatus.PREPARING
+      : isRushMode && type === 'ready'
+        ? OrderStatus.READY
+        : undefined;
+
   return (
       <section
+      data-kitchen-drop-status={dropStatus}
       className={cn(
-        'flex min-h-[420px] flex-col overflow-hidden rounded-[2rem] border xl:h-full',
-        isTvMode
-          ? `${laneTheme} min-h-[calc(100dvh-220px)]`
+        'flex flex-col overflow-hidden border md:h-full',
+        isRushMode
+          ? type === 'ready'
+            ? 'min-h-[260px] rounded-[1.5rem]'
+            : 'min-h-[360px] rounded-[1.5rem]'
+          : 'min-h-[420px] rounded-[2rem]',
+        usesLaneTheme
+          ? `${laneTheme} ${isTvMode ? 'min-h-[calc(100dvh-220px)]' : ''}`
           : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900'
       )}
     >
       <div
         className={cn(
           'shrink-0 flex items-start justify-between gap-3 border-b border-black/5 dark:border-white/10',
-          isTvMode ? 'px-5 py-5' : 'px-4 py-4'
+          isTvMode ? 'px-5 py-5' : isRushMode ? 'px-3 py-3' : 'px-4 py-4'
         )}
       >
         <div className="min-w-0">
           <h2
             className={cn(
               'font-black text-neutral-950 dark:text-white',
-              isTvMode ? 'text-4xl' : 'text-2xl'
+              isTvMode ? 'text-4xl' : isRushMode ? 'text-xl' : 'text-2xl'
             )}
           >
             {title}
@@ -873,7 +1324,7 @@ function KitchenLane({
           <p
             className={cn(
               'mt-1 font-semibold text-neutral-500 dark:text-neutral-400',
-              isTvMode ? 'text-base' : 'text-sm'
+              isTvMode ? 'text-base' : isRushMode ? 'text-xs' : 'text-sm'
             )}
           >
             {description}
@@ -883,7 +1334,7 @@ function KitchenLane({
         <span
           className={cn(
             'grid shrink-0 place-items-center rounded-full bg-black font-black text-white dark:bg-gold dark:text-black',
-            isTvMode ? 'size-14 text-2xl' : 'size-10 text-sm'
+            isTvMode ? 'size-14 text-2xl' : isRushMode ? 'size-8 text-xs' : 'size-10 text-sm'
           )}
         >
           {orders.length}
@@ -893,14 +1344,20 @@ function KitchenLane({
       <div
           className={cn(
             'min-h-0 flex-1 overflow-y-auto overscroll-contain',
-            isTvMode ? 'p-5 pr-3' : 'p-4 pr-2'
+            isTvMode
+              ? 'p-5 pr-3'
+              : isRushMode && type === 'ready'
+                ? 'p-2 pr-1.5'
+                : isRushMode
+                  ? 'p-2.5 pr-2'
+                  : 'p-4 pr-2'
           )}
         >
         {orders.length === 0 ? (
           <div
             className={cn(
               'grid h-full min-h-40 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white text-center dark:border-neutral-800 dark:bg-neutral-950',
-              isTvMode ? 'p-8' : 'p-5'
+              isTvMode ? 'p-8' : isRushMode ? 'p-4' : 'p-5'
             )}
           >
             <p
@@ -913,16 +1370,20 @@ function KitchenLane({
             </p>
           </div>
         ) : (
-          <div className="grid gap-3">
-            {orders.map((order) => (
-              <KitchenOrderCard
-                key={order.id}
-                order={order}
-                type={type}
-                showHistory={showHistory}
-                displayMode={displayMode}
-              />
-            ))}
+          <div className={cn('grid', isRushMode ? 'gap-2' : 'gap-3')}>
+            {orders.map((order) =>
+              isRushMode && type === 'ready' ? (
+                <KitchenRushReadyCard key={order.id} order={order} />
+              ) : (
+                <KitchenOrderCard
+                  key={order.id}
+                  order={order}
+                  type={type}
+                  showHistory={showHistory}
+                  displayMode={displayMode}
+                />
+              )
+            )}
           </div>
         )}
       </div>
@@ -995,11 +1456,7 @@ const isScheduledView = activeView === 'scheduled';
   const showHistory = params?.history === '1';
   const message = getKitchenMessage(params?.success, params?.error);
  const displayMode: KitchenDisplayMode =
-  params?.mode === 'tv'
-    ? 'tv'
-    : params?.mode === 'rush'
-      ? 'rush'
-      : 'normal';
+  params?.mode === 'tv' ? 'tv' : 'rush';
 
 const isTvMode = displayMode === 'tv';
 const isRushMode = displayMode === 'rush';
@@ -1143,18 +1600,19 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       <div
         id="kitchen-display-fullscreen"
         className={cn(
-            'h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white xl:overflow-hidden',
+            'h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white md:overflow-hidden',
             isTvMode
               ? 'bg-neutral-950 p-5'
-              : 'bg-white px-4 pb-28 pt-4 dark:bg-neutral-950 xl:px-6'
+              : 'bg-white px-3 pb-24 pt-3 dark:bg-neutral-950 md:px-4 md:pb-4 md:pt-4 xl:px-6'
           )}
       >
       <RealtimeKitchenRefresh fallbackIntervalMs={30_000} refreshDebounceMs={500} />
+      <KitchenSwipeDragController />
       <KitchenToast message={message} showHistory={showHistory} />
 
       <div
   className={cn(
-    'mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between',
+    'mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between',
     isTvMode && 'rounded-[2rem] border border-white/10 bg-white/5 p-5'
   )}
 >
@@ -1179,7 +1637,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     />
   )}
 
-<div className="flex flex-wrap gap-2">
+<div className="flex flex-wrap gap-2 md:justify-end">
   <KitchenManualRefreshButton />
 
   <KitchenFullscreenButton targetId="kitchen-display-fullscreen" />
@@ -1206,7 +1664,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
           : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
       )}
     >
-      {isTvMode ? 'Normal Mode' : 'TV Mode'}
+      {isTvMode ? 'Exit TV' : 'TV Mode'}
     </Link>
   ) : null}
 
@@ -1215,22 +1673,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       <Link
         href={buildKitchenModeHref({
           history: false,
-          mode: displayMode,
-          view: 'live',
-        })}
-        className={
-          activeView === 'live' && !showHistory
-            ? 'inline-flex min-h-11 items-center gap-2 rounded-2xl bg-black px-4 py-2 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
-            : 'inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
-        }
-      >
-        Live Orders
-      </Link>
-
-      <Link
-        href={buildKitchenModeHref({
-          history: false,
-          mode: 'normal',
+          mode: 'rush',
           view: 'scheduled',
         })}
         className={
@@ -1275,23 +1718,21 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
         </Link>
       ) : null}
 
-      {activeView === 'live' ? (
-        <Link
-          href={buildKitchenModeHref({
-            history: showHistory,
-            mode: isRushMode ? 'normal' : 'rush',
-            view: 'live',
-          })}
-          className={cn(
-            'inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black transition',
-            isRushMode
-              ? 'bg-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
-              : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
-          )}
-        >
-          {isRushMode ? 'Normal Mode' : 'Rush Mode'}
-        </Link>
-      ) : null}
+      <Link
+        href={buildKitchenModeHref({
+          history: showHistory,
+          mode: 'rush',
+          view: 'live',
+        })}
+        className={cn(
+          'inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black transition',
+          activeView === 'live' && isRushMode
+            ? 'bg-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+            : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+        )}
+      >
+        Rush Mode
+      </Link>
     </>
   ) : null}
 </div>
@@ -1299,50 +1740,52 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
 
       <div
           className={cn(
-            'grid min-h-0 gap-4 xl:h-[calc(100dvh-170px)]',
+            'grid min-h-0 gap-3 md:h-[calc(100dvh-160px)] xl:h-[calc(100dvh-170px)]',
             showHistory && !isTvMode && !isScheduledView
-              ? 'xl:grid-cols-[minmax(0,1fr)_360px]'
-              : 'xl:grid-cols-1'
+              ? 'md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]'
+              : 'md:grid-cols-1'
           )}
         >
             <main
           className={cn(
             'min-h-0 flex-col overflow-hidden',
-            isTvMode || isRushMode ? 'gap-5' : 'gap-4',
-            showHistory && !isTvMode && !isScheduledView ? 'hidden xl:flex' : 'flex'
+            isTvMode ? 'gap-5' : isRushMode ? 'gap-3' : 'gap-4',
+            showHistory && !isTvMode && !isScheduledView ? 'hidden md:flex' : 'flex'
           )}
         >
     {isScheduledView ? (
   <KitchenScheduledLane orders={scheduledOrders} />
 ) : isRushMode ? (
- <div className="grid min-h-0 gap-4 xl:grid-cols-3">
-
-    <KitchenRushLaneWithDrawer
-        title="Pending"
-        description="Oldest pending orders first."
-        orders={pendingOrders.map(toKitchenRushOrderForClient)}
-        type="pending"
-        statusAction={updateKitchenOrderStatusAction}
-      />
-
-      <KitchenRushLaneWithDrawer
-      title="Preparing"
-      description="Accepted orders currently being prepared."
-      orders={preparingOrders.map(toKitchenRushOrderForClient)}
-      type="preparing"
-      statusAction={updateKitchenOrderStatusAction}
+  <div className="grid min-h-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_220px] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_280px] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">
+    <KitchenLane
+      title="Pending"
+      description="Oldest pending orders first."
+      orders={pendingOrders}
+      type="pending"
+      showHistory={showHistory}
+      displayMode={displayMode}
     />
 
-      <KitchenRushLaneWithDrawer
-        title="Ready"
-        description="Orders ready for delivery."
-        orders={readyOrders.map(toKitchenRushOrderForClient)}
-        type="ready"
-        statusAction={updateKitchenOrderStatusAction}
-      />
+    <KitchenLane
+      title="Preparing"
+      description="Accepted orders currently being prepared."
+      orders={preparingOrders}
+      type="preparing"
+      showHistory={showHistory}
+      displayMode={displayMode}
+    />
+
+    <KitchenLane
+      title="Ready"
+      description="Orders ready for delivery."
+      orders={readyOrders}
+      type="ready"
+      showHistory={showHistory}
+      displayMode={displayMode}
+    />
   </div>
 ) : isTvMode ? (
-  <div className="grid min-h-0 gap-4 xl:grid-cols-3">
+  <div className="grid min-h-0 gap-3 md:grid-cols-3 xl:gap-4">
     <KitchenTvPagedLane
       title="Pending"
       description="Auto-rotating pending orders."
@@ -1401,7 +1844,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     </KitchenTvPagedLane>
   </div>
 ) : (
-  <div className="grid min-h-0 gap-4 xl:grid-cols-3">
+  <div className="grid min-h-0 gap-3 md:grid-cols-3 xl:gap-4">
     <KitchenLane
       title="Pending"
       description="New orders waiting for accept or reject."

@@ -1534,283 +1534,297 @@ function pushTestNotification() {
     persistedNotifications.length + notifications.length;
 
   return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
-      <div className="w-full space-y-3">
-        {toastNotifications.map((notification) => {
-          const Icon = getNotificationIcon(notification.type);
-          const style = getNotificationStyle(notification.type);
-
-          return (
-            <div
-            key={notification.id}
-            className={`pointer-events-auto overflow-hidden rounded-3xl border ${style.border} bg-white shadow-2xl`}
-          >
-              <div className="flex items-start gap-3 p-4">
-                <span
-                  className={`grid size-10 shrink-0 place-items-center rounded-2xl ${style.iconWrap}`}
-                >
-                  <Icon className="size-5" />
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    markNotificationRead(notification.id);
-                    dismissToast(notification.id);
-                    router.push(notification.href);
-                  }}
-                  className="min-w-0 flex-1 text-left"
-                >
-                  <p className="text-sm font-black text-neutral-950">
-                    {notification.title}
-                  </p>
-                  <p className="mt-1 text-sm font-bold leading-6 text-neutral-600">
-                    {notification.message}
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => dismissToast(notification.id)}
-                  className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200"
-                  aria-label="Dismiss notification"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {notificationCenterOpen ? (
-  <div className="pointer-events-auto w-full overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl">
-    <div className="border-b border-neutral-100 bg-neutral-50 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-black text-neutral-950">
-            Notification Center
-          </p>
-          <p className="mt-1 text-xs font-bold text-neutral-500">
-            {unreadCount} unread · {totalNotificationCount} total
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setNotificationCenterOpen(false)}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-neutral-500 hover:bg-neutral-100"
-          aria-label="Close notification center"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={markAllNotificationsRead}
-          disabled={!unreadCount}
-          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-black px-2 text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <CheckCheck className="size-3.5" />
-          Read all
-        </button>
-
-        <button
-          type="button"
-          onClick={toggleSoundMuted}
-          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-100"
-        >
-          {soundMuted ? (
-            <VolumeX className="size-3.5" />
-          ) : (
-            <Volume2 className="size-3.5" />
-          )}
-          {soundMuted ? 'Unmute' : 'Mute'}
-        </button>
-
-        <button
-          type="button"
-          onClick={clearNotifications}
-          disabled={!totalNotificationCount}
-          className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Trash2 className="size-3.5" />
-          Clear
-        </button>
-      </div>
-
-      {persistedUnreadCount > 0 ? (
-              <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-800">
-                <p className="font-black">Welcome back!</p>
-                <p>
-                  You have {persistedUnreadCount} unread dashboard notification
-                  {persistedUnreadCount === 1 ? '' : 's'} while you were away.
-                </p>
-              </div>
-            ) : null}
-    </div>
-
-    <div className="max-h-[440px] overflow-y-auto p-3">
-      {latestNotifications.length ? (
-        <div className="space-y-2">
-          {latestNotifications.map((notification) => {
+    <>
+      <div className="pointer-events-none fixed right-5 top-[5.25rem] z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
+        <div className="w-full space-y-3">
+          {toastNotifications.map((notification) => {
             const Icon = getNotificationIcon(notification.type);
             const style = getNotificationStyle(notification.type);
-            const isUnread = !notification.readAt;
 
             return (
               <div
-                key={`center-${notification.id}`}
-                className={`rounded-2xl border p-3 ${
-                  isUnread
-                    ? `${style.border} bg-neutral-50`
-                    : 'border-neutral-100 bg-white opacity-75'
-                }`}
+                key={notification.id}
+                className={`pointer-events-auto overflow-hidden rounded-3xl border ${style.border} bg-white shadow-2xl dark:bg-neutral-950`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 p-4">
                   <span
                     className={`grid size-10 shrink-0 place-items-center rounded-2xl ${style.iconWrap}`}
                   >
                     <Icon className="size-5" />
                   </span>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-neutral-950">
-                          {notification.title}
-                        </p>
-                        <p className="mt-0.5 text-[11px] font-bold text-neutral-400">
-                          {formatNotificationTime(notification.createdAt)}
-                        </p>
-                      </div>
-
-                      {isUnread ? (
-                        <span className="mt-1 size-2 shrink-0 rounded-full bg-emerald-500" />
-                      ) : null}
-                    </div>
-
-                    <p className="mt-2 text-sm font-semibold leading-5 text-neutral-600">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markNotificationRead(notification.id);
+                      dismissToast(notification.id);
+                      router.push(notification.href);
+                    }}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <p className="text-sm font-black text-neutral-950 dark:text-white">
+                      {notification.title}
+                    </p>
+                    <p className="mt-1 text-sm font-bold leading-6 text-neutral-600 dark:text-neutral-300">
                       {notification.message}
                     </p>
+                  </button>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          markNotificationRead(notification.id);
-                          setNotificationCenterOpen(false);
-                          router.push(notification.href);
-                        }}
-                        className="h-8 rounded-xl bg-black px-3 text-[11px] font-black text-white hover:bg-neutral-800"
-                      >
-                        View
-                      </button>
-
-                      {isUnread ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            markNotificationRead(notification.id)
-                          }
-                          className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-[11px] font-black text-neutral-700 hover:bg-neutral-100"
-                        >
-                          Mark read
-                        </button>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        onClick={() => removeNotification(notification.id)}
-                        className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dismissToast(notification.id)}
+                    className="grid size-8 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-500 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    aria-label="Dismiss notification"
+                  >
+                    <X className="size-4" />
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-neutral-200 p-8 text-center">
-          <BellRing className="mx-auto size-8 text-neutral-300" />
-          <p className="mt-3 text-sm font-black text-neutral-500">
-            No notifications yet
-          </p>
-          <p className="mt-1 text-xs font-semibold text-neutral-400">
-            New orders, service requests, low stock, and cancellations will
-            appear here.
-          </p>
-        </div>
-      )}
-    </div>
-  </div>
-) : null}
+      </div>
 
-      {lastRealtimeIssue ? (
+      <div className="relative z-[110]">
         <button
           type="button"
-          onClick={() => pushSystemNotification(lastRealtimeIssue)}
-          className="pointer-events-auto max-w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-black text-amber-800 shadow-lg"
+          onClick={() => setNotificationCenterOpen((current) => !current)}
+          aria-expanded={notificationCenterOpen}
+          className={`relative inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-black transition ${
+            hasRealtimeError
+              ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
+              : 'border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+          }`}
+          title={`Kitchen: ${kitchenStatus}. Service: ${serviceStatus}. Operations: ${operationsStatus}.${
+            lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
+          }`}
         >
-          Realtime issue detected
-        </button>
-      ) : null}
+          <BellRing className="size-4" />
+          <span className="hidden sm:inline">Notifications</span>
 
-      <div
-  className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-white shadow-2xl"
-        title={`Kitchen: ${kitchenStatus}. Service: ${serviceStatus}. Operations: ${operationsStatus}.${
-          lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
-        }`}
-      >
-
-        <button
-            type="button"
-            onClick={() => setNotificationCenterOpen((current) => !current)}
-            className="relative inline-flex h-8 items-center gap-2 rounded-xl px-2 text-xs font-black transition hover:bg-white/15"
-          >
-            <BellRing className="size-4" />
-            Notifications
-
-            {unreadCount > 0 ? (
-              <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            ) : null}
-          </button>
-
-        <button
-          type="button"
-          onClick={alertsEnabled ? disableAlerts : enableAlerts}
-          className="inline-flex h-8 items-center gap-2 rounded-xl px-2 text-xs font-black transition hover:bg-white/15"
-        >
-          <Volume2 className="size-4" />
-          {alertsEnabled ? 'Alerts On' : 'Enable Alerts'}
+          {unreadCount > 0 ? (
+            <span className="absolute -right-1.5 -top-1.5 grid min-w-5 place-items-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          ) : null}
         </button>
 
-        <span className="inline-flex h-7 items-center gap-1 rounded-xl bg-white/15 px-2 text-[11px] font-black">
-          <RealtimeIcon className="size-3.5" />
-          {realtimeStatusLabel}
-        </span>
+        {notificationCenterOpen ? (
+          <div className="absolute right-0 top-full z-[120] mt-3 w-[28rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+            <div className="border-b border-neutral-100 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-neutral-950 dark:text-white">
+                    Notification Center
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                    {unreadCount} unread · {totalNotificationCount} total
+                  </p>
+                </div>
 
-        <button
-          type="button"
-          onClick={pushTestNotification}
-          className="inline-flex h-7 items-center gap-1 rounded-xl bg-white/15 px-2 text-[11px] font-black transition hover:bg-white/25"
-        >
-          Test Alert
-        </button>
+                <button
+                  type="button"
+                  onClick={() => setNotificationCenterOpen(false)}
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  aria-label="Close notification center"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
 
-        {browserNotificationPermission === 'denied' ? (
-          <span className="rounded-xl bg-red-500/25 px-2 py-1 text-[10px] font-black">
-            Browser Blocked
-          </span>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={markAllNotificationsRead}
+                  disabled={!unreadCount}
+                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-black px-2 text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
+                >
+                  <CheckCheck className="size-3.5" />
+                  Read all
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleSoundMuted}
+                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                >
+                  {soundMuted ? (
+                    <VolumeX className="size-3.5" />
+                  ) : (
+                    <Volume2 className="size-3.5" />
+                  )}
+                  {soundMuted ? 'Unmute' : 'Mute'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={clearNotifications}
+                  disabled={!totalNotificationCount}
+                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                >
+                  <Trash2 className="size-3.5" />
+                  Clear
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-neutral-200 bg-white p-2 dark:border-neutral-800 dark:bg-neutral-950">
+                <button
+                  type="button"
+                  onClick={alertsEnabled ? disableAlerts : enableAlerts}
+                  className="inline-flex h-8 items-center gap-2 rounded-xl px-2 text-xs font-black text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                >
+                  <Volume2 className="size-4" />
+                  {alertsEnabled ? 'Alerts On' : 'Enable Alerts'}
+                </button>
+
+                <span
+                  className={`inline-flex h-8 items-center gap-1 rounded-xl px-2 text-[11px] font-black ${
+                    realtimeConnected
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                      : hasRealtimeError
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
+                        : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300'
+                  }`}
+                >
+                  <RealtimeIcon className="size-3.5" />
+                  {realtimeStatusLabel}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={pushTestNotification}
+                  className="inline-flex h-8 items-center gap-1 rounded-xl bg-neutral-100 px-2 text-[11px] font-black text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                >
+                  Test Alert
+                </button>
+
+                {browserNotificationPermission === 'denied' ? (
+                  <span className="rounded-xl bg-red-500/10 px-2 py-1 text-[10px] font-black text-red-600 dark:text-red-300">
+                    Browser Blocked
+                  </span>
+                ) : null}
+              </div>
+
+              {lastRealtimeIssue ? (
+                <button
+                  type="button"
+                  onClick={() => pushSystemNotification(lastRealtimeIssue)}
+                  className="mt-3 w-full rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-left text-xs font-black text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                >
+                  Realtime issue detected
+                </button>
+              ) : null}
+
+              {persistedUnreadCount > 0 ? (
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                  <p className="font-black">Welcome back!</p>
+                  <p>
+                    You have {persistedUnreadCount} unread dashboard notification
+                    {persistedUnreadCount === 1 ? '' : 's'} while you were away.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="max-h-[min(440px,calc(100dvh-240px))] overflow-y-auto p-3">
+              {latestNotifications.length ? (
+                <div className="space-y-2">
+                  {latestNotifications.map((notification) => {
+                    const Icon = getNotificationIcon(notification.type);
+                    const style = getNotificationStyle(notification.type);
+                    const isUnread = !notification.readAt;
+
+                    return (
+                      <div
+                        key={`center-${notification.id}`}
+                        className={`rounded-2xl border p-3 ${
+                          isUnread
+                            ? `${style.border} bg-neutral-50 dark:bg-neutral-900`
+                            : 'border-neutral-100 bg-white opacity-75 dark:border-neutral-800 dark:bg-neutral-950'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={`grid size-10 shrink-0 place-items-center rounded-2xl ${style.iconWrap}`}
+                          >
+                            <Icon className="size-5" />
+                          </span>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-black text-neutral-950 dark:text-white">
+                                  {notification.title}
+                                </p>
+                                <p className="mt-0.5 text-[11px] font-bold text-neutral-400">
+                                  {formatNotificationTime(notification.createdAt)}
+                                </p>
+                              </div>
+
+                              {isUnread ? (
+                                <span className="mt-1 size-2 shrink-0 rounded-full bg-emerald-500" />
+                              ) : null}
+                            </div>
+
+                            <p className="mt-2 text-sm font-semibold leading-5 text-neutral-600 dark:text-neutral-300">
+                              {notification.message}
+                            </p>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  markNotificationRead(notification.id);
+                                  setNotificationCenterOpen(false);
+                                  router.push(notification.href);
+                                }}
+                                className="h-8 rounded-xl bg-black px-3 text-[11px] font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+                              >
+                                View
+                              </button>
+
+                              {isUnread ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    markNotificationRead(notification.id)
+                                  }
+                                  className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-[11px] font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                                >
+                                  Mark read
+                                </button>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                onClick={() => removeNotification(notification.id)}
+                                className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-neutral-200 p-8 text-center dark:border-neutral-800">
+                  <BellRing className="mx-auto size-8 text-neutral-300 dark:text-neutral-700" />
+                  <p className="mt-3 text-sm font-black text-neutral-500 dark:text-neutral-400">
+                    No notifications yet
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-neutral-400 dark:text-neutral-500">
+                    New orders, service requests, low stock, and cancellations will
+                    appear here.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         ) : null}
       </div>
-    </div>
+    </>
   );
 }

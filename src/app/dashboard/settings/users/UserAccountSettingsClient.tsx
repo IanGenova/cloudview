@@ -215,6 +215,7 @@ type ToastMessage =
   key: 'REWARDS' as DashboardModule,
   label: 'Rewards',
   description: 'Manage guest rewards, points, and loyalty settings.',
+  superAdminOnly: true,
 },
 ];
 
@@ -274,6 +275,27 @@ function viewOnlyPermissionValue() {
   };
 }
 
+function isRequiredLandingModule(module: DashboardModule) {
+  return module === ('OVERVIEW' as DashboardModule);
+}
+
+function forceSafePermissionDraft(draft: PermissionDraft) {
+  const nextDraft = {
+    ...draft,
+  };
+
+  nextDraft.OVERVIEW = {
+    ...(nextDraft.OVERVIEW ?? emptyPermissionValue()),
+    canView: true,
+  };
+
+  return nextDraft;
+}
+
+function countVisiblePermissions(permissions: UserDashboardPermission[]) {
+  return permissions.filter((permission) => permission.canView).length;
+}
+
 function normalizePermissionValue(
   current: PermissionDraft[string],
   key: PermissionKey,
@@ -321,7 +343,7 @@ function createPermissionDraftFromSaved({
     };
   }
 
-  return draft;
+  return forceSafePermissionDraft(draft);
 }
 
 function createDefaultPermissionDraftForRole({
@@ -348,7 +370,7 @@ function createDefaultPermissionDraftForRole({
       draft[module.key] = fullPermissionValue();
     }
 
-    return draft;
+    return forceSafePermissionDraft(draft);
   }
 
   if (role === 'KITCHEN') {
@@ -362,7 +384,7 @@ function createDefaultPermissionDraftForRole({
     });
     setModule('INVENTORY', viewOnlyPermissionValue());
 
-    return draft;
+    return forceSafePermissionDraft(draft);
   }
 
   setModule('OVERVIEW', viewOnlyPermissionValue());
@@ -425,7 +447,7 @@ function createDefaultPermissionDraftForRole({
 
   setModule('ANALYTICS', viewOnlyPermissionValue());
 
-  return draft;
+  return forceSafePermissionDraft(draft);
 }
 
 function PermissionMatrix({
@@ -472,6 +494,13 @@ function PermissionMatrix({
   const activeDraft = isControlled ? permissionDraft ?? {} : localDraft;
 
   function getModuleValue(module: DashboardModule) {
+    if (isRequiredLandingModule(module)) {
+      return {
+        ...(activeDraft[module] ?? emptyPermissionValue()),
+        canView: true,
+      };
+    }
+
     return activeDraft[module] ?? emptyPermissionValue();
   }
 
@@ -519,13 +548,25 @@ function PermissionMatrix({
   ) {
     const nextDraft = cloneActiveDraft();
 
+    if (isRequiredLandingModule(module) && key !== 'canView') {
+      nextDraft[module] = viewOnlyPermissionValue();
+      applyDraft(forceSafePermissionDraft(nextDraft));
+      return;
+    }
+
+    if (isRequiredLandingModule(module) && key === 'canView' && !checked) {
+      nextDraft[module] = viewOnlyPermissionValue();
+      applyDraft(forceSafePermissionDraft(nextDraft));
+      return;
+    }
+
     nextDraft[module] = normalizePermissionValue(
       nextDraft[module] ?? emptyPermissionValue(),
       key,
       checked
     );
 
-    applyDraft(nextDraft);
+    applyDraft(forceSafePermissionDraft(nextDraft));
   }
 
   function setModulePreset(
@@ -534,21 +575,25 @@ function PermissionMatrix({
   ) {
     const nextDraft = cloneActiveDraft();
 
-    nextDraft[module] = value;
+    nextDraft[module] = isRequiredLandingModule(module)
+      ? viewOnlyPermissionValue()
+      : value;
 
-    applyDraft(nextDraft);
+    applyDraft(forceSafePermissionDraft(nextDraft));
   }
 
   function setAllModules(value: PermissionDraft[string]) {
     const nextDraft = cloneActiveDraft();
 
     for (const module of visibleModules) {
-      nextDraft[module.key] = {
-        ...value,
-      };
+      nextDraft[module.key] = isRequiredLandingModule(module.key)
+        ? viewOnlyPermissionValue()
+        : {
+            ...value,
+          };
     }
 
-    applyDraft(nextDraft);
+    applyDraft(forceSafePermissionDraft(nextDraft));
   }
 
   function setColumnAll(key: PermissionKey, checked: boolean) {
@@ -562,7 +607,7 @@ function PermissionMatrix({
       );
     }
 
-    applyDraft(nextDraft);
+    applyDraft(forceSafePermissionDraft(nextDraft));
   }
 
   const allSelected = visibleModules.every((module) => {
@@ -593,6 +638,9 @@ function PermissionMatrix({
 
           <p className="mt-2 text-xs font-black text-neutral-600">
             {visibleCount} of {visibleModules.length} modules visible
+          </p>
+          <p className="mt-1 text-[11px] font-bold text-emerald-700">
+            Overview is kept visible as the safe dashboard landing page.
           </p>
         </div>
 
@@ -687,7 +735,8 @@ function PermissionMatrix({
                     onClick={() =>
                       setModulePreset(module.key, emptyPermissionValue())
                     }
-                    className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100"
+                    disabled={isRequiredLandingModule(module.key)}
+                    className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Clear
                   </button>
@@ -696,12 +745,20 @@ function PermissionMatrix({
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {permissionColumns.map((column) => {
-                  const checked = Boolean(value[column.key]);
+                  const isRequiredModule = isRequiredLandingModule(module.key);
+                  const checked = isRequiredModule
+                    ? column.key === 'canView'
+                    : Boolean(value[column.key]);
+                  const disabled = false;
 
                   return (
                     <label
                       key={`${module.key}-${column.key}`}
-                      className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-black text-neutral-700 transition hover:border-neutral-400 hover:bg-white"
+                      className={
+                        disabled
+                          ? 'flex cursor-not-allowed items-center justify-between rounded-xl border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-black text-neutral-400'
+                          : 'flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-black text-neutral-700 transition hover:border-neutral-400 hover:bg-white'
+                      }
                     >
                       <span>{column.label}</span>
 
@@ -709,6 +766,7 @@ function PermissionMatrix({
                         type="checkbox"
                         name={`permission:${module.key}:${column.key}`}
                         checked={checked}
+                        disabled={disabled}
                         onChange={(event) => {
                           updatePermission(
                             module.key,
@@ -716,7 +774,7 @@ function PermissionMatrix({
                             event.target.checked
                           );
                         }}
-                        className="size-4 cursor-pointer rounded border-neutral-300 accent-black"
+                        className="size-4 cursor-pointer rounded border-neutral-300 accent-black disabled:cursor-not-allowed"
                       />
                     </label>
                   );
@@ -1008,10 +1066,10 @@ function CreateUserModal({
 
       return {
         ...current,
-        permissions: {
+        permissions: forceSafePermissionDraft({
           ...current.permissions,
           [module]: nextModule,
-        },
+        }),
       };
     });
   }
@@ -1057,16 +1115,16 @@ function CreateUserModal({
             </label>
             <input
               name="password"
-              type="password"
+              type="text"
               required
-              minLength={8}
+              minLength={5}
               value={draft.password}
               onChange={(event) => updateDraft('password', event.target.value)}
-              placeholder="Minimum 8 characters"
+              placeholder="Example: 12345 or abcde"
               className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
             <p className="mt-1 text-xs text-neutral-500">
-              Must include uppercase, lowercase, and number.
+              Simple temporary password is allowed. Example: 12345 or abcde.
             </p>
           </div>
 
@@ -1323,10 +1381,10 @@ function ResetPasswordModal({
           </label>
           <input
             name="password"
-            type="password"
+            type="text"
             required
-            minLength={8}
-            placeholder="Minimum 8 characters"
+            minLength={5}
+            placeholder="Example: 12345 or abcde"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
@@ -1337,17 +1395,17 @@ function ResetPasswordModal({
           </label>
           <input
             name="confirmPassword"
-            type="password"
+            type="text"
             required
-            minLength={8}
+            minLength={5}
             placeholder="Re-enter new password"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div className="rounded-2xl bg-amber-50 p-4 text-xs font-bold text-amber-700">
-          Password must contain at least 8 characters, one uppercase letter, one
-          lowercase letter, and one number.
+          Simple temporary passwords are allowed. Use at least 5 characters,
+          such as 12345 or abcde.
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -1438,6 +1496,9 @@ export function UserAccountSettingsClient({
   currentUserRole: Role;
 }) {
   const [toast, setToast] = useState<ToastMessage>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | Role>('ALL');
+  const [hotelFilter, setHotelFilter] = useState('ALL');
 
   const [creatingUser, setCreatingUser] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
@@ -1445,110 +1506,291 @@ export function UserAccountSettingsClient({
     useState<UserAccount | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
 
+  const filteredUsers = users.filter((account) => {
+    const searchable = [
+      account.name,
+      account.email,
+      account.role,
+      account.hotel?.name ?? 'No hotel assigned',
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    const matchesSearch = searchable.includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'ALL' || account.role === roleFilter;
+    const matchesHotel =
+      hotelFilter === 'ALL' ||
+      (hotelFilter === 'NONE' && !account.hotelId) ||
+      account.hotelId === hotelFilter;
+
+    return matchesSearch && matchesRole && matchesHotel;
+  });
+
+  const adminCount = users.filter(
+    (account) =>
+      account.role === 'SUPER_ADMIN' || account.role === 'HOTEL_ADMIN'
+  ).length;
+  const staffCount = users.filter(
+    (account) => account.role === 'STAFF' || account.role === 'KITCHEN'
+  ).length;
+  const zeroAccessCount = users.filter(
+    (account) => countVisiblePermissions(account.dashboardPermissions) <= 0
+  ).length;
+
   return (
     <>
       <Toast message={toast} onClose={() => setToast(null)} />
 
       <div className="space-y-5">
-        <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
-          <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
+        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-[#11100b] text-white shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
+          <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-black">Existing Users</h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                Create users, edit accounts, reset passwords, delete users, and
-                manage dashboard module access.
+              <p className="inline-flex rounded-full border border-[#c99c38]/30 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#f1c66a]">
+                Access Control
+              </p>
+              <h1 className="mt-3 text-2xl font-black tracking-tight">
+                User Account Settings
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/60">
+                Create accounts, assign hotel access, and control exactly which
+                dashboard modules each user can open.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => setCreatingUser(true)}
-              className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#d6a738] px-5 text-sm font-black text-black shadow-[0_14px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
             >
               Create New User
             </button>
           </div>
-        </div>
 
-        <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
-          <div className="mt-1 space-y-4">
-            {users.map((account) => (
-              <div
-                key={account.id}
-                className="rounded-3xl border border-neutral-200 bg-white p-4"
-              >
-                <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-black">{account.name}</h3>
+          <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
+            <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                Users
+              </p>
+              <p className="mt-1 text-2xl font-black">{users.length}</p>
+              <p className="mt-1 text-xs font-semibold text-white/45">
+                Total accounts
+              </p>
+            </div>
 
-                      <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-700">
-                        {roleLabels[account.role]}
-                      </span>
-                    </div>
+            <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                Admins
+              </p>
+              <p className="mt-1 text-2xl font-black">{adminCount}</p>
+              <p className="mt-1 text-xs font-semibold text-white/45">
+                Admin-level accounts
+              </p>
+            </div>
 
-                    <p className="mt-1 text-sm text-neutral-500">
-                      {account.email}
-                    </p>
+            <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                Staff
+              </p>
+              <p className="mt-1 text-2xl font-black">{staffCount}</p>
+              <p className="mt-1 text-xs font-semibold text-white/45">
+                Staff and kitchen users
+              </p>
+            </div>
 
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Hotel:{' '}
-                      <span className="font-bold">
-                        {account.hotel?.name ?? 'No hotel assigned'}
-                      </span>
-                    </p>
-
-                    <p className="mt-2 text-xs font-bold text-neutral-500">
-                      Modules:{' '}
-                      <span className="text-neutral-800">
-                        {account.dashboardPermissions?.filter(
-                          (permission) => permission.canView
-                        ).length ?? 0}{' '}
-                        visible
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingUser(account)}
-                      className="h-10 rounded-2xl border border-neutral-200 px-4 text-sm font-black hover:bg-neutral-50"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setResetPasswordUser(account)}
-                      className="h-10 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800"
-                    >
-                      Reset Password
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setDeletingUser(account)}
-                      className="h-10 rounded-2xl bg-red-600 px-4 text-sm font-black text-white hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {!users.length ? (
-              <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-                <p className="font-black">No user accounts found.</p>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Create your first dashboard user using the Create New User
-                  button.
-                </p>
-              </div>
-            ) : null}
+            <div className="p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                Needs Review
+              </p>
+              <p className="mt-1 text-2xl font-black">{zeroAccessCount}</p>
+              <p className="mt-1 text-xs font-semibold text-white/45">
+                No visible module
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_180px_220px]">
+            <label className="grid gap-1">
+              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                Search Users
+              </span>
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search name, email, role, or hotel..."
+                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+              />
+            </label>
+
+            <label className="grid gap-1">
+              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                Role
+              </span>
+              <select
+                value={roleFilter}
+                onChange={(event) =>
+                  setRoleFilter(event.target.value as 'ALL' | Role)
+                }
+                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+              >
+                <option value="ALL">All Roles</option>
+                {allowedRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {roleLabels[role]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1">
+              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                Hotel
+              </span>
+              <select
+                value={hotelFilter}
+                onChange={(event) => setHotelFilter(event.target.value)}
+                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+              >
+                <option value="ALL">All Hotels</option>
+                <option value="NONE">No Hotel Assigned</option>
+                {hotels.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id}>
+                    {hotel.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-neutral-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-black">User Directory</h2>
+              <p className="text-sm font-semibold text-neutral-500">
+                Showing {filteredUsers.length} of {users.length} accounts.
+                Overview is always kept visible as a safe login landing page.
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-left">
+              <thead className="bg-neutral-50">
+                <tr>
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                    User
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                    Role
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                    Hotel
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                    Access
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredUsers.map((account) => {
+                  const visibleModules = countVisiblePermissions(
+                    account.dashboardPermissions
+                  );
+                  const hasOverview = account.dashboardPermissions.some(
+                    (permission) =>
+                      permission.module === ('OVERVIEW' as DashboardModule) &&
+                      permission.canView
+                  );
+
+                  return (
+                    <tr key={account.id} className="border-t border-neutral-100">
+                      <td className="px-5 py-4">
+                        <p className="font-black text-[#11100b]">
+                          {account.name}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-neutral-500">
+                          {account.email}
+                        </p>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className="inline-flex rounded-full bg-[#fff8e7] px-3 py-1 text-xs font-black text-[#9a6b18]">
+                          {roleLabels[account.role]}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm font-bold text-neutral-700">
+                        {account.hotel?.name ?? 'No hotel assigned'}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <p className="text-sm font-black text-[#11100b]">
+                          {visibleModules} visible modules
+                        </p>
+                        <p
+                          className={
+                            hasOverview
+                              ? 'mt-1 text-xs font-bold text-emerald-700'
+                              : 'mt-1 text-xs font-bold text-red-600'
+                          }
+                        >
+                          {hasOverview
+                            ? 'Safe landing enabled'
+                            : 'Needs save to repair landing'}
+                        </p>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingUser(account)}
+                            className="h-9 rounded-xl border border-neutral-200 px-3 text-xs font-black hover:bg-neutral-50"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setResetPasswordUser(account)}
+                            className="h-9 rounded-xl bg-black px-3 text-xs font-black text-white hover:bg-neutral-800"
+                          >
+                            Reset Password
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDeletingUser(account)}
+                            className="h-9 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-700"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {!filteredUsers.length ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-10 text-center text-sm font-bold text-neutral-500"
+                    >
+                      No users match your current filters.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       {creatingUser ? (

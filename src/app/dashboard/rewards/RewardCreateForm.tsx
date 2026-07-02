@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Gift } from 'lucide-react';
+import { Gift, Globe2 } from 'lucide-react';
 import { createRewardAction } from './actions';
 
 type HotelOption = {
@@ -9,11 +9,7 @@ type HotelOption = {
   name: string;
 };
 
-export function RewardCreateForm({
-  hotels,
-  defaultHotelId,
-  isSuperAdmin,
-}: {
+export function RewardCreateForm(_props: {
   hotels: HotelOption[];
   defaultHotelId: string;
   isSuperAdmin: boolean;
@@ -24,24 +20,28 @@ export function RewardCreateForm({
     <div className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
       <h2 className="flex items-center gap-2 text-lg font-black">
         <Gift className="size-5 text-[#b88938]" />
-        Create Reward
+        Create Global Reward
       </h2>
 
-      <form action={createRewardAction} className="mt-5 space-y-4">
-        {isSuperAdmin ? (
-          <select
-            name="hotelId"
-            defaultValue={defaultHotelId}
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
-          >
-            {hotels.map((hotel) => (
-              <option key={hotel.id} value={hotel.id}>
-                {hotel.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
+      <div className="mt-4 rounded-2xl border border-[#c99c38]/25 bg-[#fff8e7] p-4">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white text-[#b88938]">
+            <Globe2 className="size-5" />
+          </span>
 
+          <div>
+            <p className="text-sm font-black text-[#11100b]">
+              Super Admin global catalog
+            </p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-neutral-600">
+              Saving this reward creates matching reward records for every active
+              CloudView hotel so guests across the system can redeem it.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form action={createRewardAction} className="mt-5 space-y-4">
         <input
           name="name"
           placeholder="Reward name"
@@ -140,7 +140,7 @@ export function RewardCreateForm({
         </div>
 
         <button className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white">
-          Save Reward
+          Save Global Reward
         </button>
       </form>
     </div>

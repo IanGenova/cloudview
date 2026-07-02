@@ -5,6 +5,8 @@ import {
   MenuProductType,
   OrderStatus,
   PaymentMethod,
+  PaymentStatus,
+  RoomAddOnPaymentStatus,
   ServiceAvailabilityMovementType,
   ServiceBillingMode,
   ServiceRequestStatus,
@@ -132,6 +134,19 @@ export async function createPOSOrder(input: POSOrderInput) {
   const guestName = cleanText(input.guestName, 100);
   const notes = cleanText(input.notes, 1000);
   const paymentMethod = input.paymentMethod as PaymentMethod;
+
+  const isImmediatePOSPayment =
+    paymentMethod === PaymentMethod.CASH || paymentMethod === PaymentMethod.POS;
+
+  /**
+   * POS-created food orders should enter the kitchen as already accepted.
+   * They are paid immediately for CASH/Card/E-wallet, while room-charge and
+   * pay-later transactions still move to preparation but remain unpaid.
+   */
+  const initialFoodOrderStatus = OrderStatus.PREPARING;
+  const initialFoodPaymentStatus = isImmediatePOSPayment
+    ? PaymentStatus.PAID
+    : PaymentStatus.UNPAID;
 
   if (!hotelId) {
     throw new Error('Hotel is required.');
@@ -521,14 +536,18 @@ let groupedServiceRequestCode: string | null = null;
               .filter(Boolean)
               .join('\n') || null,
           paymentMethod,
+          paymentStatus: initialFoodPaymentStatus,
+          status: initialFoodOrderStatus,
           subtotalCents: foodSubtotal,
           serviceChargeCents: 0,
           taxCents: 0,
           totalCents: foodSubtotal,
           statusHistory: {
             create: {
-              status: OrderStatus.PENDING,
-              note: 'POS sale created from dashboard',
+              status: initialFoodOrderStatus,
+              note: isImmediatePOSPayment
+                ? 'POS sale paid and sent directly to preparation'
+                : 'POS sale sent directly to preparation',
               userId: user.id,
             },
           },
@@ -798,6 +817,14 @@ let groupedServiceRequestCode: string | null = null;
             quantity: item.quantity,
             unitPrice: (serviceUnitPriceCents / 100).toFixed(2),
             totalAmount: (serviceTotalCents / 100).toFixed(2),
+            paymentStatus: isImmediatePOSPayment
+              ? RoomAddOnPaymentStatus.PAID
+              : undefined,
+            paidAt: isImmediatePOSPayment ? new Date() : undefined,
+            paidById: isImmediatePOSPayment ? user.id : undefined,
+            paymentReference: isImmediatePOSPayment
+              ? `POS ${paymentMethod.replaceAll('_', ' ')}`
+              : undefined,
             postedById: user.id,
           },
         });
@@ -823,7 +850,7 @@ let groupedServiceRequestCode: string | null = null;
     await triggerKitchenOrderCreated({
       hotelId,
       orderCode: result.order.orderCode,
-      status: OrderStatus.PENDING,
+      status: initialFoodOrderStatus,
       source: 'POS_TERMINAL',
     });
   }

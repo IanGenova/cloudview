@@ -1,5 +1,4 @@
 import { MenuProductType, OrderStatus, ServiceBillingMode } from '@prisma/client';
-import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { POSClient } from './POSClient';
@@ -42,18 +41,11 @@ export default async function POSPage({
 
   if (!selectedHotelId || !hotel) {
     return (
-      <div>
-        <PageHeader
-          title="POS Terminal"
-          description="Create walk-in, restaurant, front-desk, or room-charge orders directly from the dashboard."
-        />
-
-        <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center">
-          <p className="font-black">No hotel available.</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            Please create or assign a hotel before using the POS Terminal.
-          </p>
-        </div>
+      <div className="rounded-[1.5rem] border border-dashed border-neutral-300 bg-white p-8 text-center shadow-sm">
+        <p className="text-lg font-black text-[#11100b]">No hotel available.</p>
+        <p className="mt-1 text-sm font-semibold text-neutral-500">
+          Please create or assign a hotel before using the POS Terminal.
+        </p>
       </div>
     );
   }
@@ -315,27 +307,20 @@ export default async function POSPage({
   });
 
   return (
-    <div>
-      <PageHeader
-        title="POS Terminal"
-        description="Create walk-in, restaurant, front-desk, room-charge, food, and service request orders directly from the dashboard."
-      />
-
-      <POSClient
-        hotels={hotels.map((item) => ({
-          id: item.id,
-          name: item.name,
-        }))}
-        selectedHotelId={selectedHotelId}
-        rooms={rooms.map((room) => ({
-          id: room.id,
-          number: room.number,
-          name: room.name,
-        }))}
-        products={mappedProducts}
-        services={mappedServices}
-        currency={hotel.settings?.currency || 'PHP'}
-      />
-    </div>
+    <POSClient
+      hotels={hotels.map((item) => ({
+        id: item.id,
+        name: item.name,
+      }))}
+      selectedHotelId={selectedHotelId}
+      rooms={rooms.map((room) => ({
+        id: room.id,
+        number: room.number,
+        name: room.name,
+      }))}
+      products={mappedProducts}
+      services={mappedServices}
+      currency={hotel.settings?.currency || 'PHP'}
+    />
   );
 }

@@ -17,6 +17,8 @@ import {
   Home,
   Hotel,
   LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
   RadioTower,
   Settings,
   ShieldCheck,
@@ -211,9 +213,11 @@ function buildGroupedNavItems(items: DashboardNavItem[]): BuiltSidebarGroup[] {
 function SidebarLink({
   item,
   pathname,
+  isSidebarOpen = true,
 }: {
   item: DashboardNavItem;
   pathname: string;
+  isSidebarOpen?: boolean;
 }) {
   const Icon = getModuleIcon(item.module);
   const active = isActiveRoute(pathname, item.href);
@@ -221,9 +225,14 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
+      title={!isSidebarOpen ? item.label : undefined}
+      aria-label={!isSidebarOpen ? item.label : undefined}
       aria-current={active ? 'page' : undefined}
       className={cx(
-        'group/link relative flex min-h-11 items-center gap-3 overflow-hidden rounded-2xl px-3 py-2.5 text-[13px] font-black transition-all duration-200',
+        'group/link relative flex items-center overflow-hidden rounded-2xl text-[13px] font-black transition-all duration-200',
+        isSidebarOpen
+          ? 'min-h-11 gap-3 px-3 py-2.5'
+          : 'mx-auto size-12 justify-center p-0',
         active
           ? 'bg-gradient-to-r from-[#e0b84a] via-[#c9992f] to-[#a8751e] text-[#090806] shadow-[0_12px_30px_rgba(214,167,56,0.28)]'
           : 'text-[#d8caa7] hover:bg-white/[0.065] hover:text-[#fff2c9]'
@@ -237,7 +246,8 @@ function SidebarLink({
 
       <span
         className={cx(
-          'relative z-10 grid size-8 shrink-0 place-items-center rounded-xl transition',
+          'relative z-10 grid shrink-0 place-items-center rounded-xl transition',
+          isSidebarOpen ? 'size-8' : 'size-9',
           active
             ? 'bg-black/15 text-[#090806]'
             : 'bg-white/[0.055] text-[#d6a738] group-hover/link:bg-[#d6a738]/15 group-hover/link:text-[#ffd875]'
@@ -246,9 +256,11 @@ function SidebarLink({
         <Icon className="size-4" />
       </span>
 
-      <span className="relative z-10 min-w-0 flex-1 truncate">
-        {item.label}
-      </span>
+      {isSidebarOpen ? (
+        <span className="relative z-10 min-w-0 flex-1 truncate">
+          {item.label}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -258,15 +270,32 @@ function SidebarSection({
   pathname,
   open,
   onToggle,
+  isSidebarOpen = true,
 }: {
   group: BuiltSidebarGroup;
   pathname: string;
   open: boolean;
   onToggle: () => void;
+  isSidebarOpen?: boolean;
 }) {
   const hasActiveItem = group.items.some((item) =>
     isActiveRoute(pathname, item.href)
   );
+
+  if (!isSidebarOpen) {
+    return (
+      <section className="space-y-1.5 pb-2">
+        {group.items.map((item) => (
+          <SidebarLink
+            key={`${group.label}-${item.module}`}
+            item={item}
+            pathname={pathname}
+            isSidebarOpen={false}
+          />
+        ))}
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-[1.35rem]">
@@ -305,6 +334,7 @@ function SidebarSection({
               key={`${group.label}-${item.module}`}
               item={item}
               pathname={pathname}
+              isSidebarOpen={isSidebarOpen}
             />
           ))}
         </div>
@@ -321,6 +351,25 @@ export function Sidebar({
   navItems?: DashboardNavItem[];
 }) {
   const pathname = usePathname();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    const savedPreference = window.localStorage.getItem(
+      'cloudview-sidebar-open'
+    );
+
+    if (savedPreference === 'false') {
+      setIsSidebarOpen(false);
+    }
+  }, []);
+
+  function toggleSidebarOpen() {
+    setIsSidebarOpen((current) => {
+      const next = !current;
+      window.localStorage.setItem('cloudview-sidebar-open', String(next));
+      return next;
+    });
+  }
 
   const originalMainItems = useMemo(
     () => navItems.filter((item) => item.group !== 'settings'),
@@ -413,53 +462,108 @@ export function Sidebar({
   const moduleCount = mainItems.length + settingsItems.length;
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start overflow-hidden border-r border-[#272014] bg-[#070604] text-white shadow-[18px_0_55px_rgba(0,0,0,0.36)] lg:flex lg:flex-col">
+    <aside
+      className={cx(
+        'sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden border-r border-[#272014] bg-[#070604] text-white shadow-[18px_0_55px_rgba(0,0,0,0.36)] transition-[width] duration-300 ease-in-out lg:flex lg:flex-col',
+        isSidebarOpen ? 'w-[292px]' : 'w-[88px]'
+      )}
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,#39290f_0%,#15110a_38%,#070604_100%)]" />
       <div className="pointer-events-none absolute -right-24 top-20 size-56 rounded-full bg-[#d6a738]/10 blur-3xl" />
       <div className="pointer-events-none absolute -left-24 bottom-20 size-56 rounded-full bg-[#d6a738]/8 blur-3xl" />
 
-      <div className="relative z-10 flex h-full min-h-0 flex-col p-4">
-        <Link
-          href={homeHref}
-          className="mb-4 shrink-0 overflow-hidden rounded-[1.75rem] border border-[#d6a738]/30 bg-white/[0.045] p-3.5 shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[#f1c66a]/60 hover:bg-white/[0.065]"
+      <div
+        className={cx(
+          'relative z-10 flex h-full min-h-0 flex-col',
+          isSidebarOpen ? 'p-4' : 'items-center p-3'
+        )}
+      >
+        <div
+          className={cx(
+            'mb-4 flex shrink-0 gap-2',
+            isSidebarOpen ? 'items-start' : 'flex-col items-center'
+          )}
         >
-          <div className="flex items-center gap-3">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#ffe08a] via-[#d6a738] to-[#9c6c18] text-[#080604] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
-              <Home className="size-5" />
-            </span>
-
-            <span className="min-w-0">
-              <span className="block truncate text-base font-black tracking-tight text-white">
-                Cloud View
+          <Link
+            href={homeHref}
+            title={!isSidebarOpen ? 'Cloud View' : undefined}
+            aria-label={!isSidebarOpen ? 'Cloud View home' : undefined}
+            className={cx(
+              'overflow-hidden border border-[#d6a738]/30 bg-white/[0.045] shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[#f1c66a]/60 hover:bg-white/[0.065]',
+              isSidebarOpen
+                ? 'min-w-0 flex-1 rounded-[1.75rem] p-3.5'
+                : 'grid size-14 place-items-center rounded-2xl p-0'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#ffe08a] via-[#d6a738] to-[#9c6c18] text-[#080604] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
+                <Home className="size-5" />
               </span>
-              <span className="mt-0.5 block truncate text-xs font-semibold text-[#b9aa88]">
-                {hotelName || 'Super Admin'}
-              </span>
-            </span>
-          </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#d6a738]/15 bg-black/20 px-3 py-2">
-            <p className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[#d6a738]">
-              Operations Suite
+              {isSidebarOpen ? (
+                <span className="min-w-0">
+                  <span className="block truncate text-base font-black tracking-tight text-white">
+                    Cloud View
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs font-semibold text-[#b9aa88]">
+                    {hotelName || 'Super Admin'}
+                  </span>
+                </span>
+              ) : null}
+            </div>
+
+            {isSidebarOpen ? (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#d6a738]/15 bg-black/20 px-3 py-2">
+                <p className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[#d6a738]">
+                  Operations Suite
+                </p>
+
+                <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-300">
+                  Online
+                </span>
+              </div>
+            ) : null}
+          </Link>
+
+          <button
+            type="button"
+            onClick={toggleSidebarOpen}
+            title={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-expanded={isSidebarOpen}
+            className="grid size-10 shrink-0 place-items-center rounded-2xl border border-[#d6a738]/25 bg-white/[0.055] text-[#d6a738] transition hover:border-[#f1c66a]/55 hover:bg-[#d6a738]/15 hover:text-[#ffe08a]"
+          >
+            {isSidebarOpen ? (
+              <PanelLeftClose className="size-4" />
+            ) : (
+              <PanelLeftOpen className="size-4" />
+            )}
+          </button>
+        </div>
+
+        <div
+          className={cx(
+            'mb-3 flex shrink-0 items-center px-2',
+            isSidebarOpen ? 'justify-between' : 'justify-center'
+          )}
+        >
+          {isSidebarOpen ? (
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7e7255]">
+              Navigation
             </p>
-
-            <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-300">
-              Online
-            </span>
-          </div>
-        </Link>
-
-        <div className="mb-3 flex shrink-0 items-center justify-between px-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7e7255]">
-            Navigation
-          </p>
+          ) : null}
 
           <span className="rounded-full border border-[#d6a738]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-black text-[#d6a738]">
             {moduleCount}
           </span>
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav
+          className={cx(
+            'min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            isSidebarOpen ? 'w-full pr-1' : 'w-full px-0'
+          )}
+        >
           {groupedMainItems.length > 0 ? (
             <div className="space-y-1 pb-4">
               {groupedMainItems.map((group) => (
@@ -469,57 +573,72 @@ export function Sidebar({
                   pathname={pathname}
                   open={openGroups.has(group.label)}
                   onToggle={() => toggleGroup(group.label)}
+                  isSidebarOpen={isSidebarOpen}
                 />
               ))}
 
               {settingsItems.length > 0 ? (
-                <section className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(SETTINGS_GROUP_KEY)}
-                    aria-expanded={openGroups.has(SETTINGS_GROUP_KEY)}
-                    className={cx(
-                      'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
-                      hasActiveSettings
-                        ? 'bg-white/[0.06] text-[#f7e7bd]'
-                        : 'text-[#b6a780] hover:bg-white/[0.045] hover:text-[#f7e7bd]'
-                    )}
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-[#d6a738]">
-                        <Settings className="size-4" />
-                      </span>
-
-                      <span className="min-w-0">
-                        <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[#d6a738]">
-                          Settings
-                        </span>
-                        <span className="mt-0.5 block text-[10px] font-bold text-[#74694e]">
-                          System preferences
-                        </span>
-                      </span>
-                    </span>
-
-                    <ChevronDown
+                isSidebarOpen ? (
+                  <section className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(SETTINGS_GROUP_KEY)}
+                      aria-expanded={openGroups.has(SETTINGS_GROUP_KEY)}
                       className={cx(
-                        'size-4 shrink-0 text-[#c99c38] transition-transform',
-                        openGroups.has(SETTINGS_GROUP_KEY) && 'rotate-180'
+                        'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
+                        hasActiveSettings
+                          ? 'bg-white/[0.06] text-[#f7e7bd]'
+                          : 'text-[#b6a780] hover:bg-white/[0.045] hover:text-[#f7e7bd]'
                       )}
-                    />
-                  </button>
+                    >
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-[#d6a738]">
+                          <Settings className="size-4" />
+                        </span>
 
-                  {openGroups.has(SETTINGS_GROUP_KEY) ? (
-                    <div className="space-y-1.5 pb-3">
-                      {settingsItems.map((item) => (
-                        <SidebarLink
-                          key={item.module}
-                          item={item}
-                          pathname={pathname}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                </section>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[#d6a738]">
+                            Settings
+                          </span>
+                          <span className="mt-0.5 block text-[10px] font-bold text-[#74694e]">
+                            System preferences
+                          </span>
+                        </span>
+                      </span>
+
+                      <ChevronDown
+                        className={cx(
+                          'size-4 shrink-0 text-[#c99c38] transition-transform',
+                          openGroups.has(SETTINGS_GROUP_KEY) && 'rotate-180'
+                        )}
+                      />
+                    </button>
+
+                    {openGroups.has(SETTINGS_GROUP_KEY) ? (
+                      <div className="space-y-1.5 pb-3">
+                        {settingsItems.map((item) => (
+                          <SidebarLink
+                            key={item.module}
+                            item={item}
+                            pathname={pathname}
+                            isSidebarOpen={isSidebarOpen}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
+                ) : (
+                  <section className="space-y-1.5 pt-1 pb-3">
+                    {settingsItems.map((item) => (
+                      <SidebarLink
+                        key={item.module}
+                        item={item}
+                        pathname={pathname}
+                        isSidebarOpen={false}
+                      />
+                    ))}
+                  </section>
+                )
               ) : null}
             </div>
           ) : (
@@ -529,20 +648,32 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className="mt-3 shrink-0 overflow-hidden rounded-[1.5rem] border border-[#d6a738]/20 bg-white/[0.045] p-3 backdrop-blur">
-          <div className="flex items-center gap-3">
+        <div
+          className={cx(
+            'mt-3 shrink-0 overflow-hidden rounded-[1.5rem] border border-[#d6a738]/20 bg-white/[0.045] p-3 backdrop-blur',
+            isSidebarOpen ? 'w-full' : 'w-14'
+          )}
+        >
+          <div
+            className={cx(
+              'flex items-center gap-3',
+              !isSidebarOpen && 'justify-center'
+            )}
+          >
             <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-black/35 text-[#d6a738]">
               <ShieldCheck className="size-5" />
             </span>
 
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
-                Secure Access
-              </p>
-              <p className="mt-0.5 truncate text-xs font-semibold text-[#b9aa88]">
-                Permission-based modules
-              </p>
-            </div>
+            {isSidebarOpen ? (
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                  Secure Access
+                </p>
+                <p className="mt-0.5 truncate text-xs font-semibold text-[#b9aa88]">
+                  Permission-based modules
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

@@ -16,9 +16,13 @@ function optionalText(maxLength: number) {
   );
 }
 
+/**
+ * Login must accept simple temporary passwords like "12345" or "abcde".
+ * Password strength rules belong in account creation/reset, not in login.
+ */
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
+  email: z.string().trim().email(),
+  password: z.string().trim().min(1).max(300),
 });
 
 export const guestCartItemSchema = z.object({
@@ -47,7 +51,7 @@ export const createGuestOrderSchema = z.object({
   fulfillmentTiming: z.enum(['ASAP', 'SCHEDULED']).optional().default('ASAP'),
   scheduledFor: z.string().trim().max(120).optional().default(''),
   scheduledNote: z.string().trim().max(300).optional().default(''),
-    items: z
+  items: z
     .array(guestCartItemSchema)
     .min(1, 'Please select at least one item.')
     .max(
@@ -58,7 +62,6 @@ export const createGuestOrderSchema = z.object({
 
 export const createServiceRequestSchema = z.object({
   tagCode: z.string().trim().min(2),
-  type: z.string().trim().min(2).max(80),
   /**
    * Also optional because service requests can use GuestStay guest name.
    */

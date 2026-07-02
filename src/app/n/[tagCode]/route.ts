@@ -1,8 +1,10 @@
-import { randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import {
-  createNfcAccessSession,
+  getNfcAccessCookieName,
   getPublicAppUrl,
+  hashValue,
+  NFC_ACCESS_COOKIE,
   verifyTagSecret,
 } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
@@ -65,6 +67,94 @@ function getRequestCookie(request: Request, cookieName: string) {
   }
 
   return null;
+}
+
+
+function getAccessTtlMinutes() {
+  return Number(process.env.NFC_ACCESS_TTL_MINUTES || 60);
+}
+
+function getIdleTimeoutMinutes() {
+  return Number(process.env.NFC_IDLE_TIMEOUT_MINUTES || 15);
+}
+
+function addMinutes(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function minDate(a: Date, b: Date) {
+  return a.getTime() <= b.getTime() ? a : b;
+}
+
+function getRequestFingerprintFromRequest(request: Request) {
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const forwardedFor = request.headers.get('x-forwarded-for') || '';
+  const realIp = request.headers.get('x-real-ip') || '';
+  const ip = forwardedFor.split(',')[0]?.trim() || realIp || 'local';
+
+  return {
+    userAgentHash: hashValue(userAgent),
+    ipHash: hashValue(ip),
+  };
+}
+
+/**
+ * Important first-scan fix:
+ * In route handlers, cookies set through next/headers cookies().set() are not
+ * always attached to a manually-created NextResponse.redirect().
+ *
+ * This helper creates the NFC access session record and returns the exact
+ * Set-Cookie payload, so /n/[tagCode] can attach cv_nfc_access cookies directly
+ * to the redirect response that opens /t/[tagCode].
+ */
+async function createNfcAccessSessionForRedirectResponse({
+  request,
+  tag,
+}: {
+  request: Request;
+  tag: {
+    id: string;
+    hotelId: string;
+    code: string;
+  };
+}) {
+  const fingerprint = getRequestFingerprintFromRequest(request);
+  const now = new Date();
+
+  const absoluteExpiresAt = addMinutes(now, getAccessTtlMinutes());
+  const idleExpiresAt = minDate(
+    addMinutes(now, getIdleTimeoutMinutes()),
+    absoluteExpiresAt
+  );
+
+  const rawToken = randomBytes(32).toString('base64url');
+  const tokenHash = hashValue(rawToken);
+
+  await db.nfcAccessSession.create({
+    data: {
+      tagId: tag.id,
+      hotelId: tag.hotelId,
+      tokenHash,
+      userAgentHash: fingerprint.userAgentHash,
+      ipHash: fingerprint.ipHash,
+      expiresAt: absoluteExpiresAt,
+      idleExpiresAt,
+      lastSeenAt: now,
+    },
+  });
+
+  return {
+    rawToken,
+    tagCookieName: getNfcAccessCookieName(tag.code),
+    legacyCookieName: NFC_ACCESS_COOKIE,
+    cookieOptions: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: shouldUseSecureCookie(request),
+      path: '/',
+      maxAge: getAccessTtlMinutes() * 60,
+    },
+  };
 }
 
 /**
@@ -426,10 +516,13 @@ export async function GET(
     });
   });
 
-  await createNfcAccessSession({
-    id: tag.id,
-    hotelId: tag.hotelId,
-    code: tag.code,
+  const accessCookie = await createNfcAccessSessionForRedirectResponse({
+    request,
+    tag: {
+      id: tag.id,
+      hotelId: tag.hotelId,
+      code: tag.code,
+    },
   });
 
   const redirectUrl =
@@ -438,6 +531,24 @@ export async function GET(
       : publicUrl(`/t/${tag.code}?nfcSession=1&tagStatus=inactive`);
 
   const response = NextResponse.redirect(redirectUrl);
+
+  /**
+   * Attach the NFC access proof directly to THIS redirect response.
+   * Without this, the first /t/[tagCode] request can arrive without
+   * cv_nfc_access_<tagCode>, causing the first passcode attempt to show
+   * "Tap NFC Again".
+   */
+  response.cookies.set(
+    accessCookie.tagCookieName,
+    accessCookie.rawToken,
+    accessCookie.cookieOptions
+  );
+
+  response.cookies.set(
+    accessCookie.legacyCookieName,
+    accessCookie.rawToken,
+    accessCookie.cookieOptions
+  );
 
   response.cookies.set(getNfcGuestSessionCookieName(tag.code), guestSessionKey, {
     httpOnly: true,

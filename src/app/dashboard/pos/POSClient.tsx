@@ -971,7 +971,7 @@ export function POSClient({
           clearCart();
           setMobileView('products');
 
-          showSuccessAfterRefresh(`POS sale completed. ${receiptLabel}`);
+          showSuccessAfterRefresh(`POS sale completed. Food orders were sent to Preparing. ${receiptLabel}`);
 
           window.setTimeout(() => {
             router.refresh();
@@ -986,7 +986,7 @@ export function POSClient({
   }
 
   return (
-    <div className="relative pb-24 lg:pb-0">
+    <div className="relative pb-20 text-[13px] lg:pb-0">
       <FloatingPOSToast
         toast={toast}
         onClose={() => {
@@ -995,7 +995,7 @@ export function POSClient({
         }}
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:hidden">
+      <div className="mb-3 grid grid-cols-2 gap-2 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileView('products')}
@@ -1029,22 +1029,42 @@ export function POSClient({
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="mb-3 flex flex-col gap-2 rounded-[1.5rem] border border-neutral-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88938]">
+            POS Terminal
+          </p>
+          <h1 className="mt-0.5 text-xl font-black text-[#11100b]">
+            Quick Sale
+          </h1>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-[11px] font-black">
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-neutral-600">
+            {itemCount} item{itemCount === 1 ? '' : 's'}
+          </span>
+          <span className="rounded-full bg-[#fff8e7] px-3 py-1 text-[#9a6b18]">
+            {money(total, currency)}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <section
           className={cn(
             'min-w-0',
             mobileView === 'cart' ? 'hidden lg:block' : 'block'
           )}
         >
-          <div className="mb-5 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft">
-            <div className="mb-4 grid grid-cols-2 gap-2">
+          <div className="mb-3 rounded-[1.5rem] border border-neutral-200 bg-white p-3 shadow-sm">
+            <div className="mb-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setActiveMode('food')}
                 className={
                   activeMode === 'food'
-                    ? 'h-12 rounded-2xl bg-black px-4 text-sm font-black text-white'
-                    : 'h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+                    ? 'h-10 rounded-xl bg-black px-3 text-xs font-black text-white'
+                    : 'h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50'
                 }
               >
                 Food Menu
@@ -1055,17 +1075,17 @@ export function POSClient({
                 onClick={() => setActiveMode('services')}
                 className={
                   activeMode === 'services'
-                    ? 'h-12 rounded-2xl bg-black px-4 text-sm font-black text-white'
-                    : 'h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+                    ? 'h-10 rounded-xl bg-black px-3 text-xs font-black text-white'
+                    : 'h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50'
                 }
               >
                 Services
               </button>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-[240px_1fr_220px]">
+            <div className="grid gap-2 md:grid-cols-[220px_1fr_200px]">
               <div>
-                <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                   Hotel
                 </label>
                 <select
@@ -1073,7 +1093,7 @@ export function POSClient({
                   onChange={(event) => {
                     router.replace(`/dashboard/pos?hotelId=${event.target.value}`, { scroll: false });
                   }}
-                  className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                  className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-bold outline-none"
                 >
                   {hotels.map((hotel) => (
                     <option key={hotel.id} value={hotel.id}>
@@ -1086,22 +1106,22 @@ export function POSClient({
               {activeMode === 'food' ? (
                 <>
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                       Search Food Product
                     </label>
-                    <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+                    <div className="flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3">
                       <Search className="size-4 shrink-0 text-neutral-400" />
                       <input
                         value={productQuery}
                         onChange={(event) => setProductQuery(event.target.value)}
                         placeholder="Search product, bundle, or component..."
-                        className="w-full bg-transparent text-sm font-semibold outline-none"
+                        className="w-full bg-transparent text-xs font-semibold outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                       Food Stock Filter
                     </label>
                     <select
@@ -1111,7 +1131,7 @@ export function POSClient({
                           event.target.value as ProductAvailabilityFilter
                         )
                       }
-                      className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                      className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-bold outline-none"
                     >
                       <option value="ALL">All Products</option>
                       <option value="AVAILABLE">Available</option>
@@ -1124,22 +1144,22 @@ export function POSClient({
               ) : (
                 <>
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                       Search Service
                     </label>
-                    <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+                    <div className="flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3">
                       <Search className="size-4 shrink-0 text-neutral-400" />
                       <input
                         value={serviceQuery}
                         onChange={(event) => setServiceQuery(event.target.value)}
                         placeholder="Search service request item..."
-                        className="w-full bg-transparent text-sm font-semibold outline-none"
+                        className="w-full bg-transparent text-xs font-semibold outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                       Service Filter
                     </label>
                     <select
@@ -1149,7 +1169,7 @@ export function POSClient({
                           event.target.value as ServiceAvailabilityFilter
                         )
                       }
-                      className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                      className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-bold outline-none"
                     >
                       <option value="ALL">All Services</option>
                       <option value="AVAILABLE">Available</option>
@@ -1162,7 +1182,7 @@ export function POSClient({
               )}
             </div>
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {(activeMode === 'food' ? productCategories : serviceCategories).map(
                 (item) => {
                   const active =
@@ -1182,7 +1202,7 @@ export function POSClient({
                         }
                       }}
                       className={cn(
-                        'shrink-0 touch-manipulation rounded-full border px-4 py-2 text-sm font-black transition active:scale-95',
+                        'shrink-0 touch-manipulation rounded-full border px-3 py-1.5 text-xs font-black transition active:scale-95',
                         active
                           ? 'border-black bg-black text-white'
                           : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
@@ -1197,7 +1217,7 @@ export function POSClient({
           </div>
 
           {activeMode === 'food' ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {filteredProducts.map((product) => {
                 const sellable = canSellProduct(product);
 
@@ -1208,14 +1228,14 @@ export function POSClient({
                     onClick={() => addFoodItem(product.id)}
                     disabled={!sellable}
                     className={cn(
-                      'touch-manipulation overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white text-left shadow-soft transition active:scale-[0.99]',
+                      'touch-manipulation overflow-hidden rounded-[1.25rem] border border-neutral-200 bg-white text-left shadow-sm transition active:scale-[0.99]',
                       sellable
                         ? 'hover:-translate-y-0.5 hover:shadow-lg'
                         : 'cursor-not-allowed opacity-60'
                     )}
                   >
                     <div
-                      className="relative h-28 bg-neutral-100 bg-cover bg-center sm:h-36"
+                      className="relative h-24 bg-neutral-100 bg-cover bg-center sm:h-28"
                       style={{
                         backgroundImage: product.imageUrl
                           ? `url(${product.imageUrl})`
@@ -1223,7 +1243,7 @@ export function POSClient({
                       }}
                     >
                       <span
-                        className={`absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-3 py-1 text-[10px] font-black ${getProductStockBadgeClass(
+                        className={`absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate rounded-full px-2 py-0.5 text-[9px] font-black ${getProductStockBadgeClass(
                           product
                         )}`}
                       >
@@ -1232,24 +1252,24 @@ export function POSClient({
 
                       {!sellable ? (
                         <div className="absolute inset-0 grid place-items-center bg-white/70">
-                          <span className="rounded-full bg-black px-4 py-2 text-xs font-black text-white">
+                          <span className="rounded-full bg-black px-3 py-1.5 text-[11px] font-black text-white">
                             Not Available
                           </span>
                         </div>
                       ) : null}
                     </div>
 
-                    <div className="p-3 sm:p-4">
+                    <div className="p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-base font-black sm:text-lg">
+                            <h3 className="truncate text-sm font-black">
                               {product.name}
                             </h3>
                             <BundleBadge product={product} />
                           </div>
 
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-neutral-500">
                             {product.description || 'No description'}
                           </p>
 
@@ -1262,22 +1282,22 @@ export function POSClient({
 
                         <span
                           className={cn(
-                            'grid size-10 shrink-0 place-items-center rounded-full',
+                            'grid size-8 shrink-0 place-items-center rounded-full',
                             sellable
                               ? 'bg-black text-white'
                               : 'bg-neutral-200 text-neutral-400'
                           )}
                         >
-                          <Plus className="size-5" />
+                          <Plus className="size-4" />
                         </span>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-base font-black text-gold sm:text-lg">
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <p className="text-sm font-black text-gold">
                           {money(product.priceCents, currency)}
                         </p>
 
-                        <p className="text-xs font-bold text-neutral-400">
+                        <p className="text-[11px] font-bold text-neutral-400">
                           Sold: {product.soldQty}
                         </p>
                       </div>
@@ -1287,18 +1307,18 @@ export function POSClient({
               })}
 
               {filteredProducts.length === 0 ? (
-                <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
+                <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-8 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
                   <p className="font-black text-neutral-600">
                     No food products found
                   </p>
-                  <p className="mt-1 text-sm text-neutral-500">
+                  <p className="mt-1 text-xs text-neutral-500">
                     Try another keyword, category, or stock filter.
                   </p>
                 </div>
               ) : null}
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {filteredServices.map((service) => {
                 const sellable = canSellService(service);
 
@@ -1309,7 +1329,7 @@ export function POSClient({
                     onClick={() => addServiceItem(service.id)}
                     disabled={!sellable}
                     className={cn(
-                      'touch-manipulation overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white p-4 text-left shadow-soft transition active:scale-[0.99]',
+                      'touch-manipulation overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2.5 text-left shadow-sm transition active:scale-[0.99]',
                       sellable
                         ? 'hover:-translate-y-0.5 hover:shadow-lg'
                         : 'cursor-not-allowed opacity-60'
@@ -1318,27 +1338,27 @@ export function POSClient({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="grid size-11 place-items-center rounded-2xl bg-blue-50 text-blue-700">
-                            <ConciergeBell className="size-5" />
+                          <div className="grid size-9 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                            <ConciergeBell className="size-4" />
                           </div>
 
                           <div className="min-w-0">
-                            <h3 className="truncate text-base font-black">
+                            <h3 className="truncate text-sm font-black">
                               {service.name}
                             </h3>
-                            <p className="text-xs font-bold text-neutral-400">
+                            <p className="text-[11px] font-bold text-neutral-400">
                               {service.category}
                             </p>
                           </div>
                         </div>
 
-                        <p className="mt-3 line-clamp-3 text-xs leading-5 text-neutral-500">
+                        <p className="mt-2 line-clamp-2 text-[11px] leading-4 text-neutral-500">
                           {service.description || 'No description'}
                         </p>
 
-                        <div className="mt-3 flex flex-wrap gap-2">
+                        <div className="mt-2 flex flex-wrap gap-1.5">
                           <span
-                            className={`rounded-full px-3 py-1 text-[10px] font-black ${getServiceStockBadgeClass(
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getServiceStockBadgeClass(
                               service
                             )}`}
                           >
@@ -1346,7 +1366,7 @@ export function POSClient({
                           </span>
 
                           <span
-                            className={`rounded-full px-3 py-1 text-[10px] font-black ${getBillingBadgeClass(
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getBillingBadgeClass(
                               service
                             )}`}
                           >
@@ -1357,13 +1377,13 @@ export function POSClient({
 
                       <span
                         className={cn(
-                          'grid size-10 shrink-0 place-items-center rounded-full',
+                          'grid size-8 shrink-0 place-items-center rounded-full',
                           sellable
                             ? 'bg-black text-white'
                             : 'bg-neutral-200 text-neutral-400'
                         )}
                       >
-                        <Plus className="size-5" />
+                        <Plus className="size-4" />
                       </span>
                     </div>
                   </button>
@@ -1371,11 +1391,11 @@ export function POSClient({
               })}
 
               {filteredServices.length === 0 ? (
-                <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
+                <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-8 text-center sm:col-span-2 xl:col-span-3 2xl:col-span-4">
                   <p className="font-black text-neutral-600">
                     No service items found
                   </p>
-                  <p className="mt-1 text-sm text-neutral-500">
+                  <p className="mt-1 text-xs text-neutral-500">
                     Try another keyword, category, or service filter.
                   </p>
                 </div>
@@ -1386,33 +1406,33 @@ export function POSClient({
 
         <aside
           className={cn(
-            'lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)]',
+            'lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]',
             mobileView === 'products' ? 'hidden lg:block' : 'block'
           )}
         >
-          <section className="flex min-h-[75vh] flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft lg:h-full">
-            <div className="border-b border-neutral-100 bg-black p-5 text-white">
+          <section className="flex min-h-[70vh] flex-col overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-sm lg:h-full">
+            <div className="border-b border-neutral-100 bg-black p-4 text-white">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setMobileView('products')}
-                    className="grid size-10 place-items-center rounded-full bg-white/10 lg:hidden"
+                    className="grid size-9 place-items-center rounded-full bg-white/10 lg:hidden"
                     aria-label="Back to products"
                   >
-                    <ArrowLeft className="size-5" />
+                    <ArrowLeft className="size-4" />
                   </button>
 
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.25em] text-gold">
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">
                       Cloud View POS
                     </p>
-                    <h2 className="mt-1 text-2xl font-black">Current Sale</h2>
+                    <h2 className="mt-0.5 text-xl font-black">Current Sale</h2>
                   </div>
                 </div>
 
                 <div className="relative">
-                  <ShoppingCart className="size-7 text-gold" />
+                  <ShoppingCart className="size-6 text-gold" />
 
                   {itemCount > 0 ? (
                     <span className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full bg-gold text-[10px] font-black text-black">
@@ -1423,9 +1443,9 @@ export function POSClient({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {lastReceiptLabel ? (
-                <div className="mb-4 rounded-[1.5rem] border border-green-200 bg-green-50 p-4 text-green-800">
+                <div className="mb-3 rounded-[1.25rem] border border-green-200 bg-green-50 p-3 text-green-800">
                   <p className="font-black">Sale completed</p>
                   <p className="mt-1 text-sm font-semibold">
                     {lastReceiptLabel}
@@ -1434,13 +1454,13 @@ export function POSClient({
               ) : null}
 
               {foodCart.length === 0 && serviceCart.length === 0 ? (
-                <div className="grid min-h-52 place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center">
+                <div className="grid min-h-40 place-items-center rounded-[1.25rem] border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
                   <div>
-                    <ReceiptText className="mx-auto size-9 text-neutral-400" />
-                    <p className="mt-3 font-black text-neutral-600">
+                    <ReceiptText className="mx-auto size-7 text-neutral-400" />
+                    <p className="mt-2 font-black text-neutral-600">
                       Cart is empty
                     </p>
-                    <p className="mt-1 text-sm text-neutral-500">
+                    <p className="mt-1 text-xs text-neutral-500">
                       Tap available food or service items to add them.
                     </p>
                   </div>
@@ -1448,12 +1468,12 @@ export function POSClient({
               ) : null}
 
               {foodCart.length > 0 ? (
-                <div className="mb-4">
-                  <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-neutral-400">
+                <div className="mb-3">
+                  <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
                     Food Menu
                   </p>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {foodCart.map((item) => {
                       const product = productMap.get(item.productId);
 
@@ -1462,7 +1482,7 @@ export function POSClient({
                       return (
                         <div
                           key={item.productId}
-                          className="rounded-[1.25rem] border border-neutral-200 bg-white p-3"
+                          className="rounded-2xl border border-neutral-200 bg-white p-2.5"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -1477,7 +1497,7 @@ export function POSClient({
                                 {money(product.priceCents, currency)}
                               </p>
 
-                              <p className="mt-1 text-xs font-bold text-neutral-400">
+                              <p className="mt-1 text-[11px] font-bold text-neutral-400">
                                 {product.isDerivedStock
                                   ? `Can sell: ${product.availableQty}`
                                   : `Stock left: ${product.availableQty}`}
@@ -1489,9 +1509,9 @@ export function POSClient({
                             <button
                               type="button"
                               onClick={() => updateFoodQty(item.productId, 0)}
-                              className="grid size-10 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
+                              className="grid size-8 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
                             >
-                              <Trash2 className="size-4" />
+                              <Trash2 className="size-3.5" />
                             </button>
                           </div>
 
@@ -1524,12 +1544,12 @@ export function POSClient({
               ) : null}
 
               {serviceCart.length > 0 ? (
-                <div className="mb-4">
-                  <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-neutral-400">
+                <div className="mb-3">
+                  <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
                     Services
                   </p>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {serviceCart.map((item) => {
                       const service = serviceMap.get(item.serviceId);
 
@@ -1547,7 +1567,7 @@ export function POSClient({
                       return (
                         <div
                           key={item.serviceId}
-                          className="rounded-[1.25rem] border border-blue-100 bg-white p-3"
+                          className="rounded-2xl border border-blue-100 bg-white p-2.5"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -1565,7 +1585,7 @@ export function POSClient({
                                 {getBillingLabel(service)}
                               </p>
 
-                              <p className="mt-1 text-xs font-bold text-neutral-400">
+                              <p className="mt-1 text-[11px] font-bold text-neutral-400">
                                 {service.inventoryTracked
                                   ? `Stock left: ${service.availableQty}`
                                   : 'Inventory not tracked'}
@@ -1575,9 +1595,9 @@ export function POSClient({
                             <button
                               type="button"
                               onClick={() => updateServiceQty(item.serviceId, 0)}
-                              className="grid size-10 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
+                              className="grid size-8 touch-manipulation place-items-center rounded-full bg-red-50 text-red-600 active:scale-95"
                             >
-                              <Trash2 className="size-4" />
+                              <Trash2 className="size-3.5" />
                             </button>
                           </div>
 
@@ -1613,27 +1633,27 @@ export function POSClient({
                 </div>
               ) : null}
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-5 space-y-2">
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     Customer / Guest Name
                   </label>
                   <input
                     value={guestName}
                     onChange={(event) => setGuestName(event.target.value)}
                     placeholder="Customer / guest name"
-                    className="h-12 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-semibold outline-none"
+                    className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-xs font-semibold outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     Room / Customer Type
                   </label>
                   <select
                     value={roomId}
                     onChange={(event) => setRoomId(event.target.value)}
-                    className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none"
+                    className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold outline-none"
                   >
                     <option value="">No room / walk-in customer</option>
                     {rooms.map((room) => (
@@ -1645,7 +1665,7 @@ export function POSClient({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     Payment Method
                   </label>
                   <select
@@ -1655,18 +1675,21 @@ export function POSClient({
                         event.target.value as typeof paymentMethod
                       )
                     }
-                    className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none"
+                    className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold outline-none"
                   >
                     <option value="CASH">Cash</option>
                     <option value="POS">Card / E-wallet</option>
                     <option value="ROOM_CHARGE">Room Charge</option>
                     <option value="PAY_AT_COUNTER">Pay Later</option>
                   </select>
+                  <p className="mt-1 text-[11px] font-bold text-neutral-500">
+                    Cash/Card/E-wallet sales are marked PAID and sent directly to Preparing.
+                  </p>
                 </div>
 
                 {paymentMethod === 'CASH' ? (
                   <div>
-                    <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                       Cash Tendered
                     </label>
                     <input
@@ -1676,27 +1699,27 @@ export function POSClient({
                       type="number"
                       min="0"
                       step="0.01"
-                      className="h-12 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-semibold outline-none"
+                      className="h-10 w-full rounded-xl border border-neutral-200 px-3 text-xs font-semibold outline-none"
                     />
                   </div>
                 ) : null}
 
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-wide text-neutral-500">
                     Order / Service Notes
                   </label>
                   <textarea
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                     placeholder="Order notes"
-                    className="min-h-24 w-full resize-none rounded-2xl border border-neutral-200 p-4 text-sm font-semibold outline-none"
+                    className="min-h-16 w-full resize-none rounded-xl border border-neutral-200 p-3 text-xs font-semibold outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-neutral-100 bg-neutral-50 p-4">
-              <div className="space-y-2 text-sm">
+            <div className="border-t border-neutral-100 bg-neutral-50 p-3">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="font-bold text-neutral-500">Food</span>
                   <span className="font-black">
@@ -1711,7 +1734,7 @@ export function POSClient({
                   </span>
                 </div>
 
-                <div className="flex justify-between text-lg">
+                <div className="flex justify-between text-base">
                   <span className="font-black">Total</span>
                   <span className="font-black">{money(total, currency)}</span>
                 </div>
@@ -1727,17 +1750,17 @@ export function POSClient({
               </div>
 
               {error ? (
-                <p className="mt-3 flex items-start gap-2 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
+                <p className="mt-2 flex items-start gap-2 rounded-xl bg-red-50 p-2.5 text-xs font-bold text-red-700">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   {error}
                 </p>
               ) : null}
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={clearCart}
-                  className="min-h-12 touch-manipulation rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-black hover:bg-neutral-100 active:scale-[0.98]"
+                  className="min-h-10 touch-manipulation rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-black hover:bg-neutral-100 active:scale-[0.98]"
                 >
                   Clear
                 </button>
@@ -1746,7 +1769,7 @@ export function POSClient({
                   type="button"
                   onClick={completeSale}
                   disabled={pending || itemCount === 0}
-                  className="min-h-12 touch-manipulation rounded-2xl bg-black px-4 py-3 text-sm font-black text-white hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-10 touch-manipulation rounded-xl bg-black px-3 py-2 text-xs font-black text-white hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pending ? 'Processing...' : 'Complete Sale'}
                 </button>
@@ -1757,11 +1780,11 @@ export function POSClient({
       </div>
 
       {mobileView === 'products' && itemCount > 0 ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white/95 p-4 backdrop-blur-xl lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white/95 p-3 backdrop-blur-xl lg:hidden">
           <button
             type="button"
             onClick={() => setMobileView('cart')}
-            className="flex min-h-14 w-full touch-manipulation items-center justify-between rounded-2xl bg-black px-5 py-4 text-sm font-black text-white active:scale-[0.98]"
+            className="flex min-h-12 w-full touch-manipulation items-center justify-between rounded-xl bg-black px-4 py-3 text-sm font-black text-white active:scale-[0.98]"
           >
             <span>View Cart ({itemCount})</span>
             <span>{money(total, currency)}</span>
@@ -1784,16 +1807,16 @@ function QuantityControls({
   disableIncrease?: boolean;
 }) {
   return (
-    <div className="inline-flex items-center rounded-full bg-neutral-50 p-1">
+    <div className="inline-flex items-center rounded-full bg-neutral-50 p-0.5">
       <button
         type="button"
         onClick={onDecrease}
-        className="grid size-10 touch-manipulation place-items-center rounded-full bg-white active:scale-95"
+        className="grid size-8 touch-manipulation place-items-center rounded-full bg-white active:scale-95"
       >
-        <Minus className="size-4" />
+        <Minus className="size-3.5" />
       </button>
 
-      <span className="min-w-10 text-center text-sm font-black">
+      <span className="min-w-8 text-center text-xs font-black">
         {quantity}
       </span>
 
@@ -1801,7 +1824,7 @@ function QuantityControls({
         type="button"
         onClick={onIncrease}
         disabled={disableIncrease}
-        className="grid size-10 touch-manipulation place-items-center rounded-full bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        className="grid size-8 touch-manipulation place-items-center rounded-full bg-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <Plus className="size-4" />
       </button>

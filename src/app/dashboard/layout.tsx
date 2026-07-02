@@ -38,7 +38,7 @@ export default async function DashboardLayout({
       <div className="min-w-0 flex-1">
         <MobileNav navItems={navItems} />
 
-       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-5 py-4 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-neutral-800 dark:bg-[#111111]/90 lg:px-8">
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-5 py-4 shadow-sm backdrop-blur-xl transition-colors duration-300 dark:border-neutral-800 dark:bg-[#111111]/90 lg:px-8">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">
               Signed in as
@@ -53,7 +53,7 @@ export default async function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3">
-        
+            <RealtimeDashboardNotifications />
 
             <ThemeToggle compact />
 
@@ -66,11 +66,9 @@ export default async function DashboardLayout({
           </div>
         </header>
 
-       <main className="min-h-[calc(100dvh-73px)] bg-neutral-50 p-5 transition-colors duration-300 dark:bg-neutral-950 lg:p-8">
+        <main className="min-h-[calc(100dvh-73px)] bg-neutral-50 p-5 transition-colors duration-300 dark:bg-neutral-950 lg:p-8">
           {children}
         </main>
-
-        <RealtimeDashboardNotifications />
       </div>
     </div>
   );

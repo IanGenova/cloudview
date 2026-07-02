@@ -1421,147 +1421,190 @@ export function InventoryClient({
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                {filteredMenuItems.map((item) => {
-                  const status = getMenuStatusLabel(item);
+              <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1120px] text-left">
+                    <thead className="bg-neutral-50">
+                      <tr>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Menu Item
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Type / Status
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
+                          Available
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
+                          Sold
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Stock Detail
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Last Updated
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
 
-                  return (
-                    <div
-                      key={item.id}
-                      className={
-                        item.isDerivedStock
-                          ? 'rounded-3xl border border-amber-200 bg-white p-4 shadow-sm'
-                          : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-black text-neutral-950">
-                            {item.name}
-                          </p>
-                          <p className="mt-1 truncate text-xs font-bold text-neutral-500">
-                            {item.hotelName}
-                          </p>
+                    <tbody className="divide-y divide-neutral-100">
+                      {filteredMenuItems.map((item) => {
+                        const status = getMenuStatusLabel(item);
 
-                          <span
-                            className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getProductTypeClass(
-                              item
-                            )}`}
+                        return (
+                          <tr
+                            key={item.id}
+                            className={
+                              item.isDerivedStock
+                                ? 'bg-amber-50/35 align-top transition hover:bg-amber-50'
+                                : 'align-top transition hover:bg-neutral-50'
+                            }
                           >
-                            {getProductTypeLabel(item)}
-                          </span>
-                        </div>
+                            <td className="px-4 py-4">
+                              <p className="font-black text-neutral-950">
+                                {item.name}
+                              </p>
+                              <p className="mt-1 text-xs font-bold text-neutral-500">
+                                {item.hotelName}
+                              </p>
+                            </td>
 
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                            status
-                          )}`}
-                        >
-                          {status}
-                        </span>
-                      </div>
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col items-start gap-2">
+                                <span
+                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getProductTypeClass(
+                                    item
+                                  )}`}
+                                >
+                                  {getProductTypeLabel(item)}
+                                </span>
 
-                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                        <Metric
-                          label={item.isDerivedStock ? 'Can Sell' : 'Available'}
-                          value={item.availableQty}
-                          strong
-                        />
-                        <Metric label="Sold" value={item.soldQty} />
-                        <Metric
-                          label={item.isDerivedStock ? 'Components' : 'Updated'}
-                          value={
-                            item.isDerivedStock
-                              ? item.bundleComponents.length
-                              : item.updatedAt
-                                ? 'Yes'
-                                : 'No'
-                          }
-                          small
-                        />
-                      </div>
+                                <span
+                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
+                                    status
+                                  )}`}
+                                >
+                                  {status}
+                                </span>
+                              </div>
+                            </td>
 
-                      {item.isDerivedStock ? (
-                        <div className="mt-3 rounded-2xl bg-amber-50 p-3">
-                          <p className="text-xs font-black uppercase text-amber-700">
-                            Bundle Components
-                          </p>
+                            <td className="px-4 py-4 text-center">
+                              <p className="text-2xl font-black text-neutral-950">
+                                {item.availableQty}
+                              </p>
+                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                                {item.isDerivedStock ? 'Can Sell' : 'Available'}
+                              </p>
+                            </td>
 
-                          {item.bundleComponents.length ? (
-                            <div className="mt-2 space-y-1">
-                              {item.bundleComponents
-                                .slice(0, 4)
-                                .map((component) => (
-                                  <p
-                                    key={component.id}
-                                    className="text-xs font-bold text-amber-900"
-                                  >
-                                    {component.quantity}× {component.name} ·{' '}
-                                    {component.availableQty} available
+                            <td className="px-4 py-4 text-center">
+                              <p className="text-2xl font-black text-neutral-800">
+                                {item.soldQty}
+                              </p>
+                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                                Sold
+                              </p>
+                            </td>
+
+                            <td className="max-w-sm px-4 py-4">
+                              {item.isDerivedStock ? (
+                                <div className="space-y-1">
+                                  <p className="text-xs font-black uppercase text-amber-700">
+                                    {item.bundleComponents.length} component
+                                    {item.bundleComponents.length === 1
+                                      ? ''
+                                      : 's'}
                                   </p>
-                                ))}
 
-                              {item.bundleComponents.length > 4 ? (
-                                <p className="text-xs font-bold text-amber-800">
-                                  +{item.bundleComponents.length - 4} more
-                                  component
-                                  {item.bundleComponents.length - 4 === 1
-                                    ? ''
-                                    : 's'}
+                                  {item.bundleComponents.length ? (
+                                    <div className="space-y-1">
+                                      {item.bundleComponents
+                                        .slice(0, 3)
+                                        .map((component) => (
+                                          <p
+                                            key={component.id}
+                                            className="text-xs font-bold text-amber-900"
+                                          >
+                                            • {component.quantity}×{' '}
+                                            {component.name} ·{' '}
+                                            {component.availableQty} available
+                                          </p>
+                                        ))}
+
+                                      {item.bundleComponents.length > 3 ? (
+                                        <p className="text-xs font-bold text-amber-800">
+                                          +{item.bundleComponents.length - 3}{' '}
+                                          more
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs font-bold text-amber-800">
+                                      No components yet.
+                                    </p>
+                                  )}
+
+                                  {item.limitingComponentName ? (
+                                    <p className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900">
+                                      Limiting item:{' '}
+                                      {item.limitingComponentName}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : item.notes ? (
+                                <p className="line-clamp-2 text-xs font-semibold leading-5 text-neutral-500">
+                                  {item.notes}
                                 </p>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <p className="mt-2 text-xs font-bold text-amber-800">
-                              No components yet.
+                              ) : (
+                                <p className="text-xs font-semibold text-neutral-400">
+                                  No stock note.
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-4 text-sm font-bold text-neutral-600">
+                              {formatDateTime(item.updatedAt)}
+                            </td>
+
+                            <td className="px-4 py-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setControllingMenuItem(item)}
+                                className={
+                                  item.isDerivedStock
+                                    ? 'inline-flex h-9 items-center justify-center rounded-full bg-amber-500 px-4 text-xs font-black text-white hover:bg-amber-600'
+                                    : 'inline-flex h-9 items-center justify-center rounded-full bg-black px-4 text-xs font-black text-white hover:bg-neutral-800'
+                                }
+                              >
+                                {item.isDerivedStock
+                                  ? 'View Components'
+                                  : 'Control Stock'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {!filteredMenuItems.length ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="px-5 py-12 text-center"
+                          >
+                            <p className="font-black">No menu items found.</p>
+                            <p className="mt-1 text-sm text-neutral-500">
+                              Try changing your search or filter.
                             </p>
-                          )}
-
-                          {item.limitingComponentName ? (
-                            <p className="mt-3 rounded-xl bg-white/80 p-2 text-xs font-black text-amber-900">
-                              Limiting item: {item.limitingComponentName}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : item.notes ? (
-                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
-                          {item.notes}
-                        </p>
-                      ) : (
-                        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-400">
-                          No stock note.
-                        </p>
-                      )}
-
-                      <p className="mt-3 text-xs font-bold text-neutral-400">
-                        Last updated: {formatDateTime(item.updatedAt)}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => setControllingMenuItem(item)}
-                        className={
-                          item.isDerivedStock
-                            ? 'mt-4 h-10 w-full rounded-2xl bg-amber-500 text-sm font-black text-white hover:bg-amber-600'
-                            : 'mt-4 h-10 w-full rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800'
-                        }
-                      >
-                        {item.isDerivedStock
-                          ? 'View Components'
-                          : 'Control Stock'}
-                      </button>
-                    </div>
-                  );
-                })}
-
-                {!filteredMenuItems.length ? (
-                  <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-                    <p className="font-black">No menu items found.</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Try changing your search or filter.
-                    </p>
-                  </div>
-                ) : null}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1672,169 +1715,225 @@ export function InventoryClient({
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                {filteredServiceItems.map((item) => {
-                  const status = getServiceStatusLabel(item);
+              <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1180px] text-left">
+                    <thead className="bg-neutral-50">
+                      <tr>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Service Item
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Tracking / Billing
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
+                          Available
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
+                          Used
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Detail
+                        </th>
+                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
+                          Last Updated
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
 
-                  return (
-                    <div
-                      key={item.id}
-                      className={
-                        item.inventoryTracked
-                          ? 'rounded-3xl border border-blue-200 bg-white p-4 shadow-sm'
-                          : 'rounded-3xl border border-neutral-200 bg-white p-4 shadow-sm'
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-black text-neutral-950">
-                            {item.name}
-                          </p>
-                          <p className="mt-1 truncate text-xs font-bold text-neutral-500">
-                            {item.hotelName} · {item.category}
-                          </p>
+                    <tbody className="divide-y divide-neutral-100">
+                      {filteredServiceItems.map((item) => {
+                        const status = getServiceStatusLabel(item);
 
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <span
-                              className={
-                                item.inventoryTracked
-                                  ? 'rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700'
-                                  : 'rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600'
-                              }
-                            >
-                              {item.inventoryTracked
-                                ? 'Inventory Tracked'
-                                : 'Not Tracked'}
-                            </span>
-
-                            <span
-                              className={`rounded-full px-3 py-1 text-[10px] font-black ${getBillingClass(
-                                item.billingMode
-                              )}`}
-                            >
-                              {getBillingLabel(item.billingMode)}
-                              {item.billingMode ===
-                              ServiceBillingMode.FIXED_PRICE
-                                ? ` · ${money(item.unitPrice)}`
-                                : ''}
-                            </span>
-                          </div>
-                        </div>
-
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                            status
-                          )}`}
-                        >
-                          {status}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                        <Metric
-                          label="Available"
-                          value={
-                            item.inventoryTracked ? item.availableQty : '—'
-                          }
-                          strong={item.inventoryTracked}
-                        />
-                        <Metric
-                          label="Used"
-                          value={item.inventoryTracked ? item.usedQty : '—'}
-                        />
-                        <Metric
-                          label="Updated"
-                          value={item.updatedAt ? 'Yes' : 'No'}
-                          small
-                        />
-                      </div>
-
-                      {item.description ? (
-                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
-                          {item.description}
-                        </p>
-                      ) : item.notes ? (
-                        <p className="mt-3 line-clamp-2 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-500">
-                          {item.notes}
-                        </p>
-                      ) : (
-                        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-xs text-neutral-400">
-                          No description or stock note.
-                        </p>
-                      )}
-
-                      <p className="mt-3 text-xs font-bold text-neutral-400">
-                        Last updated: {formatDateTime(item.updatedAt)}
-                      </p>
-
-                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {item.inventoryTracked ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setControllingServiceItem(item)}
-                              className="h-10 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800"
-                            >
-                              Control Stock
-                            </button>
-
-                            <form action={handleDisableServiceInventory}>
-                              <input
-                                type="hidden"
-                                name="serviceId"
-                                value={item.id}
-                              />
-                              <button
-                                type="submit"
-                                disabled={pendingAction === `disable-service:${item.id}`}
-                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {pendingAction === `disable-service:${item.id}` ? (
-                                  <Loader2 className="size-4 animate-spin" />
-                                ) : null}
-                                {pendingAction === `disable-service:${item.id}`
-                                  ? 'Disabling...'
-                                  : 'Disable Tracking'}
-                              </button>
-                            </form>
-                          </>
-                        ) : (
-                          <form
-                            action={handleEnableServiceInventory}
-                            className="sm:col-span-2"
+                        return (
+                          <tr
+                            key={item.id}
+                            className={
+                              item.inventoryTracked
+                                ? 'bg-blue-50/25 align-top transition hover:bg-blue-50'
+                                : 'align-top transition hover:bg-neutral-50'
+                            }
                           >
-                            <input
-                              type="hidden"
-                              name="serviceId"
-                              value={item.id}
-                            />
-                            <button
-                              type="submit"
-                              disabled={pendingAction === `enable-service:${item.id}`}
-                              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {pendingAction === `enable-service:${item.id}` ? (
-                                <Loader2 className="size-4 animate-spin" />
+                            <td className="px-4 py-4">
+                              <p className="font-black text-neutral-950">
+                                {item.name}
+                              </p>
+                              <p className="mt-1 text-xs font-bold text-neutral-500">
+                                {item.hotelName} · {item.category}
+                              </p>
+                              {item.code ? (
+                                <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-neutral-400">
+                                  Code: {item.code}
+                                </p>
                               ) : null}
-                              {pendingAction === `enable-service:${item.id}`
-                                ? 'Enabling...'
-                                : 'Enable Inventory'}
-                            </button>
-                          </form>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                            </td>
 
-                {!filteredServiceItems.length ? (
-                  <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-                    <p className="font-black">No service items found.</p>
-                    <p className="mt-1 text-sm text-neutral-500">
-                      Try changing your search or filter.
-                    </p>
-                  </div>
-                ) : null}
+                            <td className="px-4 py-4">
+                              <div className="flex flex-col items-start gap-2">
+                                <span
+                                  className={
+                                    item.inventoryTracked
+                                      ? 'inline-flex rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700'
+                                      : 'inline-flex rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600'
+                                  }
+                                >
+                                  {item.inventoryTracked
+                                    ? 'Inventory Tracked'
+                                    : 'Not Tracked'}
+                                </span>
+
+                                <span
+                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getBillingClass(
+                                    item.billingMode
+                                  )}`}
+                                >
+                                  {getBillingLabel(item.billingMode)}
+                                  {item.billingMode ===
+                                  ServiceBillingMode.FIXED_PRICE
+                                    ? ` · ${money(item.unitPrice)}`
+                                    : ''}
+                                </span>
+
+                                <span
+                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
+                                    status
+                                  )}`}
+                                >
+                                  {status}
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="px-4 py-4 text-center">
+                              <p className="text-2xl font-black text-neutral-950">
+                                {item.inventoryTracked
+                                  ? item.availableQty
+                                  : '—'}
+                              </p>
+                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                                Available
+                              </p>
+                            </td>
+
+                            <td className="px-4 py-4 text-center">
+                              <p className="text-2xl font-black text-neutral-800">
+                                {item.inventoryTracked ? item.usedQty : '—'}
+                              </p>
+                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                                Used
+                              </p>
+                            </td>
+
+                            <td className="max-w-sm px-4 py-4">
+                              {item.description ? (
+                                <p className="line-clamp-2 text-xs font-semibold leading-5 text-neutral-500">
+                                  {item.description}
+                                </p>
+                              ) : item.notes ? (
+                                <p className="line-clamp-2 text-xs font-semibold leading-5 text-neutral-500">
+                                  {item.notes}
+                                </p>
+                              ) : (
+                                <p className="text-xs font-semibold text-neutral-400">
+                                  No description or stock note.
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-4 text-sm font-bold text-neutral-600">
+                              {formatDateTime(item.updatedAt)}
+                            </td>
+
+                            <td className="px-4 py-4">
+                              <div className="flex flex-wrap justify-end gap-2">
+                                {item.inventoryTracked ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setControllingServiceItem(item)
+                                      }
+                                      className="inline-flex h-9 items-center justify-center rounded-full bg-black px-4 text-xs font-black text-white hover:bg-neutral-800"
+                                    >
+                                      Control Stock
+                                    </button>
+
+                                    <form action={handleDisableServiceInventory}>
+                                      <input
+                                        type="hidden"
+                                        name="serviceId"
+                                        value={item.id}
+                                      />
+                                      <button
+                                        type="submit"
+                                        disabled={
+                                          pendingAction ===
+                                          `disable-service:${item.id}`
+                                        }
+                                        className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                      >
+                                        {pendingAction ===
+                                        `disable-service:${item.id}` ? (
+                                          <Loader2 className="size-3.5 animate-spin" />
+                                        ) : null}
+                                        {pendingAction ===
+                                        `disable-service:${item.id}`
+                                          ? 'Disabling...'
+                                          : 'Disable'}
+                                      </button>
+                                    </form>
+                                  </>
+                                ) : (
+                                  <form action={handleEnableServiceInventory}>
+                                    <input
+                                      type="hidden"
+                                      name="serviceId"
+                                      value={item.id}
+                                    />
+                                    <button
+                                      type="submit"
+                                      disabled={
+                                        pendingAction ===
+                                        `enable-service:${item.id}`
+                                      }
+                                      className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-blue-600 px-4 text-xs font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {pendingAction ===
+                                      `enable-service:${item.id}` ? (
+                                        <Loader2 className="size-3.5 animate-spin" />
+                                      ) : null}
+                                      {pendingAction ===
+                                      `enable-service:${item.id}`
+                                        ? 'Enabling...'
+                                        : 'Enable Inventory'}
+                                    </button>
+                                  </form>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {!filteredServiceItems.length ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="px-5 py-12 text-center"
+                          >
+                            <p className="font-black">No service items found.</p>
+                            <p className="mt-1 text-sm text-neutral-500">
+                              Try changing your search or filter.
+                            </p>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </CardContent>
           </Card>

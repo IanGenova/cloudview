@@ -48,37 +48,44 @@ function getDate(formData: FormData, key: string, endOfDay = false) {
   return date;
 }
 
-function canManageRewards(role: Role) {
-  return role === Role.SUPER_ADMIN || role === Role.HOTEL_ADMIN;
+function requireSuperAdminRole(role: Role) {
+  if (role !== Role.SUPER_ADMIN) {
+    throw new Error('Rewards module is available to Super Admin only.');
+  }
 }
 
-function canVerifyRedemptions(role: Role) {
-  return role === Role.SUPER_ADMIN || role === Role.HOTEL_ADMIN || role === Role.STAFF;
+async function requireSuperAdmin() {
+  const user = await requireUser();
+
+  requireSuperAdminRole(user.role);
+
+  return user;
 }
 
 async function getActionHotelId(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireSuperAdmin();
+  const hotelId = getString(formData, 'hotelId');
 
-  if (user.role === Role.SUPER_ADMIN) {
-    const hotelId = getString(formData, 'hotelId');
-
-    if (!hotelId) {
-      throw new Error('Hotel is required.');
-    }
-
-    return {
-      user,
-      hotelId,
-    };
+  if (!hotelId) {
+    throw new Error('Hotel is required.');
   }
 
-  if (!user.hotelId) {
-    throw new Error('Your account is not assigned to a hotel.');
+  const hotel = await db.hotel.findFirst({
+    where: {
+      id: hotelId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!hotel) {
+    throw new Error('Selected hotel was not found.');
   }
 
   return {
     user,
-    hotelId: user.hotelId,
+    hotelId: hotel.id,
   };
 }
 
@@ -154,59 +161,87 @@ function buildRewardData(formData: FormData) {
   };
 }
 
+function getRewardIds(formData: FormData) {
+  const rewardIds = new Set<string>();
+
+  for (const value of formData.getAll('rewardId')) {
+    if (typeof value === 'string' && value.trim()) {
+      rewardIds.add(value.trim());
+    }
+  }
+
+  const rewardIdsText = getString(formData, 'rewardIds');
+
+  if (rewardIdsText) {
+    for (const rewardId of rewardIdsText.split(',')) {
+      const cleanedRewardId = rewardId.trim();
+
+      if (cleanedRewardId) {
+        rewardIds.add(cleanedRewardId);
+      }
+    }
+  }
+
+  return Array.from(rewardIds);
+}
+
 export async function createRewardAction(formData: FormData) {
-  const { hotelId } = await getActionHotelId(formData);
+  await requireSuperAdmin();
 
   const data = buildRewardData(formData);
 
-  await db.reward.create({
-    data: {
-      hotelId,
-      ...data,
+  const hotels = await db.hotel.findMany({
+    where: {
       isActive: true,
     },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!hotels.length) {
+    throw new Error('No active hotels found for global reward creation.');
+  }
+
+  await db.reward.createMany({
+    data: hotels.map((hotel) => ({
+      hotelId: hotel.id,
+      ...data,
+      isActive: true,
+    })),
   });
 
   revalidatePath('/dashboard/rewards');
 }
 
 export async function updateRewardAction(formData: FormData) {
-  const user = await requireUser();
+  await requireSuperAdmin();
 
-  if (!canManageRewards(user.role)) {
-    throw new Error('You are not allowed to edit rewards.');
-  }
+  const rewardIds = getRewardIds(formData);
 
-  const rewardId = getString(formData, 'rewardId');
-
-  if (!rewardId) {
+  if (!rewardIds.length) {
     throw new Error('Reward is required.');
   }
 
-  const reward = await db.reward.findFirst({
-    where:
-      user.role === Role.SUPER_ADMIN
-        ? {
-            id: rewardId,
-          }
-        : {
-            id: rewardId,
-            hotelId: user.hotelId!,
-          },
-    select: {
-      id: true,
+  const existingRewardCount = await db.reward.count({
+    where: {
+      id: {
+        in: rewardIds,
+      },
     },
   });
 
-  if (!reward) {
-    throw new Error('Reward not found.');
+  if (existingRewardCount !== rewardIds.length) {
+    throw new Error('One or more rewards were not found.');
   }
 
   const data = buildRewardData(formData);
 
-  await db.reward.update({
+  await db.reward.updateMany({
     where: {
-      id: reward.id,
+      id: {
+        in: rewardIds,
+      },
     },
     data,
   });
@@ -215,28 +250,20 @@ export async function updateRewardAction(formData: FormData) {
 }
 
 export async function deleteRewardAction(formData: FormData) {
-  const user = await requireUser();
+  await requireSuperAdmin();
 
-  if (!canManageRewards(user.role)) {
-    throw new Error('You are not allowed to delete rewards.');
-  }
+  const rewardIds = getRewardIds(formData);
 
-  const rewardId = getString(formData, 'rewardId');
-
-  if (!rewardId) {
+  if (!rewardIds.length) {
     throw new Error('Reward is required.');
   }
 
-  const reward = await db.reward.findFirst({
-    where:
-      user.role === Role.SUPER_ADMIN
-        ? {
-            id: rewardId,
-          }
-        : {
-            id: rewardId,
-            hotelId: user.hotelId!,
-          },
+  const rewards = await db.reward.findMany({
+    where: {
+      id: {
+        in: rewardIds,
+      },
+    },
     select: {
       id: true,
       _count: {
@@ -247,26 +274,30 @@ export async function deleteRewardAction(formData: FormData) {
     },
   });
 
-  if (!reward) {
+  if (!rewards.length) {
     throw new Error('Reward not found.');
   }
 
-  if (reward._count.redemptions > 0) {
-    await db.reward.update({
-      where: {
-        id: reward.id,
-      },
-      data: {
-        isActive: false,
-      },
-    });
-  } else {
-    await db.reward.delete({
-      where: {
-        id: reward.id,
-      },
-    });
-  }
+  await db.$transaction(async (tx) => {
+    for (const reward of rewards) {
+      if (reward._count.redemptions > 0) {
+        await tx.reward.update({
+          where: {
+            id: reward.id,
+          },
+          data: {
+            isActive: false,
+          },
+        });
+      } else {
+        await tx.reward.delete({
+          where: {
+            id: reward.id,
+          },
+        });
+      }
+    }
+  });
 
   revalidatePath('/dashboard/rewards');
 }
@@ -378,11 +409,7 @@ export async function createGuestMemberAction(formData: FormData) {
 }
 
 export async function markRewardRedemptionUsedAction(formData: FormData) {
-  const user = await requireUser();
-
-  if (!canVerifyRedemptions(user.role)) {
-    throw new Error('You are not allowed to verify redemptions.');
-  }
+  await requireSuperAdmin();
 
   const redemptionId = getString(formData, 'redemptionId');
 
@@ -391,17 +418,10 @@ export async function markRewardRedemptionUsedAction(formData: FormData) {
   }
 
   const result = await db.rewardRedemption.updateMany({
-    where:
-      user.role === Role.SUPER_ADMIN
-        ? {
-            id: redemptionId,
-            status: RewardRedemptionStatus.RESERVED,
-          }
-        : {
-            id: redemptionId,
-            hotelId: user.hotelId!,
-            status: RewardRedemptionStatus.RESERVED,
-          },
+    where: {
+      id: redemptionId,
+      status: RewardRedemptionStatus.RESERVED,
+    },
     data: {
       status: RewardRedemptionStatus.USED,
       usedAt: new Date(),
@@ -416,11 +436,7 @@ export async function markRewardRedemptionUsedAction(formData: FormData) {
 }
 
 export async function cancelRewardRedemptionAction(formData: FormData) {
-  const user = await requireUser();
-
-  if (!canVerifyRedemptions(user.role)) {
-    throw new Error('You are not allowed to cancel redemptions.');
-  }
+  const user = await requireSuperAdmin();
 
   const redemptionId = getString(formData, 'redemptionId');
 
@@ -430,17 +446,10 @@ export async function cancelRewardRedemptionAction(formData: FormData) {
 
   await db.$transaction(async (tx) => {
     const redemption = await tx.rewardRedemption.findFirst({
-      where:
-        user.role === Role.SUPER_ADMIN
-          ? {
-              id: redemptionId,
-              status: RewardRedemptionStatus.RESERVED,
-            }
-          : {
-              id: redemptionId,
-              hotelId: user.hotelId!,
-              status: RewardRedemptionStatus.RESERVED,
-            },
+      where: {
+        id: redemptionId,
+        status: RewardRedemptionStatus.RESERVED,
+      },
       include: {
         reward: {
           select: {

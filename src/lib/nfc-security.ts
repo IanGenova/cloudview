@@ -215,18 +215,21 @@ export async function createNfcAccessSession(tag: {
     maxAge: getAccessTtlMinutes() * 60,
   };
 
-  if (tag.code) {
-    cookieStore.set(getNfcAccessCookieName(tag.code), rawToken, cookieOptions);
+  const tagCookieName = tag.code ? getNfcAccessCookieName(tag.code) : null;
+
+  if (tagCookieName) {
+    cookieStore.set(tagCookieName, rawToken, cookieOptions);
   }
 
-  /**
-   * Legacy fallback cookie.
-   * Keep this so old guest pages/routes still work while we transition to
-   * tag-specific access cookies.
-   */
   cookieStore.set(NFC_ACCESS_COOKIE, rawToken, cookieOptions);
-}
 
+  return {
+    rawToken,
+    tagCookieName,
+    legacyCookieName: NFC_ACCESS_COOKIE,
+    cookieOptions,
+  };
+}
 export async function requireNfcGuestAccess(tagCode: string) {
   const tag = await db.nfcTag.findUnique({
     where: {

@@ -1,13 +1,25 @@
 'use server';
 
+import { randomUUID } from 'crypto';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { verifyTagSecret } from '@/lib/nfc-security';
+import {
+  createNfcAccessSession,
+  shouldUseSecureNfcCookies,
+  verifyTagSecret,
+} from '@/lib/nfc-security';
 import { getActiveGuestStayForRoom } from '@/lib/guest-stay-device-auth';
 import {
   authorizeGuestStayDeviceWithPasscode,
   GuestStayDeviceAuthError,
 } from '@/lib/guest-stay-device-auth';
+import {
+  ACTIVE_ORDER_STATUSES,
+  ACTIVE_SERVICE_REQUEST_STATUSES,
+  getNfcGuestSessionCookieName,
+  getReusableNfcGuestSessionForTag,
+} from '@/lib/nfc-guest-session';
 
 function cleanText(value: FormDataEntryValue | null, maxLength = 200) {
   if (typeof value !== 'string') return '';
@@ -45,8 +57,10 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
     },
     select: {
       id: true,
+      code: true,
       hotelId: true,
       roomId: true,
+      locationId: true,
       tagType: true,
       status: true,
       scanSecret: true,
@@ -107,5 +121,153 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
     redirectToVerify(tagCode, scanSecret, 'authorization_failed');
   }
 
-  redirect(`/n/${tagCode}?k=${encodeURIComponent(scanSecret)}`);
+  /**
+   * First-scan fix:
+   *
+   * Do not redirect back through /n/[tagCode] after passcode verification.
+   * That extra hop can race the Set-Cookie handoff on phones and make the first
+   * portal load arrive without a valid NFC access/session cookie.
+   *
+   * Instead, create the NFC guest session and NFC access proof right here,
+   * then redirect directly to /t/[tagCode]?nfcSession=1.
+   */
+  const reusableGuestSession = await getReusableNfcGuestSessionForTag({
+    tagId: tag.id,
+    hotelId: tag.hotelId,
+    tagType: tag.tagType,
+    roomId: tag.roomId,
+    locationId: tag.locationId,
+    guestStayId: activeStay.id,
+  });
+
+  const guestSessionKey = reusableGuestSession?.sessionKey ?? randomUUID();
+  const now = new Date();
+
+  await db.$transaction(async (tx) => {
+    await tx.nfcTag.update({
+      where: {
+        id: tag.id,
+      },
+      data: {
+        lastScannedAt: now,
+      },
+    });
+
+    /**
+     * Private room tags are strict. Revoke old NFC access sessions before
+     * creating the fresh access proof below.
+     */
+    await tx.nfcAccessSession.updateMany({
+      where: {
+        tagId: tag.id,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: now,
+      },
+    });
+
+    await tx.nfcAccessSession.deleteMany({
+      where: {
+        expiresAt: {
+          lt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        },
+      },
+    });
+
+    /**
+     * Close old room sessions without pending work. Keep the reusable pending
+     * session, if one exists, so existing in-progress guest work is preserved.
+     */
+    await tx.nfcGuestSession.updateMany({
+      where: {
+        tagId: tag.id,
+        hotelId: tag.hotelId,
+        endedAt: null,
+        ...(reusableGuestSession
+          ? {
+              id: {
+                not: reusableGuestSession.id,
+              },
+            }
+          : {}),
+        orders: {
+          none: {
+            status: {
+              in: [...ACTIVE_ORDER_STATUSES],
+            },
+          },
+        },
+        serviceRequests: {
+          none: {
+            status: {
+              in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+            },
+          },
+        },
+      },
+      data: {
+        endedAt: now,
+      },
+    });
+
+    if (reusableGuestSession) {
+      await tx.nfcGuestSession.update({
+        where: {
+          id: reusableGuestSession.id,
+        },
+        data: {
+          endedAt: null,
+          lastSeenAt: now,
+          roomId: tag.roomId,
+          locationId: tag.locationId,
+          guestMemberId: activeStay.guestMemberId,
+          guestStayId: activeStay.id,
+        },
+      });
+
+      return;
+    }
+
+    await tx.nfcGuestSession.create({
+      data: {
+        sessionKey: guestSessionKey,
+        hotelId: tag.hotelId,
+        tagId: tag.id,
+        roomId: tag.roomId,
+        locationId: tag.locationId,
+        guestMemberId: activeStay.guestMemberId,
+        guestStayId: activeStay.id,
+      },
+    });
+  });
+
+  /**
+   * Create the NFC access proof cookie now, after old access sessions were
+   * revoked. This is the cookie checked by requireNfcGuestAccess().
+   */
+  await createNfcAccessSession({
+    id: tag.id,
+    hotelId: tag.hotelId,
+    code: tag.code,
+  });
+
+  const cookieStore = await cookies();
+
+  /**
+   * Create the guest session cookie checked by nfc-guest-session.ts.
+   */
+  cookieStore.set(getNfcGuestSessionCookieName(tag.code), guestSessionKey, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: await shouldUseSecureNfcCookies(),
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  /**
+   * nfcSession=1 tells NfcBrowserSessionGuard that this navigation came from
+   * a trusted NFC/passcode flow and should activate the in-tab browser session.
+   */
+  redirect(`/t/${tag.code}?nfcSession=1`);
 }

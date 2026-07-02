@@ -46,17 +46,46 @@ function isValidRole(value: unknown): value is Role {
   );
 }
 
+function normalizePasswordInput(password: string) {
+  return String(password ?? '').trim();
+}
+
+function isBcryptHash(value: string) {
+  return /^\$2[aby]\$\d{2}\$/.test(value);
+}
+
 export async function verifyPassword(password: string, passwordHash: string) {
-  return bcrypt.compare(password, passwordHash);
+  const normalizedPassword = normalizePasswordInput(password);
+
+  if (!normalizedPassword || !passwordHash) {
+    return false;
+  }
+
+  if (isBcryptHash(passwordHash)) {
+    return bcrypt.compare(normalizedPassword, passwordHash);
+  }
+
+  /**
+   * Dev/legacy fallback:
+   * Allows login if an older seed accidentally stored passwordHash as plain text.
+   * New and reset passwords should still be stored through hashPassword().
+   */
+  return normalizedPassword === passwordHash.trim();
 }
 
 export async function hashPassword(password: string) {
-  return bcrypt.hash(password, 12);
+  const normalizedPassword = normalizePasswordInput(password);
+
+  if (!normalizedPassword) {
+    throw new Error('Password is required.');
+  }
+
+  return bcrypt.hash(normalizedPassword, 12);
 }
 
 export function dashboardHomeForRole(role: Role) {
   if (role === Role.KITCHEN) {
-    return '/dashboard/kitchen-display';
+    return '/dashboard/kitchen';
   }
 
   if (role === Role.STAFF) {
@@ -174,6 +203,6 @@ export async function requireUser() {
 
 export function requireRole(currentRole: Role, allowedRoles: Role[] | string[]) {
   if (!allowedRoles.includes(currentRole)) {
-    throw new Error('Forbidden');
+    redirect(dashboardHomeForRole(currentRole));
   }
 }

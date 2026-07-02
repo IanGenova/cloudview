@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { NFC_ACCESS_COOKIE } from '@/lib/nfc-security';
+import {
+  getNfcAccessCookieName,
+  NFC_ACCESS_COOKIE,
+} from '@/lib/nfc-security';
 import {
   closeCurrentNfcGuestSessionIfNoPendingWork,
   getNfcGuestSessionCookieName,
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
    */
   if (!result.keepSession) {
     clearCookie(response, getNfcGuestSessionCookieName(tagCode));
+    clearCookie(response, getNfcAccessCookieName(tagCode));
     clearCookie(response, NFC_ACCESS_COOKIE);
   }
 

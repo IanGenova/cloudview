@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
@@ -1320,6 +1320,594 @@ function OrderDetailsModal({
   );
 }
 
+
+const workflowSteps: OrderStatus[] = [
+  'PENDING',
+  'ACCEPTED',
+  'PREPARING',
+  'READY',
+  'DELIVERED',
+];
+
+const statusToneMap: Record<OrderStatus, string> = {
+  PENDING: 'border-amber-200 bg-amber-50 text-amber-900',
+  ACCEPTED: 'border-blue-200 bg-blue-50 text-blue-900',
+  PREPARING: 'border-sky-200 bg-sky-50 text-sky-900',
+  READY: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  DELIVERED: 'border-neutral-200 bg-neutral-50 text-neutral-900',
+  CANCELLED: 'border-red-200 bg-red-50 text-red-900',
+};
+
+const statusAccentMap: Record<OrderStatus, string> = {
+  PENDING: 'bg-amber-500',
+  ACCEPTED: 'bg-blue-500',
+  PREPARING: 'bg-sky-500',
+  READY: 'bg-emerald-500',
+  DELIVERED: 'bg-neutral-500',
+  CANCELLED: 'bg-red-500',
+};
+
+function getSourceLabel(order: DashboardOrder) {
+  return order.tagCode ? 'Guest Portal' : 'POS Terminal';
+}
+
+function getWorkflowProgressIndex(status: OrderStatus) {
+  return Math.max(workflowSteps.indexOf(status), 0);
+}
+
+function getOrderFocusLabel(order: DashboardOrder) {
+  if (order.status === 'PENDING') {
+    return 'Needs acceptance';
+  }
+
+  if (order.status === 'READY') {
+    return 'Ready for delivery';
+  }
+
+  if (order.paymentStatus !== 'PAID') {
+    return 'Payment pending';
+  }
+
+  if (order.status === 'PREPARING') {
+    return 'Kitchen active';
+  }
+
+  if (order.status === 'ACCEPTED') {
+    return 'Accepted';
+  }
+
+  if (order.status === 'DELIVERED') {
+    return 'Completed';
+  }
+
+  return 'Cancelled';
+}
+
+function getPrimaryNextStatus(status: OrderStatus): OrderStatus | null {
+  if (status === 'PENDING') {
+    return 'ACCEPTED';
+  }
+
+  if (status === 'ACCEPTED') {
+    return 'PREPARING';
+  }
+
+  if (status === 'PREPARING') {
+    return 'READY';
+  }
+
+  if (status === 'READY') {
+    return 'DELIVERED';
+  }
+
+  return null;
+}
+
+function getPrimaryActionText(status: OrderStatus) {
+  if (status === 'PENDING') {
+    return 'Accept';
+  }
+
+  if (status === 'ACCEPTED') {
+    return 'Start Prep';
+  }
+
+  if (status === 'PREPARING') {
+    return 'Mark Ready';
+  }
+
+  if (status === 'READY') {
+    return 'Deliver';
+  }
+
+  return 'No action';
+}
+
+function OrderMetricTile({
+  icon,
+  label,
+  value,
+  helper,
+  tone = 'neutral',
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string | number;
+  helper: string;
+  tone?: 'neutral' | 'green' | 'red' | 'blue' | 'amber';
+}) {
+  const tileClass =
+    tone === 'green'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : tone === 'red'
+        ? 'border-red-200 bg-red-50 text-red-900'
+        : tone === 'blue'
+          ? 'border-blue-200 bg-blue-50 text-blue-900'
+          : tone === 'amber'
+            ? 'border-amber-200 bg-amber-50 text-amber-900'
+            : 'border-neutral-200 bg-white text-neutral-950';
+
+  const iconClass =
+    tone === 'green'
+      ? 'bg-emerald-100 text-emerald-700'
+      : tone === 'red'
+        ? 'bg-red-100 text-red-700'
+        : tone === 'blue'
+          ? 'bg-blue-100 text-blue-700'
+          : tone === 'amber'
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-[#fff8e7] text-[#b88938]';
+
+  return (
+    <div className={`rounded-[1.75rem] border p-4 ${tileClass}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
+            {label}
+          </p>
+          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
+        </div>
+
+        <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${iconClass}`}>
+          {icon}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowProgress({ status }: { status: OrderStatus }) {
+  if (status === 'CANCELLED') {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-3">
+        <p className="text-xs font-black text-red-700">Order cancelled</p>
+      </div>
+    );
+  }
+
+  const currentIndex = getWorkflowProgressIndex(status);
+
+  return (
+    <div className="grid grid-cols-5 gap-1">
+      {workflowSteps.map((step, index) => {
+        const isActive = index <= currentIndex;
+
+        return (
+          <div key={step} className="space-y-1">
+            <div
+              className={
+                isActive
+                  ? `h-1.5 rounded-full ${statusAccentMap[step]}`
+                  : 'h-1.5 rounded-full bg-neutral-200'
+              }
+            />
+            <p
+              className={
+                index === currentIndex
+                  ? 'truncate text-[9px] font-black uppercase text-neutral-900'
+                  : 'truncate text-[9px] font-black uppercase text-neutral-400'
+              }
+            >
+              {step === 'ACCEPTED' ? 'Accept' : label(step)}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OrderActionButton({
+  order,
+  status,
+  action,
+  children,
+  className,
+}: {
+  order: DashboardOrder;
+  status: OrderStatus;
+  action: ClientOrderAction;
+  children: ReactNode;
+  className: string;
+}) {
+  return (
+    <form action={action}>
+      <input type="hidden" name="orderId" value={order.id} />
+      <input type="hidden" name="redirectTo" value="orders" />
+      <input type="hidden" name="status" value={status} />
+      <input
+        type="hidden"
+        name="note"
+        value={`Dashboard status changed to ${label(status)}`}
+      />
+      <button type="submit" className={className}>
+        {children}
+      </button>
+    </form>
+  );
+}
+
+function MarkPaidButton({
+  order,
+  action,
+  compact = false,
+}: {
+  order: DashboardOrder;
+  action: ClientOrderAction;
+  compact?: boolean;
+}) {
+  if (order.paymentStatus === 'PAID') {
+    return null;
+  }
+
+  return (
+    <form action={action}>
+      <input type="hidden" name="orderId" value={order.id} />
+      <input type="hidden" name="redirectTo" value="orders" />
+      <button
+        type="submit"
+        className={
+          compact
+            ? 'inline-flex h-9 items-center justify-center gap-2 rounded-full bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700'
+            : 'inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700'
+        }
+      >
+        <CreditCard className={compact ? 'size-3.5' : 'size-4'} />
+        Mark Paid
+      </button>
+    </form>
+  );
+}
+
+function OrderCard({
+  order,
+  now,
+  onView,
+  onPrint,
+  onMarkPaid,
+  onStatusChange,
+  onCancel,
+}: {
+  order: DashboardOrder;
+  now: number;
+  onView: () => void;
+  onPrint: () => void;
+  onMarkPaid: ClientOrderAction;
+  onStatusChange: ClientOrderAction;
+  onCancel: () => void;
+}) {
+  const itemCount = getItemCount(order.items);
+  const preview = getOrderPreview(order.items);
+  const waitingLabel = getOrderAgeLabel(order, now);
+  const nextStatus = getPrimaryNextStatus(order.status);
+  const hasAction = Boolean(nextStatus);
+  const isAttentionOrder =
+    order.status === 'PENDING' ||
+    order.status === 'READY' ||
+    order.paymentStatus !== 'PAID';
+
+  return (
+    <article
+      className={
+        isAttentionOrder
+          ? `overflow-hidden rounded-[1.75rem] border bg-white shadow-sm ${statusToneMap[order.status]}`
+          : 'overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-sm'
+      }
+    >
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-xl font-black text-neutral-950">
+                {order.orderCode}
+              </h3>
+
+              <span
+                className={`rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
+                  order.status
+                )}`}
+              >
+                {label(order.status)}
+              </span>
+            </div>
+
+            <p className="mt-1 truncate text-xs font-black uppercase tracking-wide text-neutral-500">
+              {order.roomLabel || 'Guest location'} ·{' '}
+              {order.guestName || 'Guest name not provided'}
+            </p>
+
+            <p className="mt-1 text-xs font-semibold text-neutral-400">
+              {order.hotelName} · {getSourceLabel(order)}
+            </p>
+          </div>
+
+          <span
+            className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getOrderAgeClass(
+              order,
+              now
+            )}`}
+          >
+            {activeOrderStatuses.includes(order.status)
+              ? `Waiting ${waitingLabel}`
+              : `Duration ${waitingLabel}`}
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <WorkflowProgress status={order.status} />
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-2xl bg-white/70 p-3">
+            <p className="text-[10px] font-black uppercase text-neutral-400">
+              Total
+            </p>
+            <p className="mt-1 text-sm font-black text-neutral-950">
+              {money(order.totalCents)}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white/70 p-3">
+            <p className="text-[10px] font-black uppercase text-neutral-400">
+              Payment
+            </p>
+            <p className="mt-1 truncate text-sm font-black text-neutral-950">
+              {label(order.paymentMethod)}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white/70 p-3">
+            <p className="text-[10px] font-black uppercase text-neutral-400">
+              Items
+            </p>
+            <p className="mt-1 text-sm font-black text-neutral-950">
+              {itemCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl bg-white/70 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-[10px] font-black ${getPaymentClass(
+                order.paymentStatus
+              )}`}
+            >
+              {label(order.paymentStatus)}
+            </span>
+            <span className="rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600">
+              {getOrderFocusLabel(order)}
+            </span>
+          </div>
+
+          <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-neutral-600">
+            {preview}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-2 border-t border-neutral-100 bg-white p-3 sm:grid-cols-2">
+        {hasAction && nextStatus ? (
+          <OrderActionButton
+            order={order}
+            status={nextStatus}
+            action={onStatusChange}
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+          >
+            {nextStatus === 'ACCEPTED' ? (
+              <CheckCircle2 className="size-4" />
+            ) : nextStatus === 'PREPARING' ? (
+              <ChefHat className="size-4" />
+            ) : nextStatus === 'READY' ? (
+              <PackageCheck className="size-4" />
+            ) : (
+              <Truck className="size-4" />
+            )}
+            {getPrimaryActionText(order.status)}
+          </OrderActionButton>
+        ) : (
+          <button
+            type="button"
+            onClick={onView}
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+          >
+            View Details
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={onView}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-xs font-black text-neutral-800 hover:bg-neutral-50"
+        >
+          <ReceiptText className="size-4" />
+          Details
+        </button>
+
+        {order.status === 'PENDING' ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
+          >
+            <Ban className="size-4" />
+            Reject
+          </button>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={onPrint}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-xs font-black text-neutral-800 hover:bg-neutral-50"
+        >
+          <Printer className="size-4" />
+          Print
+        </button>
+
+        {order.paymentStatus !== 'PAID' ? (
+          <div className="sm:col-span-2">
+            <MarkPaidButton order={order} action={onMarkPaid} />
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function PriorityQueue({
+  orders,
+  now,
+  onSelectOrder,
+}: {
+  orders: DashboardOrder[];
+  now: number;
+  onSelectOrder: (order: DashboardOrder) => void;
+}) {
+  const priorityOrders = orders
+    .filter(
+      (order) =>
+        order.status === 'PENDING' ||
+        order.status === 'READY' ||
+        order.paymentStatus !== 'PAID'
+    )
+    .slice(0, 6);
+
+  return (
+    <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+      <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88938]">
+              Focus Queue
+            </p>
+            <h3 className="mt-1 text-lg font-black">Needs Attention</h3>
+          </div>
+
+          <span className="rounded-full bg-black px-3 py-1 text-xs font-black text-white">
+            {priorityOrders.length}
+          </span>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {priorityOrders.length ? (
+            priorityOrders.map((order) => (
+              <button
+                key={order.id}
+                type="button"
+                onClick={() => onSelectOrder(order)}
+                className="block w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-left transition hover:border-[#c99c38] hover:bg-[#fffaf0]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black text-neutral-950">
+                      {order.orderCode}
+                    </p>
+                    <p className="mt-1 truncate text-[11px] font-black uppercase tracking-wide text-neutral-500">
+                      {order.roomLabel || 'Guest location'}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${getStatusClass(
+                      order.status
+                    )}`}
+                  >
+                    {label(order.status)}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-1 text-[9px] font-black ${getPaymentClass(
+                      order.paymentStatus
+                    )}`}
+                  >
+                    {label(order.paymentStatus)}
+                  </span>
+
+                  <span
+                    className={`rounded-full px-2 py-1 text-[9px] font-black ${getOrderAgeClass(
+                      order,
+                      now
+                    )}`}
+                  >
+                    {getOrderAgeLabel(order, now)}
+                  </span>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
+              <p className="text-sm font-black text-neutral-700">
+                No urgent order right now.
+              </p>
+              <p className="mt-1 text-xs font-semibold text-neutral-500">
+                Pending, ready, or unpaid orders will appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-500">
+          Status Breakdown
+        </p>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {statusOptions
+            .filter((status) => status !== 'ALL')
+            .map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => {
+                  const firstOrderWithStatus = orders.find(
+                    (order) => order.status === status
+                  );
+
+                  if (firstOrderWithStatus) {
+                    onSelectOrder(firstOrderWithStatus);
+                  }
+                }}
+                disabled={!orders.some((order) => order.status === status)}
+                className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-left disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <p className="text-[10px] font-black uppercase text-neutral-400">
+                  {label(status)}
+                </p>
+                <p className="mt-1 text-xl font-black text-neutral-950">
+                  {orders.filter((order) => order.status === status).length}
+                </p>
+              </button>
+            ))}
+        </div>
+      </section>
+    </aside>
+  );
+}
+
 export function OrdersClient({
   message,
   summary,
@@ -1331,15 +1919,15 @@ export function OrdersClient({
   statusCounts: StatusCounts;
   orders: DashboardOrder[];
 }) {
- const router = useRouter();
+  const router = useRouter();
 
-const [localOrders, setLocalOrders] = useState<DashboardOrder[]>(orders);
-const [clientMessage, setClientMessage] = useState<Message>(null);
-const [isMutating, setIsMutating] = useState(false);
+  const [localOrders, setLocalOrders] = useState<DashboardOrder[]>(orders);
+  const [clientMessage, setClientMessage] = useState<Message>(null);
+  const [isMutating, setIsMutating] = useState(false);
 
-const [search, setSearch] = useState('');
-const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(
     null
   );
@@ -1351,9 +1939,12 @@ const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
       setNow(Date.now());
     }, 60_000);
 
-
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    setLocalOrders(orders);
+  }, [orders]);
 
   const filteredOrders = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -1390,190 +1981,281 @@ const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
 
       return matchesSearch && matchesStatus && matchesPayment;
     });
- }, [localOrders, paymentFilter, search, statusFilter]);
+  }, [localOrders, paymentFilter, search, statusFilter]);
 
-     useEffect(() => {
-  setLocalOrders(orders);
-}, [orders]);
+  const sortedOrders = useMemo(() => {
+    const priority: Record<OrderStatus, number> = {
+      PENDING: 0,
+      READY: 1,
+      PREPARING: 2,
+      ACCEPTED: 3,
+      DELIVERED: 4,
+      CANCELLED: 5,
+    };
 
-function getClientActionError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
+    return [...filteredOrders].sort((left, right) => {
+      const priorityDiff = priority[left.status] - priority[right.status];
 
-  return 'Something went wrong. Please try again.';
-}
+      if (priorityDiff !== 0) {
+        return priorityDiff;
+      }
 
-function updateLocalOrder(
-  orderId: string,
-  updater: (order: DashboardOrder) => DashboardOrder
-) {
-  setLocalOrders((currentOrders) =>
-    currentOrders.map((order) =>
-      order.id === orderId ? updater(order) : order
-    )
-  );
+      const leftTime = new Date(left.createdAt).getTime();
+      const rightTime = new Date(right.createdAt).getTime();
 
-  setSelectedOrder((currentOrder) =>
-    currentOrder?.id === orderId ? updater(currentOrder) : currentOrder
-  );
+      if (activeOrderStatuses.includes(left.status)) {
+        return leftTime - rightTime;
+      }
 
-  setCancelOrder((currentOrder) =>
-    currentOrder?.id === orderId ? updater(currentOrder) : currentOrder
-  );
-}
-
-async function runOrderClientAction({
-  formData,
-  action,
-  successText,
-  optimisticUpdate,
-}: {
-  formData: FormData;
-  action: (formData: FormData) => Promise<unknown>;
-  successText: string;
-  optimisticUpdate?: () => void;
-}) {
-  if (isMutating) {
-    return;
-  }
-
-  const previousOrders = localOrders;
-  const previousSelectedOrder = selectedOrder;
-  const previousCancelOrder = cancelOrder;
-
-  setClientMessage(null);
-  setIsMutating(true);
-
-  try {
-    optimisticUpdate?.();
-
-    await action(formData);
-
-    setClientMessage({
-      type: 'success',
-      text: successText,
+      return rightTime - leftTime;
     });
+  }, [filteredOrders]);
 
-    /**
-     * This is not a full browser reload.
-     * It refreshes server data in-place.
-     */
-    router.refresh();
-  } catch (error) {
-    setLocalOrders(previousOrders);
-    setSelectedOrder(previousSelectedOrder);
-    setCancelOrder(previousCancelOrder);
+  const attentionCount = localOrders.filter(
+    (order) =>
+      order.status === 'PENDING' ||
+      order.status === 'READY' ||
+      order.paymentStatus !== 'PAID'
+  ).length;
 
-    setClientMessage({
-      type: 'error',
-      text: getClientActionError(error),
-    });
+  const kitchenQueueCount = localOrders.filter((order) =>
+    ['ACCEPTED', 'PREPARING', 'READY'].includes(order.status)
+  ).length;
 
-    throw error;
-  } finally {
-    setIsMutating(false);
+  function getClientActionError(error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return 'Something went wrong. Please try again.';
   }
-}
 
-async function handleMarkPaid(formData: FormData) {
-  const orderId = String(formData.get('orderId') || '');
+  function updateLocalOrder(
+    orderId: string,
+    updater: (order: DashboardOrder) => DashboardOrder
+  ) {
+    setLocalOrders((currentOrders) =>
+      currentOrders.map((order) =>
+        order.id === orderId ? updater(order) : order
+      )
+    );
 
-  await runOrderClientAction({
+    setSelectedOrder((currentOrder) =>
+      currentOrder?.id === orderId ? updater(currentOrder) : currentOrder
+    );
+
+    setCancelOrder((currentOrder) =>
+      currentOrder?.id === orderId ? updater(currentOrder) : currentOrder
+    );
+  }
+
+  async function runOrderClientAction({
     formData,
-    action: markOrderPaidAction,
-    successText: 'Order payment marked as paid.',
-    optimisticUpdate: () => {
-      updateLocalOrder(orderId, (order) => ({
-        ...order,
-        paymentStatus: 'PAID',
-      }));
-    },
-  });
-}
+    action,
+    successText,
+    optimisticUpdate,
+  }: {
+    formData: FormData;
+    action: (formData: FormData) => Promise<unknown>;
+    successText: string;
+    optimisticUpdate?: () => void;
+  }) {
+    if (isMutating) {
+      return;
+    }
 
-async function handleStatusChange(formData: FormData) {
-  const orderId = String(formData.get('orderId') || '');
-  const nextStatus = String(formData.get('status') || '') as OrderStatus;
+    const previousOrders = localOrders;
+    const previousSelectedOrder = selectedOrder;
+    const previousCancelOrder = cancelOrder;
 
-  await runOrderClientAction({
-    formData,
-    action: updateOrderStatusAction,
-    successText: `Order status updated to ${label(nextStatus)}.`,
-    optimisticUpdate: () => {
-      updateLocalOrder(orderId, (order) => ({
-        ...order,
-        status: nextStatus,
-        updatedAt: new Date().toISOString(),
-      }));
-    },
-  });
-}
+    setClientMessage(null);
+    setIsMutating(true);
 
-async function handleCancelOrderItem(formData: FormData) {
-  const orderId = String(formData.get('orderId') || '');
-  const orderItemId = String(formData.get('orderItemId') || '');
-  const reason = String(formData.get('reason') || 'Cancelled');
+    try {
+      optimisticUpdate?.();
 
-  await runOrderClientAction({
-    formData,
-    action: cancelOrderItemAction,
-    successText: 'Food item cancelled.',
-    optimisticUpdate: () => {
-      updateLocalOrder(orderId, (order) => ({
-        ...order,
-        items: order.items.map((item) =>
-          item.id === orderItemId
-            ? {
-                ...item,
-                status: 'CANCELLED',
-                cancelledQty: item.quantity,
-                cancelReason: reason,
-                cancelledAt: new Date().toISOString(),
-              }
-            : item
-        ),
-      }));
-    },
-  });
-}
+      await action(formData);
+
+      setClientMessage({
+        type: 'success',
+        text: successText,
+      });
+
+      router.refresh();
+    } catch (error) {
+      setLocalOrders(previousOrders);
+      setSelectedOrder(previousSelectedOrder);
+      setCancelOrder(previousCancelOrder);
+
+      setClientMessage({
+        type: 'error',
+        text: getClientActionError(error),
+      });
+
+      throw error;
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function handleMarkPaid(formData: FormData) {
+    const orderId = String(formData.get('orderId') || '');
+
+    await runOrderClientAction({
+      formData,
+      action: markOrderPaidAction,
+      successText: 'Order payment marked as paid.',
+      optimisticUpdate: () => {
+        updateLocalOrder(orderId, (order) => ({
+          ...order,
+          paymentStatus: 'PAID',
+        }));
+      },
+    });
+  }
+
+  async function handleStatusChange(formData: FormData) {
+    const orderId = String(formData.get('orderId') || '');
+    const nextStatus = String(formData.get('status') || '') as OrderStatus;
+
+    await runOrderClientAction({
+      formData,
+      action: updateOrderStatusAction,
+      successText: `Order status updated to ${label(nextStatus)}.`,
+      optimisticUpdate: () => {
+        updateLocalOrder(orderId, (order) => ({
+          ...order,
+          status: nextStatus,
+          updatedAt: new Date().toISOString(),
+        }));
+      },
+    });
+  }
+
+  async function handleCancelOrderItem(formData: FormData) {
+    const orderId = String(formData.get('orderId') || '');
+    const orderItemId = String(formData.get('orderItemId') || '');
+    const reason = String(formData.get('reason') || 'Cancelled');
+
+    await runOrderClientAction({
+      formData,
+      action: cancelOrderItemAction,
+      successText: 'Food item cancelled.',
+      optimisticUpdate: () => {
+        updateLocalOrder(orderId, (order) => ({
+          ...order,
+          items: order.items.map((item) =>
+            item.id === orderItemId
+              ? {
+                  ...item,
+                  status: 'CANCELLED',
+                  cancelledQty: item.quantity,
+                  cancelReason: reason,
+                  cancelledAt: new Date().toISOString(),
+                }
+              : item
+          ),
+        }));
+      },
+    });
+  }
 
   return (
     <>
-    <Toast message={clientMessage ?? message} />
-      <div className="mb-6 grid gap-3 md:grid-cols-4">
-        <SummaryCard
-          label="Active Orders"
-          value={summary.activeOrders}
-          tone="blue"
-        />
-        <SummaryCard
-          label="Unpaid Orders"
-          value={summary.unpaidOrders}
-          tone="red"
-        />
-        <SummaryCard
-          label="Cancelled"
-          value={summary.cancelledOrders}
-          tone="red"
-        />
-        <SummaryCard
-          label="Total Sales"
-          value={money(summary.totalSalesCents)}
-          tone="green"
-        />
-      </div>
+      <Toast message={clientMessage ?? message} />
 
-      <div className="mb-5 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <section className="overflow-hidden rounded-[2.25rem] border border-neutral-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.06)]">
+        <div className="relative overflow-hidden bg-[#11100b] p-6 text-white">
+          <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#c99c38]/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-10 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+                <ReceiptText className="size-4" />
+                Order Command Center
+              </p>
+
+              <h2 className="mt-5 text-4xl font-black tracking-tight">
+                Order Operations Board
+              </h2>
+
+              <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-white/60">
+                Prioritize pending approvals, kitchen movement, ready-for-delivery
+                orders, unpaid balances, and receipts from one cleaner workflow.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 rounded-[1.5rem] border border-white/10 bg-white/10 p-3 text-sm font-bold text-white/75">
+              <div className="rounded-2xl bg-black/20 p-3">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#f1c66a]">
+                  Attention
+                </p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {attentionCount}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-black/20 p-3">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#f1c66a]">
+                  Kitchen Queue
+                </p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {kitchenQueueCount}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 border-t border-neutral-100 bg-neutral-50 p-4 md:grid-cols-2 xl:grid-cols-4">
+          <OrderMetricTile
+            icon={<Clock className="size-5" />}
+            label="Active Orders"
+            value={summary.activeOrders}
+            helper="Pending to ready"
+            tone="blue"
+          />
+
+          <OrderMetricTile
+            icon={<CreditCard className="size-5" />}
+            label="Unpaid Orders"
+            value={summary.unpaidOrders}
+            helper="Needs payment follow-up"
+            tone="red"
+          />
+
+          <OrderMetricTile
+            icon={<Ban className="size-5" />}
+            label="Cancelled"
+            value={summary.cancelledOrders}
+            helper="Cancelled orders"
+            tone="amber"
+          />
+
+          <OrderMetricTile
+            icon={<ReceiptText className="size-5" />}
+            label="Total Sales"
+            value={money(summary.totalSalesCents)}
+            helper="Paid and recorded totals"
+            tone="green"
+          />
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h2 className="text-xl font-black">Order Management</h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Small order cards. Details open in a modal.
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+              Workflow Filters
+            </p>
+            <h2 className="mt-1 text-xl font-black">Order Queue</h2>
+            <p className="mt-1 text-sm font-semibold text-neutral-500">
+              Use one-tap status filters, search, and payment filters before
+              opening details.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
             {statusOptions.map((status) => (
               <button
                 key={status}
@@ -1581,8 +2263,8 @@ async function handleCancelOrderItem(formData: FormData) {
                 onClick={() => setStatusFilter(status)}
                 className={
                   statusFilter === status
-                    ? 'rounded-full bg-black px-4 py-2 text-xs font-black text-white'
-                    : 'rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50'
+                    ? 'shrink-0 rounded-full bg-black px-4 py-2 text-xs font-black text-white'
+                    : 'shrink-0 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 transition hover:bg-neutral-50'
                 }
               >
                 {status === 'ALL' ? 'All' : label(status)}{' '}
@@ -1596,17 +2278,17 @@ async function handleCancelOrderItem(formData: FormData) {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_200px]">
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <label className="grid gap-1">
             <span className="text-xs font-black uppercase text-neutral-500">
               Search Orders
             </span>
-            <div className="flex h-11 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+            <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
               <Search className="size-4 shrink-0 text-neutral-400" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search order code, room, guest, item, bundle component..."
+                placeholder="Search code, room, guest, item, note, payment..."
                 className="w-full bg-transparent text-sm font-bold outline-none"
               />
             </div>
@@ -1621,7 +2303,7 @@ async function handleCancelOrderItem(formData: FormData) {
               onChange={(event) =>
                 setPaymentFilter(event.target.value as PaymentFilter)
               }
-              className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
             >
               <option value="ALL">All Payments</option>
               <option value="PAID">Paid</option>
@@ -1629,145 +2311,86 @@ async function handleCancelOrderItem(formData: FormData) {
             </select>
           </label>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        {filteredOrders.map((order) => {
-          const itemCount = getItemCount(order.items);
-          const preview = getOrderPreview(order.items);
-          const sourceLabel = order.tagCode ? 'Guest Portal' : 'POS Terminal';
-          const waitingLabel = getOrderAgeLabel(order, now);
+      <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400">
+                Showing {sortedOrders.length} of {localOrders.length}
+              </p>
+              <h3 className="mt-1 text-lg font-black">Orders</h3>
+            </div>
 
-          return (
-            <article
-              key={order.id}
-              className="rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-lg font-black">
-                    {order.orderCode}
-                  </h3>
-                  <p className="mt-1 truncate text-xs font-bold text-neutral-500">
-                    {order.hotelName} · {order.roomLabel}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-neutral-400">
-                    {sourceLabel}
-                  </p>
-                </div>
-
-                <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                    order.status
-                  )}`}
-                >
-                  {label(order.status)}
-                </span>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span
-                  className={`rounded-full px-3 py-1 text-[10px] font-black ${getPaymentClass(
-                    order.paymentStatus
-                  )}`}
-                >
-                  {label(order.paymentStatus)}
-                </span>
-
-                <span
-                  className={`rounded-full px-3 py-1 text-[10px] font-black ${getOrderAgeClass(
-                    order,
-                    now
-                  )}`}
-                >
-                  {activeOrderStatuses.includes(order.status)
-                    ? `Waiting ${waitingLabel}`
-                    : `Duration ${waitingLabel}`}
-                </span>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-2xl bg-neutral-50 p-3">
-                  <p className="text-[10px] font-black uppercase text-neutral-400">
-                    Total
-                  </p>
-                  <p className="mt-1 text-sm font-black">
-                    {money(order.totalCents)}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-neutral-50 p-3">
-                  <p className="text-[10px] font-black uppercase text-neutral-400">
-                    Payment
-                  </p>
-                  <p className="mt-1 text-sm font-black">
-                    {label(order.paymentMethod)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl bg-neutral-50 p-3">
-                <p className="text-[10px] font-black uppercase text-neutral-400">
-                  Active Items
-                </p>
-                <p className="mt-1 line-clamp-2 text-xs font-bold text-neutral-600">
-                  {itemCount} item{itemCount === 1 ? '' : 's'} · {preview}
-                </p>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedOrder(order)}
-                  className="h-10 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
-                >
-                  View Details
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => printOrder(order)}
-                  className="flex h-10 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-xs font-black hover:bg-neutral-50"
-                >
-                  <Printer className="size-4" />
-                  Print
-                </button>
-              </div>
-            </article>
-          );
-        })}
-
-        {!filteredOrders.length ? (
-          <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
-            <p className="font-black">No orders found.</p>
-            <p className="mt-1 text-sm text-neutral-500">
-              Try changing your search or filters.
-            </p>
+            {(search || statusFilter !== 'ALL' || paymentFilter !== 'ALL') ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('ALL');
+                  setPaymentFilter('ALL');
+                }}
+                className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+              >
+                Clear filters
+              </button>
+            ) : null}
           </div>
-        ) : null}
+
+          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-2">
+            {sortedOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                now={now}
+                onView={() => setSelectedOrder(order)}
+                onPrint={() => printOrder(order)}
+                onMarkPaid={handleMarkPaid}
+                onStatusChange={handleStatusChange}
+                onCancel={() => setCancelOrder(order)}
+              />
+            ))}
+
+            {!sortedOrders.length ? (
+              <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center lg:col-span-2">
+                <p className="font-black">No orders found.</p>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Try changing your search or filters.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <PriorityQueue
+          orders={localOrders}
+          now={now}
+          onSelectOrder={(order) => setSelectedOrder(order)}
+        />
       </div>
 
       {selectedOrder ? (
         <OrderDetailsModal
-            order={selectedOrder}
-            now={now}
-            onClose={() => setSelectedOrder(null)}
-            onCancel={(order) => {
-              setSelectedOrder(null);
-              setCancelOrder(order);
-            }}
-            onMarkPaid={handleMarkPaid}
-            onStatusChange={handleStatusChange}
-            onCancelItemAction={handleCancelOrderItem}
-          />
+          order={selectedOrder}
+          now={now}
+          onClose={() => setSelectedOrder(null)}
+          onCancel={(order) => {
+            setSelectedOrder(null);
+            setCancelOrder(order);
+          }}
+          onMarkPaid={handleMarkPaid}
+          onStatusChange={handleStatusChange}
+          onCancelItemAction={handleCancelOrderItem}
+        />
       ) : null}
 
       {cancelOrder ? (
-       <CancelOrderModal
-              order={cancelOrder}
-              onClose={() => setCancelOrder(null)}
-              action={handleStatusChange}
-            />
+        <CancelOrderModal
+          order={cancelOrder}
+          onClose={() => setCancelOrder(null)}
+          action={handleStatusChange}
+        />
       ) : null}
     </>
   );
