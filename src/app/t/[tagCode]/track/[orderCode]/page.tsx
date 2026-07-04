@@ -913,28 +913,28 @@ function CompactOrderProgress({
   return (
     <section
       className={cx(
-        'mt-5 rounded-[2rem] border p-5 shadow-[0_18px_45px_rgba(0,0,0,0.35)]',
+        'mt-6 rounded-[2rem] border p-6 shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl',
         isCancelled
           ? 'border-red-500/25 bg-red-500/10'
-          : 'border-gold/25 bg-white/[0.055]'
+          : 'border-gold/20 bg-white/[0.04]'
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
             Live Progress
           </p>
-          <h2 className="mt-1 text-lg font-black text-white">
+          <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
             {getProgressStatusText(orderStatus)}
           </h2>
-          <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+          <p className="mt-1.5 text-xs font-medium text-white/50">
             Updates automatically through realtime events.
           </p>
         </div>
 
         <span
           className={cx(
-            'shrink-0 rounded-full px-3 py-1 text-[10px] font-black',
+            'shrink-0 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest',
             isCancelled
               ? 'bg-red-500/20 text-red-200'
               : isDelivered
@@ -946,7 +946,7 @@ function CompactOrderProgress({
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-5 gap-1">
+      <div className="mt-6 grid grid-cols-5 gap-1">
         {trackingSteps.map((step, index) => {
           const active =
             !isCancelled && !isDelivered && orderStatus === step.status;
@@ -964,7 +964,7 @@ function CompactOrderProgress({
                 {index > 0 ? (
                   <span
                     className={cx(
-                      'absolute right-1/2 top-1/2 h-0.5 w-full -translate-y-1/2',
+                      'absolute right-1/2 top-1/2 h-[3px] w-full -translate-y-1/2 rounded-full',
                       reached ? 'bg-gold' : 'bg-white/10'
                     )}
                   />
@@ -972,28 +972,28 @@ function CompactOrderProgress({
 
                 <span
                   className={cx(
-                    'relative z-10 grid size-9 place-items-center rounded-full border text-xs font-black transition',
+                    'relative z-10 grid size-9 place-items-center rounded-full border text-xs font-semibold transition',
                     active
-                      ? 'animate-pulse border-gold bg-gold text-black shadow-[0_0_24px_rgba(201,156,56,0.45)]'
+                      ? 'animate-pulse border-gold bg-gold text-black shadow-[0_0_20px_rgba(214,167,56,0.3)]'
                       : completed
                         ? 'border-gold bg-gold text-black'
-                        : 'border-white/20 bg-black text-white/35'
+                        : 'border-white/20 bg-black text-white/40'
                   )}
                 >
                   {completed ? (
-                    <Check className="size-4" />
+                    <Check className="size-4.5" strokeWidth={2.5} />
                   ) : active ? (
-                    <Clock className="size-4" />
+                    <Clock className="size-4" strokeWidth={2} />
                   ) : (
-                    <Circle className="size-3" />
+                    <Circle className="size-3" strokeWidth={2} />
                   )}
                 </span>
               </div>
 
               <p
                 className={cx(
-                  'mt-2 truncate text-[10px] font-black',
-                  active || completed ? 'text-white' : 'text-white/35'
+                  'mt-3 truncate text-[10px] font-medium tracking-wide',
+                  active || completed ? 'text-white' : 'text-white/40'
                 )}
               >
                 {getShortStepLabel(step.status)}
@@ -1003,15 +1003,15 @@ function CompactOrderProgress({
         })}
       </div>
 
-      <div className="mt-5">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/35">
+      <div className="mt-6">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
             Order Progress
           </p>
 
           <p
             className={cx(
-              'text-xs font-black',
+              'font-serif text-[15px] font-medium tracking-wide',
               isCancelled ? 'text-red-200' : 'text-gold'
             )}
           >
@@ -1019,7 +1019,7 @@ function CompactOrderProgress({
           </p>
         </div>
 
-        <div className="h-3 overflow-hidden rounded-full bg-white/10">
+        <div className="h-2.5 overflow-hidden rounded-full bg-white/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
           <div
             className={cx(
               'h-full rounded-full transition-all duration-700',
@@ -1027,7 +1027,7 @@ function CompactOrderProgress({
                 ? 'bg-red-500'
                 : isDelivered
                   ? 'bg-emerald-500'
-                  : 'bg-gradient-to-r from-[#8d641c] via-[#c99c38] to-[#f1c66a]'
+                  : 'bg-[linear-gradient(90deg,#9c6c18,#d6a738,#f6d77b)]'
             )}
             style={{
               width: `${progressPercent}%`,
@@ -1036,43 +1036,43 @@ function CompactOrderProgress({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2">
-        <div className="rounded-2xl bg-black/30 p-3">
-          <p className="text-[10px] font-black uppercase text-white/35">
+      <div className="mt-6 grid grid-cols-3 gap-2">
+        <div className="rounded-[1.25rem] bg-black/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
             Current
           </p>
-          <p className="mt-1 truncate text-sm font-black text-white">
+          <p className="mt-1 truncate font-serif text-[15px] font-medium tracking-wide text-white">
             {currentStepLabel}
           </p>
         </div>
 
-        <div className="rounded-2xl bg-black/30 p-3">
-          <p className="text-[10px] font-black uppercase text-white/35">
+        <div className="rounded-[1.25rem] bg-black/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
             Timer
           </p>
-          <p className="mt-1 text-sm font-black text-white">
+          <p className="mt-1 font-serif text-[15px] font-medium tracking-wide text-white">
             <LiveElapsedTimer from={timerStart} to={timerEnd} />
           </p>
         </div>
 
-        <div className="rounded-2xl bg-black/30 p-3">
-          <p className="text-[10px] font-black uppercase text-white/35">
+        <div className="rounded-[1.25rem] bg-black/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
             Updated
           </p>
-          <p className="mt-1 text-sm font-black text-white">
+          <p className="mt-1 font-serif text-[15px] font-medium tracking-wide text-white">
             {currentHistory ? formatTime(currentHistory.createdAt) : 'Now'}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-black/25 p-3 text-center">
-        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/35">
+      <div className="mt-4 rounded-[1.25rem] bg-white/5 p-4 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
           {statusContent.etaLabel}
         </p>
 
         <p
           className={cx(
-            'mt-1 text-xl font-black',
+            'mt-1 font-serif text-3xl font-light tracking-wide',
             isCancelled ? 'text-red-200' : 'text-sand'
           )}
         >
@@ -1105,8 +1105,8 @@ function OrderItemLine({
     <div
       className={
         isCancelled
-          ? 'rounded-2xl border border-red-500/20 bg-red-500/10 p-3 text-sm'
-          : 'rounded-2xl bg-white/5 p-3 text-sm'
+          ? 'rounded-[1.25rem] border border-red-500/20 bg-red-500/10 p-4'
+          : 'rounded-[1.25rem] bg-white/5 p-4'
       }
     >
       <div className="flex justify-between gap-3">
@@ -1115,8 +1115,8 @@ function OrderItemLine({
             <p
               className={
                 isCancelled
-                  ? 'font-bold text-red-100 line-through decoration-red-300'
-                  : 'font-bold text-white'
+                  ? 'font-serif text-[15px] font-medium tracking-wide text-red-100 line-through decoration-red-300'
+                  : 'font-serif text-[15px] font-medium tracking-wide text-white'
               }
             >
               {isCancelled ? item.quantity : activeQty}×{' '}
@@ -1124,13 +1124,13 @@ function OrderItemLine({
             </p>
 
             {item.isBundleSnapshot ? (
-              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
+              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                 Bundle
               </span>
             ) : null}
 
             <span
-              className={`rounded-full px-3 py-1 text-[10px] font-black ${getItemStatusClass(
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${getItemStatusClass(
                 item
               )}`}
             >
@@ -1139,46 +1139,48 @@ function OrderItemLine({
           </div>
 
           {item.cancelledQty > 0 ? (
-            <p className="mt-1 text-xs font-bold text-red-200">
+            <p className="mt-2 text-xs font-medium text-red-200/80">
               Cancelled quantity: {item.cancelledQty}
             </p>
           ) : null}
 
           {item.cancelReason ? (
-            <p className="mt-1 text-xs font-bold text-red-200">
+            <p className="mt-1 text-xs font-medium text-red-200/80">
               Reason: {item.cancelReason}
             </p>
           ) : null}
 
           {item.notes ? (
-            <p className="mt-1 whitespace-pre-line text-xs text-white/40">
-              {item.notes}
+            <p className="mt-2 whitespace-pre-line text-[13px] font-medium leading-relaxed text-white/50">
+              <span className="text-white/70">Note: </span>{item.notes}
             </p>
           ) : null}
         </div>
 
-        <b className="shrink-0">{money(itemTotal)}</b>
+        <b className="shrink-0 font-serif text-[15px] font-medium tracking-wide text-white">
+          {money(itemTotal)}
+        </b>
       </div>
 
       {item.isBundleSnapshot ? (
-        <div className="mt-3 rounded-xl bg-gold/10 p-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gold">
+        <div className="mt-4 rounded-[1rem] bg-gold/10 p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
             Includes
           </p>
 
           {item.bundleComponents.length ? (
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-1.5">
               {item.bundleComponents.map((component) => (
                 <p
                   key={component.id}
-                  className="text-xs font-bold text-white/75"
+                  className="text-[13px] font-medium text-white/75"
                 >
                   {component.quantity}× {component.componentNameSnapshot}
                 </p>
               ))}
             </div>
           ) : (
-            <p className="mt-2 text-xs font-bold text-white/45">
+            <p className="mt-2 text-[13px] font-medium text-white/45">
               Bundle component details were not saved for this order.
             </p>
           )}
@@ -1186,27 +1188,27 @@ function OrderItemLine({
       ) : null}
 
       {canCancel ? (
-        <details className="mt-3 rounded-xl bg-red-500/10 p-3">
-          <summary className="cursor-pointer text-xs font-black text-red-100">
+        <details className="group mt-4 rounded-[1rem] bg-red-500/10 p-4 transition-all open:bg-red-500/15">
+          <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-widest text-red-200 transition group-open:mb-4">
             Cancel this item
           </summary>
 
-          <form action={cancelGuestOrderItemAction} className="mt-3 space-y-3">
+          <form action={cancelGuestOrderItemAction} className="space-y-4">
             <input type="hidden" name="tagCode" value={tagCode} />
             <input type="hidden" name="orderCode" value={orderCode} />
             <input type="hidden" name="orderItemId" value={item.id} />
 
-            <label className="grid gap-1">
-              <span className="text-[11px] font-black uppercase text-red-100">
+            <label className="grid gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-red-200/80">
                 Reason
               </span>
               <select
                 name="reason"
                 defaultValue={cancelReasons[0]}
-                className="h-10 rounded-xl border border-white/10 bg-black px-3 text-xs font-bold text-white outline-none"
+                className="h-12 rounded-[1rem] border border-red-500/20 bg-black/40 px-4 text-[13px] font-medium text-red-100 outline-none transition focus:border-red-500/50 appearance-none"
               >
                 {cancelReasons.map((reason) => (
-                  <option key={reason} value={reason}>
+                  <option key={reason} value={reason} className="bg-[#111] text-white">
                     {reason}
                   </option>
                 ))}
@@ -1215,12 +1217,12 @@ function OrderItemLine({
 
             <button
               type="submit"
-              className="h-10 w-full rounded-xl bg-red-600 text-xs font-black text-white"
+              className="h-12 w-full rounded-[1rem] bg-red-600/90 text-[14px] font-semibold tracking-wide text-white transition hover:bg-red-500 active:scale-[0.98]"
             >
               Confirm Cancel Item
             </button>
 
-            <p className="text-[11px] leading-5 text-red-100/70">
+            <p className="text-[12px] leading-5 text-red-200/60">
               This will cancel only this item and restore its stock. Other items
               in this order will remain active.
             </p>
@@ -1324,62 +1326,62 @@ export default async function OrderTrackingPage({
   const isDelivered = order.status === OrderStatus.DELIVERED;
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-[#050505] text-white">
       <RealtimeOrderRefresh tagCode={tagCode} orderCode={order.orderCode} />
 
-      <div className="mx-auto min-h-screen max-w-md bg-black px-5 pb-32 pt-5">
-        <div className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">
+      <div className="mx-auto min-h-screen max-w-md bg-[#050505] px-5 pb-32 pt-5">
+        <div className="mb-6 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
             href={`/t/${tagCode}`}
-            className="grid size-11 place-items-center rounded-full text-white hover:bg-white/10"
+            className="grid size-11 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back"
           >
             <ChevronLeft className="size-6" />
           </Link>
 
           <div className="text-center">
-            <h1 className="text-xl font-black">Order Tracking</h1>
-            <p className="text-sm text-white/45">{roomLabel}</p>
+            <h1 className="font-serif text-xl font-normal tracking-wide">Order Tracking</h1>
+            <p className="mt-0.5 text-xs font-medium text-white/50">{roomLabel}</p>
           </div>
 
           <div />
         </div>
 
-        <section className="py-5 text-center">
-          <div className="mb-5 flex justify-center">
+        <section className="py-6 text-center">
+          <div className="mb-6 flex justify-center">
             <GuestLogo hotel={order.hotel} />
           </div>
 
           {isCancelled ? (
-            <div className="mx-auto mb-5 grid size-16 place-items-center rounded-[2rem] border border-red-500/40 bg-red-500/10 text-red-300">
-              <AlertTriangle className="size-7" />
+            <div className="mx-auto mb-6 grid size-20 place-items-center rounded-[1.5rem] border border-red-500/20 bg-red-500/10 text-red-400 shadow-sm">
+              <AlertTriangle className="size-8" strokeWidth={1.5} />
             </div>
           ) : isDelivered ? (
-            <div className="mx-auto mb-5 grid size-16 place-items-center rounded-[2rem] border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
-              <PackageCheck className="size-7" />
+            <div className="mx-auto mb-6 grid size-20 place-items-center rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 shadow-sm">
+              <PackageCheck className="size-8" strokeWidth={1.5} />
             </div>
           ) : (
-            <div className="mx-auto mb-5 grid size-16 place-items-center rounded-[2rem] border border-gold/40 bg-gold/10 text-gold">
-              <Utensils className="size-7" />
+            <div className="mx-auto mb-6 grid size-20 place-items-center rounded-[1.5rem] border border-gold/20 bg-gold/10 text-gold shadow-sm">
+              <Utensils className="size-8" strokeWidth={1.5} />
             </div>
           )}
 
-          <h2 className="font-serif text-4xl leading-tight text-white">
+          <h2 className="font-serif text-4xl font-light tracking-wide text-white">
             {statusContent.title}
           </h2>
 
-          <p className="mx-auto mt-4 max-w-xs text-sm leading-6 text-white/50">
+          <p className="mx-auto mt-4 max-w-[280px] text-[15px] font-medium leading-relaxed text-white/60">
             {statusContent.subtitle}
           </p>
 
-          <div className="mt-8">
-            <p className="text-sm font-bold text-white/45">
+          <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm mx-auto max-w-[260px]">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gold/80">
               {statusContent.etaLabel}
             </p>
 
             <p
               className={cx(
-                'mt-2 text-3xl font-black',
+                'mt-2 font-serif text-4xl font-light tracking-wide',
                 isCancelled ? 'text-red-300' : 'text-white'
               )}
             >
@@ -1389,22 +1391,23 @@ export default async function OrderTrackingPage({
         </section>
 
         <CompactOrderProgress
-        orderStatus={order.status}
-        currentStepIndex={currentStepIndex}
-        historyByStatus={historyByStatus}
-        statusContent={statusContent}
-        timerStart={timerStart}
-        timerEnd={timerEnd}
-      />
+          orderStatus={order.status}
+          currentStepIndex={currentStepIndex}
+          historyByStatus={historyByStatus}
+          statusContent={statusContent}
+          timerStart={timerStart}
+          timerEnd={timerEnd}
+        />
 
-
-        <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/5 p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <ReceiptText className="size-5 text-gold" />
-            <h2 className="font-black">Order Details</h2>
+        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
+              <ReceiptText className="size-5" />
+            </div>
+            <h2 className="font-serif text-xl font-normal tracking-wide">Order Details</h2>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {order.items.map((item) => (
               <OrderItemLine
                 key={item.id}
@@ -1416,102 +1419,106 @@ export default async function OrderTrackingPage({
             ))}
           </div>
 
-          <div className="mt-4 space-y-2 border-t border-white/10 pt-4 text-sm">
-            <div className="flex justify-between text-white/50">
+          <div className="mt-6 space-y-3 border-t border-white/10 pt-5 text-[15px] font-medium">
+            <div className="flex justify-between text-white/60">
               <span>Subtotal</span>
-              <span>{money(order.subtotalCents)}</span>
+              <span className="font-serif tracking-wide">{money(order.subtotalCents)}</span>
             </div>
 
-            <div className="flex justify-between text-white/50">
+            <div className="flex justify-between text-white/60">
               <span>Service Charge</span>
-              <span>{money(order.serviceChargeCents)}</span>
+              <span className="font-serif tracking-wide">{money(order.serviceChargeCents)}</span>
             </div>
 
-            <div className="flex justify-between text-white/50">
+            <div className="flex justify-between text-white/60">
               <span>Tax</span>
-              <span>{money(order.taxCents)}</span>
+              <span className="font-serif tracking-wide">{money(order.taxCents)}</span>
             </div>
 
-            <div className="flex justify-between pt-2 text-lg font-black text-white">
+            <div className="flex justify-between pt-3 text-[17px] font-semibold text-white">
               <span>Total</span>
-              <span>{money(order.totalCents)}</span>
+              <span className="font-serif text-xl tracking-wide text-gold">{money(order.totalCents)}</span>
             </div>
           </div>
         </section>
 
-        <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/5 p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Truck className="size-5 text-gold" />
-            <h2 className="font-black">Delivery Details</h2>
+        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
+              <Truck className="size-5" />
+            </div>
+            <h2 className="font-serif text-xl font-normal tracking-wide">Delivery Details</h2>
           </div>
 
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-3">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-gold" />
+          <div className="space-y-3 text-[15px] font-medium">
+            <div className="flex items-start gap-4 rounded-[1.25rem] bg-white/5 p-4">
+              <MapPin className="mt-0.5 size-5 shrink-0 text-gold" />
               <div>
-                <p className="font-black">Room / Location</p>
-                <p className="mt-1 text-white/50">{roomLabel}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Room / Location</p>
+                <p className="mt-1 font-serif tracking-wide text-white">{roomLabel}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-3">
-              <CreditCard className="mt-0.5 size-4 shrink-0 text-gold" />
+            <div className="flex items-start gap-4 rounded-[1.25rem] bg-white/5 p-4">
+              <CreditCard className="mt-0.5 size-5 shrink-0 text-gold" />
               <div>
-                <p className="font-black">Payment</p>
-                <p className="mt-1 text-white/50">
-                  {paymentLabel(order.paymentMethod)} · {order.paymentStatus}
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Payment</p>
+                <p className="mt-1 font-serif tracking-wide text-white capitalize">
+                  {paymentLabel(order.paymentMethod).toLowerCase()} · {order.paymentStatus.toLowerCase()}
                 </p>
               </div>
             </div>
 
             {order.guestName ? (
-              <div className="rounded-2xl bg-white/5 p-3">
-                <p className="font-black">Guest Name</p>
-                <p className="mt-1 text-white/50">{order.guestName}</p>
+              <div className="rounded-[1.25rem] bg-white/5 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Guest Name</p>
+                <p className="mt-1 font-serif tracking-wide text-white capitalize">{order.guestName}</p>
               </div>
             ) : null}
 
             {order.notes ? (
-              <div className="rounded-2xl bg-white/5 p-3">
-                <p className="font-black">Special Notes</p>
-                <p className="mt-1 whitespace-pre-line text-white/50">
+              <div className="rounded-[1.25rem] bg-white/5 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Special Notes</p>
+                <p className="mt-1 whitespace-pre-line leading-relaxed text-white/75">
                   {order.notes}
                 </p>
               </div>
             ) : null}
 
-            <div className="rounded-2xl bg-white/5 p-3">
-              <p className="font-black">Order Code</p>
-              <p className="mt-1 text-white/50">{order.orderCode}</p>
-              <p className="mt-1 text-xs text-white/35">
+            <div className="rounded-[1.25rem] bg-white/5 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Order Code</p>
+              <p className="mt-1 font-serif tracking-wide text-white">{order.orderCode}</p>
+              <p className="mt-1.5 text-xs text-white/40">
                 Ordered at {formatDateTime(order.createdAt)}
               </p>
             </div>
           </div>
         </section>
 
-        <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/5 p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <ConciergeBell className="size-5 text-gold" />
-            <h2 className="font-black">Need help?</h2>
+        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
+              <ConciergeBell className="size-5" />
+            </div>
+            <h2 className="font-serif text-xl font-normal tracking-wide">Need help?</h2>
           </div>
 
-          <p className="text-sm leading-6 text-white/50">
+          <p className="text-[15px] font-medium leading-relaxed text-white/60">
             Contact the front desk if you need to update, follow up, or report
             an issue with this order.
           </p>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <Link
               href={`/t/${tagCode}/contact`}
-              className="rounded-2xl bg-gold px-4 py-3 text-center text-sm font-black text-ink"
+              className="flex items-center justify-center rounded-[1.25rem] bg-gold px-5 py-4 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
             >
               Contact Front Desk
             </Link>
 
             <Link
               href={`/t/${tagCode}/service`}
-              className="rounded-2xl border border-white/15 px-4 py-3 text-center text-sm font-black text-white"
+              className="flex items-center justify-center rounded-[1.25rem] border border-white/15 bg-white/5 px-5 py-4 text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10 active:scale-[0.98]"
             >
               Request Assistance
             </Link>

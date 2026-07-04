@@ -44,7 +44,7 @@ function getGuestGreeting() {
     return 'Good Afternoon';
   }
 
-  if (manilaHour >= 18 && manilaHour < 21) {
+  if (manilaHour >= 18 && manilaHour < 24) {
     return 'Good Evening';
   }
 
@@ -115,7 +115,7 @@ function LuxuryHotelMark({ hotelName }: { hotelName: string }) {
       <div className="relative">
         <div className="absolute inset-0 rounded-[2rem] bg-gold/30 blur-2xl" />
 
-        <div className="relative grid size-20 place-items-center rounded-[2rem] border border-gold/50 bg-[linear-gradient(145deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04))] text-xl font-black tracking-tight text-gold shadow-[0_22px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+        <div className="relative grid size-20 place-items-center rounded-[2rem] border border-gold/50 bg-[linear-gradient(145deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04))] text-2xl font-serif font-medium tracking-wide text-gold shadow-[0_22px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl">
           {getHotelInitials(hotelName)}
         </div>
 
@@ -124,11 +124,11 @@ function LuxuryHotelMark({ hotelName }: { hotelName: string }) {
         </span>
       </div>
 
-      <p className="mt-5 max-w-[320px] text-center text-[13px] font-black uppercase leading-5 tracking-[0.3em] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.9)]">
+      <p className="mt-5 max-w-[320px] text-center text-sm font-serif uppercase leading-5 tracking-[0.25em] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.9)]">
         {hotelName}
       </p>
 
-      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.26em] text-gold">
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-gold/80">
         Private Guest Profile
       </p>
     </div>
@@ -152,11 +152,12 @@ function LuxuryInfoPill({
         </span>
 
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/35">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
             {label}
           </p>
 
-          <p className="mt-1 truncate text-sm font-black text-white">
+          {/* Replaced truncate with line-clamp-2 to prevent aggressive clipping */}
+          <p className="mt-1 line-clamp-2 text-sm font-serif font-medium leading-tight tracking-wide text-white">
             {value}
           </p>
         </div>
@@ -243,16 +244,17 @@ export default async function ContactPage({
                 <LuxuryHotelMark hotelName={tag.hotel.name} />
 
                 <div className="mt-10 rounded-[2.25rem] border border-white/10 bg-black/35 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-                  <p className="inline-flex items-center gap-2 rounded-full bg-gold px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-black">
+                  <p className="inline-flex items-center gap-2 rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-black">
                     <Sparkles className="size-3.5" />
                     {greeting}
                   </p>
 
-                  <h1 className="mt-4 font-serif text-5xl leading-[0.95] text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.9)]">
-                    {guestDisplayName}
+                  {/* Added break-words, text-balance, and scaled font dynamically. Lowercased to force proper capitalize. */}
+                  <h1 className="mt-4 break-words font-serif text-3xl font-light capitalize leading-[1.1] tracking-wide text-white text-balance drop-shadow-[0_8px_30px_rgba(0,0,0,0.9)] sm:text-4xl">
+                    {guestDisplayName.toLowerCase()}
                   </h1>
 
-                  <p className="mt-4 text-sm font-semibold leading-7 text-white/70">
+                  <p className="mt-4 text-sm font-medium leading-7 text-white/70">
                     Welcome to your private guest profile. Manage your stay,
                     rewards, orders, requests, and front desk support in one
                     elegant space.
@@ -286,15 +288,15 @@ export default async function ContactPage({
 
             <section className="mt-7">
               <div className="mb-4">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
                   Personal Concierge
                 </p>
 
-                <h2 className="mt-2 text-2xl font-black text-white">
+                <h2 className="mt-2 font-serif text-3xl font-normal text-white">
                   Your stay, at a glance
                 </h2>
 
-                <p className="mt-1 text-sm font-semibold leading-6 text-white/45">
+                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
                   Fast access to your orders, requests, rewards, and guest
                   assistance.
                 </p>
@@ -344,15 +346,15 @@ export default async function ContactPage({
                   </span>
 
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                       Front Desk
                     </p>
 
-                    <h2 className="mt-1 text-2xl font-black text-white">
+                    <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
                       Need assistance?
                     </h2>
 
-                    <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+                    <p className="mt-1 text-sm font-medium leading-6 text-white/60">
                       Connect with the hotel team for guest support, requests,
                       and urgent concerns.
                     </p>
@@ -382,10 +384,10 @@ export default async function ContactPage({
                 {!phone && !email ? (
                   <div className="rounded-[1.5rem] border border-dashed border-white/10 p-6 text-center">
                     <Hotel className="mx-auto size-9 text-gold" />
-                    <p className="mt-3 text-sm font-black text-white">
+                    <p className="mt-3 font-serif text-base font-medium tracking-wide text-white">
                       Contact details are not available yet.
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-white/45">
+                    <p className="mt-1 text-xs font-medium text-white/50">
                       Please approach the front desk for assistance.
                     </p>
                   </div>
@@ -400,16 +402,16 @@ export default async function ContactPage({
                 </span>
 
                 <div>
-                  <p className="text-2xl font-black">One tap luxury access</p>
+                  <p className="font-serif text-2xl font-normal">One tap luxury access</p>
 
-                  <p className="mt-2 text-sm font-bold leading-6 text-black/65">
+                  <p className="mt-2 text-sm font-medium leading-6 text-black/75">
                     Your orders, requests, rewards, and support options stay
                     available anytime during your visit.
                   </p>
 
                   <Link
                     href={`/t/${tagCode}`}
-                    className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-black text-white"
+                    className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
                   >
                     Back to Home
                     <ArrowRight className="size-4" />
@@ -456,15 +458,15 @@ function RewardsProfileCard({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-gold">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                 CloudView Rewards
               </p>
 
-              <p className="mt-1 text-2xl font-black text-white">
+              <p className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
                 Claim your guest rewards
               </p>
 
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/55">
+              <p className="mt-2 text-sm font-medium leading-6 text-white/60">
                 Add your name and contact details to start earning points from
                 NFC taps, completed requests, and eligible orders.
               </p>
@@ -488,16 +490,17 @@ function RewardsProfileCard({
         <div className="relative z-10 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gold">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gold">
                 <Sparkles className="size-4" />
                 CloudView Rewards
               </p>
 
-              <p className="mt-3 text-sm font-bold text-white/55">
+              <p className="mt-3 text-sm font-medium tracking-wide text-white/60">
                 Available Points
               </p>
 
-              <p className="mt-1 text-6xl font-black leading-none text-white">
+              {/* Added sm:text-6xl for dynamic sizing on huge point counts */}
+              <p className="mt-1 font-serif text-5xl font-light leading-none text-white sm:text-6xl">
                 {availablePoints}
               </p>
             </div>
@@ -509,28 +512,28 @@ function RewardsProfileCard({
 
           <div className="mt-6 grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-black/35 p-3">
-              <p className="text-[10px] font-black uppercase text-white/35">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
                 Pending
               </p>
-              <p className="mt-1 text-sm font-black text-white">
+              <p className="mt-1 font-serif text-base font-medium text-white">
                 {pointLabel(pendingPoints)}
               </p>
             </div>
 
             <div className="rounded-2xl bg-black/35 p-3">
-              <p className="text-[10px] font-black uppercase text-white/35">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
                 Earned
               </p>
-              <p className="mt-1 text-sm font-black text-white">
+              <p className="mt-1 font-serif text-base font-medium text-white">
                 {pointLabel(lifetimeEarnedPoints)}
               </p>
             </div>
 
             <div className="rounded-2xl bg-black/35 p-3">
-              <p className="text-[10px] font-black uppercase text-white/35">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
                 Redeemed
               </p>
-              <p className="mt-1 text-sm font-black text-white">
+              <p className="mt-1 font-serif text-base font-medium text-white">
                 {pointLabel(lifetimeRedeemedPoints)}
               </p>
             </div>
@@ -586,8 +589,8 @@ function ProfileActionCard({
       <p
         className={
           gold
-            ? 'mt-4 text-sm font-black text-black'
-            : 'mt-4 text-sm font-black text-white'
+            ? 'mt-4 font-serif text-[15px] font-medium tracking-wide text-black'
+            : 'mt-4 font-serif text-[15px] font-medium tracking-wide text-white'
         }
       >
         {title}
@@ -596,8 +599,8 @@ function ProfileActionCard({
       <p
         className={
           gold
-            ? 'mt-1 line-clamp-2 text-xs font-bold leading-5 text-black/60'
-            : 'mt-1 line-clamp-2 text-xs font-semibold leading-5 text-white/45'
+            ? 'mt-1 line-clamp-2 text-xs font-medium leading-5 text-black/70'
+            : 'mt-1 line-clamp-2 text-xs font-medium leading-5 text-white/55'
         }
       >
         {description}
@@ -627,9 +630,9 @@ function ProfileLink({
       </span>
 
       <span className="min-w-0">
-        <span className="block truncate font-black">{label}</span>
+        <span className="block truncate font-serif text-[15px] font-medium tracking-wide">{label}</span>
         {helper ? (
-          <span className="mt-0.5 block truncate text-xs font-semibold text-white/40">
+          <span className="mt-0.5 block truncate text-xs font-medium text-white/50">
             {helper}
           </span>
         ) : null}

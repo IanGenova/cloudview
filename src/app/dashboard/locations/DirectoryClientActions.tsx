@@ -201,6 +201,13 @@ export function DirectoryConfirmButton({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
   const [isPending, startTransition] = useTransition();
+  
+  // 1. Add a mounted state to prevent hydration mismatches with portals
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function runDelete() {
     startTransition(() => {
@@ -244,7 +251,8 @@ export function DirectoryConfirmButton({
         {isPending ? 'Deleting...' : 'Delete'}
       </button>
 
-      {confirmOpen ? (
+      {/* 2. Wrap the modal inside createPortal */}
+      {mounted && confirmOpen ? createPortal(
         <div className="fixed inset-0 z-[160] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl">
             <div className="border-b border-red-100 bg-red-50 p-6">
@@ -312,7 +320,8 @@ export function DirectoryConfirmButton({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body // Teleporting to the body
       ) : null}
 
       <ToastPortal toast={toast} onClose={() => setToast(null)} />

@@ -179,11 +179,11 @@ function InfoStatCard({
         <Icon className="size-5" />
       </span>
 
-      <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+      <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-gold">
         {label}
       </p>
 
-      <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-white">
+      <p className="mt-1 line-clamp-2 font-serif text-[15px] font-medium tracking-wide text-white">
         {value}
       </p>
     </div>
@@ -235,8 +235,8 @@ function QuickActionCard({
       <p
         className={
           gold
-            ? 'mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-black/55'
-            : 'mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-gold'
+            ? 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-black/60'
+            : 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-gold'
         }
       >
         {title}
@@ -245,8 +245,8 @@ function QuickActionCard({
       <p
         className={
           gold
-            ? 'mt-1 line-clamp-2 text-sm font-black text-black'
-            : 'mt-1 line-clamp-2 text-sm font-black text-white'
+            ? 'mt-1 line-clamp-2 font-serif text-[15px] font-medium tracking-wide text-black'
+            : 'mt-1 line-clamp-2 font-serif text-[15px] font-medium tracking-wide text-white'
         }
       >
         {description}
@@ -264,11 +264,11 @@ function PoolRuleCard({ rules }: { rules: string[] }) {
         </span>
 
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
             Safety First
           </p>
-          <h2 className="mt-1 text-2xl font-black text-white">Pool Rules</h2>
-          <p className="mt-1 text-sm font-semibold leading-6 text-white/55">
+          <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">Pool Rules</h2>
+          <p className="mt-1 text-[13px] font-medium leading-6 text-white/60">
             Please follow these guidelines so everyone can enjoy the pool safely.
           </p>
         </div>
@@ -278,9 +278,9 @@ function PoolRuleCard({ rules }: { rules: string[] }) {
         {rules.map((rule, index) => (
           <div
             key={`${rule}-${index}`}
-            className="flex gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-semibold leading-6 text-white/70"
+            className="flex gap-3 rounded-2xl bg-black/25 px-4 py-3 text-[14px] font-medium leading-6 text-white/75"
           >
-            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gold text-xs font-black text-black">
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gold text-[11px] font-bold text-black">
               {index + 1}
             </span>
             <span>{rule}</span>
@@ -308,10 +308,10 @@ function PoolGallery({
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
       <div className="mb-4">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
           Gallery
         </p>
-        <h2 className="mt-1 text-2xl font-black text-white">Pool Preview</h2>
+        <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">Pool Preview</h2>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -333,11 +333,11 @@ function PoolGallery({
             {(image.title || image.caption) && index === 0 ? (
               <figcaption className="p-3">
                 {image.title ? (
-                  <p className="text-sm font-black text-white">{image.title}</p>
+                  <p className="font-serif text-[15px] font-medium tracking-wide text-white">{image.title}</p>
                 ) : null}
 
                 {image.caption ? (
-                  <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
+                  <p className="mt-1 text-[13px] font-medium leading-5 text-white/60">
                     {image.caption}
                   </p>
                 ) : null}
@@ -600,10 +600,10 @@ export default async function PoolPage({
               </Link>
 
               <div className="min-w-0 text-center">
-                <h1 className="truncate text-base font-black tracking-tight text-white">
+                <h1 className="truncate font-serif text-[17px] font-medium tracking-wide text-white">
                   Pool Guide
                 </h1>
-                <p className="truncate text-xs font-semibold text-white/45">
+                <p className="truncate text-[11px] font-medium text-white/50">
                   Hours, rules, and poolside services
                 </p>
               </div>
@@ -630,25 +630,25 @@ export default async function PoolPage({
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black" />
 
               <div className="relative z-10 flex min-h-[430px] flex-col justify-end p-5">
-                <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-gold backdrop-blur">
+                <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
                   <Sparkles className="size-4" />
                   Pool Experience
                 </span>
 
-                <h2 className="max-w-sm text-5xl font-black leading-[0.92] tracking-tight text-white">
+                <h2 className="max-w-sm font-serif text-5xl font-light leading-[1.1] tracking-wide text-white">
                   {heroTitle}
                 </h2>
 
-                <p className="mt-4 max-w-sm text-sm font-semibold leading-7 text-white/65">
+                <p className="mt-4 max-w-sm text-[15px] font-medium leading-7 text-white/75">
                   {heroDescription}
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white backdrop-blur">
+                  <span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
                     Open {poolHours}
                   </span>
 
-                  <span className="rounded-full bg-gold px-3 py-1 text-xs font-black text-black">
+                  <span className="rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-black">
                     Guest Access
                   </span>
                 </div>
@@ -666,13 +666,13 @@ export default async function PoolPage({
 
           <section className="px-5 pt-6">
             <div className="mb-4">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
                 Quick Actions
               </p>
-              <h2 className="mt-2 text-2xl font-black text-white">
+              <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
                 What do you need?
               </h2>
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+              <p className="mt-1 text-[15px] font-medium leading-6 text-white/60">
                 Fast access to poolside dining, towels, rules, and staff help.
               </p>
             </div>
@@ -702,30 +702,30 @@ export default async function PoolPage({
           ) : null}
 
           <section className="px-5 pt-6">
-            <div className="rounded-[2rem] border border-gold/30 bg-gold p-5 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
+            <div className="rounded-[2rem] border border-gold/30 bg-gold p-6 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
               <div className="flex items-start gap-4">
                 <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-black/10">
                   <HelpCircle className="size-6" />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-xl font-black">Need pool assistance?</p>
+                  <p className="font-serif text-2xl font-normal tracking-wide">Need pool assistance?</p>
 
-                  <p className="mt-1 text-sm font-bold leading-6 text-black/65">
+                  <p className="mt-1 text-[15px] font-medium leading-6 text-black/75">
                     Request towels, order poolside food, or contact the staff for help.
                   </p>
 
-                  <div className="mt-4 grid gap-2">
+                  <div className="mt-5 grid gap-2">
                     <Link
                       href={`/t/${tagCode}/service`}
-                      className="rounded-2xl bg-black px-4 py-3 text-center text-sm font-black text-white"
+                      className="rounded-[1.25rem] bg-black px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-black/80 active:scale-[0.98]"
                     >
                       Request Service
                     </Link>
 
                     <Link
                       href={`/t/${tagCode}/menu`}
-                      className="rounded-2xl border border-black/15 bg-white/40 px-4 py-3 text-center text-sm font-black text-black"
+                      className="rounded-[1.25rem] border border-black/15 bg-white/40 px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-black transition hover:bg-white/50 active:scale-[0.98]"
                     >
                       Order Food & Drinks
                     </Link>

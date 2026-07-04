@@ -161,8 +161,8 @@ function InfoCard({
         </span>
 
         <div className="min-w-0">
-          <h3 className="font-black text-white">{title}</h3>
-          <p className="mt-2 whitespace-pre-line text-sm font-semibold leading-6 text-white/60">
+          <h3 className="font-serif text-[15px] font-medium tracking-wide text-white">{title}</h3>
+          <p className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-white/70">
             {body}
           </p>
         </div>
@@ -213,8 +213,8 @@ function QuickActionCard({
       <p
         className={
           gold
-            ? 'mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-black/55'
-            : 'mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-gold'
+            ? 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-black/60'
+            : 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-gold'
         }
       >
         {title}
@@ -223,8 +223,8 @@ function QuickActionCard({
       <p
         className={
           gold
-            ? 'mt-1 line-clamp-2 text-sm font-black text-black'
-            : 'mt-1 line-clamp-2 text-sm font-black text-white'
+            ? 'mt-1 line-clamp-2 font-serif text-base font-medium tracking-wide text-black'
+            : 'mt-1 line-clamp-2 font-serif text-base font-medium tracking-wide text-white'
         }
       >
         {value}
@@ -268,7 +268,7 @@ function FeaturedGuideCard({
 
       <div className="relative z-10 flex min-h-[250px] flex-col justify-between p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-gold backdrop-blur">
+          <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
             <Icon className="size-3.5" />
             Featured
           </span>
@@ -279,24 +279,24 @@ function FeaturedGuideCard({
         </div>
 
         <div>
-          <h3 className="text-3xl font-black leading-tight text-white">
+          <h3 className="font-serif text-3xl font-light leading-tight tracking-wide text-white">
             {section.title}
           </h3>
 
-          <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-white/65">
+          <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-white/70">
             {section.subtitle ||
               section.description ||
               'Discover useful details for your stay.'}
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white backdrop-blur">
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur">
               {section.items.length} guide item
               {section.items.length === 1 ? '' : 's'}
             </span>
 
             {section.galleryImages.length > 0 ? (
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white backdrop-blur">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur">
                 {section.galleryImages.length} photo
                 {section.galleryImages.length === 1 ? '' : 's'}
               </span>
@@ -334,7 +334,7 @@ function GuideSectionCard({
           <Icon className="size-5" />
         </span>
 
-        <span className="absolute right-3 top-3 rounded-full bg-black/45 px-3 py-1 text-[10px] font-black text-white/80 backdrop-blur">
+        <span className="absolute right-3 top-3 rounded-full bg-black/45 px-3 py-1 text-[10px] font-medium tracking-wide text-white/80 backdrop-blur">
           {section.items.length} item{section.items.length === 1 ? '' : 's'}
         </span>
       </div>
@@ -342,11 +342,11 @@ function GuideSectionCard({
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-lg font-black text-white">
+            <h3 className="truncate font-serif text-[17px] font-medium tracking-wide text-white">
               {section.title}
             </h3>
 
-            <p className="mt-1 line-clamp-2 text-sm font-semibold leading-6 text-white/50">
+            <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-white/60">
               {section.subtitle ||
                 section.description ||
                 'Tap to view hotel guide details.'}
@@ -372,7 +372,7 @@ function PopularShortcut({
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.98]"
+      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 font-serif text-[15px] font-medium tracking-wide text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.98]"
     >
       <Icon className="size-4 text-gold" />
       {title}
@@ -458,16 +458,16 @@ export function HotelGuideContent({
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/65 to-black" />
 
         <div className="relative z-10 p-5">
-          <div className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-black/40 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-gold backdrop-blur">
+          <div className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-black/40 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
             <Sparkles className="size-4" />
             Digital Concierge
           </div>
 
-          <h1 className="mt-5 text-4xl font-black leading-[0.95] tracking-tight text-white">
+          <h1 className="mt-5 font-serif text-4xl font-light leading-[0.95] tracking-wide text-white">
             Your stay, made simple.
           </h1>
 
-          <p className="mt-4 max-w-md text-sm font-semibold leading-7 text-white/65">
+          <p className="mt-4 max-w-md text-sm font-medium leading-7 text-white/70">
             Explore hotel essentials, amenities, dining, services, and local
             tips in one beautiful guide.
           </p>
@@ -480,7 +480,7 @@ export function HotelGuideContent({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search Wi-Fi, pool, dining, checkout..."
-                className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/35"
+                className="w-full bg-transparent text-sm font-medium text-white outline-none placeholder:text-white/40"
               />
 
               {searchQuery ? (
@@ -503,11 +503,11 @@ export function HotelGuideContent({
           <section className="mb-6">
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                   Quick Essentials
                 </p>
 
-                <h2 className="mt-2 text-2xl font-black text-white">
+                <h2 className="mt-2 font-serif text-3xl font-normal tracking-wide text-white">
                   Need-to-know details
                 </h2>
               </div>
@@ -543,7 +543,7 @@ export function HotelGuideContent({
           </section>
 
           <section className="mb-6">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gold">
               Popular Shortcuts
             </p>
 
@@ -580,15 +580,15 @@ export function HotelGuideContent({
           {featuredSections.length > 0 ? (
             <section className="mb-7">
               <div className="mb-4">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                   Featured Guides
                 </p>
 
-                <h2 className="mt-2 text-2xl font-black text-white">
+                <h2 className="mt-2 font-serif text-3xl font-normal tracking-wide text-white">
                   Start here
                 </h2>
 
-                <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
                   The most useful guide sections for guests during their stay.
                 </p>
               </div>
@@ -607,12 +607,12 @@ export function HotelGuideContent({
 
           <section className="mb-5">
             <div className="mb-4">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gold">
                 Explore More
               </p>
 
-              <h2 className="mt-2 text-2xl font-black text-white">
-                Hotel guide categories
+              <h2 className="mt-2 font-serif text-3xl font-normal tracking-wide text-white">
+                Hotel Guide Categories
               </h2>
             </div>
 
@@ -629,10 +629,10 @@ export function HotelGuideContent({
             ) : featuredSections.length === 0 ? (
               <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 text-center backdrop-blur">
                 <Info className="mx-auto size-9 text-gold" />
-                <h3 className="mt-4 font-black text-white">
+                <h3 className="mt-4 font-serif text-[17px] font-medium tracking-wide text-white">
                   No guide sections yet
                 </h3>
-                <p className="mt-2 text-sm font-semibold leading-6 text-white/50">
+                <p className="mt-2 text-sm font-medium leading-6 text-white/60">
                   Hotel guide content will appear here once configured.
                 </p>
               </div>
@@ -641,9 +641,9 @@ export function HotelGuideContent({
         </>
       ) : (
         <>
-          <div className="mb-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-bold text-white/60 backdrop-blur">
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-medium text-white/70 backdrop-blur">
             Showing results for:{' '}
-            <span className="text-gold">“{query}”</span>
+            <span className="font-semibold text-gold">“{query}”</span>
           </div>
 
           {hasResults ? (
@@ -677,9 +677,9 @@ export function HotelGuideContent({
             <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8 text-center shadow-sm backdrop-blur">
               <Search className="mx-auto size-9 text-gold" />
 
-              <h3 className="mt-4 font-black text-white">No results found</h3>
+              <h3 className="mt-4 font-serif text-[17px] font-medium tracking-wide text-white">No results found</h3>
 
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/50">
+              <p className="mt-2 text-sm font-medium leading-6 text-white/60">
                 Try searching for Wi-Fi, dining, pool, check-in, policies,
                 transportation, or front desk.
               </p>
@@ -687,7 +687,7 @@ export function HotelGuideContent({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="mt-5 rounded-2xl bg-gold px-5 py-3 text-sm font-black text-black"
+                className="mt-5 rounded-[1.25rem] bg-gold px-5 py-3 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
               >
                 Clear Search
               </button>
@@ -696,31 +696,31 @@ export function HotelGuideContent({
         </>
       )}
 
-      <section className="mt-8 rounded-[2rem] border border-gold/30 bg-gold p-5 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
+      <section className="mt-8 rounded-[2rem] border border-gold/30 bg-gold p-6 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
         <div className="flex items-start gap-4">
           <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-black/10">
             <HelpCircle className="size-6" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xl font-black">Need something else?</p>
+            <p className="font-serif text-2xl font-normal tracking-wide">Need something else?</p>
 
-            <p className="mt-1 text-sm font-bold leading-6 text-black/65">
+            <p className="mt-2 text-[15px] font-medium leading-6 text-black/75">
               Our staff can help with room requests, food orders, directions,
               and hotel information.
             </p>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
               <Link
                 href={`/t/${tagCode}/service`}
-                className="rounded-2xl bg-black px-4 py-3 text-center text-sm font-black text-white"
+                className="rounded-[1.25rem] bg-black px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-black/80 active:scale-[0.98]"
               >
                 Request Service
               </Link>
 
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="rounded-2xl border border-black/15 bg-white/40 px-4 py-3 text-center text-sm font-black text-black"
+                className="rounded-[1.25rem] border border-black/15 bg-white/40 px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-black transition hover:bg-white/50 active:scale-[0.98]"
               >
                 Contact Staff
               </Link>

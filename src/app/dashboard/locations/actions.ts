@@ -220,26 +220,33 @@ export async function deleteRoomAction(formData: FormData) {
 
   await assertHotelAccess(room.hotelId);
 
-  await db.$transaction([
-    db.nfcTag.updateMany({
-      where: {
-        roomId: room.id,
-      },
-      data: {
-        roomId: null,
-      },
-    }),
+  // 1. Check for active NFC tags assigned to this room
+  const attachedTagsCount = await db.nfcTag.count({
+    where: {
+      roomId: room.id,
+      deletedAt: null,
+    },
+  });
 
-    db.room.update({
-      where: {
-        id: room.id,
-      },
-      data: {
-        isActive: false,
-        deletedAt: new Date(),
-      },
-    }),
-  ]);
+  // 2. Prevent deletion if tags are found
+  if (attachedTagsCount > 0) {
+    throw new Error(
+      `Cannot delete this room. There ${
+        attachedTagsCount === 1 ? 'is 1 NFC tag' : `are ${attachedTagsCount} NFC tags`
+      } still assigned to it. Please reassign or delete the tags first.`
+    );
+  }
+
+  // 3. Proceed with soft-deletion since no tags are attached
+  await db.room.update({
+    where: {
+      id: room.id,
+    },
+    data: {
+      isActive: false,
+      deletedAt: new Date(),
+    },
+  });
 
   return finishDirectoryAction({
     success: 'room-deleted',
@@ -336,26 +343,33 @@ export async function deleteLocationAction(formData: FormData) {
 
   await assertHotelAccess(location.hotelId);
 
-  await db.$transaction([
-    db.nfcTag.updateMany({
-      where: {
-        locationId: location.id,
-      },
-      data: {
-        locationId: null,
-      },
-    }),
+  // 1. Check for active NFC tags assigned to this location
+  const attachedTagsCount = await db.nfcTag.count({
+    where: {
+      locationId: location.id,
+      deletedAt: null,
+    },
+  });
 
-    db.location.update({
-      where: {
-        id: location.id,
-      },
-      data: {
-        isActive: false,
-        deletedAt: new Date(),
-      },
-    }),
-  ]);
+  // 2. Prevent deletion if tags are found
+  if (attachedTagsCount > 0) {
+    throw new Error(
+      `Cannot delete this location. There ${
+        attachedTagsCount === 1 ? 'is 1 NFC tag' : `are ${attachedTagsCount} NFC tags`
+      } still assigned to it. Please reassign or delete the tags first.`
+    );
+  }
+
+  // 3. Proceed with soft-deletion since no tags are attached
+  await db.location.update({
+    where: {
+      id: location.id,
+    },
+    data: {
+      isActive: false,
+      deletedAt: new Date(),
+    },
+  });
 
   return finishDirectoryAction({
     success: 'location-deleted',

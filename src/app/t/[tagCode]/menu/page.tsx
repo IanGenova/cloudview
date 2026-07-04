@@ -140,29 +140,29 @@ export default async function GuestMenuPage({
           backHref={`/t/${tagCode}`}
           variant="dark"
         >
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 text-center text-white">
-            <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-gold/15 text-gold">
+          <div className="rounded-[2.25rem] border border-white/10 bg-white/[0.04] p-8 text-center text-white backdrop-blur-md">
+            <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-gold/10 text-gold shadow-sm">
               <Lock className="size-8" />
             </div>
 
-            <h2 className="mt-5 text-2xl font-black">Ordering is disabled</h2>
+            <h2 className="mt-6 font-serif text-3xl font-normal tracking-wide">Ordering is disabled</h2>
 
-            <p className="mt-3 text-sm leading-6 text-white/55">
+            <p className="mx-auto mt-4 max-w-[280px] text-[15px] font-medium leading-7 text-white/60">
               This NFC panel is currently inactive. You can still view the guest
               portal, but food ordering is not available from this NFC tag.
             </p>
 
-            <div className="mt-5 grid gap-3">
+            <div className="mt-8 grid gap-3">
               <Link
                 href={`/t/${tagCode}/guide`}
-                className="rounded-2xl bg-gold px-5 py-3 text-sm font-black text-ink"
+                className="rounded-[1.25rem] bg-gold px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
               >
                 View Hotel Guide
               </Link>
 
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-black text-white"
+                className="rounded-[1.25rem] border border-white/15 bg-white/5 px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10 active:scale-[0.98]"
               >
                 Contact Front Desk
               </Link>
@@ -320,63 +320,64 @@ export default async function GuestMenuPage({
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
-        <div className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5 text-white">
-  {rewardsContext.guestMember && rewardsContext.pointAccount ? (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
-          CloudView Rewards
-        </p>
+        <div className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5 text-white backdrop-blur-md">
+          {rewardsContext.guestMember && rewardsContext.pointAccount ? (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                  CloudView Rewards
+                </p>
 
-        <h2 className="mt-2 text-xl font-black">
-          {rewardsContext.pointAccount.availablePoints} points available
-        </h2>
+                <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
+                  {rewardsContext.pointAccount.availablePoints} points available
+                </h2>
 
-        <p className="mt-1 text-sm font-semibold text-white/50">
-          Complete paid orders to earn more rewards points.
-        </p>
-      </div>
+                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
+                  Complete paid orders to earn more rewards points.
+                </p>
+              </div>
 
-      <Link
-        href={`/t/${tagCode}/rewards`}
-        className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
-      >
-        View
-      </Link>
-    </div>
-  ) : (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
-          CloudView Rewards
-        </p>
+              <Link
+                href={`/t/${tagCode}/rewards`}
+                className="shrink-0 rounded-[1rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+              >
+                View
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                  CloudView Rewards
+                </p>
 
-        <h2 className="mt-2 text-xl font-black">
-          Earn points from this order
-        </h2>
+                <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
+                  Earn points from this order
+                </h2>
 
-        <p className="mt-1 text-sm font-semibold text-white/50">
-          Claim rewards before ordering so this order can be linked to your points.
-        </p>
-      </div>
+                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
+                  Claim rewards before ordering so this order can be linked to your points.
+                </p>
+              </div>
 
-      <Link
-        href={`/t/${tagCode}/rewards`}
-        className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
-      >
-        Claim
-      </Link>
-    </div>
-  )}
-</div>
+              <Link
+                href={`/t/${tagCode}/rewards`}
+                className="shrink-0 rounded-[1rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+              >
+                Claim
+              </Link>
+            </div>
+          )}
+        </div>
+
         <MenuClient
-            tagCode={tagCode}
-            products={menuProducts}
-            currency={tag.hotel.settings?.currency ?? 'PHP'}
-            taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
-            serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
-            defaultGuestName={defaultGuestName}
-          />
+          tagCode={tagCode}
+          products={menuProducts}
+          currency={tag.hotel.settings?.currency ?? 'PHP'}
+          taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
+          serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
+          defaultGuestName={defaultGuestName}
+        />
       </GuestShell>
 
       <GuestBottomNav tagCode={tagCode} active="order" dark />

@@ -171,18 +171,18 @@ function OrderItemSummary({
     <div
       className={
         isCancelled
-          ? 'rounded-2xl border border-red-500/20 bg-red-500/10 p-3'
-          : 'rounded-2xl bg-white/5 p-3'
+          ? 'rounded-[1.25rem] border border-red-500/20 bg-red-500/10 p-4'
+          : 'rounded-[1.25rem] bg-white/5 p-4'
       }
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p
               className={
                 isCancelled
-                  ? 'text-sm font-black text-red-100 line-through decoration-red-300'
-                  : 'text-sm font-black text-white'
+                  ? 'font-serif text-[15px] font-medium tracking-wide text-red-100 line-through decoration-red-300'
+                  : 'font-serif text-[15px] font-medium tracking-wide text-white'
               }
             >
               {isCancelled ? item.quantity : activeQty}×{' '}
@@ -190,13 +190,13 @@ function OrderItemSummary({
             </p>
 
             {item.isBundleSnapshot ? (
-              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
+              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                 Bundle
               </span>
             ) : null}
 
             <span
-              className={`rounded-full px-3 py-1 text-[10px] font-black ${itemStatusBadgeClass(
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${itemStatusBadgeClass(
                 item.status
               )}`}
             >
@@ -205,20 +205,20 @@ function OrderItemSummary({
           </div>
 
           {item.cancelledQty > 0 ? (
-            <p className="mt-1 text-xs font-bold text-red-200">
+            <p className="mt-2 text-xs font-medium text-red-200/80">
               Cancelled quantity: {item.cancelledQty}
             </p>
           ) : null}
 
           {item.cancelReason ? (
-            <p className="mt-1 text-xs font-bold text-red-200">
+            <p className="mt-1 text-xs font-medium text-red-200/80">
               Reason: {item.cancelReason}
             </p>
           ) : null}
 
           {item.notes ? (
-            <p className="mt-1 whitespace-pre-line text-xs text-white/40">
-              {item.notes}
+            <p className="mt-2 whitespace-pre-line text-[13px] font-medium leading-relaxed text-white/50">
+              <span className="text-white/70">Note: </span>{item.notes}
             </p>
           ) : null}
         </div>
@@ -226,8 +226,8 @@ function OrderItemSummary({
         <p
           className={
             isCancelled
-              ? 'text-sm font-black text-red-100'
-              : 'text-sm font-black text-white'
+              ? 'font-serif text-[15px] font-medium tracking-wide text-red-100'
+              : 'font-serif text-[15px] font-medium tracking-wide text-white'
           }
         >
           {money(activeQty * item.unitPriceCents)}
@@ -235,24 +235,24 @@ function OrderItemSummary({
       </div>
 
       {item.isBundleSnapshot ? (
-        <div className="mt-3 rounded-xl bg-gold/10 p-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gold">
+        <div className="mt-4 rounded-xl bg-gold/10 p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
             Includes
           </p>
 
           {item.bundleComponents.length ? (
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-1.5">
               {item.bundleComponents.map((component) => (
                 <p
                   key={component.id}
-                  className="text-xs font-bold text-white/75"
+                  className="text-[13px] font-medium text-white/75"
                 >
                   {component.quantity}× {component.componentNameSnapshot}
                 </p>
               ))}
             </div>
           ) : (
-            <p className="mt-2 text-xs font-bold text-white/45">
+            <p className="mt-2 text-[13px] font-medium text-white/45">
               Bundle component details were not saved for this order.
             </p>
           )}
@@ -277,7 +277,7 @@ export default async function MyOrdersPage({
     notFound();
   }
 
- const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
+  const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
   const guestSession = guestIdentity.session;
   const guestDisplayName = guestIdentity.guestName || 'Guest';
   const rewardsContext = await getGuestRewardsContextForTag(tagCode);
@@ -315,97 +315,97 @@ export default async function MyOrdersPage({
     : [];
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-[#050505] text-white">
       <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-5">
-        <div className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">
+        <div className="mb-6 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
             href={`/t/${tagCode}`}
-            className="grid size-11 place-items-center rounded-full text-white hover:bg-white/10"
+            className="grid size-11 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back"
           >
             <ChevronLeft className="size-6" />
           </Link>
 
           <div className="text-center">
-            <h1 className="text-xl font-black">My Orders</h1>
-            <p className="text-sm text-white/45">
-                  {location} · {guestDisplayName}
-                </p>
+            <h1 className="font-serif text-xl font-normal tracking-wide">My Orders</h1>
+            <p className="mt-0.5 text-xs font-medium text-white/50">
+              {location} · <span className="capitalize">{guestDisplayName}</span>
+            </p>
           </div>
 
           <div />
         </div>
 
-        <section className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5">
-          <div className="flex items-start gap-3">
-            <div className="grid size-12 place-items-center rounded-2xl bg-gold text-black">
+        <section className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5 backdrop-blur-md">
+          <div className="flex items-start gap-4">
+            <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-black shadow-sm">
               <ShoppingBag className="size-6" />
             </div>
 
             <div>
-              <h2 className="font-black text-white">Food Order History</h2>
-                    <p className="mt-1 text-sm font-bold text-gold">
-                      Guest: {guestDisplayName}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-white/50">
-                      View your current and previous food orders. Pending orders can
-                      still be managed from the tracking page.
-                    </p>
+              <h2 className="font-serif text-xl font-normal tracking-wide text-white">Food Order History</h2>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-gold">
+                Guest: {guestDisplayName}
+              </p>
+              <p className="mt-2 text-[13px] font-medium leading-relaxed text-white/60">
+                View your current and previous food orders. Pending orders can
+                still be managed from the tracking page.
+              </p>
             </div>
           </div>
         </section>
 
         {rewardsContext.guestMember && rewardsContext.pointAccount ? (
-  <section className="mb-5 rounded-[2rem] border border-gold/25 bg-gold/10 p-5">
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
-          CloudView Rewards
-        </p>
+          <section className="mb-5 rounded-[2rem] border border-gold/25 bg-gold/10 p-5 backdrop-blur-md">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                  CloudView Rewards
+                </p>
 
-        <h2 className="mt-2 text-xl font-black text-white">
-          {rewardsContext.pointAccount.availablePoints} points available
-        </h2>
+                <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
+                  {rewardsContext.pointAccount.availablePoints} points available
+                </h2>
 
-        <p className="mt-1 text-sm font-semibold text-white/50">
-          Orders linked to your rewards profile can earn points once paid and delivered.
-        </p>
-      </div>
+                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
+                  Orders linked to your rewards profile can earn points once paid and delivered.
+                </p>
+              </div>
 
-      <Link
-        href={`/t/${tagCode}/rewards`}
-        className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
-      >
-        View
-      </Link>
-    </div>
-  </section>
-) : (
-        <section className="mb-5 rounded-[2rem] border border-gold/25 bg-white/5 p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">
-                CloudView Rewards
-              </p>
-
-              <h2 className="mt-2 text-xl font-black text-white">
-                Claim points from your orders
-              </h2>
-
-              <p className="mt-1 text-sm font-semibold text-white/50">
-                Link your guest rewards profile to earn points from food orders and services.
-              </p>
+              <Link
+                href={`/t/${tagCode}/rewards`}
+                className="shrink-0 rounded-[1.25rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+              >
+                View
+              </Link>
             </div>
+          </section>
+        ) : (
+          <section className="mb-5 rounded-[2rem] border border-gold/25 bg-white/[0.04] p-5 backdrop-blur-md">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                  CloudView Rewards
+                </p>
 
-            <Link
-              href={`/t/${tagCode}/rewards`}
-              className="shrink-0 rounded-2xl bg-gold px-4 py-3 text-xs font-black text-black"
-            >
-              Claim
-            </Link>
-          </div>
-        </section>
-      )}
+                <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
+                  Claim points from your orders
+                </h2>
+
+                <p className="mt-1 text-[13px] font-medium leading-6 text-white/55">
+                  Link your guest rewards profile to earn points from food orders and services.
+                </p>
+              </div>
+
+              <Link
+                href={`/t/${tagCode}/rewards`}
+                className="shrink-0 rounded-[1.25rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+              >
+                Claim
+              </Link>
+            </div>
+          </section>
+        )}
 
         {orders.length ? (
           <div className="space-y-4">
@@ -419,17 +419,17 @@ export default async function MyOrdersPage({
               return (
                 <article
                   key={order.id}
-                  className="rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-sm"
+                  className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 shadow-sm backdrop-blur-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-black text-white">
+                        <h2 className="font-serif text-[17px] font-medium tracking-wide text-white">
                           {order.orderCode}
                         </h2>
 
                         <span
-                          className={`rounded-full px-3 py-1 text-[10px] font-black ${statusBadgeClass(
+                          className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusBadgeClass(
                             order.status
                           )}`}
                         >
@@ -437,88 +437,87 @@ export default async function MyOrdersPage({
                         </span>
                       </div>
 
-                      <p className="mt-1 text-xs font-bold text-white/40">
+                      <p className="mt-1 text-xs font-medium text-white/50">
                         {formatDateTime(order.createdAt)}
                       </p>
                     </div>
 
-                    <p className="shrink-0 text-right text-lg font-black text-gold">
+                    <p className="shrink-0 text-right font-serif text-lg font-medium tracking-wide text-gold">
                       {money(order.totalCents)}
                     </p>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/30">
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-white/5 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
                         Active Items
                       </p>
-                      <p className="mt-1 text-sm font-black text-white">
+                      <p className="mt-1 font-serif text-lg font-normal tracking-wide text-white">
                         {itemCount}
                       </p>
                     </div>
 
-                    <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/30">
+                    <div className="rounded-2xl bg-white/5 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
                         Payment
                       </p>
-                      <p className="mt-1 text-sm font-black text-white">
+                      <p className="mt-1 font-serif text-base font-normal tracking-wide text-white">
                         {order.paymentMethod.replaceAll('_', ' ')}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-black ${paymentBadgeClass(
+                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
                         order.paymentStatus
                       )}`}
                     >
                       {statusLabel(order.paymentStatus)}
                     </span>
 
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black text-white/60">
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/70">
                       {orderType}
                     </span>
 
                     {cancelledItemCount > 0 ? (
-                      <span className="rounded-full bg-red-500/15 px-3 py-1 text-[10px] font-black text-red-200">
-                        {cancelledItemCount} cancelled item
-                        {cancelledItemCount === 1 ? '' : 's'}
+                      <span className="rounded-full bg-red-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-red-200">
+                        {cancelledItemCount} cancelled item{cancelledItemCount === 1 ? '' : 's'}
                       </span>
                     ) : null}
 
                     {canManageItems ? (
-                      <span className="rounded-full bg-blue-500/15 px-3 py-1 text-[10px] font-black text-blue-200">
+                      <span className="rounded-full bg-blue-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-blue-200">
                         Can cancel items
                       </span>
                     ) : null}
                   </div>
 
-                  <div className="mt-4 rounded-2xl bg-white/5 p-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/30">
+                  <div className="mt-5 rounded-[1.25rem] bg-white/5 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
                       Preview
                     </p>
-                    <p className="mt-1 text-sm font-bold leading-6 text-white/70">
+                    <p className="mt-1.5 text-[15px] font-medium leading-relaxed text-white/75">
                       {preview}
                     </p>
                   </div>
 
-                  <details className="mt-3 rounded-2xl bg-white/5 p-3">
-                    <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-gold">
-                      View Items
+                  <details className="group mt-3 rounded-[1.25rem] bg-white/5 p-4 open:bg-white/[0.07]">
+                    <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-widest text-gold transition group-open:mb-4">
+                      View Order Details
                     </summary>
 
-                    <div className="mt-3 space-y-2">
+                    <div className="space-y-3">
                       {order.items.map((item) => (
                         <OrderItemSummary key={item.id} item={item} />
                       ))}
                     </div>
                   </details>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <Link
                       href={`/t/${tagCode}/track/${order.orderCode}`}
-                      className="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-4 py-3 text-center text-sm font-black text-black"
+                      className="flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] bg-gold px-4 py-3 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
                     >
                       <PackageCheck className="size-4" />
                       {canManageItems ? 'Track / Manage' : 'Track Order'}
@@ -526,9 +525,9 @@ export default async function MyOrdersPage({
 
                     <Link
                       href={`/t/${tagCode}/menu`}
-                      className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-center text-sm font-black text-white"
+                      className="flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] border border-white/15 px-4 py-3 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10 active:scale-[0.98]"
                     >
-                      <Utensils className="size-4" />
+                      <Utensils className="size-4 text-gold" />
                       Order Again
                     </Link>
                   </div>
@@ -537,21 +536,21 @@ export default async function MyOrdersPage({
             })}
           </div>
         ) : (
-          <section className="grid min-h-[60vh] place-items-center rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center">
+          <section className="grid min-h-[50vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-md">
             <div>
-              <div className="mx-auto grid size-20 place-items-center rounded-[2rem] bg-white/10 text-gold">
-                <ReceiptText className="size-10" />
+              <div className="mx-auto grid size-24 place-items-center rounded-full bg-white/5 text-gold shadow-sm">
+                <ReceiptText className="size-10" strokeWidth={1.5} />
               </div>
 
-              <h2 className="mt-5 text-2xl font-black">No orders yet</h2>
+              <h2 className="mt-6 font-serif text-3xl font-light tracking-wide">No orders yet</h2>
 
-              <p className="mt-2 text-sm leading-6 text-white/45">
+              <p className="mt-3 text-[15px] font-medium leading-relaxed text-white/50">
                 Food orders you place during this guest session will appear here.
               </p>
 
               <Link
                 href={`/t/${tagCode}/menu`}
-                className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-3 text-sm font-black text-black"
+                className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] bg-gold px-6 py-3 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
               >
                 <Utensils className="size-4" />
                 Order Food
@@ -560,13 +559,15 @@ export default async function MyOrdersPage({
           </section>
         )}
 
-        <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/5 p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <Clock className="size-5 text-gold" />
-            <h2 className="font-black">Order Notes</h2>
+        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
+              <Clock className="size-5" />
+            </div>
+            <h2 className="font-serif text-xl font-normal tracking-wide">Order Notes</h2>
           </div>
 
-          <div className="space-y-3 text-sm leading-6 text-white/50">
+          <div className="space-y-3 text-[13px] font-medium leading-relaxed text-white/60">
             <p>
               Pending orders may still allow item cancellation from the tracking
               page.

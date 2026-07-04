@@ -252,13 +252,13 @@ export default async function GuestRewardsPage({
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
-        <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-black px-5 pb-28 pt-4 text-white">
+        <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#050505] px-5 pb-28 pt-4 text-white">
           {message ? (
             <div
               className={
                 message.type === 'success'
-                  ? 'mb-4 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-200'
-                  : 'mb-4 rounded-[1.5rem] border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200'
+                  ? 'mb-4 rounded-[1.25rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-[15px] font-medium text-emerald-200'
+                  : 'mb-4 rounded-[1.25rem] border border-red-400/20 bg-red-500/10 p-4 text-[15px] font-medium text-red-200'
               }
             >
               {message.text}
@@ -269,124 +269,128 @@ export default async function GuestRewardsPage({
             <ClaimRewardsCard tagCode={tagCode} hotelName={tag.hotel.name} />
           ) : (
             <>
-              <section className="rounded-[2rem] border border-gold/25 bg-white/[0.06] p-5 shadow-2xl">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-gold">
-                      <Sparkles className="size-4" />
-                      Welcome back
+              <section className="relative overflow-hidden rounded-[2.4rem] border border-gold/25 bg-white/[0.04] shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.15),transparent_50%)]" />
+                
+                <div className="relative z-10 p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-gold">
+                        <Sparkles className="size-3.5" />
+                        Welcome back
+                      </p>
+
+                      <h1 className="mt-3 font-serif text-4xl font-light capitalize tracking-wide text-white">
+                        {guestMember.name}
+                      </h1>
+
+                      <p className="mt-2 text-sm font-medium text-white/60">
+                        Redeem your available points below.
+                      </p>
+                    </div>
+
+                    <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold shadow-sm">
+                      <Gift className="size-6" />
+                    </div>
+                  </div>
+
+                  <div className="mt-8 rounded-[1.5rem] bg-black/40 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                      Available Points
                     </p>
 
-                    <h1 className="mt-2 text-2xl font-black text-white">
-                      {guestMember.name}
-                    </h1>
-
-                    <p className="mt-1 text-sm font-semibold text-white/50">
-                      Redeem your available points below.
+                    <p className="mt-1 font-serif text-6xl font-light text-sand">
+                      {availablePoints}
                     </p>
                   </div>
 
-                  <div className="grid size-14 place-items-center rounded-2xl bg-gold text-black">
-                    <Gift className="size-6" />
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-black/25 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                        Pending
+                      </p>
+                      <p className="mt-1 font-serif text-lg font-medium tracking-wide text-white">
+                        {pointLabel(pendingPoints)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-black/25 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                        Lifetime Earned
+                      </p>
+                      <p className="mt-1 font-serif text-lg font-medium tracking-wide text-white">
+                        {pointLabel(lifetimeEarnedPoints)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-black/25 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                        Redeemed
+                      </p>
+                      <p className="mt-1 font-serif text-lg font-medium tracking-wide text-white">
+                        {pointLabel(lifetimeRedeemedPoints)}
+                      </p>
+                    </div>
+
+                    <Link
+                      href={`/t/${tagCode}/contact`}
+                      className="flex items-center justify-between rounded-2xl bg-gold/10 p-4 transition hover:bg-gold/15 active:scale-[0.98]"
+                    >
+                      <span className="font-serif text-[15px] font-medium tracking-wide text-gold">View Profile</span>
+                      <ChevronRight className="size-4 text-gold" />
+                    </Link>
                   </div>
-                </div>
-
-                <div className="mt-5 rounded-[1.5rem] bg-black/30 p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-white/40">
-                    Available Points
-                  </p>
-
-                  <p className="mt-1 text-5xl font-black text-sand">
-                    {availablePoints}
-                  </p>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-black/25 p-3">
-                    <p className="text-[10px] font-black uppercase text-white/35">
-                      Pending
-                    </p>
-                    <p className="mt-1 text-sm font-black text-white">
-                      {pointLabel(pendingPoints)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-black/25 p-3">
-                    <p className="text-[10px] font-black uppercase text-white/35">
-                      Lifetime Earned
-                    </p>
-                    <p className="mt-1 text-sm font-black text-white">
-                      {pointLabel(lifetimeEarnedPoints)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-black/25 p-3">
-                    <p className="text-[10px] font-black uppercase text-white/35">
-                      Redeemed
-                    </p>
-                    <p className="mt-1 text-sm font-black text-white">
-                      {pointLabel(lifetimeRedeemedPoints)}
-                    </p>
-                  </div>
-
-                  <Link
-                    href={`/t/${tagCode}/contact`}
-                    className="rounded-2xl bg-gold/15 p-3 text-sm font-black text-gold"
-                  >
-                    View Profile
-                    <ChevronRight className="mt-1 size-4" />
-                  </Link>
                 </div>
               </section>
 
-              <section className="mt-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-lg font-black text-white">
+              <section className="mt-8">
+                <div className="mb-4 flex items-end justify-between">
+                  <h2 className="font-serif text-2xl font-normal tracking-wide text-white">
                     Redeem Rewards
                   </h2>
 
-                  <span className="text-xs font-bold text-white/40">
+                  <span className="text-xs font-medium text-white/50">
                     {rewards.length} available
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {rewards.map((reward) => {
                     const canRedeem = availablePoints >= reward.pointsCost;
 
                     return (
                       <article
                         key={reward.id}
-                        className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-4"
+                        className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
+                        <div className="flex items-start gap-4">
+                          <div className="grid size-12 shrink-0 place-items-center rounded-[1rem] bg-gold/15 text-gold">
                             <Ticket className="size-5" />
                           </div>
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-black text-white">
+                              <h3 className="font-serif text-lg font-medium tracking-wide text-white">
                                 {reward.name}
                               </h3>
 
-                              <span className="rounded-full bg-gold/15 px-2.5 py-1 text-[10px] font-black text-gold">
+                              <span className="rounded-full bg-gold/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                                 {pointLabel(reward.pointsCost)}
                               </span>
                             </div>
 
-                            <p className="mt-1 text-sm font-bold text-sand">
+                            <p className="mt-1 text-[15px] font-medium text-sand">
                               {formatRewardValue(reward)}
                             </p>
 
                             {reward.description ? (
-                              <p className="mt-2 text-xs leading-5 text-white/50">
+                              <p className="mt-2 text-[13px] font-medium leading-relaxed text-white/60">
                                 {reward.description}
                               </p>
                             ) : null}
 
                             {reward.validUntil ? (
-                              <p className="mt-2 text-[11px] font-bold text-white/35">
+                              <p className="mt-3 text-[11px] font-semibold tracking-wide text-white/40">
                                 Valid until{' '}
                                 {reward.validUntil.toLocaleDateString('en-PH')}
                               </p>
@@ -394,7 +398,7 @@ export default async function GuestRewardsPage({
                           </div>
                         </div>
 
-                        <form action={redeemGuestRewardAction} className="mt-4">
+                        <form action={redeemGuestRewardAction} className="mt-5">
                           <input type="hidden" name="tagCode" value={tagCode} />
                           <input
                             type="hidden"
@@ -407,8 +411,8 @@ export default async function GuestRewardsPage({
                             disabled={!canRedeem}
                             className={
                               canRedeem
-                                ? 'h-11 w-full rounded-2xl bg-gold text-sm font-black text-black'
-                                : 'h-11 w-full cursor-not-allowed rounded-2xl bg-white/10 text-sm font-black text-white/35'
+                                ? 'h-12 w-full rounded-[1.25rem] bg-gold text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]'
+                                : 'h-12 w-full cursor-not-allowed rounded-[1.25rem] bg-white/5 text-[15px] font-semibold tracking-wide text-white/30'
                             }
                           >
                             {canRedeem
@@ -423,12 +427,12 @@ export default async function GuestRewardsPage({
                   })}
 
                   {!rewards.length ? (
-                    <div className="rounded-[1.5rem] border border-dashed border-white/15 p-8 text-center">
-                      <Gift className="mx-auto size-8 text-white/35" />
-                      <h3 className="mt-3 font-black text-white">
+                    <div className="rounded-[1.5rem] border border-dashed border-white/10 p-8 text-center backdrop-blur-sm">
+                      <Gift className="mx-auto size-8 text-white/30" strokeWidth={1.5} />
+                      <h3 className="mt-4 font-serif text-[17px] font-medium tracking-wide text-white">
                         No rewards available yet
                       </h3>
-                      <p className="mt-1 text-sm text-white/45">
+                      <p className="mt-1 text-sm font-medium text-white/50">
                         Please check again later.
                       </p>
                     </div>
@@ -436,38 +440,38 @@ export default async function GuestRewardsPage({
                 </div>
               </section>
 
-              <section className="mt-6">
-                <h2 className="mb-3 text-lg font-black text-white">
+              <section className="mt-8">
+                <h2 className="mb-4 font-serif text-2xl font-normal tracking-wide text-white">
                   My Redemption Codes
                 </h2>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {redemptions.map((redemption) => (
                     <div
                       key={redemption.id}
-                      className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-4"
+                      className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-black text-white">
+                          <p className="font-serif text-[17px] font-medium tracking-wide text-white">
                             {redemption.reward.name}
                           </p>
 
-                          <p className="mt-1 text-xs font-bold text-white/45">
+                          <p className="mt-1 text-xs font-medium text-white/50">
                             {pointLabel(redemption.pointsUsed)} used ·{' '}
                             {redemption.status}
                           </p>
                         </div>
 
-                        <CheckCircle2 className="size-5 text-gold" />
+                        <CheckCircle2 className="size-5 shrink-0 text-gold" />
                       </div>
 
-                      <div className="mt-3 rounded-2xl bg-black/35 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+                      <div className="mt-4 rounded-2xl bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                           Redemption Code
                         </p>
 
-                        <p className="mt-1 font-mono text-xl font-black tracking-widest text-sand">
+                        <p className="mt-1 font-mono text-2xl font-medium tracking-widest text-sand">
                           {redemption.code}
                         </p>
                       </div>
@@ -475,7 +479,7 @@ export default async function GuestRewardsPage({
                   ))}
 
                   {!redemptions.length ? (
-                    <div className="rounded-[1.5rem] bg-white/[0.04] p-5 text-center text-sm font-bold text-white/45">
+                    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-6 text-center text-[15px] font-medium text-white/50 backdrop-blur-sm">
                       No redemptions yet.
                     </div>
                   ) : null}
@@ -499,54 +503,58 @@ function ClaimRewardsCard({
   hotelName: string;
 }) {
   return (
-    <section className="rounded-[2rem] border border-gold/20 bg-white/[0.06] p-6 shadow-2xl">
-      <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-gold text-black">
-        <Lock className="size-8" />
-      </div>
+    <section className="relative overflow-hidden rounded-[2.4rem] border border-gold/25 bg-white/[0.04] p-8 shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.1),transparent_60%)]" />
+      
+      <div className="relative z-10">
+        <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-gold/15 text-gold shadow-sm">
+          <Lock className="size-8" />
+        </div>
 
-      <h1 className="mt-5 text-center text-2xl font-black text-white">
-        Claim your rewards
-      </h1>
+        <h1 className="mt-6 text-center font-serif text-3xl font-normal tracking-wide text-white">
+          Claim your rewards
+        </h1>
 
-      <p className="mt-3 text-center text-sm leading-6 text-white/55">
-        Add your name and contact details so {hotelName} can connect your
-        points, orders, requests, and redemptions.
-      </p>
-
-      <form action={claimNfcRewardsAction} className="mt-6 space-y-3">
-        <input type="hidden" name="tagCode" value={tagCode} />
-
-        <input
-          name="name"
-          required
-          placeholder="Your name"
-          className="h-13 w-full rounded-2xl border border-white/10 bg-white px-4 text-sm font-bold text-black outline-none"
-        />
-
-        <input
-          name="phone"
-          placeholder="Phone number"
-          className="h-13 w-full rounded-2xl border border-white/10 bg-white px-4 text-sm font-bold text-black outline-none"
-        />
-
-        <input
-          name="email"
-          type="email"
-          placeholder="Email address"
-          className="h-13 w-full rounded-2xl border border-white/10 bg-white px-4 text-sm font-bold text-black outline-none"
-        />
-
-        <p className="text-xs font-semibold leading-5 text-white/45">
-          Please provide at least your phone number or email address.
+        <p className="mx-auto mt-4 max-w-[280px] text-center text-[15px] font-medium leading-7 text-white/60">
+          Add your name and contact details so {hotelName} can connect your
+          points, orders, requests, and redemptions.
         </p>
 
-        <button
-          type="submit"
-          className="h-12 w-full rounded-2xl bg-gold text-sm font-black text-black"
-        >
-          Claim Rewards
-        </button>
-      </form>
+        <form action={claimNfcRewardsAction} className="mt-8 space-y-3.5">
+          <input type="hidden" name="tagCode" value={tagCode} />
+
+          <input
+            name="name"
+            required
+            placeholder="Your full name"
+            className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+          />
+
+          <input
+            name="phone"
+            placeholder="Phone number"
+            className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+          />
+
+          <input
+            name="email"
+            type="email"
+            placeholder="Email address"
+            className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+          />
+
+          <p className="pt-2 text-center text-xs font-medium leading-5 text-white/50">
+            Please provide at least your phone number or email address.
+          </p>
+
+          <button
+            type="submit"
+            className="mt-4 h-14 w-full rounded-[1.25rem] bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110 active:scale-[0.98]"
+          >
+            Claim Rewards
+          </button>
+        </form>
+      </div>
     </section>
   );
 }

@@ -108,8 +108,8 @@ function PrimaryActionCard({
       <p
         className={
           gold
-            ? 'mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-black/55'
-            : 'mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-gold'
+            ? 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-black/60'
+            : 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-gold'
         }
       >
         {title}
@@ -118,8 +118,8 @@ function PrimaryActionCard({
       <p
         className={
           gold
-            ? 'mt-1 text-sm font-black leading-5 text-black'
-            : 'mt-1 text-sm font-black leading-5 text-white'
+            ? 'mt-1 text-base font-serif font-medium leading-5 text-black'
+            : 'mt-1 text-base font-serif font-medium leading-5 text-white'
         }
       >
         {description}
@@ -152,7 +152,7 @@ function MiniActionCard({
         <ChevronRight className="size-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-gold" />
       </div>
 
-      <p className="mt-3 text-sm font-black leading-tight">{title}</p>
+      <p className="mt-3 line-clamp-2 text-[15px] font-serif font-medium leading-tight tracking-wide">{title}</p>
     </Link>
     </GuestPressable>
   );
@@ -175,10 +175,11 @@ function StayInfoCard({
         </span>
 
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
             {label}
           </p>
-          <p className="mt-1 truncate text-sm font-black text-white">
+          {/* Swapped truncate for line-clamp-2 so longer values display fully without cutting off */}
+          <p className="mt-1 line-clamp-2 text-[15px] font-serif font-medium leading-tight tracking-wide text-white">
             {value}
           </p>
         </div>
@@ -211,18 +212,18 @@ function ActivityCard({
           </span>
 
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-gold">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gold">
               My Activity
             </p>
-            <h2 className="mt-1 text-xl font-black">Track your requests</h2>
-            <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+            <h2 className="mt-1 text-2xl font-serif font-normal tracking-wide">Track your requests</h2>
+            <p className="mt-1 text-sm font-medium leading-6 text-white/60">
               View current orders, service requests, and past activity.
             </p>
           </div>
         </div>
 
         {total > 0 ? (
-          <span className="grid min-w-9 place-items-center rounded-full bg-gold px-3 py-2 text-sm font-black text-black">
+          <span className="grid min-w-9 place-items-center rounded-full bg-gold px-3 py-2 text-sm font-serif font-medium text-black">
             {total}
           </span>
         ) : null}
@@ -230,17 +231,17 @@ function ActivityCard({
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-white/8 p-3">
-          <p className="text-[10px] font-black uppercase tracking-wide text-white/35">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
             Food Orders
           </p>
-          <p className="mt-1 text-2xl font-black">{activeOrderCount}</p>
+          <p className="mt-1 text-2xl font-serif font-medium">{activeOrderCount}</p>
         </div>
 
         <div className="rounded-2xl bg-white/8 p-3">
-          <p className="text-[10px] font-black uppercase tracking-wide text-white/35">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
             Services
           </p>
-          <p className="mt-1 text-2xl font-black">{activeRequestCount}</p>
+          <p className="mt-1 text-2xl font-serif font-medium">{activeRequestCount}</p>
         </div>
       </div>
     </Link>
@@ -272,15 +273,15 @@ function RecommendedCard({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+        <span className="block text-[10px] font-semibold uppercase tracking-widest text-gold">
           {eyebrow}
         </span>
 
-        <span className="mt-1 block truncate text-sm font-black">
+        <span className="mt-1 block line-clamp-2 text-[15px] font-serif font-medium leading-tight tracking-wide">
           {title}
         </span>
 
-        <span className="mt-0.5 block line-clamp-1 text-xs font-semibold text-white/45">
+        <span className="mt-0.5 block line-clamp-1 text-xs font-medium text-white/50">
           {description}
         </span>
       </span>
@@ -310,15 +311,15 @@ function getHotelInitials(hotelName: string) {
 function DynamicHotelLogo({ hotelName }: { hotelName: string }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="grid size-16 place-items-center rounded-[1.5rem] border border-gold/50 bg-black/35 text-lg font-black tracking-tight text-gold shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <div className="grid size-16 place-items-center rounded-[1.5rem] border border-gold/50 bg-black/35 text-2xl font-serif font-medium tracking-wide text-gold shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-md">
         {getHotelInitials(hotelName)}
       </div>
 
-      <p className="mt-4 max-w-[300px] text-center text-[13px] font-black uppercase leading-5 tracking-[0.28em] text-white drop-shadow-[0_3px_16px_rgba(0,0,0,0.9)]">
+      <p className="mt-4 max-w-[300px] text-center text-sm font-serif uppercase leading-5 tracking-[0.2em] text-white drop-shadow-[0_3px_16px_rgba(0,0,0,0.9)]">
         {hotelName}
       </p>
 
-      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.24em] text-gold">
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-gold/80">
         Guest Portal
       </p>
     </div>
@@ -411,22 +412,23 @@ export default async function GuestHome({ params }: GuestHomeProps) {
                 <Bell className="size-5" />
 
                 {activeActivityCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-black text-black">
+                  <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-semibold text-black">
                     {activeActivityCount}
                   </span>
                 ) : null}
               </Link>
             </GuestReveal>
           <GuestReveal delay={0.14} className="relative z-10 pt-24">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">
               {greeting}
             </p>
 
-            <h1 className="mt-3 max-w-xs font-serif text-5xl leading-[0.95] text-white">
-              {guestDisplayName}
+            {/* Added break-words, text-balance, and scaled font dynamically. Lowercased to force proper capitalize. */}
+            <h1 className="mt-3 max-w-[280px] break-words font-serif text-4xl font-light capitalize leading-[1.05] tracking-wide text-white text-balance drop-shadow-md sm:text-5xl">
+              {guestDisplayName.toLowerCase()}
             </h1>
 
-            <p className="mt-4 max-w-xs text-sm font-semibold leading-6 text-white/70">
+            <p className="mt-4 max-w-xs text-sm font-medium leading-6 text-white/70">
               Welcome to {tag.hotel.name}. Everything you need during your stay
               is just one tap away.
             </p>
@@ -441,10 +443,10 @@ export default async function GuestHome({ params }: GuestHomeProps) {
         <GuestReveal delay={0.12} className="px-5 pt-6">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
                 Guest Concierge
               </p>
-              <h2 className="mt-1 text-2xl font-black text-white">
+              <h2 className="mt-1 text-3xl font-serif font-normal text-white">
                 What would you like to do?
               </h2>
             </div>
@@ -498,10 +500,10 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
         <GuestReveal delay={0.24} className="px-5 pt-6">
           <div className="mb-4">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
               Recommended
             </p>
-            <h2 className="mt-1 text-2xl font-black text-white">
+            <h2 className="mt-1 text-2xl font-serif font-normal text-white tracking-wide">
               Helpful during your stay
             </h2>
           </div>
@@ -511,7 +513,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               href={`/t/${normalizedTagCode}/guide`}
               icon={Wifi}
               eyebrow="Essentials"
-              title="Wi-Fi, check-in, and hotel policies"
+              title="Wi-Fi, check-in, & policies"
               description="Quickly find the most requested hotel information."
             />
 
@@ -549,15 +551,15 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               </span>
 
               <div>
-                <p className="text-xl font-black">One tap guest portal</p>
-                <p className="mt-1 text-sm font-bold leading-6 text-black/65">
+                <p className="text-2xl font-serif font-normal">One tap guest portal</p>
+                <p className="mt-1 text-sm font-medium leading-6 text-black/75">
                   No app install needed. Scan, browse, order, request, and enjoy
                   your stay.
                 </p>
 
                 <Link
                   href={`/t/${normalizedTagCode}/guide`}
-                  className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-black text-white"
+                  className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
                 >
                   Explore Hotel Guide
                 </Link>

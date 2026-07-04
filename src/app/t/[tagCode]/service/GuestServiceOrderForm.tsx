@@ -134,7 +134,7 @@ function getBillingBadge(service: GuestServiceItem) {
   if (service.billingMode === 'FREE') {
     return {
       label: 'FREE',
-      className: 'bg-emerald-400/15 text-emerald-300 border-emerald-400/20',
+      className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
     };
   }
 
@@ -147,7 +147,7 @@ function getBillingBadge(service: GuestServiceItem) {
 
   return {
     label: money(service.unitPrice),
-    className: 'bg-sand/15 text-sand border-sand/25',
+    className: 'bg-white/10 text-white/80 border-white/20',
   };
 }
 
@@ -157,7 +157,6 @@ function getErrorMessage(error?: string) {
   }
 
   const messages: Record<string, string> = {
-    
     invalid_tag: 'Invalid guest access. Please scan the NFC tag again.',
     inactive_tag: 'This NFC tag is inactive. Please contact the front desk.',
     invalid_service: 'Please select at least one valid service.',
@@ -170,7 +169,6 @@ function getErrorMessage(error?: string) {
     invalid_attachment: 'Please upload JPG, PNG, or WEBP images only. Maximum 5 images, 5MB each.',
     invalid_schedule:
         'Please select a valid future date and time for the scheduled request.',
-    
   };
 
   return messages[error] ?? 'Unable to submit the request. Please try again.';
@@ -236,7 +234,7 @@ function SubmitButton({
       type="submit"
       disabled={disabled || pending}
       size="lg"
-      className="mt-5 w-full bg-ink text-white disabled:cursor-not-allowed disabled:opacity-50"
+      className="mt-6 h-14 w-full rounded-[1.25rem] bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
     >
       {pending ? 'Submitting...' : 'Submit Requests'}
     </Button>
@@ -277,17 +275,16 @@ export function GuestServiceOrderForm({
   const objectUrlsRef = useRef<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
 
-      useEffect(() => {
-        return () => {
-          objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-          objectUrlsRef.current = [];
-        };
-      }, []);
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
+    };
+  }, []);
 
-
-      useEffect(() => {
-      setGuestName(defaultGuestName);
-    }, [defaultGuestName]);
+  useEffect(() => {
+    setGuestName(defaultGuestName);
+  }, [defaultGuestName]);
 
   const serviceMap = useMemo(
     () => new Map(services.map((service) => [service.code, service])),
@@ -415,170 +412,170 @@ export function GuestServiceOrderForm({
   }
 
   function clearCart() {
-  setCart([]);
-  setNotes('');
-  setChargeConsent(false);
-  setLocalError(null);
-  clearAttachments();
-}
+    setCart([]);
+    setNotes('');
+    setChargeConsent(false);
+    setLocalError(null);
+    clearAttachments();
+  }
 
   function syncAttachmentInput(nextAttachments: AttachmentPreview[]) {
-  const input = attachmentInputRef.current;
+    const input = attachmentInputRef.current;
 
-  if (!input) {
-    return;
-  }
-
-  if (!nextAttachments.length) {
-    input.value = '';
-    return;
-  }
-
-  const dataTransfer = new DataTransfer();
-
-  nextAttachments.forEach((attachment) => {
-    dataTransfer.items.add(attachment.file);
-  });
-
-  input.files = dataTransfer.files;
-}
-
-function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
-  setLocalError(null);
-
-  const selectedFiles = Array.from(event.currentTarget.files ?? []);
-
-  if (!selectedFiles.length) {
-    return;
-  }
-
-  const nextAttachments = [...attachments];
-
-  for (const file of selectedFiles) {
-    if (nextAttachments.length >= MAX_ATTACHMENTS) {
-      setLocalError(`You can upload up to ${MAX_ATTACHMENTS} images only.`);
-      break;
+    if (!input) {
+      return;
     }
 
-    const validationError = validateAttachmentFile(file);
-
-    if (validationError) {
-      setLocalError(validationError);
-      continue;
+    if (!nextAttachments.length) {
+      input.value = '';
+      return;
     }
 
-    const url = URL.createObjectURL(file);
+    const dataTransfer = new DataTransfer();
 
-    objectUrlsRef.current.push(url);
-
-    nextAttachments.push({
-      id: createAttachmentId(file),
-      file,
-      url,
+    nextAttachments.forEach((attachment) => {
+      dataTransfer.items.add(attachment.file);
     });
+
+    input.files = dataTransfer.files;
   }
 
-  setAttachments(nextAttachments);
-  syncAttachmentInput(nextAttachments);
-}
+  function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
+    setLocalError(null);
 
-function removeAttachment(attachmentId: string) {
-  const removedAttachment = attachments.find(
-    (attachment) => attachment.id === attachmentId
-  );
+    const selectedFiles = Array.from(event.currentTarget.files ?? []);
 
-  if (removedAttachment) {
-    URL.revokeObjectURL(removedAttachment.url);
+    if (!selectedFiles.length) {
+      return;
+    }
 
-    objectUrlsRef.current = objectUrlsRef.current.filter(
-      (url) => url !== removedAttachment.url
-    );
-  }
+    const nextAttachments = [...attachments];
 
-  const nextAttachments = attachments.filter(
-    (attachment) => attachment.id !== attachmentId
-  );
-
-  setAttachments(nextAttachments);
-  syncAttachmentInput(nextAttachments);
-}
-
-function clearAttachments() {
-  attachments.forEach((attachment) => URL.revokeObjectURL(attachment.url));
-  objectUrlsRef.current = [];
-  setAttachments([]);
-
-  if (attachmentInputRef.current) {
-    attachmentInputRef.current.value = '';
-  }
-}
-
-      function getScheduledForIso() {
-        if (fulfillmentTiming !== 'SCHEDULED') {
-          return '';
-        }
-
-        if (!scheduledDate || !scheduledTime) {
-          return null;
-        }
-
-        const date = new Date(`${scheduledDate}T${scheduledTime}:00`);
-
-        if (Number.isNaN(date.getTime())) {
-          return null;
-        }
-
-        return date.toISOString();
+    for (const file of selectedFiles) {
+      if (nextAttachments.length >= MAX_ATTACHMENTS) {
+        setLocalError(`You can upload up to ${MAX_ATTACHMENTS} images only.`);
+        break;
       }
 
- function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-  setLocalError(null);
+      const validationError = validateAttachmentFile(file);
 
-  if (!cart.length) {
-    event.preventDefault();
-    setLocalError('Please add at least one service request.');
-    return;
+      if (validationError) {
+        setLocalError(validationError);
+        continue;
+      }
+
+      const url = URL.createObjectURL(file);
+
+      objectUrlsRef.current.push(url);
+
+      nextAttachments.push({
+        id: createAttachmentId(file),
+        file,
+        url,
+      });
+    }
+
+    setAttachments(nextAttachments);
+    syncAttachmentInput(nextAttachments);
   }
 
-  const scheduledForIso = getScheduledForIso();
+  function removeAttachment(attachmentId: string) {
+    const removedAttachment = attachments.find(
+      (attachment) => attachment.id === attachmentId
+    );
 
-  if (fulfillmentTiming === 'SCHEDULED') {
-    if (!scheduledForIso) {
+    if (removedAttachment) {
+      URL.revokeObjectURL(removedAttachment.url);
+
+      objectUrlsRef.current = objectUrlsRef.current.filter(
+        (url) => url !== removedAttachment.url
+      );
+    }
+
+    const nextAttachments = attachments.filter(
+      (attachment) => attachment.id !== attachmentId
+    );
+
+    setAttachments(nextAttachments);
+    syncAttachmentInput(nextAttachments);
+  }
+
+  function clearAttachments() {
+    attachments.forEach((attachment) => URL.revokeObjectURL(attachment.url));
+    objectUrlsRef.current = [];
+    setAttachments([]);
+
+    if (attachmentInputRef.current) {
+      attachmentInputRef.current.value = '';
+    }
+  }
+
+  function getScheduledForIso() {
+    if (fulfillmentTiming !== 'SCHEDULED') {
+      return '';
+    }
+
+    if (!scheduledDate || !scheduledTime) {
+      return null;
+    }
+
+    const date = new Date(`${scheduledDate}T${scheduledTime}:00`);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toISOString();
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    setLocalError(null);
+
+    if (!cart.length) {
       event.preventDefault();
-      setLocalError('Please select a valid scheduled date and time.');
+      setLocalError('Please add at least one service request.');
       return;
     }
 
-    if (new Date(scheduledForIso).getTime() <= Date.now() + 60_000) {
+    const scheduledForIso = getScheduledForIso();
+
+    if (fulfillmentTiming === 'SCHEDULED') {
+      if (!scheduledForIso) {
+        event.preventDefault();
+        setLocalError('Please select a valid scheduled date and time.');
+        return;
+      }
+
+      if (new Date(scheduledForIso).getTime() <= Date.now() + 60_000) {
+        event.preventDefault();
+        setLocalError('Scheduled service time must be in the future.');
+        return;
+      }
+    }
+
+    if (hasFixedPriceItem && !chargeConsent) {
       event.preventDefault();
-      setLocalError('Scheduled service time must be in the future.');
+      setLocalError('Please confirm the room add-on charge before submitting.');
       return;
     }
   }
-
-  if (hasFixedPriceItem && !chargeConsent) {
-    event.preventDefault();
-    setLocalError('Please confirm the room add-on charge before submitting.');
-    return;
-  }
-}
 
   if (screen === 'cart') {
     return (
-      <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#f8f3ec] px-5 pb-28 pt-2 text-ink">
+      <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#050505] px-5 pb-28 pt-2 text-white">
         <div className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">
           <button
             type="button"
             onClick={() => setScreen('services')}
-            className="grid size-10 place-items-center rounded-full hover:bg-black/5"
+            className="grid size-11 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back to services"
           >
-            <ArrowLeft className="size-5" />
+            <ArrowLeft className="size-6" />
           </button>
 
           <div className="text-center">
-            <h2 className="font-black">Selected Requests</h2>
-            <p className="text-xs text-neutral-500">
+            <h2 className="font-serif text-xl font-normal tracking-wide">Selected Requests</h2>
+            <p className="mt-0.5 text-xs font-medium text-white/50">
               Review services before submitting
             </p>
           </div>
@@ -587,24 +584,24 @@ function clearAttachments() {
         </div>
 
         {cart.length === 0 ? (
-          <div className="grid min-h-[65vh] place-items-center rounded-[2rem] bg-white p-6 text-center shadow-soft">
+          <div className="grid min-h-[65vh] place-items-center rounded-[2.4rem] border border-white/10 bg-white/[0.03] p-6 text-center shadow-sm backdrop-blur-md">
             <div>
-              <div className="mx-auto grid size-16 place-items-center rounded-full bg-neutral-100">
-                <ShoppingBag className="size-7" />
+              <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-white/5 text-white/40">
+                <ShoppingBag className="size-8" strokeWidth={1.5} />
               </div>
 
-              <h3 className="mt-4 text-xl font-black">No requests selected</h3>
-              <p className="mt-1 text-sm text-neutral-500">
+              <h3 className="mt-6 font-serif text-2xl font-light tracking-wide">No requests selected</h3>
+              <p className="mt-2 text-[15px] font-medium text-white/50">
                 Add service requests first.
               </p>
 
-              <Button
+              <button
                 type="button"
                 onClick={() => setScreen('services')}
-                className="mt-5"
+                className="mt-8 rounded-[1.25rem] bg-gold px-6 py-3.5 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
               >
                 Back to Services
-              </Button>
+              </button>
             </div>
           </div>
         ) : (
@@ -626,10 +623,10 @@ function clearAttachments() {
                 <input type="hidden" name="fulfillmentTiming" value={fulfillmentTiming} />
                 <input type="hidden" name="scheduledFor" value={getScheduledForIso() || ''} />
                 <input type="hidden" name="scheduledNote" value={scheduledNote} />
-                              </div>
+              </div>
             ))}
 
-            <div className="rounded-[2rem] bg-white p-4 shadow-soft">
+            <div className="rounded-[2.4rem] border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md">
               <div className="space-y-4">
                 {selectedServices.map(({ service, quantity }) => {
                   const Icon = getServiceIcon(service);
@@ -637,20 +634,20 @@ function clearAttachments() {
                   return (
                     <div
                       key={service.code}
-                      className="grid grid-cols-[64px_1fr_36px] gap-3 border-b border-neutral-100 pb-4 last:border-b-0"
+                      className="grid grid-cols-[64px_1fr_36px] gap-4 border-b border-white/10 pb-5 last:border-b-0 last:pb-0"
                     >
-                      <div className="grid size-16 place-items-center rounded-2xl bg-neutral-100 text-neutral-700">
+                      <div className="grid size-16 place-items-center rounded-[1.25rem] bg-white/5 text-white/70">
                         <Icon className="size-7" />
                       </div>
 
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-black leading-tight">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h3 className="font-serif text-[17px] font-medium tracking-wide text-white text-balance">
                             {service.name}
                           </h3>
 
                           <span
-                            className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${
                               getBillingBadge(service).className
                             }`}
                           >
@@ -658,29 +655,29 @@ function clearAttachments() {
                           </span>
                         </div>
 
-                        <p className="mt-1 text-sm font-bold text-neutral-700">
+                        <p className="mt-1 text-sm font-medium text-gold/90">
                           {getServicePriceText(service)}
                         </p>
 
                         {service.description ? (
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
+                          <p className="mt-1.5 text-[12px] leading-relaxed text-white/60 text-balance">
                             {service.description}
                           </p>
                         ) : null}
 
-                        <div className="mt-3 inline-flex items-center gap-3 rounded-full bg-neutral-50 px-2 py-1">
+                        <div className="mt-4 flex items-center gap-3 w-fit rounded-full border border-white/10 bg-black/40 px-2 py-1">
                           <button
                             type="button"
                             onClick={() =>
                               updateQuantity(service.code, quantity - 1)
                             }
-                            className="grid size-8 place-items-center rounded-full hover:bg-white active:scale-95"
+                            className="grid size-8 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white active:scale-95"
                             aria-label={`Decrease ${service.name}`}
                           >
-                            <Minus className="size-3" />
+                            <Minus className="size-3.5" />
                           </button>
 
-                          <span className="min-w-4 text-center text-sm font-black">
+                          <span className="min-w-[1.25rem] text-center text-[15px] font-semibold text-white">
                             {quantity}
                           </span>
 
@@ -689,10 +686,10 @@ function clearAttachments() {
                             onClick={() =>
                               updateQuantity(service.code, quantity + 1)
                             }
-                            className="grid size-8 place-items-center rounded-full hover:bg-white active:scale-95"
+                            className="grid size-8 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white active:scale-95"
                             aria-label={`Increase ${service.name}`}
                           >
-                            <Plus className="size-3" />
+                            <Plus className="size-3.5" />
                           </button>
                         </div>
                       </div>
@@ -700,10 +697,10 @@ function clearAttachments() {
                       <button
                         type="button"
                         onClick={() => updateQuantity(service.code, 0)}
-                        className="grid size-10 place-items-center rounded-full text-neutral-400 hover:bg-neutral-100"
+                        className="grid size-10 shrink-0 place-items-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white"
                         aria-label={`Remove ${service.name}`}
                       >
-                        <X className="size-4" />
+                        <X className="size-5" />
                       </button>
                     </div>
                   );
@@ -711,12 +708,12 @@ function clearAttachments() {
               </div>
             </div>
 
-            <div className="mt-5 rounded-[2rem] bg-white p-4 shadow-soft">
-              <h3 className="mb-3 font-black">Request Details</h3>
+            <div className="mt-5 rounded-[2.4rem] border border-white/10 bg-white/[0.04] p-6 shadow-sm backdrop-blur-md">
+              <h3 className="mb-5 font-serif text-xl font-normal tracking-wide text-white">Request Details</h3>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-gold/80">
                     Requested By
                   </label>
 
@@ -725,9 +722,10 @@ function clearAttachments() {
                     placeholder="Guest name"
                     value={guestName}
                     onChange={(event) => setGuestName(event.target.value)}
+                    className="h-14 rounded-[1.25rem] border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                   />
 
-                  <p className="mt-1 text-xs font-semibold text-neutral-400">
+                  <p className="mt-2 text-xs font-medium text-white/50">
                     Auto-filled from the current stay. You may edit this if another guest is making the request.
                   </p>
                 </div>
@@ -737,10 +735,11 @@ function clearAttachments() {
                   placeholder="Special instructions / notes"
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
+                  className="rounded-[1.25rem] border-white/10 bg-black/40 p-5 text-[15px] font-medium text-white placeholder:text-white/40 transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                 />
 
                 <div>
-                  <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                  <label className="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-gold/80">
                     Request Time
                   </label>
 
@@ -749,130 +748,132 @@ function clearAttachments() {
                     onChange={(event) =>
                       setFulfillmentTiming(event.target.value as FulfillmentTimingValue)
                     }
-                    className="h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+                    className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] appearance-none"
                   >
-                    <option value="ASAP">Now / Send request immediately</option>
-                    <option value="SCHEDULED">Schedule service for later</option>
+                    <option value="ASAP" className="bg-[#111] text-white">Now / Send request immediately</option>
+                    <option value="SCHEDULED" className="bg-[#111] text-white">Schedule service for later</option>
                   </select>
                 </div>
 
                 {fulfillmentTiming === 'SCHEDULED' ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+                  <div className="rounded-[1.5rem] border border-gold/20 bg-gold/5 p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
                       Scheduled Service Request
                     </p>
 
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <Input
-                            type="date"
-                            value={scheduledDate}
-                            onChange={(event) => setScheduledDate(event?.currentTarget?.value ?? '')}
-                          />
+                        type="date"
+                        value={scheduledDate}
+                        onChange={(event) => setScheduledDate(event?.currentTarget?.value ?? '')}
+                        className="h-14 rounded-[1.25rem] border-gold/20 bg-black/40 px-5 text-[15px] font-medium text-white transition focus:border-gold/50 focus:bg-black/60 [color-scheme:dark]"
+                      />
 
-                          <Input
-                            type="time"
-                            value={scheduledTime}
-                            onChange={(event) => setScheduledTime(event?.currentTarget?.value ?? '')}
-                          />
+                      <Input
+                        type="time"
+                        value={scheduledTime}
+                        onChange={(event) => setScheduledTime(event?.currentTarget?.value ?? '')}
+                        className="h-14 rounded-[1.25rem] border-gold/20 bg-black/40 px-5 text-[15px] font-medium text-white transition focus:border-gold/50 focus:bg-black/60 [color-scheme:dark]"
+                      />
                     </div>
 
                     <Textarea
-                      className="mt-3"
+                      className="mt-3 rounded-[1.25rem] border-gold/20 bg-black/40 p-5 text-[15px] font-medium text-white placeholder:text-white/40 transition focus:border-gold/50 focus:bg-black/60"
                       placeholder="Optional schedule note, e.g. Please clean the room after breakfast"
                       value={scheduledNote}
                       onChange={(event) => setScheduledNote(event?.currentTarget?.value ?? '')}
                     />
 
-                    <p className="mt-2 text-xs font-semibold leading-5 text-amber-800">
+                    <p className="mt-3 text-[13px] font-medium leading-relaxed text-gold/80">
                       This request will be saved now, then released to staff before the
                       scheduled time.
                     </p>
                   </div>
                 ) : null}
 
-                <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-4">
-  <div className="flex items-start gap-3">
-    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-neutral-700 shadow-sm">
-      <ImagePlus className="size-5" />
-    </span>
+                <div className="rounded-[1.5rem] border border-dashed border-white/20 bg-black/20 p-5">
+                  <div className="flex items-start gap-4">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-[1rem] bg-white/10 text-white shadow-sm">
+                      <ImagePlus className="size-5" />
+                    </span>
 
-    <div className="min-w-0 flex-1">
-      <p className="text-sm font-black text-neutral-900">
-        Add Photos
-      </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-serif text-[17px] font-medium tracking-wide text-white">
+                        Add Photos
+                      </p>
 
-      <p className="mt-1 text-xs font-semibold leading-5 text-neutral-500">
-        Upload photos for maintenance issues, damages, leaks, missing items,
-        or areas needing attention. Maximum {MAX_ATTACHMENTS} images, 5MB each.
-      </p>
-    </div>
-  </div>
+                      <p className="mt-1.5 text-[13px] font-medium leading-relaxed text-white/60">
+                        Upload photos for maintenance issues, damages, leaks, missing items,
+                        or areas needing attention. Maximum {MAX_ATTACHMENTS} images, 5MB each.
+                      </p>
+                    </div>
+                  </div>
 
-  <input
-    ref={attachmentInputRef}
-    name="attachments"
-    type="file"
-    accept="image/jpeg,image/png,image/webp"
-    multiple
-    onChange={handleAttachmentChange}
-    className="hidden"
-  />
+                  <input
+                    ref={attachmentInputRef}
+                    name="attachments"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={handleAttachmentChange}
+                    className="hidden"
+                  />
 
-  <button
-    type="button"
-    onClick={() => attachmentInputRef.current?.click()}
-    className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-black text-white"
-  >
-    <Camera className="size-4" />
-    Take / Upload Photos
-  </button>
+                  <button
+                    type="button"
+                    onClick={() => attachmentInputRef.current?.click()}
+                    className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-[1.25rem] bg-gold px-5 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                  >
+                    <Camera className="size-4.5" />
+                    Take / Upload Photos
+                  </button>
 
-  {attachments.length > 0 ? (
-    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {attachments.map((attachment) => (
-        <div
-          key={attachment.id}
-          className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
-        >
-          <div className="relative aspect-square bg-neutral-100">
-            <img
-              src={attachment.url}
-              alt={attachment.file.name}
-              className="size-full object-cover"
-            />
+                  {attachments.length > 0 ? (
+                    <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {attachments.map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/5"
+                        >
+                          <div className="relative aspect-square bg-black/40">
+                            <img
+                              src={attachment.url}
+                              alt={attachment.file.name}
+                              className="size-full object-cover"
+                            />
 
-            <button
-              type="button"
-              onClick={() => removeAttachment(attachment.id)}
-              className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/70 text-white"
-              aria-label={`Remove ${attachment.file.name}`}
-            >
-              <X className="size-4" />
-            </button>
-          </div>
+                            <button
+                              type="button"
+                              onClick={() => removeAttachment(attachment.id)}
+                              className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/70 text-white transition hover:bg-black/90 active:scale-95"
+                              aria-label={`Remove ${attachment.file.name}`}
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </div>
 
-          <div className="p-2">
-            <p className="truncate text-xs font-black text-neutral-800">
-              {attachment.file.name}
-            </p>
+                          <div className="p-3">
+                            <p className="truncate text-[13px] font-medium text-white">
+                              {attachment.file.name}
+                            </p>
 
-            <p className="mt-0.5 text-[11px] font-bold text-neutral-400">
-              {formatFileSize(attachment.file.size)}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white p-3 text-xs font-bold text-neutral-500">
-      <FileImage className="size-4 text-neutral-400" />
-      No photos attached yet.
-    </div>
-  )}
-</div>
+                            <p className="mt-0.5 text-[11px] font-medium text-white/50">
+                              {formatFileSize(attachment.file.size)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-5 flex items-center gap-2.5 rounded-[1rem] bg-white/5 p-4 text-[13px] font-medium text-white/50">
+                      <FileImage className="size-4.5 text-white/40" />
+                      No photos attached yet.
+                    </div>
+                  )}
+                </div>
 
                 {hasFixedPriceItem ? (
-                  <label className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
+                  <label className="flex items-start gap-3 rounded-[1.5rem] bg-gold/10 p-5 text-[15px] font-medium text-gold cursor-pointer transition hover:bg-gold/15">
                     <input
                       name="chargeConsent"
                       value="true"
@@ -881,19 +882,19 @@ function clearAttachments() {
                       onChange={(event) =>
                         setChargeConsent(event.target.checked)
                       }
-                      className="mt-1 size-4"
+                      className="mt-1 size-5 rounded border-gold/40 bg-black/40 accent-gold"
                     />
 
-                    <span>
+                    <span className="leading-relaxed">
                       I confirm the selected paid room add-ons may be charged to
                       this room. Total paid add-ons:{' '}
-                      <b>{money(fixedPriceTotal)}</b>.
+                      <span className="font-semibold text-white">{money(fixedPriceTotal)}</span>.
                     </span>
                   </label>
                 ) : null}
 
                 {hasConfirmationItem ? (
-                  <div className="rounded-2xl bg-gold/10 p-4 text-sm font-bold text-amber-800">
+                  <div className="rounded-[1.5rem] bg-gold/10 p-5 text-[15px] font-medium leading-relaxed text-gold">
                     Some selected services require staff confirmation before
                     pricing or completion.
                   </div>
@@ -901,28 +902,28 @@ function clearAttachments() {
               </div>
             </div>
 
-            <div className="mt-5 rounded-[2rem] bg-white p-4 shadow-soft">
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Selected requests</span>
-                  <b>{selectedCount}</b>
+            <div className="mt-5 rounded-[2.4rem] border border-white/10 bg-white/[0.04] p-6 shadow-sm backdrop-blur-md">
+              <div className="space-y-4 text-[15px]">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-white/60">Selected requests</span>
+                  <span className="font-serif font-medium tracking-wide text-white">{selectedCount}</span>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Paid add-ons</span>
-                  <b>{money(fixedPriceTotal)}</b>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-white/60">Paid add-ons</span>
+                  <span className="font-serif font-medium tracking-wide text-gold">{money(fixedPriceTotal)}</span>
                 </div>
 
-                <div className="border-t border-neutral-100 pt-4 text-base">
-                  <div className="flex justify-between">
-                    <span className="font-black">Room / Location</span>
-                    <span className="font-black">{roomLabel}</span>
+                <div className="border-t border-white/10 pt-5 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-serif font-medium tracking-wide text-white/80">Room / Location</span>
+                    <span className="font-serif font-medium tracking-wide text-white">{roomLabel}</span>
                   </div>
                 </div>
               </div>
 
               {visibleError ? (
-                <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">
+                <p className="mt-5 rounded-[1.25rem] bg-red-500/10 p-4 text-[13px] font-medium text-red-200">
                   {visibleError}
                 </p>
               ) : null}
@@ -938,9 +939,9 @@ function clearAttachments() {
   }
 
   return (
-    <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-black px-5 pb-28 pt-2 text-white">
+    <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#050505] px-5 pb-28 pt-2 text-white">
       {successMessage ? (
-        <div className="mb-4 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-200">
+        <div className="mb-5 rounded-[1.25rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-[15px] font-medium text-emerald-200">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
             <p>{successMessage}</p>
@@ -949,40 +950,40 @@ function clearAttachments() {
       ) : null}
 
       {visibleError ? (
-        <div className="mb-4 rounded-[1.5rem] border border-red-400/20 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+        <div className="mb-5 rounded-[1.25rem] border border-red-400/20 bg-red-500/10 p-4 text-[15px] font-medium text-red-200">
           {visibleError}
         </div>
       ) : null}
 
-      <div className="mb-4">
-          <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-sand">
-            Requested By
-          </label>
+      <div className="mb-6">
+        <label className="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-gold/80">
+          Requested By
+        </label>
 
-          <Input
-            placeholder="Guest name"
-            value={guestName}
-            onChange={(event) => setGuestName(event.target.value)}
-            className="h-14 rounded-2xl border-white/10 bg-white text-ink"
-          />
+        <Input
+          placeholder="Guest name"
+          value={guestName}
+          onChange={(event) => setGuestName(event.target.value)}
+          className="h-14 rounded-[1.25rem] border-white/10 bg-white/5 text-[15px] font-medium text-white transition focus:border-gold/50 focus:bg-white/10"
+        />
 
-          <p className="mt-1 text-xs font-semibold text-white/45">
-            Auto-filled from your current stay. You may edit this name before submitting.
-          </p>
-        </div>
+        <p className="mt-2 text-xs font-medium text-white/50">
+          Auto-filled from your current stay. You may edit this name before submitting.
+        </p>
+      </div>
 
-      <div className="mb-4 flex h-12 items-center gap-3 rounded-2xl bg-white/10 px-4">
-        <Search className="size-5 text-white/40" />
+      <div className="mb-6 flex h-14 items-center gap-3 rounded-[1.25rem] border border-white/10 bg-white/5 px-5 transition focus-within:border-gold/50 focus-within:bg-white/10">
+        <Search className="size-5 text-gold" />
 
         <input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search services..."
-          className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/40"
+          className="w-full bg-transparent text-[15px] font-medium text-white outline-none placeholder:text-white/40"
         />
       </div>
 
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {categories.map((category) => {
           const active = category === activeCategory;
 
@@ -992,8 +993,8 @@ function clearAttachments() {
               type="button"
               onClick={() => setActiveCategory(category)}
               className={cn(
-                'shrink-0 rounded-full px-5 py-3 text-sm font-black',
-                active ? 'bg-sand text-ink' : 'bg-white/5 text-white'
+                'shrink-0 rounded-[1.25rem] px-5 py-3 text-[13px] font-semibold tracking-wide transition active:scale-[0.98]',
+                active ? 'bg-gold text-black shadow-[0_4px_14px_rgba(214,167,56,0.2)]' : 'bg-white/5 text-white/80 hover:bg-white/10'
               )}
             >
               {category}
@@ -1002,7 +1003,7 @@ function clearAttachments() {
         })}
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {categories
           .filter((category) => category !== 'All')
           .filter(
@@ -1020,7 +1021,7 @@ function clearAttachments() {
 
             return (
               <section key={category}>
-                <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-sand">
+                <h3 className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-gold">
                   {category}
                 </h3>
 
@@ -1036,41 +1037,44 @@ function clearAttachments() {
                         type="button"
                         onClick={() => addService(service.code)}
                         className={cn(
-                          'relative min-h-36 rounded-[1.35rem] border p-4 text-left transition active:scale-[0.98]',
+                          'relative flex min-h-[160px] flex-col h-full rounded-[1.5rem] border p-4 text-left transition active:scale-[0.98]',
                           quantity > 0
-                            ? 'border-gold bg-gold/10'
-                            : 'border-white/10 bg-white/5 hover:bg-white/10'
+                            ? 'border-gold/50 bg-gold/10 shadow-[0_8px_20px_rgba(214,167,56,0.1)]'
+                            : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
                         )}
                       >
                         <span
-                          className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-black ${badge.className}`}
+                          className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest ${badge.className}`}
                         >
                           {badge.label}
                         </span>
 
                         {quantity > 0 ? (
-                          <span className="absolute left-3 top-3 grid size-6 place-items-center rounded-full bg-gold text-xs font-black text-black">
+                          <span className="absolute left-3 top-3 grid size-7 place-items-center rounded-full bg-gold text-[11px] font-bold text-black shadow-sm">
                             {quantity}
                           </span>
                         ) : null}
 
-                        <div className="mt-7 grid place-items-center text-white/85">
-                          <Icon className="size-8" />
+                        <div className="mt-8 grid place-items-center text-white/80">
+                          <Icon className="size-8" strokeWidth={1.5} />
                         </div>
 
-                        <p className="mt-3 text-center text-sm font-black leading-tight">
+                        <p className="mt-4 w-full text-center font-serif text-[15px] sm:text-base font-medium tracking-wide text-white leading-tight text-balance">
                           {service.name}
                         </p>
 
                         {service.description ? (
-                          <p className="mt-2 line-clamp-2 text-center text-[11px] leading-4 text-white/40">
+                          <p className="mt-2 w-full text-center text-[11px] sm:text-xs font-medium leading-relaxed text-white/60 text-balance">
                             {service.description}
                           </p>
                         ) : null}
 
-                        <div className="mt-3 flex justify-center">
-                          <span className="grid size-9 place-items-center rounded-full bg-white text-black">
-                            <Plus className="size-4" />
+                        <div className="mt-auto w-full pt-4 flex justify-center">
+                          <span className={cn(
+                            "grid size-9 place-items-center rounded-full transition",
+                            quantity > 0 ? "bg-gold text-black" : "bg-white/10 text-white"
+                          )}>
+                            <Plus className="size-4" strokeWidth={2} />
                           </span>
                         </div>
                       </button>
@@ -1082,10 +1086,10 @@ function clearAttachments() {
           })}
 
         {!filteredServices.length ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 text-center">
-            <ConciergeBell className="mx-auto size-8 text-white/40" />
-            <h3 className="mt-3 font-black">No services found</h3>
-            <p className="mt-1 text-sm text-white/45">
+          <div className="rounded-[2.4rem] border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-sm">
+            <ConciergeBell className="mx-auto size-10 text-white/30" strokeWidth={1.5} />
+            <h3 className="mt-5 font-serif text-xl font-normal tracking-wide text-white">No services found</h3>
+            <p className="mt-2 text-[15px] font-medium text-white/50">
               Try another category or search term.
             </p>
           </div>
@@ -1096,10 +1100,10 @@ function clearAttachments() {
         <button
           type="button"
           onClick={() => setScreen('cart')}
-          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between rounded-2xl bg-gold px-5 py-4 font-black text-ink shadow-xl"
+          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between rounded-[1.5rem] bg-gold px-6 py-4 font-semibold tracking-wide text-black shadow-[0_16px_40px_rgba(214,167,56,0.3)] transition hover:brightness-110 active:scale-[0.98]"
         >
-          <span>View Requests ({selectedCount})</span>
-          <span>
+          <span className="text-[15px]">View Requests ({selectedCount})</span>
+          <span className="font-serif text-lg font-medium">
             {fixedPriceTotal > 0 ? money(fixedPriceTotal) : 'Review'}
           </span>
         </button>
@@ -1109,7 +1113,7 @@ function clearAttachments() {
         <button
           type="button"
           onClick={clearCart}
-          className="fixed bottom-44 right-5 z-30 grid size-11 place-items-center rounded-full bg-red-600 text-white shadow-xl"
+          className="fixed bottom-44 right-5 z-30 grid size-12 place-items-center rounded-full bg-red-600/90 text-white shadow-[0_8px_20px_rgba(220,38,38,0.3)] backdrop-blur transition hover:bg-red-500 active:scale-95"
           aria-label="Clear selected requests"
         >
           <Trash2 className="size-5" />

@@ -142,10 +142,7 @@ function getGuestNameSnapshot({
 }
 
 export async function createGuestOrder(input: unknown) {
-
   const parsed = createGuestOrderSchema.parse(input);
-  
-
 
   const tag = await db.nfcTag.findUnique({
     where: {
@@ -157,12 +154,12 @@ export async function createGuestOrder(input: unknown) {
       roomId: true,
       locationId: true,
       status: true,
-     hotel: {
-  select: {
-    name: true,
-    settings: true,
-  },
-},
+      hotel: {
+        select: {
+          name: true,
+          settings: true,
+        },
+      },
     }
   });
 
@@ -172,20 +169,20 @@ export async function createGuestOrder(input: unknown) {
 
   const guestIdentity = await getResolvedGuestPortalIdentity(parsed.tagCode);
 
-if (!guestIdentity?.session) {
-  throw new Error('Guest session expired. Please tap the NFC card again.');
-}
+  if (!guestIdentity?.session) {
+    throw new Error('Guest session expired. Please tap the NFC card again.');
+  }
 
-const guestSession = guestIdentity.session;
+  const guestSession = guestIdentity.session;
 
-if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
-  throw new Error('Invalid guest session. Please tap the NFC card again.');
-}
+  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+    throw new Error('Invalid guest session. Please tap the NFC card again.');
+  }
 
-const orderGuestName = getGuestNameSnapshot({
-  stayGuestName: guestIdentity.guestName,
-  submittedGuestName: parsed.guestName,
-});
+  const orderGuestName = getGuestNameSnapshot({
+    stayGuestName: guestIdentity.guestName,
+    submittedGuestName: parsed.guestName,
+  });
 
   const uniqueProductIds = Array.from(
     new Set(parsed.items.map((item) => item.productId))
@@ -290,7 +287,6 @@ const orderGuestName = getGuestNameSnapshot({
 
   const subtotal = parsed.items.reduce((sum, item) => {
     const product = productMap.get(item.productId)!;
-
     return sum + product.priceCents * item.quantity;
   }, 0);
 
@@ -304,11 +300,11 @@ const orderGuestName = getGuestNameSnapshot({
   const total = subtotal + serviceCharge + tax;
 
   const schedule = buildScheduledFulfillment({
-  fulfillmentTiming: parseFulfillmentTiming(parsed.fulfillmentTiming),
-  scheduledFor: parseScheduledDate(parsed.scheduledFor),
-  scheduledNote: parsed.scheduledNote,
-  releaseBufferMinutes: 20,
-});
+    fulfillmentTiming: parseFulfillmentTiming(parsed.fulfillmentTiming),
+    scheduledFor: parseScheduledDate(parsed.scheduledFor),
+    scheduledNote: parsed.scheduledNote,
+    releaseBufferMinutes: 20,
+  });
 
   const order = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     const stockByProductId = new Map<
@@ -354,23 +350,22 @@ const orderGuestName = getGuestNameSnapshot({
       stockByProductId.set(requirement.productId, stock);
     }
 
-     const orderCode = await generateSeriesCode(tx, {
+    const orderCode = await generateSeriesCode(tx, {
       hotelName: tag.hotel.name,
       type: SeriesCodeType.FOOD,
     });
 
     const createdOrder = await tx.order.create({
-
-        data: {
-          hotelId: tag.hotelId,
-          roomId: tag.roomId,
-          locationId: tag.locationId,
-          tagId: tag.id,
-          guestSessionId: guestSession.id,
-          guestStayId: guestIdentity.guestStayId,
-          guestMemberId: guestIdentity.guestMemberId,
-          orderCode,
-          guestName: orderGuestName,
+      data: {
+        hotelId: tag.hotelId,
+        roomId: tag.roomId,
+        locationId: tag.locationId,
+        tagId: tag.id,
+        guestSessionId: guestSession.id,
+        guestStayId: guestIdentity.guestStayId,
+        guestMemberId: guestIdentity.guestMemberId,
+        orderCode,
+        guestName: orderGuestName,
         notes: cleanText(parsed.notes, 1000),
         paymentMethod: parsed.paymentMethod as PaymentMethod,
 
@@ -521,14 +516,19 @@ const orderGuestName = getGuestNameSnapshot({
     return createdOrder;
   });
 
-  await logActivity({
-    hotelId: tag.hotelId,
-    actor: orderGuestName || 'Guest',
-    action: 'CREATE',
-    entity: 'Order',
-    entityId: order.id,
-    message: `New guest order ${order.orderCode}`,
-  });
+  // Execute non-critical side effects in try/catch to prevent ghost orders throwing 500s
+  try {
+    await logActivity({
+      hotelId: tag.hotelId,
+      actor: orderGuestName || 'Guest',
+      action: 'CREATE',
+      entity: 'Order',
+      entityId: order.id,
+      message: `New guest order ${order.orderCode}`,
+    });
+  } catch (error) {
+    console.error('Failed to log order activity', error);
+  }
 
   await Promise.allSettled([
     createDashboardNotification({
@@ -556,19 +556,27 @@ const orderGuestName = getGuestNameSnapshot({
   ]);
 
   if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
-  await triggerKitchenOrderCreated({
-    hotelId: tag.hotelId,
-    orderCode: order.orderCode,
-    status: order.status,
-    source: 'GUEST_PORTAL',
-  });
-}
+    try {
+      await triggerKitchenOrderCreated({
+        hotelId: tag.hotelId,
+        orderCode: order.orderCode,
+        status: order.status,
+        source: 'GUEST_PORTAL',
+      });
+    } catch (error) {
+      console.error('Failed to trigger kitchen pusher event', error);
+    }
+  }
 
-  await triggerInventoryUpdated({
-    hotelId: tag.hotelId,
-    productIds: Array.from(stockRequirements.keys()),
-    source: 'GUEST_PORTAL',
-  });
+  try {
+    await triggerInventoryUpdated({
+      hotelId: tag.hotelId,
+      productIds: Array.from(stockRequirements.keys()),
+      source: 'GUEST_PORTAL',
+    });
+  } catch (error) {
+    console.error('Failed to trigger inventory pusher event', error);
+  }
 
   return {
     ok: true,
@@ -577,6 +585,7 @@ const orderGuestName = getGuestNameSnapshot({
 }
 
 function parseQuantity(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string') return null;
   const quantity = Number(value);
 
   if (!Number.isInteger(quantity) || quantity < 1) {
@@ -612,45 +621,46 @@ function redirectToService(
 }
 
 export async function createServiceRequestAction(formData: FormData) {
-  const tagCode = cleanText(formData.get('tagCode'), 160) || '';
-  const guestName = cleanText(formData.get('guestName'), 100);
-  const notes = cleanText(formData.get('notes'), 1000);
+  const tagCode = typeof formData.get('tagCode') === 'string' ? cleanText(formData.get('tagCode') as string, 160) || '' : '';
+  const guestName = typeof formData.get('guestName') === 'string' ? cleanText(formData.get('guestName') as string, 100) : '';
+  const notes = typeof formData.get('notes') === 'string' ? cleanText(formData.get('notes') as string, 1000) : '';
   const chargeConsent = formData.get('chargeConsent') === 'true';
 
   let schedule;
 
-    try {
-      schedule = buildScheduledFulfillment({
-        fulfillmentTiming: parseFulfillmentTiming(formData.get('fulfillmentTiming')),
-        scheduledFor: parseScheduledDate(formData.get('scheduledFor')),
-        scheduledNote: cleanText(formData.get('scheduledNote'), 300),
-        releaseBufferMinutes: 15,
-      });
-    } catch {
-      redirectToService(tagCode, {
-        error: 'invalid_schedule',
-      });
-    }
+  try {
+    schedule = buildScheduledFulfillment({
+      fulfillmentTiming: parseFulfillmentTiming(formData.get('fulfillmentTiming') as string),
+      scheduledFor: parseScheduledDate(formData.get('scheduledFor') as string),
+      scheduledNote: typeof formData.get('scheduledNote') === 'string' ? cleanText(formData.get('scheduledNote') as string, 300) : '',
+      releaseBufferMinutes: 15,
+    });
+  } catch {
+    redirectToService(tagCode, {
+      error: 'invalid_schedule',
+    });
+  }
 
   const serviceCodes = Array.from(
     new Set(
       formData
         .getAll('serviceCodes')
-        .map((value) => cleanText(value, 80))
+        .map((value) => typeof value === 'string' ? cleanText(value, 80) : '')
         .filter(Boolean)
     )
   ) as string[];
-      const attachmentFiles = getServiceRequestImageFiles(formData, 'attachments');
 
-    try {
-      for (const file of attachmentFiles) {
-        validateServiceRequestImageFile(file);
-      }
-    } catch {
-      redirectToService(tagCode, {
-        error: 'invalid_attachment',
-      });
+  const attachmentFiles = getServiceRequestImageFiles(formData, 'attachments');
+
+  try {
+    for (const file of attachmentFiles) {
+      validateServiceRequestImageFile(file);
     }
+  } catch {
+    redirectToService(tagCode, {
+      error: 'invalid_attachment',
+    });
+  }
 
   if (!tagCode) {
     redirect('/t');
@@ -663,27 +673,26 @@ export async function createServiceRequestAction(formData: FormData) {
   }
 
   const tag = await db.nfcTag.findUnique({
-  where: {
-    code: tagCode,
-  },
-  select: {
-    id: true,
-    hotelId: true,
-    roomId: true,
-    locationId: true,
-    status: true,
-    hotel: {
-      select: {
-        name: true,
+    where: {
+      code: tagCode,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      roomId: true,
+      locationId: true,
+      status: true,
+      hotel: {
+        select: {
+          name: true,
+        },
       },
     },
-  },
-});
+  });
 
   if (!tag) {
-    redirectToService(tagCode, {
-      error: 'invalid_tag',
-    });
+    // BUG FIX: Prevent routing loop/immediate 404 for entirely invalid tags
+    redirect('/nfc-access-denied?reason=invalid-nfc-access');
   }
 
   if (tag.status !== 'ACTIVE') {
@@ -692,36 +701,36 @@ export async function createServiceRequestAction(formData: FormData) {
     });
   }
 
-          let guestIdentity: Awaited<
-          ReturnType<typeof getResolvedGuestPortalIdentity>
-        > = null;
+  let guestIdentity: Awaited<
+    ReturnType<typeof getResolvedGuestPortalIdentity>
+  > | null = null;
 
-        try {
-          guestIdentity = await getResolvedGuestPortalIdentity(tagCode);
-        } catch {
-          redirectToService(tagCode, {
-            error: 'invalid_session',
-          });
-        }
+  try {
+    guestIdentity = await getResolvedGuestPortalIdentity(tagCode);
+  } catch {
+    redirectToService(tagCode, {
+      error: 'invalid_session',
+    });
+  }
 
-        if (!guestIdentity?.session) {
-          redirectToService(tagCode, {
-            error: 'invalid_session',
-          });
-        }
+  if (!guestIdentity?.session) {
+    redirectToService(tagCode, {
+      error: 'invalid_session',
+    });
+  }
 
-        const guestSession = guestIdentity.session;
+  const guestSession = guestIdentity.session;
 
-        if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
-          redirectToService(tagCode, {
-            error: 'invalid_session',
-          });
-        }
+  if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
+    redirectToService(tagCode, {
+      error: 'invalid_session',
+    });
+  }
 
-        const serviceGuestName = getGuestNameSnapshot({
-          stayGuestName: guestIdentity.guestName,
-          submittedGuestName: guestName,
-        });
+  const serviceGuestName = getGuestNameSnapshot({
+    stayGuestName: guestIdentity.guestName,
+    submittedGuestName: guestName,
+  });
 
   const services = await db.serviceCatalogItem.findMany({
     where: {
@@ -880,7 +889,6 @@ export async function createServiceRequestAction(formData: FormData) {
         type: SeriesCodeType.SERVICE,
       });
 
-
       const requests: {
         id: string;
         requestCode: string;
@@ -894,8 +902,8 @@ export async function createServiceRequestAction(formData: FormData) {
             locationId: tag.locationId,
             tagId: tag.id,
             guestSessionId: guestSession.id,
-            guestStayId: guestIdentity.guestStayId,
-            guestMemberId: guestIdentity.guestMemberId,
+            guestStayId: guestIdentity!.guestStayId,
+            guestMemberId: guestIdentity!.guestMemberId,
             requestCode: groupedRequestCode,
             type: item.service.name,
             guestName: serviceGuestName || null,
@@ -1050,18 +1058,23 @@ export async function createServiceRequestAction(formData: FormData) {
       error: 'request_failed',
     });
   }
-  
+
+  // Wrapp non-critical side effects in try/catch to prevent ghost orders throwing 500
   if (attachmentFiles.length > 0 && createdRequests.length > 0) {
-  await saveServiceRequestImageFiles({
-    hotelId: tag.hotelId,
-    requestId: createdRequests[0].id,
-    requestCode: groupedRequestCode,
-    files: attachmentFiles,
-    attachmentType: ServiceRequestAttachmentType.GUEST_UPLOAD,
-    uploadedByGuest: true,
-    caption: notes || null,
-  });
-}
+    try {
+      await saveServiceRequestImageFiles({
+        hotelId: tag.hotelId,
+        requestId: createdRequests[0].id,
+        requestCode: groupedRequestCode,
+        files: attachmentFiles,
+        attachmentType: ServiceRequestAttachmentType.GUEST_UPLOAD,
+        uploadedByGuest: true,
+        caption: notes || null,
+      });
+    } catch (error) {
+      console.error('Failed to save service request attachments', error);
+    }
+  }
 
   await Promise.allSettled(
     createdRequests.map((request) =>
@@ -1099,25 +1112,29 @@ export async function createServiceRequestAction(formData: FormData) {
     }),
   ]);
 
- if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
-  await Promise.allSettled(
-    createdRequests.map((request) =>
-      triggerServiceRequestCreated({
-        hotelId: tag.hotelId,
-        requestId: request.id,
-        requestCode: request.requestCode,
-        status: ServiceRequestStatus.NEW,
-      })
-    )
-  );
-}
+  if (schedule.fulfillmentTiming === FulfillmentTiming.ASAP) {
+    await Promise.allSettled(
+      createdRequests.map((request) =>
+        triggerServiceRequestCreated({
+          hotelId: tag.hotelId,
+          requestId: request.id,
+          requestCode: request.requestCode,
+          status: ServiceRequestStatus.NEW,
+        })
+      )
+    );
+  }
 
   if (serviceStockRequirements.size > 0) {
-    await triggerInventoryUpdated({
-      hotelId: tag.hotelId,
-      productIds: Array.from(serviceStockRequirements.keys()),
-      source: 'GUEST_PORTAL',
-    });
+    try {
+      await triggerInventoryUpdated({
+        hotelId: tag.hotelId,
+        productIds: Array.from(serviceStockRequirements.keys()),
+        source: 'GUEST_PORTAL',
+      });
+    } catch (error) {
+      console.error('Failed to trigger inventory event', error);
+    }
   }
 
   const success =

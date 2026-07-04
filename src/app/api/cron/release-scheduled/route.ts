@@ -28,6 +28,20 @@ const releasableServiceStatuses = [
   ServiceRequestStatus.IN_PROGRESS,
 ] as const;
 
+type ReleaseFailure = {
+  id: string;
+  code: string;
+  error: string;
+};
+
+type ReleaseResult = {
+  scanned: number;
+  released: string[];
+  failed: ReleaseFailure[];
+  queryError?: string;
+  permissionError?: boolean;
+};
+
 function getRequestSecret(request: Request) {
   const authorization = request.headers.get('authorization') || '';
 
@@ -42,15 +56,64 @@ function isAuthorized(request: Request) {
   const expectedSecret = process.env.SCHEDULED_RELEASE_CRON_SECRET?.trim();
 
   /**
-   * Local/dev convenience:
-   * If no secret is configured, allow the route.
-   * In production, always set SCHEDULED_RELEASE_CRON_SECRET.
+   * Local/dev convenience only.
+   * In production, require SCHEDULED_RELEASE_CRON_SECRET so this endpoint
+   * cannot be triggered by any public client.
    */
   if (!expectedSecret) {
-    return true;
+    return process.env.NODE_ENV !== 'production';
   }
 
   return getRequestSecret(request) === expectedSecret;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return String(error || 'Unknown error');
+}
+
+function isDatabasePermissionError(error: unknown) {
+  const message = getErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes('command denied') ||
+    message.includes('select command denied') ||
+    message.includes('insert command denied') ||
+    message.includes('update command denied') ||
+    message.includes('delete command denied') ||
+    message.includes('mysqlerror { code: 1142') ||
+    message.includes('code: 1142')
+  );
+}
+
+async function safeRelease(
+  label: 'orders' | 'serviceRequests',
+  releaseFn: () => Promise<ReleaseResult>
+): Promise<ReleaseResult> {
+  try {
+    return await releaseFn();
+  } catch (error) {
+    const message = getErrorMessage(error);
+
+    console.error(`Scheduled release query failed for ${label}:`, error);
+
+    return {
+      scanned: 0,
+      released: [],
+      failed: [
+        {
+          id: label,
+          code: 'QUERY_FAILED',
+          error: message,
+        },
+      ],
+      queryError: message,
+      permissionError: isDatabasePermissionError(error),
+    };
+  }
 }
 
 function formatReleaseNote({
@@ -62,7 +125,8 @@ function formatReleaseNote({
   scheduledFor: Date | null;
   releaseAt: Date | null;
 }) {
-  const label = type === 'order' ? 'Scheduled food order' : 'Scheduled service request';
+  const label =
+    type === 'order' ? 'Scheduled food order' : 'Scheduled service request';
 
   return [
     `${label} released automatically.`,
@@ -73,7 +137,7 @@ function formatReleaseNote({
     .join('\n');
 }
 
-async function releaseScheduledOrders(now: Date) {
+async function releaseScheduledOrders(now: Date): Promise<ReleaseResult> {
   const dueOrders = await db.order.findMany({
     where: {
       fulfillmentTiming: FulfillmentTiming.SCHEDULED,
@@ -119,7 +183,7 @@ async function releaseScheduledOrders(now: Date) {
   });
 
   const released: string[] = [];
-  const failed: { id: string; code: string; error: string }[] = [];
+  const failed: ReleaseFailure[] = [];
 
   for (const order of dueOrders) {
     try {
@@ -154,10 +218,6 @@ async function releaseScheduledOrders(now: Date) {
         hotelId: releasedOrder.hotelId,
         orderCode: releasedOrder.orderCode,
         status: releasedOrder.status,
-        /**
-         * Keep this as GUEST_PORTAL to match your existing realtime source types.
-         * If your source type already supports SCHEDULED_RELEASE, you may change it later.
-         */
         source: 'GUEST_PORTAL',
       });
 
@@ -166,7 +226,7 @@ async function releaseScheduledOrders(now: Date) {
       failed.push({
         id: order.id,
         code: order.orderCode,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       });
     }
   }
@@ -178,7 +238,9 @@ async function releaseScheduledOrders(now: Date) {
   };
 }
 
-async function releaseScheduledServiceRequests(now: Date) {
+async function releaseScheduledServiceRequests(
+  now: Date
+): Promise<ReleaseResult> {
   const dueRequests = await db.serviceRequest.findMany({
     where: {
       fulfillmentTiming: FulfillmentTiming.SCHEDULED,
@@ -224,7 +286,7 @@ async function releaseScheduledServiceRequests(now: Date) {
   });
 
   const released: string[] = [];
-  const failed: { id: string; code: string; error: string }[] = [];
+  const failed: ReleaseFailure[] = [];
 
   for (const request of dueRequests) {
     try {
@@ -267,7 +329,7 @@ async function releaseScheduledServiceRequests(now: Date) {
       failed.push({
         id: request.id,
         code: request.requestCode,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: getErrorMessage(error),
       });
     }
   }
@@ -295,8 +357,8 @@ async function handleReleaseScheduled(request: Request) {
   const now = new Date();
 
   const [orders, serviceRequests] = await Promise.all([
-    releaseScheduledOrders(now),
-    releaseScheduledServiceRequests(now),
+    safeRelease('orders', () => releaseScheduledOrders(now)),
+    safeRelease('serviceRequests', () => releaseScheduledServiceRequests(now)),
   ]);
 
   if (orders.released.length > 0) {
@@ -308,12 +370,25 @@ async function handleReleaseScheduled(request: Request) {
     revalidatePath('/dashboard/service-requests');
   }
 
-  return NextResponse.json({
-    ok: true,
-    now: now.toISOString(),
-    orders,
-    serviceRequests,
-  });
+  const hasQueryError = Boolean(orders.queryError || serviceRequests.queryError);
+  const hasPermissionError = Boolean(
+    orders.permissionError || serviceRequests.permissionError
+  );
+
+  return NextResponse.json(
+    {
+      ok: !hasQueryError,
+      now: now.toISOString(),
+      orders,
+      serviceRequests,
+      databasePermissionHint: hasPermissionError
+        ? 'MySQL denied this DATABASE_URL user access to one or more tables. Grant SELECT, INSERT, UPDATE, DELETE on the cloudview database to the app user.'
+        : null,
+    },
+    {
+      status: hasQueryError ? 500 : 200,
+    }
+  );
 }
 
 export async function GET(request: Request) {

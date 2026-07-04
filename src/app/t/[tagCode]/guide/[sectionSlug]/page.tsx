@@ -132,8 +132,8 @@ function ActionLink({
   primary?: boolean;
 }) {
   const className = primary
-    ? 'inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gold px-5 py-3 text-sm font-black text-black shadow-[0_14px_30px_rgba(214,167,56,0.25)]'
-    : 'inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-black text-white backdrop-blur hover:bg-white/15';
+    ? 'inline-flex min-h-11 items-center justify-center gap-2 rounded-[1.25rem] bg-gold px-5 py-3 text-[15px] font-semibold tracking-wide text-black shadow-[0_14px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110 active:scale-[0.98]'
+    : 'inline-flex min-h-11 items-center justify-center gap-2 rounded-[1.25rem] border border-white/15 bg-white/10 px-5 py-3 text-[15px] font-semibold tracking-wide text-white backdrop-blur transition hover:bg-white/15 active:scale-[0.98]';
 
   if (href.startsWith('http://') || href.startsWith('https://')) {
     return (
@@ -165,11 +165,11 @@ function DetailPill({
         <Icon className="size-5" />
       </span>
 
-      <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+      <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-gold">
         {label}
       </p>
 
-      <p className="mt-1 line-clamp-2 text-sm font-black text-white">
+      <p className="mt-1 line-clamp-2 font-serif text-[15px] font-medium tracking-wide text-white">
         {value}
       </p>
     </div>
@@ -187,10 +187,10 @@ function PhotoStrip({ images }: { images: GuideImage[] }) {
     <section className="rounded-[2rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
             Gallery
           </p>
-          <h2 className="mt-1 text-xl font-black text-white">
+          <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
             Preview photos
           </h2>
         </div>
@@ -219,11 +219,11 @@ function PhotoStrip({ images }: { images: GuideImage[] }) {
             {(image.title || image.caption) && index === 0 ? (
               <figcaption className="p-3">
                 {image.title ? (
-                  <p className="text-sm font-black text-white">{image.title}</p>
+                  <p className="font-serif text-[15px] font-medium tracking-wide text-white">{image.title}</p>
                 ) : null}
 
                 {image.caption ? (
-                  <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
+                  <p className="mt-1 text-xs font-medium leading-5 text-white/60">
                     {image.caption}
                   </p>
                 ) : null}
@@ -273,18 +273,18 @@ function GuideItemCard({
           </span>
         ) : null}
 
-        <h3 className={imageUrl ? 'text-2xl font-black text-white' : 'mt-4 text-2xl font-black text-white'}>
+        <h3 className={imageUrl ? 'font-serif text-2xl font-normal tracking-wide text-white' : 'mt-4 font-serif text-2xl font-normal tracking-wide text-white'}>
           {item.title}
         </h3>
 
         {item.subtitle ? (
-          <p className="mt-2 text-sm font-semibold leading-6 text-gold">
+          <p className="mt-2 text-[15px] font-medium leading-6 tracking-wide text-gold">
             {item.subtitle}
           </p>
         ) : null}
 
         {item.content ? (
-          <p className="mt-4 whitespace-pre-line text-sm font-semibold leading-7 text-white/60">
+          <p className="mt-4 whitespace-pre-line text-sm font-medium leading-7 text-white/70">
             {item.content}
           </p>
         ) : null}
@@ -292,21 +292,21 @@ function GuideItemCard({
         {(item.hours || item.location || item.contact) ? (
           <div className="mt-5 grid gap-2">
             {item.hours ? (
-              <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-bold text-white/70">
+              <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-medium text-white/80">
                 <Clock className="size-4 shrink-0 text-gold" />
                 {item.hours}
               </div>
             ) : null}
 
             {item.location ? (
-              <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-bold text-white/70">
+              <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-medium text-white/80">
                 <MapPin className="size-4 shrink-0 text-gold" />
                 {item.location}
               </div>
             ) : null}
 
             {item.contact ? (
-              <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-bold text-white/70">
+              <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-sm font-medium text-white/80">
                 <Phone className="size-4 shrink-0 text-gold" />
                 {item.contact}
               </div>
@@ -339,7 +339,7 @@ function GuideItemCard({
                 key={image.id}
                 src={image.imageUrl}
                 alt={image.title || item.title}
-                className="h-20 rounded-2xl object-cover"
+                className="h-20 rounded-[1rem] object-cover"
               />
             ))}
           </div>
@@ -456,28 +456,28 @@ export default async function GuideSectionDetailPage({
           <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/60 to-black" />
 
           <div className="relative z-10 flex min-h-[430px] flex-col justify-end p-5">
-            <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-gold backdrop-blur">
+            <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
               <SectionIcon className="size-4" />
               Hotel Guide
             </span>
 
-            <h1 className="max-w-sm text-5xl font-black leading-[0.94] tracking-tight text-white">
+            <h1 className="max-w-sm font-serif text-4xl font-light leading-[1.1] tracking-wide text-white">
               {section.title}
             </h1>
 
             {section.subtitle ? (
-              <p className="mt-4 max-w-md text-sm font-semibold leading-7 text-white/65">
+              <p className="mt-4 max-w-md text-sm font-medium leading-7 text-white/75">
                 {section.subtitle}
               </p>
             ) : null}
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white backdrop-blur">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
                 {section.items.length} guide item
                 {section.items.length === 1 ? '' : 's'}
               </span>
 
-              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-black text-white backdrop-blur">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
                 {section.galleryImages.length} photo
                 {section.galleryImages.length === 1 ? '' : 's'}
               </span>
@@ -513,11 +513,11 @@ export default async function GuideSectionDetailPage({
 
         {section.description ? (
           <section className="mb-5 rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
               About This Guide
             </p>
 
-            <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-7 text-white/60">
+            <p className="mt-3 whitespace-pre-line text-[15px] font-medium leading-7 text-white/70">
               {section.description}
             </p>
           </section>
@@ -528,15 +528,15 @@ export default async function GuideSectionDetailPage({
         {section.items.length > 0 ? (
           <section className="mt-6">
             <div className="mb-4">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
                 Details
               </p>
 
-              <h2 className="mt-2 text-2xl font-black text-white">
+              <h2 className="mt-2 font-serif text-2xl font-normal tracking-wide text-white">
                 What guests need to know
               </h2>
 
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+              <p className="mt-1 text-sm font-medium leading-6 text-white/60">
                 Tap buttons, open maps, and view helpful details for this hotel
                 guide section.
               </p>
@@ -552,11 +552,11 @@ export default async function GuideSectionDetailPage({
           <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/10 p-8 text-center backdrop-blur">
             <Info className="mx-auto size-10 text-gold" />
 
-            <h2 className="mt-4 text-xl font-black text-white">
+            <h2 className="mt-4 font-serif text-xl font-medium tracking-wide text-white">
               No guide items yet
             </h2>
 
-            <p className="mt-2 text-sm font-semibold leading-6 text-white/50">
+            <p className="mt-2 text-sm font-medium leading-6 text-white/50">
               More details will appear here once the hotel updates this guide
               section.
             </p>
@@ -571,9 +571,9 @@ export default async function GuideSectionDetailPage({
               </span>
 
               <div>
-                <p className="text-xl font-black">Guest tip</p>
+                <p className="font-serif text-[17px] font-medium tracking-wide">Guest tip</p>
 
-                <p className="mt-1 text-sm font-bold leading-6 text-black/65">
+                <p className="mt-1 text-sm font-medium leading-6 text-black/75">
                   Save this page during your stay. This section contains the
                   most useful details for {section.title.toLowerCase()}.
                 </p>
@@ -584,7 +584,7 @@ export default async function GuideSectionDetailPage({
 
         {otherSections.length > 0 ? (
           <section className="mt-8">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-gold">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
               More Hotel Guides
             </p>
 
@@ -605,10 +605,10 @@ export default async function GuideSectionDetailPage({
                     </span>
 
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-black text-white">
+                      <span className="block truncate font-serif text-[15px] font-medium tracking-wide text-white">
                         {otherSection.title}
                       </span>
-                      <span className="mt-1 block truncate text-xs font-semibold text-white/45">
+                      <span className="mt-1 block truncate text-xs font-medium text-white/50">
                         {otherSection.subtitle ||
                           `${otherSection.items.length} guide item${
                             otherSection.items.length === 1 ? '' : 's'
@@ -631,9 +631,9 @@ export default async function GuideSectionDetailPage({
             </span>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xl font-black text-white">Need help?</p>
+              <p className="font-serif text-xl font-normal tracking-wide text-white">Need help?</p>
 
-              <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+              <p className="mt-1 text-sm font-medium leading-6 text-white/60">
                 Our team can help with directions, service requests, food
                 orders, and hotel information.
               </p>
@@ -641,14 +641,14 @@ export default async function GuideSectionDetailPage({
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <Link
                   href={`/t/${tagCode}/service`}
-                  className="rounded-2xl bg-gold px-4 py-3 text-center text-sm font-black text-black"
+                  className="rounded-[1.25rem] bg-gold px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
                 >
                   Request Service
                 </Link>
 
                 <Link
                   href={`/t/${tagCode}/contact`}
-                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-black text-white"
+                  className="rounded-[1.25rem] border border-white/15 bg-white/10 px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/20 active:scale-[0.98]"
                 >
                   Contact Staff
                 </Link>
