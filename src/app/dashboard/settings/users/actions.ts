@@ -2,7 +2,8 @@
 
 import { DashboardModule, Prisma, Role } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { hashPassword, requireRole, requireUser } from '@/lib/auth';
+import { hashPassword, requireRole } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 
@@ -39,12 +40,6 @@ const HOTEL_ADMIN_RESTRICTED_MODULES = new Set<DashboardModule>([
   DashboardModule.REWARDS,
 ]);
 
-const PERMISSION_KEYS: readonly PermissionKey[] = [
-  'canView',
-  'canCreate',
-  'canEdit',
-  'canDelete',
-];
 
 function getAllowedRoles(currentUserRole: Role) {
   if (currentUserRole === Role.SUPER_ADMIN) {
@@ -142,15 +137,6 @@ function optionalViewOnlyPermission(value: string): DashboardPermissionInput[] {
   return module ? [viewOnlyPermission(module)] : [];
 }
 
-function optionalCustomPermission(
-  value: string,
-  permissions: Partial<Omit<DashboardPermissionInput, 'module'>>
-): DashboardPermissionInput[] {
-  const module = getDashboardModule(value);
-
-  return module ? [customPermission(module, permissions)] : [];
-}
-
 function customPermission(
   module: DashboardModule,
   permissions: Partial<Omit<DashboardPermissionInput, 'module'>>
@@ -190,7 +176,6 @@ function getDefaultDashboardPermissions(role: Role): DashboardPermissionInput[] 
   if (role === Role.KITCHEN) {
     return [
       viewOnlyPermission(DashboardModule.OVERVIEW),
-      viewOnlyPermission(DashboardModule.ORDERS),
       customPermission(DashboardModule.KITCHEN_DISPLAY, {
         canView: true,
         canEdit: true,
@@ -358,12 +343,21 @@ async function syncDashboardPermissions(
   });
 }
 
+function revalidateUserAccountSettings() {
+  revalidatePath('/dashboard/settings/users');
+  revalidatePath('/dashboard');
+}
+
+
 export async function createUserAccountAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const currentUser = await requireUser();
+    const currentUser = await requireDashboardPermission(
+      DashboardModule.USER_ACCOUNT_SETTINGS,
+      'canCreate'
+    );
     requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
     const name = cleanText(formData.get('name'), 120);
@@ -434,7 +428,7 @@ export async function createUserAccountAction(
       await syncDashboardPermissions(tx, createdUser.id, permissions);
     });
 
-    revalidatePath('/dashboard/settings/users');
+    revalidateUserAccountSettings();
 
     return { ok: true, message: 'User account created successfully.' };
   } catch (error) {
@@ -447,7 +441,10 @@ export async function updateUserAccountAction(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const currentUser = await requireUser();
+    const currentUser = await requireDashboardPermission(
+      DashboardModule.USER_ACCOUNT_SETTINGS,
+      'canEdit'
+    );
     requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
     const userId = cleanText(formData.get('userId'));
@@ -549,7 +546,7 @@ export async function updateUserAccountAction(
       }
     });
 
-    revalidatePath('/dashboard/settings/users');
+    revalidateUserAccountSettings();
 
     return { ok: true, message: 'User account updated successfully.' };
   } catch (error) {
@@ -562,7 +559,10 @@ export async function resetUserPasswordAction(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const currentUser = await requireUser();
+    const currentUser = await requireDashboardPermission(
+      DashboardModule.USER_ACCOUNT_SETTINGS,
+      'canEdit'
+    );
     requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
     const userId = cleanText(formData.get('userId'));
@@ -614,9 +614,13 @@ export async function resetUserPasswordAction(
       },
     });
 
-    revalidatePath('/dashboard/settings/users');
+    revalidateUserAccountSettings();
 
-    return { ok: true, message: 'Password reset successfully. The new plain temporary password can now be used to sign in.' };
+    return {
+      ok: true,
+      message:
+        'Password reset successfully. The new plain temporary password can now be used to sign in.',
+    };
   } catch (error) {
     return { ok: false, message: getReadablePrismaError(error) };
   }
@@ -627,7 +631,10 @@ export async function deleteUserAccountAction(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const currentUser = await requireUser();
+    const currentUser = await requireDashboardPermission(
+      DashboardModule.USER_ACCOUNT_SETTINGS,
+      'canDelete'
+    );
     requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
     const userId = cleanText(formData.get('userId'));
@@ -681,7 +688,7 @@ export async function deleteUserAccountAction(
       },
     });
 
-    revalidatePath('/dashboard/settings/users');
+    revalidateUserAccountSettings();
 
     return { ok: true, message: 'User account deleted successfully.' };
   } catch (error) {

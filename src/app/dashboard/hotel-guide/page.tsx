@@ -1,6 +1,6 @@
-import { Role } from '@prisma/client';
+import { DashboardModule, Role } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
-import { requireRole, requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { HotelGuideClient } from './HotelGuideClient';
 
@@ -60,8 +60,10 @@ export default async function HotelGuideModulePage({
   const error = params?.error;
   const success = params?.success;
 
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canView'
+  );
 
   const [hotels, sections] = await Promise.all([
     user.role === Role.SUPER_ADMIN

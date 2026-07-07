@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Ban,
   BellRing,
@@ -8,6 +8,7 @@ import {
   ChefHat,
   ConciergeBell,
   PackageMinus,
+  ShoppingBag,
   Trash2,
   Volume2,
   VolumeX,
@@ -27,7 +28,10 @@ const REALTIME_ENDPOINTS = {
 const NOTIFICATION_STORAGE_KEY = 'cloudview-dashboard-notifications';
 const SOUND_MUTED_STORAGE_KEY = 'cloudview-dashboard-sound-muted';
 const MAX_STORED_NOTIFICATIONS = 50;
+const MAX_CENTER_NOTIFICATIONS = 25;
 const TOAST_VISIBLE_MS = 15_000;
+const PERSISTED_POLL_MS = 30_000;
+const EVENT_DEDUPE_TTL_MS = 30_000;
 
 
 type KitchenPayload = {
@@ -80,6 +84,7 @@ type DashboardNotification = {
   id: string;
   type:
     | 'ORDER'
+    | 'KITCHEN_ORDER'
     | 'SERVICE_REQUEST'
     | 'LOW_STOCK'
     | 'CANCELLED_ITEM'
@@ -90,6 +95,7 @@ type DashboardNotification = {
   createdAt: number;
   readAt?: number | null;
   isPersisted?: boolean;
+  dedupeKey?: string;
 };
 
 type PersistedDashboardNotification = {
@@ -127,6 +133,50 @@ function createNotificationId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+
+function notificationFingerprint(notification: DashboardNotification) {
+  return [
+    notification.type,
+    notification.title,
+    notification.message,
+    notification.href,
+  ]
+    .map((part) => String(part ?? '').trim().toLowerCase())
+    .join('|');
+}
+
+function getNotificationDedupeKey(notification: DashboardNotification) {
+  return notification.dedupeKey || notificationFingerprint(notification);
+}
+
+function dedupeDashboardNotifications(items: DashboardNotification[]) {
+  const map = new Map<string, DashboardNotification>();
+
+  for (const item of items) {
+    const key = getNotificationDedupeKey(item);
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, item);
+      continue;
+    }
+
+    const shouldReplace =
+      item.createdAt > existing.createdAt ||
+      (!item.readAt && Boolean(existing.readAt)) ||
+      (item.isPersisted && !existing.isPersisted);
+
+    if (shouldReplace) {
+      map.set(key, {
+        ...item,
+        readAt: item.readAt ?? existing.readAt ?? null,
+      });
+    }
+  }
+
+  return Array.from(map.values());
+}
+
 function parseStoredNotifications(value: string | null) {
   if (!value) {
     return [];
@@ -153,7 +203,7 @@ function parseStoredNotifications(value: string | null) {
       })
       .map((item) => ({
         id: item.id,
-        type: item.type,
+        type: toDashboardNotificationType(String(item.type ?? 'SYSTEM')),
         title: item.title,
         message: item.message,
         href: item.href,
@@ -377,8 +427,12 @@ function getRealtimeErrorMessage(value: unknown) {
 }
 
 function getNotificationIcon(type: DashboardNotification['type']) {
-  if (type === 'ORDER') {
+  if (type === 'KITCHEN_ORDER') {
     return ChefHat;
+  }
+
+  if (type === 'ORDER') {
+    return ShoppingBag;
   }
 
   if (type === 'SERVICE_REQUEST') {
@@ -397,6 +451,13 @@ function getNotificationIcon(type: DashboardNotification['type']) {
 }
 
 function getNotificationStyle(type: DashboardNotification['type']) {
+  if (type === 'KITCHEN_ORDER') {
+    return {
+      iconWrap: 'bg-orange-100 text-orange-700',
+      border: 'border-orange-200',
+    };
+  }
+
   if (type === 'LOW_STOCK') {
     return {
       iconWrap: 'bg-amber-100 text-amber-700',
@@ -437,6 +498,10 @@ function toDashboardNotificationType(
 ): DashboardNotification['type'] {
   const normalizedType = normalizeValue(value);
 
+  if (normalizedType.includes('KITCHEN')) {
+    return 'KITCHEN_ORDER';
+  }
+
   if (normalizedType.includes('LOW_STOCK')) {
     return 'LOW_STOCK';
   }
@@ -474,11 +539,21 @@ function mapPersistedDashboardNotification(
     createdAt: Date.parse(notification.createdAt) || Date.now(),
     readAt: notification.isRead ? Date.now() : null,
     isPersisted: true,
+    dedupeKey: notificationFingerprint({
+      id: notification.id,
+      type: toDashboardNotificationType(notification.type),
+      title: notification.title,
+      message: notification.message,
+      href: notification.url || '/dashboard',
+      createdAt: Date.parse(notification.createdAt) || Date.now(),
+      readAt: notification.isRead ? Date.now() : null,
+    }),
   };
 }
 
 export function RealtimeDashboardNotifications() {
   const router = useRouter();
+  const notificationShellRef = useRef<HTMLDivElement | null>(null);
 
   const [notifications, setNotifications] = useState<DashboardNotification[]>(
     []
@@ -589,7 +664,7 @@ const alertsEnabledRef = useRef(false);
 
     const intervalId = window.setInterval(() => {
       void fetchUnreadNotifications();
-    }, 30_000);
+    }, PERSISTED_POLL_MS);
 
     return () => {
       disposed = true;
@@ -611,6 +686,10 @@ const alertsEnabledRef = useRef(false);
   function scheduleToastRemoval(id: string) {
   const timeoutId = window.setTimeout(() => {
     dismissToast(id);
+
+    notificationTimeoutsRef.current = notificationTimeoutsRef.current.filter(
+      (currentTimeoutId) => currentTimeoutId !== timeoutId
+    );
   }, TOAST_VISIBLE_MS);
 
   notificationTimeoutsRef.current.push(timeoutId);
@@ -721,6 +800,10 @@ function clearNotifications() {
   setToastNotificationIds([]);
   setPersistedNotifications([]);
   setPersistedUnreadCount(0);
+
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(NOTIFICATION_STORAGE_KEY);
+  }
 
   void markPersistedNotificationsRead({ all: true });
 }
@@ -838,10 +921,12 @@ function addNotificationToCenter({
     showBrowserNotification(normalizedNotification);
   }
 
-  setNotifications((current) => [
-    normalizedNotification,
-    ...current.filter((item) => item.id !== normalizedNotification.id),
-  ].slice(0, MAX_STORED_NOTIFICATIONS));
+  setNotifications((current) =>
+    dedupeDashboardNotifications([
+      normalizedNotification,
+      ...current.filter((item) => item.id !== normalizedNotification.id),
+    ]).slice(0, MAX_STORED_NOTIFICATIONS)
+  );
 
   if (showToast) {
     setToastNotificationIds((current) => [
@@ -851,6 +936,16 @@ function addNotificationToCenter({
 
     scheduleToastRemoval(normalizedNotification.id);
   }
+}
+
+
+function getKitchenNotificationHref(orderCode: string) {
+  const query = new URLSearchParams({
+    mode: 'rush',
+    focusOrder: orderCode,
+  });
+
+  return `/dashboard/kitchen?${query.toString()}`;
 }
 
 function pushNotification(notification: DashboardNotification) {
@@ -924,6 +1019,7 @@ function pushTestNotification() {
               'In-app alerts and sound are enabled. Browser push notifications require HTTPS for LAN IP access.',
             href: '/dashboard/orders',
             createdAt: Date.now(),
+            readAt: null,
           },
           ...current,
         ]);
@@ -972,10 +1068,43 @@ function pushTestNotification() {
 
     window.setTimeout(() => {
       recentEventKeysRef.current.delete(key);
-    }, 30_000);
+    }, EVENT_DEDUPE_TTL_MS);
 
     return false;
   }
+
+  useEffect(() => {
+    if (!notificationCenterOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (
+        target instanceof Node &&
+        notificationShellRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setNotificationCenterOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setNotificationCenterOpen(false);
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [notificationCenterOpen]);
 
   useEffect(() => {
     let disposed = false;
@@ -1068,6 +1197,17 @@ function pushTestNotification() {
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn(
+            `${label} realtime disabled. Token route returned HTTP ${response.status}.`
+          );
+
+          return {
+            token: undefined,
+            channels: [],
+          };
+        }
+
         throw new Error(
           `${label} token route failed. HTTP ${response.status}. Check ${endpoint} and CENTRIFUGO_TOKEN_HMAC_SECRET.`
         );
@@ -1153,15 +1293,29 @@ function pushTestNotification() {
               return;
             }
 
+            const createdAt = Date.now();
+            const orderMessage = `${orderCode} is waiting for order review.${
+              data.paymentStatus ? ` Payment: ${data.paymentStatus}.` : ''
+            }`;
+
             pushNotification({
               id: createNotificationId(),
               type: 'ORDER',
               title: 'New Food Order',
-              message: `${orderCode} is waiting for kitchen review.${
-                data.paymentStatus ? ` Payment: ${data.paymentStatus}.` : ''
-              }`,
+              message: orderMessage,
               href: '/dashboard/orders',
-              createdAt: Date.now(),
+              createdAt,
+              dedupeKey: `order-management:${orderCode}:${data.updatedAt ?? ''}`,
+            });
+
+            pushNotification({
+              id: createNotificationId(),
+              type: 'KITCHEN_ORDER',
+              title: 'New Kitchen Ticket',
+              message: `${orderCode} is ready for kitchen action. Open Rush Mode to accept and prepare it.`,
+              href: getKitchenNotificationHref(orderCode),
+              createdAt,
+              dedupeKey: `kitchen-ticket:${orderCode}:${data.updatedAt ?? ''}`,
             });
           });
 
@@ -1517,21 +1671,33 @@ function pushTestNotification() {
     toastNotificationIds.includes(notification.id)
   );
 
-  const localUnreadCount = notifications.filter(
-    (notification) => !notification.readAt
+  const mergedNotifications = useMemo(() => {
+    return dedupeDashboardNotifications([
+      ...persistedNotifications,
+      ...notifications,
+    ]).sort((first, second) => second.createdAt - first.createdAt);
+  }, [notifications, persistedNotifications]);
+
+  const displayedPersistedUnreadCount = mergedNotifications.filter(
+    (notification) => notification.isPersisted && !notification.readAt
   ).length;
 
-  const unreadCount = persistedUnreadCount + localUnreadCount;
+  const hiddenPersistedUnreadCount = Math.max(
+    0,
+    persistedUnreadCount - displayedPersistedUnreadCount
+  );
 
-  const latestNotifications = [
-    ...persistedNotifications,
-    ...notifications,
-  ]
-    .sort((first, second) => second.createdAt - first.createdAt)
-    .slice(0, 25);
+  const unreadCount =
+    mergedNotifications.filter((notification) => !notification.readAt).length +
+    hiddenPersistedUnreadCount;
+
+  const latestNotifications = mergedNotifications.slice(
+    0,
+    MAX_CENTER_NOTIFICATIONS
+  );
 
   const totalNotificationCount =
-    persistedNotifications.length + notifications.length;
+    mergedNotifications.length + hiddenPersistedUnreadCount;
 
   return (
     <>
@@ -1585,7 +1751,7 @@ function pushTestNotification() {
         </div>
       </div>
 
-      <div className="relative z-[110]">
+      <div ref={notificationShellRef} className="relative z-[110]">
         <button
           type="button"
           onClick={() => setNotificationCenterOpen((current) => !current)}

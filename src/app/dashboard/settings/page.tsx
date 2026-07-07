@@ -1,13 +1,15 @@
 import { type ReactNode } from 'react';
+import { DashboardModule } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { saveHotelSettingsAction } from './actions';
 import { HotelSettingsFormClient } from './HotelSettingsFormClient';
+import { ThemePaletteSelector } from '@/components/dashboard/ThemePaletteSelector';
 
 function FormField({
   label,
@@ -55,7 +57,10 @@ function SectionTitle({
 }
 
 export default async function SettingsPage() {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_SETTINGS,
+    'canView'
+  );
 
   const hotels = await db.hotel.findMany({
     where: user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! },
@@ -92,6 +97,11 @@ export default async function SettingsPage() {
         title="Settings"
         description="Branding, operating information, taxes, service charge, Wi-Fi, policies, and guide content."
       />
+
+
+      <section className="mb-6 rounded-[2rem] border border-[var(--cv-border)] bg-[var(--cv-card)] p-5 shadow-sm">
+        <ThemePaletteSelector />
+      </section>
 
       <Card>
         <CardHeader>

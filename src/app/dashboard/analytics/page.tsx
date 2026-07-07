@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
+import { DashboardModule, OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 import {
   BarChart3,
   CircleDollarSign,
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { money } from '@/lib/money';
 
 export const dynamic = 'force-dynamic';
@@ -543,7 +543,10 @@ function EmptyState({ text }: { text: string }) {
 }
 
 export default async function AnalyticsPage() {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.ANALYTICS,
+    'canView'
+  );
 
   const baseOrderWhere: Prisma.OrderWhereInput =
     user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };

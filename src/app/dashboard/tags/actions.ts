@@ -2,14 +2,18 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { TagStatus, TagType } from '@prisma/client';
+import { DashboardModule, Role, TagStatus, TagType } from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { randomSecret } from '@/lib/nfc-security';
 import { cleanText } from '@/lib/sanitize';
 
 const TAG_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TAG_CODE_LENGTH = 8;
+
+type DashboardPermissionUser = Awaited<
+  ReturnType<typeof requireDashboardPermission>
+>;
 
 const tagSchema = z.object({
   hotelId: z.string().min(1),
@@ -45,7 +49,10 @@ function cleanCode(value: FormDataEntryValue | null) {
     .slice(0, 160);
 }
 
-async function getAvailableTagCode(preferredCode?: string, excludeTagId?: string) {
+async function getAvailableTagCode(
+  preferredCode?: string,
+  excludeTagId?: string
+) {
   const preferred = cleanCode(preferredCode ?? '');
 
   if (preferred) {
@@ -98,18 +105,18 @@ function finishTagAction(success: string) {
     success,
   };
 }
-async function assertHotelAccess(hotelId: string) {
-  const user = await requireUser();
 
-  if (user.role !== 'SUPER_ADMIN' && user.hotelId !== hotelId) {
+function assertHotelAccess(user: DashboardPermissionUser, hotelId: string) {
+  if (user.role !== Role.SUPER_ADMIN && user.hotelId !== hotelId) {
     throw new Error('You are not allowed to manage this hotel.');
   }
-
-  return user;
 }
 
 export async function toggleTagStatusAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.NFC_TAGS,
+    'canEdit'
+  );
 
   const tagId = cleanText(formData.get('tagId'));
 
@@ -132,13 +139,10 @@ export async function toggleTagStatusAction(formData: FormData) {
     throw new Error('NFC tag not found.');
   }
 
-  if (user.role !== 'SUPER_ADMIN' && tag.hotelId !== user.hotelId) {
-    throw new Error('You are not allowed to update this NFC tag.');
-  }
+  assertHotelAccess(user, tag.hotelId);
 
-  const nextStatus = tag.status === TagStatus.ACTIVE
-    ? TagStatus.INACTIVE
-    : TagStatus.ACTIVE;
+  const nextStatus =
+    tag.status === TagStatus.ACTIVE ? TagStatus.INACTIVE : TagStatus.ACTIVE;
 
   await db.nfcTag.update({
     where: {
@@ -153,7 +157,10 @@ export async function toggleTagStatusAction(formData: FormData) {
 }
 
 export async function createTagAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.NFC_TAGS,
+    'canCreate'
+  );
 
   const availableCode = await getAvailableTagCode(
     cleanCode(formData.get('code'))
@@ -169,7 +176,7 @@ export async function createTagAction(formData: FormData) {
     status: TagStatus.ACTIVE,
   });
 
-  await assertHotelAccess(parsed.hotelId);
+  assertHotelAccess(user, parsed.hotelId);
 
   const existingDeletedTag = await db.nfcTag.findUnique({
     where: {
@@ -216,6 +223,11 @@ export async function createTagAction(formData: FormData) {
 }
 
 export async function updateTagAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.NFC_TAGS,
+    'canEdit'
+  );
+
   const existing = await db.nfcTag.findUnique({
     where: {
       id: String(formData.get('tagId') || ''),
@@ -242,8 +254,8 @@ export async function updateTagAction(formData: FormData) {
     status: formData.get('status'),
   });
 
-  await assertHotelAccess(existing.hotelId);
-  await assertHotelAccess(parsed.hotelId);
+  assertHotelAccess(user, existing.hotelId);
+  assertHotelAccess(user, parsed.hotelId);
 
   const duplicateCode = await db.nfcTag.findUnique({
     where: {
@@ -291,6 +303,11 @@ export async function updateTagAction(formData: FormData) {
 }
 
 export async function deleteTagAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.NFC_TAGS,
+    'canDelete'
+  );
+
   const tagId = String(formData.get('tagId') || '');
 
   const tag = await db.nfcTag.findUnique({
@@ -303,7 +320,7 @@ export async function deleteTagAction(formData: FormData) {
     throw new Error('NFC tag not found.');
   }
 
-  await assertHotelAccess(tag.hotelId);
+  assertHotelAccess(user, tag.hotelId);
 
   const archivedCode = `${tag.code}-DELETED-${Date.now()}`.slice(0, 190);
 
@@ -334,6 +351,11 @@ export async function deleteTagAction(formData: FormData) {
 }
 
 export async function rotateTagSecretAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.NFC_TAGS,
+    'canEdit'
+  );
+
   const tagId = String(formData.get('tagId') || '');
 
   const tag = await db.nfcTag.findUnique({
@@ -346,7 +368,7 @@ export async function rotateTagSecretAction(formData: FormData) {
     throw new Error('NFC tag not found.');
   }
 
-  await assertHotelAccess(tag.hotelId);
+  assertHotelAccess(user, tag.hotelId);
 
   await db.$transaction([
     db.nfcAccessSession.updateMany({

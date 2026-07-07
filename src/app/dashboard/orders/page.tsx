@@ -1,4 +1,5 @@
 import {
+  DashboardModule,
   MenuAvailabilityMovementType,
   OrderStatus,
   PaymentStatus,
@@ -6,7 +7,7 @@ import {
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { RealtimeKitchenRefresh } from '@/components/dashboard/RealtimeKitchenRefresh';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { OrdersClient } from './OrdersClient';
 
 export const dynamic = 'force-dynamic';
@@ -61,7 +62,10 @@ export default async function OrdersPage({
     error?: string;
   }>;
 }) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.ORDERS,
+    'canView'
+  );
   const params = await searchParams;
   const message = getOrdersMessage(params?.success, params?.error);
 

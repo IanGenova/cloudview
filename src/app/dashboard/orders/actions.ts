@@ -1,14 +1,20 @@
 'use server';
 
 import {
+  DashboardModule,
   MenuAvailabilityMovementType,
   OrderItemStatus,
   OrderStatus,
   PaymentStatus,
   Prisma,
+  Role,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/auth';
+import {
+  getUserDashboardPermissions,
+  hasDashboardPermission,
+} from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
 import { deductInventoryForOrder, InventoryError } from '@/lib/inventory';
@@ -54,6 +60,75 @@ type RestoreRequirement = {
   reason: string;
   duplicateGuardText: string;
 };
+
+
+const KITCHEN_STATUS_ACTIONS = new Set<OrderStatus>([
+  OrderStatus.PREPARING,
+  OrderStatus.READY,
+  OrderStatus.DELIVERED,
+  OrderStatus.CANCELLED,
+]);
+
+async function getDashboardPermissionsForUser(user: {
+  id: string;
+  role: Role;
+}) {
+  return getUserDashboardPermissions(user.id, user.role);
+}
+
+async function assertOrderManagementEditAccess(user: {
+  id: string;
+  role: Role;
+}) {
+  if (user.role === Role.SUPER_ADMIN) {
+    return;
+  }
+
+  const permissions = await getDashboardPermissionsForUser(user);
+
+  if (hasDashboardPermission(permissions, DashboardModule.ORDERS, 'canEdit')) {
+    return;
+  }
+
+  throw new Error('You do not have permission to manage orders.');
+}
+
+async function assertOrderStatusUpdateAccess({
+  user,
+  status,
+}: {
+  user: {
+    id: string;
+    role: Role;
+  };
+  status: OrderStatus;
+}) {
+  if (user.role === Role.SUPER_ADMIN) {
+    return;
+  }
+
+  const permissions = await getDashboardPermissionsForUser(user);
+
+  const canManageOrders = hasDashboardPermission(
+    permissions,
+    DashboardModule.ORDERS,
+    'canEdit'
+  );
+
+  const canOperateKitchen =
+    KITCHEN_STATUS_ACTIONS.has(status) &&
+    hasDashboardPermission(
+      permissions,
+      DashboardModule.KITCHEN_DISPLAY,
+      'canEdit'
+    );
+
+  if (canManageOrders || canOperateKitchen) {
+    return;
+  }
+
+  throw new Error('You do not have permission to update this order status.');
+}
 
 async function safelyPublishCancelledItemAlert(payload: {
   hotelId: string;
@@ -593,6 +668,7 @@ if (!orderId || !orderItemId) {
 }
 
   assertHotelScope(user, order.hotelId);
+  await assertOrderManagementEditAccess(user);
 
 if (order.status !== OrderStatus.PENDING) {
   throw new Error('Only pending orders can have items cancelled.');
@@ -776,13 +852,25 @@ export async function updateOrderStatusAction(formData: FormData) {
   const user = await requireUser();
 
   const orderId = cleanText(formData.get('orderId'));
-  const status = formData.get('status') as OrderStatus;
+  const requestedStatus = formData.get('status') as OrderStatus;
   const note = cleanText(formData.get('note'), 300);
   const redirectTarget = cleanText(formData.get('redirectTo'));
+  void redirectTarget;
 
-  if (!orderId || !Object.values(OrderStatus).includes(status)) {
+  if (!orderId || !Object.values(OrderStatus).includes(requestedStatus)) {
     throw new Error('Invalid status update');
   }
+
+  /**
+   * Operational shortcut:
+   * The dashboard no longer keeps orders in ACCEPTED as a separate working step.
+   * Any old button/form that still submits ACCEPTED is treated as PREPARING so
+   * staff only click once: Accept -> Preparing.
+   */
+  const status =
+    requestedStatus === OrderStatus.ACCEPTED
+      ? OrderStatus.PREPARING
+      : requestedStatus;
 
   const order = await db.order.findUnique({
     where: {
@@ -826,6 +914,7 @@ export async function updateOrderStatusAction(formData: FormData) {
   }
 
   assertHotelScope(user, order.hotelId);
+  await assertOrderStatusUpdateAccess({ user, status });
 
   let statusUpdatedAt = new Date();
   let restoredProductIds: string[] = [];
@@ -836,7 +925,14 @@ export async function updateOrderStatusAction(formData: FormData) {
     order.status !== OrderStatus.DELIVERED;
 
   try {
-    if (status === OrderStatus.ACCEPTED && !order.inventoryDeductedAt) {
+    const shouldReleaseToKitchen =
+      !order.inventoryDeductedAt &&
+      order.status === OrderStatus.PENDING &&
+      (status === OrderStatus.PREPARING ||
+        status === OrderStatus.READY ||
+        status === OrderStatus.DELIVERED);
+
+    if (shouldReleaseToKitchen) {
       await deductInventoryForOrder(order.id, user.id);
       await sendOrderToPos(order.id);
     }
@@ -929,6 +1025,7 @@ export async function markOrderPaidAction(formData: FormData) {
 
   const orderId = cleanText(formData.get('orderId'));
   const redirectTarget = cleanText(formData.get('redirectTo'));
+  void redirectTarget;
 
   if (!orderId) {
     throw new Error('Order required');
@@ -955,6 +1052,7 @@ export async function markOrderPaidAction(formData: FormData) {
   }
 
   assertHotelScope(user, order.hotelId);
+  await assertOrderManagementEditAccess(user);
 
   await db.order.update({
     where: {

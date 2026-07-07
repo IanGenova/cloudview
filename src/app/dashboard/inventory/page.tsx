@@ -1,7 +1,7 @@
-import { MenuProductType, OrderStatus } from '@prisma/client';
+import { DashboardModule, MenuProductType, OrderStatus } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { InventoryClient } from './InventoryClient';
 import { RealtimeInventoryRefresh } from '@/components/dashboard/RealtimeInventoryRefresh';
 
@@ -88,7 +88,10 @@ export default async function InventoryPage({
   const { error, success, tab } = await searchParams;
   const activeTab = getActiveTab(tab);
 
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canView'
+  );
 
   const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 

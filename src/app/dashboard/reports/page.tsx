@@ -11,14 +11,15 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import {
+  DashboardModule,
   OrderItemStatus,
   OrderStatus,
   PaymentStatus,
-  Prisma,
+  Role,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,9 @@ type SearchParams = Promise<{
   hotelId?: string;
   start?: string;
   end?: string;
-}>;
+}> | undefined;
+
+type HotelIdFilter = string | { in: string[] };
 
 const reportTabs: {
   key: ReportKey;
@@ -103,9 +106,23 @@ function parseDate(value: string | undefined, fallback: Date) {
     return fallback;
   }
 
-  const parsed = new Date(`${value}T00:00:00`);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
 
-  if (Number.isNaN(parsed.getTime())) {
+  if (!match) {
+    return fallback;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
     return fallback;
   }
 
@@ -113,7 +130,11 @@ function parseDate(value: string | undefined, fallback: Date) {
 }
 
 function toInputDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
 function startOfDay(date: Date) {
@@ -245,6 +266,55 @@ function buildReportUrl(params: {
   }
 
   return url;
+}
+
+function getSelectedHotelId({
+  hotelInput,
+  accessibleHotelIds,
+  isSuperAdmin,
+}: {
+  hotelInput?: string;
+  accessibleHotelIds: string[];
+  isSuperAdmin: boolean;
+}) {
+  if (hotelInput && accessibleHotelIds.includes(hotelInput)) {
+    return hotelInput;
+  }
+
+  if (isSuperAdmin && hotelInput === 'ALL') {
+    return 'ALL';
+  }
+
+  if (isSuperAdmin) {
+    return 'ALL';
+  }
+
+  return accessibleHotelIds[0] ?? 'ALL';
+}
+
+function buildHotelFilter(
+  selectedHotelId: string,
+  accessibleHotelIds: string[]
+): HotelIdFilter {
+  return selectedHotelId === 'ALL'
+    ? {
+        in: accessibleHotelIds,
+      }
+    : selectedHotelId;
+}
+
+function normalizeDateRange(startDate: Date, endDate: Date) {
+  if (startDate.getTime() <= endDate.getTime()) {
+    return {
+      startDate,
+      endDate,
+    };
+  }
+
+  return {
+    startDate: startOfDay(endDate),
+    endDate: endOfDay(startDate),
+  };
 }
 
 function StatusPill({
@@ -387,10 +457,14 @@ function ReportTable({
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams?: SearchParams;
 }) {
-  const user = await requireUser();
-  const resolvedSearchParams = await searchParams;
+  const user = await requireDashboardPermission(
+    DashboardModule.REPORTS,
+    'canView'
+  );
+
+  const resolvedSearchParams = (await searchParams) ?? {};
 
   const today = new Date();
   const defaultStart = startOfDay(today);
@@ -401,8 +475,13 @@ export default async function ReportsPage({
   const reportInput = getParam(resolvedSearchParams.report);
   const hotelInput = getParam(resolvedSearchParams.hotelId);
 
-  const startDate = startOfDay(parseDate(startInput, defaultStart));
-  const endDate = endOfDay(parseDate(endInput, defaultEnd));
+  const normalizedRange = normalizeDateRange(
+    startOfDay(parseDate(startInput, defaultStart)),
+    endOfDay(parseDate(endInput, defaultEnd))
+  );
+
+  const startDate = normalizedRange.startDate;
+  const endDate = normalizedRange.endDate;
 
   const startValue = toInputDate(startDate);
   const endValue = toInputDate(endDate);
@@ -432,19 +511,14 @@ export default async function ReportsPage({
   });
 
   const accessibleHotelIds = hotels.map((hotel) => hotel.id);
-const selectedHotelId =
-      hotelInput && accessibleHotelIds.includes(hotelInput)
-        ? hotelInput
-        : user.role === 'SUPER_ADMIN'
-          ? 'ALL'
-          : accessibleHotelIds[0] ?? 'ALL';
+  const selectedHotelId = getSelectedHotelId({
+    hotelInput,
+    accessibleHotelIds,
+    isSuperAdmin: user.role === Role.SUPER_ADMIN,
+  });
 
-    const hotelFilter =
-      selectedHotelId === 'ALL'
-        ? {
-            in: accessibleHotelIds,
-          }
-        : selectedHotelId;
+  const hotelFilter = buildHotelFilter(selectedHotelId, accessibleHotelIds);
+
   const dateRangeFilter = {
     gte: startDate,
     lte: endDate,
@@ -1147,6 +1221,8 @@ const selectedHotelId =
       ]);
   }
 
+  const exportReport: ReportKey = activeReport === 'export' ? 'daily' : activeReport;
+
   return (
     <div className="space-y-6">
       <section className="flex flex-wrap items-end justify-between gap-4">
@@ -1161,7 +1237,7 @@ const selectedHotelId =
       <div className="flex flex-wrap gap-2">
                     <a
                         href={buildExportUrl({
-                        report: activeReport,
+                        report: exportReport,
                         hotelId: selectedHotelId,
                         start: startValue,
                         end: endValue,
@@ -1175,7 +1251,7 @@ const selectedHotelId =
 
                     <a
                         href={buildExportUrl({
-                        report: activeReport,
+                        report: exportReport,
                         hotelId: selectedHotelId,
                         start: startValue,
                         end: endValue,
@@ -1189,7 +1265,7 @@ const selectedHotelId =
 
                     <a
                         href={buildExportUrl({
-                        report: activeReport,
+                        report: exportReport,
                         hotelId: selectedHotelId,
                         start: startValue,
                         end: endValue,

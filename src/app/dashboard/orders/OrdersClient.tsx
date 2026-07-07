@@ -128,7 +128,6 @@ type Message =
 const statusOptions: StatusFilter[] = [
   'ALL',
   'PENDING',
-  'ACCEPTED',
   'PREPARING',
   'READY',
   'DELIVERED',
@@ -233,9 +232,9 @@ function getNextActions(status: OrderStatus) {
   if (status === 'PENDING') {
     return [
       {
-        status: 'ACCEPTED' as OrderStatus,
-        label: 'Accept',
-        className: 'bg-blue-600 text-white hover:bg-blue-700',
+        status: 'PREPARING' as OrderStatus,
+        label: 'Accept & Prepare',
+        className: 'bg-black text-white hover:bg-neutral-800',
       },
       {
         status: 'CANCELLED' as OrderStatus,
@@ -1323,7 +1322,6 @@ function OrderDetailsModal({
 
 const workflowSteps: OrderStatus[] = [
   'PENDING',
-  'ACCEPTED',
   'PREPARING',
   'READY',
   'DELIVERED',
@@ -1352,7 +1350,9 @@ function getSourceLabel(order: DashboardOrder) {
 }
 
 function getWorkflowProgressIndex(status: OrderStatus) {
-  return Math.max(workflowSteps.indexOf(status), 0);
+  const workflowStatus = status === 'ACCEPTED' ? 'PREPARING' : status;
+
+  return Math.max(workflowSteps.indexOf(workflowStatus), 0);
 }
 
 function getOrderFocusLabel(order: DashboardOrder) {
@@ -1373,7 +1373,7 @@ function getOrderFocusLabel(order: DashboardOrder) {
   }
 
   if (order.status === 'ACCEPTED') {
-    return 'Accepted';
+    return 'Kitchen active';
   }
 
   if (order.status === 'DELIVERED') {
@@ -1385,7 +1385,7 @@ function getOrderFocusLabel(order: DashboardOrder) {
 
 function getPrimaryNextStatus(status: OrderStatus): OrderStatus | null {
   if (status === 'PENDING') {
-    return 'ACCEPTED';
+    return 'PREPARING';
   }
 
   if (status === 'ACCEPTED') {
@@ -1405,7 +1405,7 @@ function getPrimaryNextStatus(status: OrderStatus): OrderStatus | null {
 
 function getPrimaryActionText(status: OrderStatus) {
   if (status === 'PENDING') {
-    return 'Accept';
+    return 'Accept & Prepare';
   }
 
   if (status === 'ACCEPTED') {
@@ -1509,7 +1509,7 @@ function WorkflowProgress({ status }: { status: OrderStatus }) {
                   : 'truncate text-[9px] font-black uppercase text-neutral-400'
               }
             >
-              {step === 'ACCEPTED' ? 'Accept' : label(step)}
+              {label(step)}
             </p>
           </div>
         );
@@ -2116,12 +2116,18 @@ export function OrdersClient({
 
   async function handleStatusChange(formData: FormData) {
     const orderId = String(formData.get('orderId') || '');
-    const nextStatus = String(formData.get('status') || '') as OrderStatus;
+    const requestedStatus = String(formData.get('status') || '') as OrderStatus;
+    const nextStatus = requestedStatus === 'ACCEPTED' ? 'PREPARING' : requestedStatus;
+    const currentStatus =
+      localOrders.find((order) => order.id === orderId)?.status ?? null;
 
     await runOrderClientAction({
       formData,
       action: updateOrderStatusAction,
-      successText: `Order status updated to ${label(nextStatus)}.`,
+      successText:
+        currentStatus === 'PENDING' && nextStatus === 'PREPARING'
+          ? 'Order accepted and moved directly to Preparing.'
+          : `Order status updated to ${label(nextStatus)}.`,
       optimisticUpdate: () => {
         updateLocalOrder(orderId, (order) => ({
           ...order,

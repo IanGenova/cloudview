@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { DashboardModule } from '@prisma/client';
 import Link from 'next/link';
 import { Building2, CheckCircle2, MapPin, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
@@ -13,7 +14,7 @@ import {
   DirectoryConfirmButton,
 } from './DirectoryClientActions';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import {
   createLocationAction,
   createRoomAction,
@@ -278,7 +279,10 @@ export default async function RoomsAndLocationsPage({
   const searchQuery = cleanSearchQuery(params?.q);
   const message = getLocationsMessage(params?.success, params?.error);
 
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canView'
+  );
 
   const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
   const itemWhere =

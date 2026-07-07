@@ -3,10 +3,11 @@
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
-import { MenuProductType, type Prisma } from '@prisma/client';
+import { DashboardModule, MenuProductType, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 
 const categorySchema = z.object({
   hotelId: z.string().min(1),
@@ -319,6 +320,8 @@ async function preventBundleProductFromBeingUsedAsComponent(productId: string) {
 }
 
 export async function createCategoryAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.MENU, 'canCreate');
+
   const parsed = parseCategoryForm(formData);
 
   await assertHotelAccess(parsed.hotelId);
@@ -336,6 +339,8 @@ export async function createCategoryAction(formData: FormData) {
 }
 
 export async function updateCategoryAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.MENU, 'canEdit');
+
   const parsed = parseUpdateCategoryForm(formData);
 
   const category = await db.menuCategory.findUnique({
@@ -365,6 +370,8 @@ export async function updateCategoryAction(formData: FormData) {
 }
 
 export async function deleteCategoryAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.MENU, 'canDelete');
+
   const categoryId = String(formData.get('categoryId') || '');
 
   if (!categoryId) {
@@ -404,6 +411,8 @@ export async function deleteCategoryAction(formData: FormData) {
 }
 
 export async function createProductAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.MENU, 'canCreate');
+
   const parsed = parseProductForm(formData);
 
   const category = await db.menuCategory.findUnique({
@@ -476,6 +485,8 @@ export async function createProductAction(formData: FormData) {
 }
 
 export async function updateProductAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.MENU, 'canEdit');
+
   const parsed = parseUpdateProductForm(formData);
 
   const product = await db.menuProduct.findUnique({
@@ -585,6 +596,8 @@ export async function updateProductAction(formData: FormData) {
 }
 
 export async function deleteProductAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.MENU, 'canDelete');
+
   const productId = String(formData.get('productId') || '');
 
   if (!productId) {

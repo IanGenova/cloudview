@@ -1,12 +1,13 @@
 'use server';
 
 import {
+  DashboardModule,
   MenuAvailabilityMovementType,
   MenuProductType,
   ServiceAvailabilityMovementType,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { requireRole, requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { assertHotelScope } from '@/lib/access';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
@@ -173,9 +174,10 @@ function getDefaultServiceMovementReason(
 }
 
 export async function controlMenuStockAction(formData: FormData) {
-  const user = await requireUser();
-
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canEdit'
+  );
 
   const productId = cleanText(formData.get('productId'));
   const operation = formData.get(
@@ -327,9 +329,10 @@ export async function controlMenuStockAction(formData: FormData) {
 }
 
 export async function initializeMenuStocksAction() {
-  const user = await requireUser();
-
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canCreate'
+  );
 
   const where =
     user.role === 'SUPER_ADMIN'
@@ -379,9 +382,10 @@ export async function initializeMenuStocksAction() {
 }
 
 export async function enableServiceInventoryAction(formData: FormData) {
-  const user = await requireUser();
-
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canEdit'
+  );
 
   const serviceId = cleanText(formData.get('serviceId'));
 
@@ -443,9 +447,10 @@ export async function enableServiceInventoryAction(formData: FormData) {
 }
 
 export async function disableServiceInventoryAction(formData: FormData) {
-  const user = await requireUser();
-
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canEdit'
+  );
 
   const serviceId = cleanText(formData.get('serviceId'));
 
@@ -485,9 +490,10 @@ export async function disableServiceInventoryAction(formData: FormData) {
 }
 
 export async function initializeServiceStocksAction() {
-  const user = await requireUser();
-
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canCreate'
+  );
 
   const where =
     user.role === 'SUPER_ADMIN'
@@ -536,9 +542,10 @@ export async function initializeServiceStocksAction() {
 }
 
 export async function controlServiceStockAction(formData: FormData) {
-  const user = await requireUser();
-
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canEdit'
+  );
 
   const serviceId = cleanText(formData.get('serviceId'));
   const operation = formData.get(

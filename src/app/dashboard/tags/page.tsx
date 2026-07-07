@@ -1,7 +1,7 @@
-import { TagStatus, TagType } from '@prisma/client';
+import { DashboardModule, TagStatus, TagType } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { protectedGuestUrl, secureNfcLaunchUrl } from '@/lib/nfc-security';
 import { NfcTagsClient } from './NfcTagsClient';
 
@@ -13,7 +13,10 @@ export default async function TagsPage({
   }>;
 }) {
   const params = await searchParams;
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.NFC_TAGS,
+    'canView'
+  );
 
   const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 

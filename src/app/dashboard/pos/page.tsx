@@ -1,6 +1,11 @@
-import { MenuProductType, OrderStatus, ServiceBillingMode } from '@prisma/client';
+import {
+  DashboardModule,
+  MenuProductType,
+  OrderStatus,
+  ServiceBillingMode,
+} from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { POSClient } from './POSClient';
 
 function safeRequiredQuantity(value: number) {
@@ -18,7 +23,10 @@ export default async function POSPage({
     hotelId?: string;
   }>;
 }) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.POS_TERMINAL,
+    'canView'
+  );
   const params = await searchParams;
 
   const hotels = await db.hotel.findMany({

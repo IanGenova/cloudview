@@ -59,25 +59,57 @@ type CreateUserDraft = {
   permissions: PermissionDraft;
 };
 
-function createEmptyPermissionDraft(currentUserRole: Role): PermissionDraft {
+function canTargetRoleUseModule(module: DashboardModule, targetRole?: Role) {
+  if (!targetRole || targetRole === 'SUPER_ADMIN') {
+    return true;
+  }
+
+  if (module === ('HOTELS' as DashboardModule)) {
+    return false;
+  }
+
+  if (module === ('REWARDS' as DashboardModule)) {
+    return false;
+  }
+
+  if (
+    targetRole !== 'HOTEL_ADMIN' &&
+    (module === ('HOTEL_SETTINGS' as DashboardModule) ||
+      module === ('USER_ACCOUNT_SETTINGS' as DashboardModule))
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function getPreferredDefaultRole(allowedRoles: Role[]) {
+  return (
+    allowedRoles.find((role) => role === 'STAFF') ??
+    allowedRoles.find((role) => role === 'KITCHEN') ??
+    allowedRoles.find((role) => role === 'HOTEL_ADMIN') ??
+    allowedRoles[0] ??
+    'STAFF'
+  );
+}
+
+function createEmptyPermissionDraft({
+  currentUserRole,
+  targetRole,
+}: {
+  currentUserRole: Role;
+  targetRole?: Role;
+}): PermissionDraft {
   const draft: PermissionDraft = {};
 
-  dashboardModuleOptions
-    .filter((module) => {
-      if (currentUserRole === 'SUPER_ADMIN') {
-        return true;
-      }
-
-      return !module.superAdminOnly;
-    })
-    .forEach((module) => {
-      draft[module.key] = {
-        canView: false,
-        canCreate: false,
-        canEdit: false,
-        canDelete: false,
-      };
-    });
+  getVisibleModuleOptions(currentUserRole, targetRole).forEach((module) => {
+    draft[module.key] = {
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+    };
+  });
 
   return draft;
 }
@@ -91,7 +123,7 @@ function createInitialUserDraft({
   hotels: HotelOption[];
   currentUserRole: Role;
 }): CreateUserDraft {
-  const defaultRole = allowedRoles[0] ?? 'STAFF';
+  const defaultRole = getPreferredDefaultRole(allowedRoles);
 
   return {
     name: '',
@@ -238,13 +270,13 @@ const permissionColumns = [
   },
 ] as const;
 
-function getVisibleModuleOptions(currentUserRole: Role) {
+function getVisibleModuleOptions(currentUserRole: Role, targetRole?: Role) {
   return dashboardModuleOptions.filter((module) => {
-    if (currentUserRole === 'SUPER_ADMIN') {
-      return true;
+    if (currentUserRole !== 'SUPER_ADMIN' && module.superAdminOnly) {
+      return false;
     }
 
-    return !module.superAdminOnly;
+    return canTargetRoleUseModule(module.key, targetRole);
   });
 }
 
@@ -322,17 +354,22 @@ function normalizePermissionValue(
 function createPermissionDraftFromSaved({
   permissions,
   currentUserRole,
+  targetRole,
 }: {
   permissions?: UserDashboardPermission[];
   currentUserRole: Role;
+  targetRole?: Role;
 }) {
-  const draft = createEmptyPermissionDraft(currentUserRole);
+  const draft = createEmptyPermissionDraft({
+    currentUserRole,
+    targetRole,
+  });
 
   const savedMap = new Map(
     (permissions ?? []).map((permission) => [permission.module, permission])
   );
 
-  for (const module of getVisibleModuleOptions(currentUserRole)) {
+  for (const module of getVisibleModuleOptions(currentUserRole, targetRole)) {
     const saved = savedMap.get(module.key);
 
     draft[module.key] = {
@@ -353,7 +390,7 @@ function createDefaultPermissionDraftForRole({
   role: Role;
   currentUserRole: Role;
 }) {
-  const draft = createEmptyPermissionDraft(currentUserRole);
+  const draft = createEmptyPermissionDraft({ currentUserRole, targetRole: role });
 
   function setModule(moduleKey: string, value: PermissionDraft[string]) {
     if (draft[moduleKey]) {
@@ -362,7 +399,7 @@ function createDefaultPermissionDraftForRole({
   }
 
   if (role === 'SUPER_ADMIN' || role === 'HOTEL_ADMIN') {
-    for (const module of getVisibleModuleOptions(currentUserRole)) {
+    for (const module of getVisibleModuleOptions(currentUserRole, role)) {
       if (role === 'HOTEL_ADMIN' && module.key === ('HOTELS' as DashboardModule)) {
         continue;
       }
@@ -431,12 +468,6 @@ function createDefaultPermissionDraftForRole({
     canDelete: false,
   });
 
-  setModule('REWARDS', {
-    canView: true,
-    canCreate: true,
-    canEdit: true,
-    canDelete: false,
-  });
 
   setModule('POS_TERMINAL', {
     canView: true,
@@ -453,12 +484,14 @@ function createDefaultPermissionDraftForRole({
 function PermissionMatrix({
   permissions,
   currentUserRole,
+  targetRole,
   compact = false,
   permissionDraft,
   onPermissionChange,
 }: {
   permissions?: UserDashboardPermission[];
   currentUserRole: Role;
+  targetRole?: Role;
   compact?: boolean;
   permissionDraft?: PermissionDraft;
   onPermissionChange?: (
@@ -469,12 +502,13 @@ function PermissionMatrix({
 }) {
   const isControlled = Boolean(permissionDraft && onPermissionChange);
 
-  const visibleModules = getVisibleModuleOptions(currentUserRole);
+  const visibleModules = getVisibleModuleOptions(currentUserRole, targetRole);
 
   const [localDraft, setLocalDraft] = useState<PermissionDraft>(() =>
     createPermissionDraftFromSaved({
       permissions,
       currentUserRole,
+      targetRole,
     })
   );
 
@@ -487,9 +521,10 @@ function PermissionMatrix({
       createPermissionDraftFromSaved({
         permissions,
         currentUserRole,
+        targetRole,
       })
     );
-  }, [permissions, currentUserRole, isControlled]);
+  }, [permissions, currentUserRole, targetRole, isControlled]);
 
   const activeDraft = isControlled ? permissionDraft ?? {} : localDraft;
 
@@ -1181,6 +1216,7 @@ function CreateUserModal({
 
         <PermissionMatrix
           currentUserRole={currentUserRole}
+          targetRole={draft.role}
           compact
           permissionDraft={draft.permissions}
           onPermissionChange={updatePermission}
@@ -1222,6 +1258,15 @@ function EditUserModal({
     updateUserAccountAction,
     initialState
   );
+  const [role, setRole] = useState<Role>(account.role);
+  const [hotelId, setHotelId] = useState(account.hotelId ?? '');
+  const [permissionDraft, setPermissionDraft] = useState<PermissionDraft>(() =>
+    createPermissionDraftFromSaved({
+      permissions: account.dashboardPermissions,
+      currentUserRole,
+      targetRole: account.role,
+    })
+  );
 
   useEffect(() => {
     if (!state.message) {
@@ -1239,97 +1284,139 @@ function EditUserModal({
     }
   }, [state, router, onClose, onToast]);
 
- return (
-  <Modal title="Edit User Account" onClose={onClose}>
-    <form action={formAction} className="space-y-4">
-      <input type="hidden" name="userId" value={account.id} />
+  function updateRole(nextRole: Role) {
+    setRole(nextRole);
+    setHotelId((currentHotelId) =>
+      nextRole === 'SUPER_ADMIN' ? '' : currentHotelId || hotels[0]?.id || ''
+    );
+    setPermissionDraft(
+      createDefaultPermissionDraftForRole({
+        role: nextRole,
+        currentUserRole,
+      })
+    );
+  }
 
-      <StateMessage state={state} />
+  function updatePermission(
+    module: DashboardModule,
+    key: PermissionKey,
+    checked: boolean
+  ) {
+    setPermissionDraft((current) => {
+      const currentModule = current[module] ?? emptyPermissionValue();
+      const nextModule = normalizePermissionValue(currentModule, key, checked);
 
-      <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-          Full Name
-        </label>
-        <input
-          name="name"
-          defaultValue={account.name}
-          required
-          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+      return forceSafePermissionDraft({
+        ...current,
+        [module]: nextModule,
+      });
+    });
+  }
+
+  return (
+    <Modal title="Edit User Account" onClose={onClose} size="wide">
+      <form action={formAction} className="space-y-4">
+        <input type="hidden" name="userId" value={account.id} />
+
+        <StateMessage state={state} />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Full Name
+            </label>
+            <input
+              name="name"
+              defaultValue={account.name}
+              required
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Email
+            </label>
+            <input
+              name="email"
+              type="email"
+              defaultValue={account.email}
+              required
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              User Role
+            </label>
+            <select
+              name="role"
+              value={role}
+              onChange={(event) => updateRole(event.target.value as Role)}
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            >
+              {allowedRoles.map((allowedRole) => (
+                <option key={allowedRole} value={allowedRole}>
+                  {roleLabels[allowedRole]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Hotel Access
+            </label>
+            <select
+              name="hotelId"
+              value={hotelId}
+              onChange={(event) => setHotelId(event.target.value)}
+              disabled={currentUserRole !== 'SUPER_ADMIN' || role === 'SUPER_ADMIN'}
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+            >
+              {currentUserRole === 'SUPER_ADMIN' ? (
+                <option value="">No hotel / Super Admin</option>
+              ) : null}
+
+              {hotels.map((hotel) => (
+                <option key={hotel.id} value={hotel.id}>
+                  {hotel.name}
+                </option>
+              ))}
+            </select>
+
+            {role !== 'SUPER_ADMIN' && !hotelId ? (
+              <p className="mt-1 text-xs font-bold text-red-600">
+                Please select a hotel for this role.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <PermissionMatrix
+          permissions={account.dashboardPermissions}
+          currentUserRole={currentUserRole}
+          targetRole={role}
+          compact
+          permissionDraft={permissionDraft}
+          onPermissionChange={updatePermission}
         />
-      </div>
 
-      <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-          Email
-        </label>
-        <input
-          name="email"
-          type="email"
-          defaultValue={account.email}
-          required
-          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        />
-      </div>
+        <div className="sticky bottom-0 -mx-6 flex justify-end gap-2 border-t border-neutral-200 bg-white/95 px-6 py-4 backdrop-blur">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
 
-      <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-          User Role
-        </label>
-        <select
-          name="role"
-          defaultValue={account.role}
-          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-        >
-          {allowedRoles.map((role) => (
-            <option key={role} value={role}>
-              {roleLabels[role]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-          Hotel Access
-        </label>
-        <select
-          name="hotelId"
-          defaultValue={account.hotelId ?? ''}
-          disabled={currentUserRole !== 'SUPER_ADMIN'}
-          className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
-        >
-          {currentUserRole === 'SUPER_ADMIN' ? (
-            <option value="">No hotel / Super Admin</option>
-          ) : null}
-
-          {hotels.map((hotel) => (
-            <option key={hotel.id} value={hotel.id}>
-              {hotel.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <PermissionMatrix
-        permissions={account.dashboardPermissions}
-        currentUserRole={currentUserRole}
-        compact
-      />
-
-      <div className="sticky bottom-0 -mx-6 flex justify-end gap-2 border-t border-neutral-200 bg-white/95 px-6 py-4 backdrop-blur">
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
-        >
-          Cancel
-        </button>
-
-        <SubmitButton>Save Changes</SubmitButton>
-      </div>
-    </form>
-  </Modal>
-);
+          <SubmitButton>Save Changes</SubmitButton>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 function ResetPasswordModal({

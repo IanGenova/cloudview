@@ -1,4 +1,5 @@
 import {
+  DashboardModule,
   FulfillmentTiming,
   ScheduledReleaseStatus,
   ServiceRequestStatus,
@@ -6,7 +7,7 @@ import {
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { RealtimeServiceRequestsRefresh } from '@/components/dashboard/RealtimeServiceRequestsRefresh';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { ServiceRequestsClient } from './ServiceRequestsClient';
 
 export const dynamic = 'force-dynamic';
@@ -232,7 +233,10 @@ export default async function ServiceRequestsPage({
     error?: string;
   }>;
 }) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICE_REQUESTS,
+    'canView'
+  );
   const params = await searchParams;
   const message = getServiceRequestsMessage(params?.success, params?.error);
 

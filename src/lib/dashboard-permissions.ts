@@ -104,6 +104,18 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     group: 'main',
   },
   {
+    module: DashboardModule.REPORTS,
+    label: 'Reports',
+    href: '/dashboard/reports',
+    group: 'main',
+  },
+  {
+    module: DashboardModule.GUEST_STAYS,
+    label: 'Guest Stays',
+    href: '/dashboard/guest-stays',
+    group: 'main',
+  },
+  {
     module: DashboardModule.REWARDS,
     label: 'Rewards',
     href: '/dashboard/rewards',
@@ -122,6 +134,19 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
     group: 'settings',
   },
 ];
+
+
+function getPreferredDashboardModule(role: Role) {
+  if (role === Role.KITCHEN) {
+    return DashboardModule.KITCHEN_DISPLAY;
+  }
+
+  if (role === Role.STAFF) {
+    return DashboardModule.OVERVIEW;
+  }
+
+  return DashboardModule.OVERVIEW;
+}
 
 function fullPermission(module: DashboardModule): DashboardPermissionSnapshot {
   return {
@@ -148,7 +173,13 @@ function normalizeRuntimePermissions(
   role: Role
 ) {
   if (role === Role.SUPER_ADMIN) {
-    return permissions;
+    return DASHBOARD_NAV_ITEMS.map((item) => {
+      const saved = permissions.find(
+        (permission) => permission.module === item.module
+      );
+
+      return saved ?? fullPermission(item.module);
+    });
   }
 
   const permissionMap = new Map(
@@ -176,6 +207,14 @@ function normalizeRuntimePermissions(
    */
   permissionMap.delete(DashboardModule.REWARDS);
   permissionMap.delete(DashboardModule.HOTELS);
+
+  /**
+   * Kitchen users must not access the Order Management module through direct links.
+   * They can still process tickets through KITCHEN_DISPLAY permissions.
+   */
+  if (role === Role.KITCHEN) {
+    permissionMap.delete(DashboardModule.ORDERS);
+  }
 
   /**
    * Staff/Kitchen should not retain admin/settings pages from old saved rows.
@@ -209,7 +248,7 @@ function legacyRoleFallback(
     return (
       action === 'canView' &&
       (module === DashboardModule.OVERVIEW ||
-        module === DashboardModule.ORDERS)
+        module === DashboardModule.INVENTORY)
     );
   }
 
@@ -279,8 +318,12 @@ export async function getVisibleDashboardNavItems(userId: string, role: Role) {
 
 export async function getFirstVisibleDashboardHref(userId: string, role: Role) {
   const visibleItems = await getVisibleDashboardNavItems(userId, role);
+  const preferredModule = getPreferredDashboardModule(role);
+  const preferredItem = visibleItems.find(
+    (item) => item.module === preferredModule
+  );
 
-  return visibleItems[0]?.href ?? null;
+  return preferredItem?.href ?? visibleItems[0]?.href ?? null;
 }
 
 export async function requireDashboardPermission(
@@ -302,7 +345,7 @@ export async function requireDashboardPermission(
       user.role
     );
 
-    redirect(firstAllowedHref ?? '/dashboard/login');
+    redirect(firstAllowedHref ?? '/dashboard');
   }
 
   return user;

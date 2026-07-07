@@ -1,12 +1,13 @@
 'use server';
 
 import {
+  DashboardModule,
   Prisma,
   ServiceAvailabilityMovementType,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
@@ -217,7 +218,10 @@ async function restoreServiceInventoryForCancelledRequests({
 }
 
 export async function updateServiceRequestAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICE_REQUESTS,
+    'canEdit'
+  );
 
   const requestId = cleanText(formData.get('requestId'));
   const requestCode = cleanText(formData.get('requestCode'));
@@ -524,7 +528,10 @@ const shouldPostCharge =
 }
 
 export async function cancelServiceRequestItemAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICE_REQUESTS,
+    'canEdit'
+  );
 
   const requestId = cleanText(formData.get('requestId'));
   const reason = cleanText(formData.get('reason'), 300);

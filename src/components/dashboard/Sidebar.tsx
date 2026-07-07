@@ -38,6 +38,7 @@ type DashboardNavItem = {
 
 type SidebarGroup = {
   label: string;
+  description: string;
   modules: string[];
 };
 
@@ -61,15 +62,18 @@ const guestStaysNavItem: DashboardNavItem = {
 
 const navGroups: SidebarGroup[] = [
   {
-    label: 'Command Center',
+    label: 'Dashboard',
+    description: 'Overview, reports, and performance',
     modules: ['OVERVIEW', 'ANALYTICS', 'REPORTS'],
   },
   {
-    label: 'Property Setup',
+    label: 'Hotel Setup',
+    description: 'Property, guide, rooms, and NFC',
     modules: ['HOTELS', 'HOTEL_GUIDE', 'ROOMS_LOCATIONS', 'NFC_TAGS'],
   },
   {
-    label: 'Guest Operations',
+    label: 'Guest Service',
+    description: 'Stays, orders, kitchen, and requests',
     modules: [
       'GUEST_STAYS',
       'ORDERS',
@@ -80,7 +84,8 @@ const navGroups: SidebarGroup[] = [
     ],
   },
   {
-    label: 'Commerce & Inventory',
+    label: 'Sales & Stock',
+    description: 'Menu, inventory, and POS',
     modules: ['MENU', 'INVENTORY', 'POS_TERMINAL'],
   },
 ];
@@ -201,7 +206,8 @@ function buildGroupedNavItems(items: DashboardNavItem[]): BuiltSidebarGroup[] {
 
   if (otherItems.length > 0) {
     groups.push({
-      label: 'Other Modules',
+      label: 'More Tools',
+      description: 'Additional assigned modules',
       modules: otherItems.map((item) => item.module),
       items: otherItems,
     });
@@ -234,14 +240,14 @@ function SidebarLink({
           ? 'min-h-11 gap-3 px-3 py-2.5'
           : 'mx-auto size-12 justify-center p-0',
         active
-          ? 'bg-gradient-to-r from-[#e0b84a] via-[#c9992f] to-[#a8751e] text-[#090806] shadow-[0_12px_30px_rgba(214,167,56,0.28)]'
-          : 'text-[#d8caa7] hover:bg-white/[0.065] hover:text-[#fff2c9]'
+          ? 'bg-gradient-to-r from-[var(--cv-accent-hover)] via-[var(--cv-accent)] to-[var(--cv-accent-strong)] text-[var(--cv-on-accent)] shadow-[0_12px_30px_rgba(214,167,56,0.28)]'
+          : 'text-[var(--cv-sidebar-text)] hover:bg-white/[0.065] hover:text-[var(--cv-sidebar-text-strong)]'
       )}
     >
       {active ? (
-        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#090806]" />
+        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[var(--cv-on-accent)]" />
       ) : (
-        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#d6a738] opacity-0 transition-opacity group-hover/link:opacity-100" />
+        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[var(--cv-accent)] opacity-0 transition-opacity group-hover/link:opacity-100" />
       )}
 
       <span
@@ -249,8 +255,8 @@ function SidebarLink({
           'relative z-10 grid shrink-0 place-items-center rounded-xl transition',
           isSidebarOpen ? 'size-8' : 'size-9',
           active
-            ? 'bg-black/15 text-[#090806]'
-            : 'bg-white/[0.055] text-[#d6a738] group-hover/link:bg-[#d6a738]/15 group-hover/link:text-[#ffd875]'
+            ? 'bg-black/15 text-[var(--cv-on-accent)]'
+            : 'bg-white/[0.055] text-[var(--cv-accent)] group-hover/link:bg-[var(--cv-accent)]/15 group-hover/link:text-[var(--cv-accent-hover)]'
         )}
       >
         <Icon className="size-4" />
@@ -306,22 +312,22 @@ function SidebarSection({
         className={cx(
           'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
           hasActiveItem
-            ? 'bg-white/[0.06] text-[#f7e7bd]'
-            : 'text-[#b6a780] hover:bg-white/[0.045] hover:text-[#f7e7bd]'
+            ? 'bg-white/[0.06] text-[var(--cv-sidebar-text-strong)]'
+            : 'text-[var(--cv-sidebar-text)] hover:bg-white/[0.045] hover:text-[var(--cv-sidebar-text-strong)]'
         )}
       >
         <span className="min-w-0">
-          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[#d6a738]">
+          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[var(--cv-accent)]">
             {group.label}
           </span>
-          <span className="mt-0.5 block text-[10px] font-bold text-[#74694e]">
-            {group.items.length} module{group.items.length === 1 ? '' : 's'}
+          <span className="mt-0.5 block text-[10px] font-bold text-[var(--cv-sidebar-muted)]">
+            {group.description}
           </span>
         </span>
 
         <ChevronDown
           className={cx(
-            'size-4 shrink-0 text-[#c99c38] transition-transform',
+            'size-4 shrink-0 text-[var(--cv-accent-strong)] transition-transform',
             open && 'rotate-180'
           )}
         />
@@ -408,7 +414,7 @@ export function Sidebar({
         isActiveRoute(pathname, item.href)
       );
 
-      if (hasActiveItem || group.label === 'Command Center') {
+      if (hasActiveItem || group.label === 'Dashboard') {
         initial.add(group.label);
       }
     }
@@ -464,13 +470,13 @@ export function Sidebar({
   return (
     <aside
       className={cx(
-        'sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden border-r border-[#272014] bg-[#070604] text-white shadow-[18px_0_55px_rgba(0,0,0,0.36)] transition-[width] duration-300 ease-in-out lg:flex lg:flex-col',
+        'sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden border-r border-[var(--cv-sidebar-border)] bg-[var(--cv-sidebar-bg)] text-white shadow-[18px_0_55px_rgba(0,0,0,0.36)] transition-[width] duration-300 ease-in-out lg:flex lg:flex-col',
         isSidebarOpen ? 'w-[292px]' : 'w-[88px]'
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,#39290f_0%,#15110a_38%,#070604_100%)]" />
-      <div className="pointer-events-none absolute -right-24 top-20 size-56 rounded-full bg-[#d6a738]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 bottom-20 size-56 rounded-full bg-[#d6a738]/8 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,var(--cv-sidebar-glow)_0%,var(--cv-sidebar-strong)_38%,var(--cv-sidebar-bg)_100%)]" />
+      <div className="pointer-events-none absolute -right-24 top-20 size-56 rounded-full bg-[var(--cv-accent)]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-20 size-56 rounded-full bg-[var(--cv-accent)]/8 blur-3xl" />
 
       <div
         className={cx(
@@ -486,26 +492,26 @@ export function Sidebar({
         >
           <Link
             href={homeHref}
-            title={!isSidebarOpen ? 'Cloud View' : undefined}
-            aria-label={!isSidebarOpen ? 'Cloud View home' : undefined}
+            title={!isSidebarOpen ? 'CloudView' : undefined}
+            aria-label={!isSidebarOpen ? 'CloudView home' : undefined}
             className={cx(
-              'overflow-hidden border border-[#d6a738]/30 bg-white/[0.045] shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[#f1c66a]/60 hover:bg-white/[0.065]',
+              'overflow-hidden border border-[var(--cv-accent)]/30 bg-white/[0.045] shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[#f1c66a]/60 hover:bg-white/[0.065]',
               isSidebarOpen
                 ? 'min-w-0 flex-1 rounded-[1.75rem] p-3.5'
                 : 'grid size-14 place-items-center rounded-2xl p-0'
             )}
           >
             <div className="flex items-center gap-3">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#ffe08a] via-[#d6a738] to-[#9c6c18] text-[#080604] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[var(--cv-accent-hover)] via-[var(--cv-accent)] to-[var(--cv-accent-strong)] text-[var(--cv-on-accent)] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
                 <Home className="size-5" />
               </span>
 
               {isSidebarOpen ? (
                 <span className="min-w-0">
                   <span className="block truncate text-base font-black tracking-tight text-white">
-                    Cloud View
+                    CloudView
                   </span>
-                  <span className="mt-0.5 block truncate text-xs font-semibold text-[#b9aa88]">
+                  <span className="mt-0.5 block truncate text-xs font-semibold text-[var(--cv-sidebar-text)]">
                     {hotelName || 'Super Admin'}
                   </span>
                 </span>
@@ -513,13 +519,13 @@ export function Sidebar({
             </div>
 
             {isSidebarOpen ? (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#d6a738]/15 bg-black/20 px-3 py-2">
-                <p className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[#d6a738]">
-                  Operations Suite
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[var(--cv-accent)]/15 bg-black/20 px-3 py-2">
+                <p className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[var(--cv-accent)]">
+                  Admin Portal
                 </p>
 
                 <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-300">
-                  Online
+                  Active
                 </span>
               </div>
             ) : null}
@@ -531,7 +537,7 @@ export function Sidebar({
             title={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             aria-expanded={isSidebarOpen}
-            className="grid size-10 shrink-0 place-items-center rounded-2xl border border-[#d6a738]/25 bg-white/[0.055] text-[#d6a738] transition hover:border-[#f1c66a]/55 hover:bg-[#d6a738]/15 hover:text-[#ffe08a]"
+            className="grid size-10 shrink-0 place-items-center rounded-2xl border border-[var(--cv-accent)]/25 bg-white/[0.055] text-[var(--cv-accent)] transition hover:border-[#f1c66a]/55 hover:bg-[var(--cv-accent)]/15 hover:text-[var(--cv-accent-hover)]"
           >
             {isSidebarOpen ? (
               <PanelLeftClose className="size-4" />
@@ -548,12 +554,12 @@ export function Sidebar({
           )}
         >
           {isSidebarOpen ? (
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#7e7255]">
-              Navigation
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--cv-sidebar-muted)]">
+              Menu
             </p>
           ) : null}
 
-          <span className="rounded-full border border-[#d6a738]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-black text-[#d6a738]">
+          <span className="rounded-full border border-[var(--cv-accent)]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-black text-[var(--cv-accent)]">
             {moduleCount}
           </span>
         </div>
@@ -587,28 +593,28 @@ export function Sidebar({
                       className={cx(
                         'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
                         hasActiveSettings
-                          ? 'bg-white/[0.06] text-[#f7e7bd]'
-                          : 'text-[#b6a780] hover:bg-white/[0.045] hover:text-[#f7e7bd]'
+                          ? 'bg-white/[0.06] text-[var(--cv-sidebar-text-strong)]'
+                          : 'text-[var(--cv-sidebar-text)] hover:bg-white/[0.045] hover:text-[var(--cv-sidebar-text-strong)]'
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-[#d6a738]">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-[var(--cv-accent)]">
                           <Settings className="size-4" />
                         </span>
 
                         <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[#d6a738]">
-                            Settings
+                          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[var(--cv-accent)]">
+                            Admin Setup
                           </span>
-                          <span className="mt-0.5 block text-[10px] font-bold text-[#74694e]">
-                            System preferences
+                          <span className="mt-0.5 block text-[10px] font-bold text-[var(--cv-sidebar-muted)]">
+                            Hotel and user access
                           </span>
                         </span>
                       </span>
 
                       <ChevronDown
                         className={cx(
-                          'size-4 shrink-0 text-[#c99c38] transition-transform',
+                          'size-4 shrink-0 text-[var(--cv-accent-strong)] transition-transform',
                           openGroups.has(SETTINGS_GROUP_KEY) && 'rotate-180'
                         )}
                       />
@@ -642,7 +648,7 @@ export function Sidebar({
               ) : null}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#c99c38]/30 bg-[#11100c] p-4 text-sm font-bold text-[#b9aa88]">
+            <div className="rounded-2xl border border-dashed border-[var(--cv-accent-strong)]/30 bg-[var(--cv-sidebar-strong)] p-4 text-sm font-bold text-[var(--cv-sidebar-text)]">
               No dashboard modules assigned.
             </div>
           )}
@@ -650,7 +656,7 @@ export function Sidebar({
 
         <div
           className={cx(
-            'mt-3 shrink-0 overflow-hidden rounded-[1.5rem] border border-[#d6a738]/20 bg-white/[0.045] p-3 backdrop-blur',
+            'mt-3 shrink-0 overflow-hidden rounded-[1.5rem] border border-[var(--cv-accent)]/20 bg-white/[0.045] p-3 backdrop-blur',
             isSidebarOpen ? 'w-full' : 'w-14'
           )}
         >
@@ -660,17 +666,17 @@ export function Sidebar({
               !isSidebarOpen && 'justify-center'
             )}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-black/35 text-[#d6a738]">
+            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-black/35 text-[var(--cv-accent)]">
               <ShieldCheck className="size-5" />
             </span>
 
             {isSidebarOpen ? (
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
-                  Secure Access
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--cv-accent)]">
+                  Access Control
                 </p>
-                <p className="mt-0.5 truncate text-xs font-semibold text-[#b9aa88]">
-                  Permission-based modules
+                <p className="mt-0.5 truncate text-xs font-semibold text-[var(--cv-sidebar-text)]">
+                  Role-based menu
                 </p>
               </div>
             ) : null}

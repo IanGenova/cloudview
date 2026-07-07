@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { MenuProductType, type Prisma } from '@prisma/client';
+import { DashboardModule, MenuProductType, type Prisma } from '@prisma/client';
 import { Plus, Pencil, X, CheckCircle2, Search, SlidersHorizontal } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -11,7 +11,7 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { MenuImageUploadPreview } from '@/components/dashboard/MenuImageUploadPreview';
 import { ModalOpenButton } from '@/components/dashboard/ModalOpenButton';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { money } from '@/lib/money';
 import {
   MenuActionForm,
@@ -315,7 +315,7 @@ export default async function MenuManagementPage({
 }) {
   const params = await searchParams;
   const message = getMenuMessage(params?.success, params?.error);
-  const user = await requireUser();
+  const user = await requireDashboardPermission(DashboardModule.MENU, 'canView');
 
  const searchTerm = (params?.q ?? '').trim();
 const selectedHotelId =

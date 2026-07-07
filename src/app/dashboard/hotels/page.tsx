@@ -1,6 +1,6 @@
-import { Role } from '@prisma/client';
+import { DashboardModule, Role } from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { HotelsClient, type HotelRow } from './HotelsClient';
 
 type SortKey =
@@ -86,11 +86,7 @@ export default async function HotelsPage({
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
-  const user = await requireUser();
-
-  if (user.role !== Role.SUPER_ADMIN) {
-    return <p>Forbidden</p>;
-  }
+  await requireDashboardPermission(DashboardModule.HOTELS, 'canView');
 
   const params = await searchParams;
   const query = params?.q?.trim() ?? '';

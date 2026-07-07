@@ -1,10 +1,10 @@
 'use server';
 
+import { DashboardModule, Role, type TagType } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import type { TagType } from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 
 const LOCATION_TYPES = [
   'ROOM',
@@ -44,18 +44,20 @@ const updateLocationSchema = locationSchema.extend({
 
 type DirectoryTab = 'rooms' | 'locations';
 
+type ScopedUser = {
+  id: string;
+  role: Role;
+  hotelId: string | null;
+};
+
 function cleanText(value: FormDataEntryValue | null, max = 500) {
   return String(value || '').trim().slice(0, max);
 }
 
-async function assertHotelAccess(hotelId: string) {
-  const user = await requireUser();
-
-  if (user.role !== 'SUPER_ADMIN' && user.hotelId !== hotelId) {
+function assertHotelAccess(user: ScopedUser, hotelId: string) {
+  if (user.role !== Role.SUPER_ADMIN && user.hotelId !== hotelId) {
     throw new Error('You are not allowed to manage this hotel.');
   }
-
-  return user;
 }
 
 function finishDirectoryAction({
@@ -76,7 +78,10 @@ function finishDirectoryAction({
 }
 
 export async function createRoomAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canCreate'
+  );
 
   const parsed = roomSchema.parse({
     hotelId: formData.get('hotelId') || user.hotelId,
@@ -86,7 +91,7 @@ export async function createRoomAction(formData: FormData) {
     isActive: true,
   });
 
-  await assertHotelAccess(parsed.hotelId);
+  assertHotelAccess(user, parsed.hotelId);
 
   const existingRoom = await db.room.findUnique({
     where: {
@@ -144,6 +149,11 @@ export async function createRoomAction(formData: FormData) {
 }
 
 export async function updateRoomAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canEdit'
+  );
+
   const roomId = cleanText(formData.get('roomId'));
 
   const existing = await db.room.findUnique({
@@ -165,8 +175,8 @@ export async function updateRoomAction(formData: FormData) {
     isActive: formData.get('isActive') === 'on',
   });
 
-  await assertHotelAccess(existing.hotelId);
-  await assertHotelAccess(parsed.hotelId);
+  assertHotelAccess(user, existing.hotelId);
+  assertHotelAccess(user, parsed.hotelId);
 
   const duplicateRoom = await db.room.findUnique({
     where: {
@@ -206,6 +216,11 @@ export async function updateRoomAction(formData: FormData) {
 }
 
 export async function deleteRoomAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canDelete'
+  );
+
   const roomId = cleanText(formData.get('roomId'));
 
   const room = await db.room.findUnique({
@@ -218,9 +233,8 @@ export async function deleteRoomAction(formData: FormData) {
     throw new Error('Room not found.');
   }
 
-  await assertHotelAccess(room.hotelId);
+  assertHotelAccess(user, room.hotelId);
 
-  // 1. Check for active NFC tags assigned to this room
   const attachedTagsCount = await db.nfcTag.count({
     where: {
       roomId: room.id,
@@ -228,7 +242,6 @@ export async function deleteRoomAction(formData: FormData) {
     },
   });
 
-  // 2. Prevent deletion if tags are found
   if (attachedTagsCount > 0) {
     throw new Error(
       `Cannot delete this room. There ${
@@ -237,7 +250,6 @@ export async function deleteRoomAction(formData: FormData) {
     );
   }
 
-  // 3. Proceed with soft-deletion since no tags are attached
   await db.room.update({
     where: {
       id: room.id,
@@ -255,7 +267,10 @@ export async function deleteRoomAction(formData: FormData) {
 }
 
 export async function createLocationAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canCreate'
+  );
 
   const parsed = locationSchema.parse({
     hotelId: formData.get('hotelId') || user.hotelId,
@@ -265,7 +280,7 @@ export async function createLocationAction(formData: FormData) {
     isActive: true,
   });
 
-  await assertHotelAccess(parsed.hotelId);
+  assertHotelAccess(user, parsed.hotelId);
 
   await db.location.create({
     data: {
@@ -285,6 +300,11 @@ export async function createLocationAction(formData: FormData) {
 }
 
 export async function updateLocationAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canEdit'
+  );
+
   const locationId = cleanText(formData.get('locationId'));
 
   const existing = await db.location.findUnique({
@@ -306,8 +326,8 @@ export async function updateLocationAction(formData: FormData) {
     isActive: formData.get('isActive') === 'on',
   });
 
-  await assertHotelAccess(existing.hotelId);
-  await assertHotelAccess(parsed.hotelId);
+  assertHotelAccess(user, existing.hotelId);
+  assertHotelAccess(user, parsed.hotelId);
 
   await db.location.update({
     where: {
@@ -329,6 +349,11 @@ export async function updateLocationAction(formData: FormData) {
 }
 
 export async function deleteLocationAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.ROOMS_LOCATIONS,
+    'canDelete'
+  );
+
   const locationId = cleanText(formData.get('locationId'));
 
   const location = await db.location.findUnique({
@@ -341,9 +366,8 @@ export async function deleteLocationAction(formData: FormData) {
     throw new Error('Location not found.');
   }
 
-  await assertHotelAccess(location.hotelId);
+  assertHotelAccess(user, location.hotelId);
 
-  // 1. Check for active NFC tags assigned to this location
   const attachedTagsCount = await db.nfcTag.count({
     where: {
       locationId: location.id,
@@ -351,7 +375,6 @@ export async function deleteLocationAction(formData: FormData) {
     },
   });
 
-  // 2. Prevent deletion if tags are found
   if (attachedTagsCount > 0) {
     throw new Error(
       `Cannot delete this location. There ${
@@ -360,7 +383,6 @@ export async function deleteLocationAction(formData: FormData) {
     );
   }
 
-  // 3. Proceed with soft-deletion since no tags are attached
   await db.location.update({
     where: {
       id: location.id,

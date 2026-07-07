@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
-import { Role } from '@prisma/client';
+import { DashboardModule, Role } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { dashboardHomeForRole, requireUser } from '@/lib/auth';
+import { dashboardHomeForRole } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { UserAccountSettingsClient } from './UserAccountSettingsClient';
 
 function getAllowedRoles(role: Role) {
@@ -14,13 +15,15 @@ function getAllowedRoles(role: Role) {
 }
 
 export default async function UserAccountSettingsPage() {
-  const currentUser = await requireUser();
+  const currentUser = await requireDashboardPermission(
+    DashboardModule.USER_ACCOUNT_SETTINGS,
+    'canView'
+  );
 
   /**
-   * Critical fix:
-   * Do not throw a raw Forbidden error in the page render.
-   * Staff/Kitchen users can reach this page through a stale `next` URL after login,
-   * so send them to their safe dashboard landing page instead.
+   * Defensive fallback only. In normal flow, requireDashboardPermission already
+   * redirects users without User Account Settings access to their first visible
+   * dashboard module.
    */
   if (
     currentUser.role !== Role.SUPER_ADMIN &&

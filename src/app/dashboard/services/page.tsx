@@ -1,7 +1,7 @@
-import { Role } from '@prisma/client';
+import { DashboardModule, Role } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { requireRole, requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { ServicesModuleClient } from './ServicesModuleClient';
 
 function getMessage(error?: string, success?: string) {
@@ -52,8 +52,10 @@ export default async function ServicesModulePage({
 }) {
   const { error, success } = await searchParams;
 
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICES_MODULE,
+    'canView'
+  );
 
   const message = getMessage(error, success);
 

@@ -1,4 +1,5 @@
 import {
+  DashboardModule,
   GuestPointLedgerStatus,
   GuestStayFolioPaymentStatus,
   OrderStatus,
@@ -8,7 +9,7 @@ import {
 } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { GuestStaysClient } from './GuestStaysClient';
 
 export const dynamic = 'force-dynamic';
@@ -163,7 +164,10 @@ function getGuestStayDisplaySnapshot(
 }
 
 export default async function GuestStaysPage() {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.GUEST_STAYS,
+    'canView'
+  );
 
   const hotels = await db.hotel.findMany({
     where:

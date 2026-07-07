@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,9 +8,9 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { Role } from '@prisma/client';
+import { DashboardModule } from '@prisma/client';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { RewardRedemptionActionButtons } from './RewardRedemptionActionButtons';
 import { RewardsActionModals } from './RewardsActionModals';
 import { RewardCatalogManager } from './RewardCatalogManager';
@@ -263,11 +262,10 @@ export default async function RewardsPage({
     ledgerPage?: string;
   }>;
 }) {
-  const user = await requireUser();
-
-  if (user.role !== Role.SUPER_ADMIN) {
-    redirect('/dashboard');
-  }
+  const user = await requireDashboardPermission(
+    DashboardModule.REWARDS,
+    'canView'
+  );
 
   const params = await searchParams;
   const requestedLedgerPage = parsePage(params?.ledgerPage);

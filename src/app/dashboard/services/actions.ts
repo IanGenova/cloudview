@@ -1,8 +1,8 @@
 'use server';
 
-import { Role, ServiceBillingMode } from '@prisma/client';
+import { DashboardModule, ServiceBillingMode } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { requireRole, requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { assertHotelScope, scopedHotelId } from '@/lib/access';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
@@ -193,8 +193,10 @@ function validateBillingMode(value: FormDataEntryValue | null) {
 }
 
 export async function createServiceCatalogItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICES_MODULE,
+    'canCreate'
+  );
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
   const name = cleanText(formData.get('name'), 120);
@@ -258,8 +260,10 @@ export async function createServiceCatalogItemAction(formData: FormData) {
 }
 
 export async function updateServiceCatalogItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICES_MODULE,
+    'canEdit'
+  );
 
   const itemId = cleanText(formData.get('itemId'));
   const name = cleanText(formData.get('name'), 120);
@@ -337,8 +341,10 @@ export async function updateServiceCatalogItemAction(formData: FormData) {
 }
 
 export async function deleteServiceCatalogItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICES_MODULE,
+    'canDelete'
+  );
 
   const itemId = cleanText(formData.get('itemId'));
 
@@ -368,8 +374,10 @@ export async function deleteServiceCatalogItemAction(formData: FormData) {
 }
 
 export async function seedDefaultServicesAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.SERVICES_MODULE,
+    'canCreate'
+  );
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
 

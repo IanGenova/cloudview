@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { dashboardHomeForRole, getCurrentUser } from '@/lib/auth';
+import { getFirstVisibleDashboardHref } from '@/lib/dashboard-permissions';
 import { loginDirectAction } from './actions';
 
 function sanitizeNext(value?: string) {
@@ -64,7 +65,12 @@ export default async function LoginPage({
   const user = await getCurrentUser();
 
   if (user) {
-    redirect(dashboardHomeForRole(user.role));
+    const firstVisibleHref = await getFirstVisibleDashboardHref(
+      user.id,
+      user.role
+    );
+
+    redirect(firstVisibleHref ?? dashboardHomeForRole(user.role));
   }
 
   const safeNext = sanitizeNext(next);

@@ -5,11 +5,14 @@ import {
   GuestPointLedgerType,
   RewardRedemptionStatus,
   RewardType,
-  Role,
+  DashboardModule,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import {
+  requireDashboardPermission,
+  type DashboardPermissionAction,
+} from '@/lib/dashboard-permissions';
 import { getOrCreatePointAccount } from '@/lib/rewards';
 
 function getString(formData: FormData, key: string, fallback = '') {
@@ -48,22 +51,15 @@ function getDate(formData: FormData, key: string, endOfDay = false) {
   return date;
 }
 
-function requireSuperAdminRole(role: Role) {
-  if (role !== Role.SUPER_ADMIN) {
-    throw new Error('Rewards module is available to Super Admin only.');
-  }
+async function requireRewardsPermission(action: DashboardPermissionAction) {
+  return requireDashboardPermission(DashboardModule.REWARDS, action);
 }
 
-async function requireSuperAdmin() {
-  const user = await requireUser();
-
-  requireSuperAdminRole(user.role);
-
-  return user;
-}
-
-async function getActionHotelId(formData: FormData) {
-  const user = await requireSuperAdmin();
+async function getActionHotelId(
+  formData: FormData,
+  action: DashboardPermissionAction
+) {
+  const user = await requireRewardsPermission(action);
   const hotelId = getString(formData, 'hotelId');
 
   if (!hotelId) {
@@ -186,7 +182,7 @@ function getRewardIds(formData: FormData) {
 }
 
 export async function createRewardAction(formData: FormData) {
-  await requireSuperAdmin();
+  await requireRewardsPermission('canCreate');
 
   const data = buildRewardData(formData);
 
@@ -215,7 +211,7 @@ export async function createRewardAction(formData: FormData) {
 }
 
 export async function updateRewardAction(formData: FormData) {
-  await requireSuperAdmin();
+  await requireRewardsPermission('canEdit');
 
   const rewardIds = getRewardIds(formData);
 
@@ -250,7 +246,7 @@ export async function updateRewardAction(formData: FormData) {
 }
 
 export async function deleteRewardAction(formData: FormData) {
-  await requireSuperAdmin();
+  await requireRewardsPermission('canDelete');
 
   const rewardIds = getRewardIds(formData);
 
@@ -303,7 +299,7 @@ export async function deleteRewardAction(formData: FormData) {
 }
 
 export async function manualPointAdjustmentAction(formData: FormData) {
-  const { hotelId, user } = await getActionHotelId(formData);
+  const { hotelId, user } = await getActionHotelId(formData, 'canEdit');
 
   const guestMemberId = getString(formData, 'guestMemberId');
   const points = getNumber(formData, 'points');
@@ -376,7 +372,7 @@ export async function manualPointAdjustmentAction(formData: FormData) {
 }
 
 export async function createGuestMemberAction(formData: FormData) {
-  const { hotelId } = await getActionHotelId(formData);
+  const { hotelId } = await getActionHotelId(formData, 'canCreate');
 
   const name = getString(formData, 'name');
   const phone = getString(formData, 'phone');
@@ -409,7 +405,7 @@ export async function createGuestMemberAction(formData: FormData) {
 }
 
 export async function markRewardRedemptionUsedAction(formData: FormData) {
-  await requireSuperAdmin();
+  await requireRewardsPermission('canEdit');
 
   const redemptionId = getString(formData, 'redemptionId');
 
@@ -436,7 +432,7 @@ export async function markRewardRedemptionUsedAction(formData: FormData) {
 }
 
 export async function cancelRewardRedemptionAction(formData: FormData) {
-  const user = await requireSuperAdmin();
+  const user = await requireRewardsPermission('canEdit');
 
   const redemptionId = getString(formData, 'redemptionId');
 

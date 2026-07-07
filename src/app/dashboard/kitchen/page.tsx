@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
+  DashboardModule,
   FulfillmentTiming,
   OrderItemStatus,
   OrderStatus,
@@ -12,7 +13,6 @@ import {
   CheckCircle2,
   Clock,
   History,
-  RefreshCcw,
   X,
 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
@@ -21,13 +21,15 @@ import { KitchenRunningTimer } from '@/components/dashboard/KitchenRunningTimer'
 import { KitchenFullscreenButton } from '@/components/dashboard/KitchenFullscreenButton';
 import { RealtimeKitchenRefresh } from '@/components/dashboard/RealtimeKitchenRefresh';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
 import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
 import { KitchenManualRefreshButton } from '@/components/dashboard/KitchenManualRefreshButton';
 import { KitchenTvPagedLane } from '@/components/dashboard/KitchenTvPagedLane';
+import { KitchenSwipeDragController } from '@/components/dashboard/KitchenSwipeDragController';
+import { KitchenFocusOrderScroller } from '@/components/dashboard/KitchenFocusOrderScroller';
 
 type KitchenToastMessage =
   | {
@@ -137,207 +139,6 @@ function KitchenDragStatusForm({
       />
     </form>
   );
-}
-
-function KitchenSwipeDragController() {
-  const script = `(() => {
-  if (window.__cloudViewKitchenSwipeDragBound) return;
-  window.__cloudViewKitchenSwipeDragBound = true;
-
-  function safeId(value) {
-    return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
-  }
-
-  function formId(orderId, targetStatus) {
-    return 'kitchen-drag-status-' + safeId(orderId) + '-' + targetStatus;
-  }
-
-  function canMove(sourceLane, targetStatus) {
-    if (!sourceLane || !targetStatus) return false;
-
-    if (sourceLane === 'pending') {
-      return targetStatus === 'PREPARING';
-    }
-
-    if (sourceLane === 'preparing') {
-      return targetStatus === 'READY';
-    }
-
-    return false;
-  }
-
-  function swipeTarget(sourceLane, distanceX) {
-    if (distanceX < 80) return '';
-
-    if (sourceLane === 'pending') {
-      return 'PREPARING';
-    }
-
-    if (sourceLane === 'preparing') {
-      return 'READY';
-    }
-
-    return '';
-  }
-
-  function submitStatus(orderId, targetStatus) {
-    const form = document.getElementById(formId(orderId, targetStatus));
-
-    if (!form || form.dataset.submitting === '1') return;
-
-    form.dataset.submitting = '1';
-    form.requestSubmit ? form.requestSubmit() : form.submit();
-  }
-
-  function setLaneHover(lane, active) {
-    if (!lane) return;
-
-    if (active) {
-      lane.style.outline = '3px solid rgba(17, 16, 11, 0.18)';
-      lane.style.outlineOffset = '3px';
-    } else {
-      lane.style.outline = '';
-      lane.style.outlineOffset = '';
-    }
-  }
-
-  let draggedCard = null;
-
-  document.addEventListener('dragstart', (event) => {
-    const card = event.target.closest('[data-kitchen-draggable-card="true"]');
-    if (!card || !event.dataTransfer) return;
-
-    draggedCard = card;
-    card.dataset.dragging = 'true';
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', card.dataset.orderId || '');
-  });
-
-  document.addEventListener('dragend', () => {
-    if (draggedCard) {
-      draggedCard.dataset.dragging = '';
-      draggedCard = null;
-    }
-
-    document
-      .querySelectorAll('[data-kitchen-drop-status]')
-      .forEach((lane) => setLaneHover(lane, false));
-  });
-
-  document.addEventListener('dragover', (event) => {
-    const lane = event.target.closest('[data-kitchen-drop-status]');
-    if (!lane || !draggedCard || !event.dataTransfer) return;
-
-    const targetStatus = lane.dataset.kitchenDropStatus;
-    const sourceLane = draggedCard.dataset.currentLane;
-
-    if (!canMove(sourceLane, targetStatus)) return;
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    setLaneHover(lane, true);
-  });
-
-  document.addEventListener('dragleave', (event) => {
-    const lane = event.target.closest('[data-kitchen-drop-status]');
-    if (!lane) return;
-
-    const related = event.relatedTarget;
-    if (related && lane.contains(related)) return;
-
-    setLaneHover(lane, false);
-  });
-
-  document.addEventListener('drop', (event) => {
-    const lane = event.target.closest('[data-kitchen-drop-status]');
-    if (!lane || !draggedCard) return;
-
-    const targetStatus = lane.dataset.kitchenDropStatus;
-    const sourceLane = draggedCard.dataset.currentLane;
-    const orderId = draggedCard.dataset.orderId;
-
-    if (!canMove(sourceLane, targetStatus)) return;
-
-    event.preventDefault();
-    setLaneHover(lane, false);
-    submitStatus(orderId, targetStatus);
-  });
-
-  let swipe = null;
-
-  document.addEventListener('pointerdown', (event) => {
-    const card = event.target.closest('[data-kitchen-swipe-card="true"]');
-    if (!card) return;
-
-    if (event.target.closest('button, a, input, textarea, select, summary, form')) {
-      return;
-    }
-
-    swipe = {
-      pointerId: event.pointerId,
-      card,
-      orderId: card.dataset.orderId,
-      sourceLane: card.dataset.currentLane,
-      startX: event.clientX,
-      startY: event.clientY,
-      active: false,
-    };
-  });
-
-  document.addEventListener('pointermove', (event) => {
-    if (!swipe || swipe.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - swipe.startX;
-    const dy = event.clientY - swipe.startY;
-
-    if (!swipe.active && Math.abs(dx) < 14) return;
-    if (!swipe.active && Math.abs(dx) < Math.abs(dy) * 1.15) return;
-
-    swipe.active = true;
-
-    const distance = Math.max(0, Math.min(dx, 260));
-    const targetStatus = swipeTarget(swipe.sourceLane, distance);
-
-    swipe.card.style.transform = 'translateX(' + distance + 'px)';
-    swipe.card.style.opacity = targetStatus ? '0.72' : '0.92';
-    swipe.card.style.boxShadow = targetStatus
-      ? '0 18px 42px rgba(17, 16, 11, 0.18)'
-      : '';
-  });
-
-  function resetSwipeCard(card) {
-    if (!card) return;
-    card.style.transform = '';
-    card.style.opacity = '';
-    card.style.boxShadow = '';
-  }
-
-  document.addEventListener('pointerup', (event) => {
-    if (!swipe || swipe.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - swipe.startX;
-    const targetStatus = swipeTarget(swipe.sourceLane, dx);
-    const card = swipe.card;
-    const orderId = swipe.orderId;
-
-    swipe = null;
-    resetSwipeCard(card);
-
-    if (targetStatus && orderId) {
-      submitStatus(orderId, targetStatus);
-    }
-  });
-
-  document.addEventListener('pointercancel', () => {
-    if (swipe?.card) {
-      resetSwipeCard(swipe.card);
-    }
-
-    swipe = null;
-  });
-})();`;
-
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }
 
 function getKitchenMessage(success?: string, error?: string): KitchenToastMessage {
@@ -834,11 +635,25 @@ function KitchenOrderItemLine({
   );
 }
 
-function KitchenRushReadyCard({ order }: { order: KitchenOrder }) {
+function KitchenRushReadyCard({
+  order,
+  focusedOrderCode,
+}: {
+  order: KitchenOrder;
+  focusedOrderCode?: string;
+}) {
   const guestName = order.guestName?.trim() || 'Guest name not provided';
+  const isFocused = Boolean(focusedOrderCode && order.orderCode === focusedOrderCode);
 
   return (
-    <details className="group rounded-xl border border-neutral-200 bg-white p-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <details
+      data-kitchen-order-code={order.orderCode}
+      data-focused-kitchen-order={isFocused ? 'true' : undefined}
+      className={cn(
+        'group rounded-xl border border-neutral-200 bg-white p-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900',
+        isFocused && 'ring-4 ring-orange-400/60 shadow-[0_0_0_6px_rgba(251,146,60,0.12)]'
+      )}
+    >
       <summary className="list-none cursor-pointer rounded-lg outline-none transition hover:bg-neutral-50 focus-visible:ring-4 focus-visible:ring-emerald-500/15 dark:hover:bg-neutral-800/60 [&::-webkit-details-marker]:hidden">
         <div className="flex min-w-0 items-start justify-between gap-2 p-1">
           <div className="min-w-0 space-y-1">
@@ -891,11 +706,13 @@ function KitchenOrderCard({
   type,
   showHistory,
   displayMode,
+  focusedOrderCode,
 }: {
   order: KitchenOrder;
   type: 'pending' | 'preparing' | 'ready';
   showHistory: boolean;
   displayMode: KitchenDisplayMode;
+  focusedOrderCode?: string;
 }) {
   const guestName = order.guestName?.trim() || 'Guest name not provided';
   const activeItemCount = getActiveItemCount(order.items);
@@ -918,6 +735,7 @@ function KitchenOrderCard({
   const rushHeaderMeta = `${roomLocationLabel} · ${guestName}`;
   const canMoveWithRushGesture =
     isRushMode && (type === 'pending' || type === 'preparing');
+  const isFocused = Boolean(focusedOrderCode && order.orderCode === focusedOrderCode);
 
   const displayStatus =
     order.status === OrderStatus.ACCEPTED
@@ -927,6 +745,8 @@ function KitchenOrderCard({
   return (
     <article
       draggable={canMoveWithRushGesture}
+      data-kitchen-order-code={order.orderCode}
+      data-focused-kitchen-order={isFocused ? 'true' : undefined}
       data-kitchen-draggable-card={canMoveWithRushGesture ? 'true' : undefined}
       data-kitchen-swipe-card={canMoveWithRushGesture ? 'true' : undefined}
       data-order-id={canMoveWithRushGesture ? order.id : undefined}
@@ -939,7 +759,8 @@ function KitchenOrderCard({
           ? 'rounded-[2rem] border-white/10 bg-white/95 shadow-2xl'
           : isRushMode
             ? 'rounded-2xl border-neutral-200 shadow-sm'
-            : 'rounded-[1.25rem] border-neutral-200'
+            : 'rounded-[1.25rem] border-neutral-200',
+        isFocused && 'ring-4 ring-orange-400/60 shadow-[0_0_0_6px_rgba(251,146,60,0.12)]'
       )}
     >
       <div
@@ -1264,6 +1085,7 @@ function KitchenLane({
   type,
   showHistory,
   displayMode,
+  focusedOrderCode,
 }: {
   title: string;
   description: string;
@@ -1271,6 +1093,7 @@ function KitchenLane({
   type: 'pending' | 'preparing' | 'ready';
   showHistory: boolean;
   displayMode: KitchenDisplayMode;
+  focusedOrderCode?: string;
 }) {
   const isTvMode = displayMode === 'tv';
   const isRushMode = displayMode === 'rush';
@@ -1373,7 +1196,7 @@ function KitchenLane({
           <div className={cn('grid', isRushMode ? 'gap-2' : 'gap-3')}>
             {orders.map((order) =>
               isRushMode && type === 'ready' ? (
-                <KitchenRushReadyCard key={order.id} order={order} />
+                <KitchenRushReadyCard key={order.id} order={order} focusedOrderCode={focusedOrderCode} />
               ) : (
                 <KitchenOrderCard
                   key={order.id}
@@ -1381,6 +1204,7 @@ function KitchenLane({
                   type={type}
                   showHistory={showHistory}
                   displayMode={displayMode}
+                  focusedOrderCode={focusedOrderCode}
                 />
               )
             )}
@@ -1445,14 +1269,19 @@ export default async function KitchenDisplayPage({
   success?: string;
   view?: string;
   error?: string;
+  focusOrder?: string;
 }>;
 }) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.KITCHEN_DISPLAY,
+    'canView'
+  );
   const params = await searchParams;
   const activeView: KitchenViewMode =
   params?.view === 'scheduled' ? 'scheduled' : 'live';
 
 const isScheduledView = activeView === 'scheduled';
+const focusOrderCode = String(params?.focusOrder ?? '').trim().slice(0, 120);
   const showHistory = params?.history === '1';
   const message = getKitchenMessage(params?.success, params?.error);
  const displayMode: KitchenDisplayMode =
@@ -1608,6 +1437,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       >
       <RealtimeKitchenRefresh fallbackIntervalMs={30_000} refreshDebounceMs={500} />
       <KitchenSwipeDragController />
+      <KitchenFocusOrderScroller orderCode={focusOrderCode} />
       <KitchenToast message={message} showHistory={showHistory} />
 
       <div
@@ -1764,6 +1594,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       type="pending"
       showHistory={showHistory}
       displayMode={displayMode}
+      focusedOrderCode={focusOrderCode}
     />
 
     <KitchenLane
@@ -1773,6 +1604,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       type="preparing"
       showHistory={showHistory}
       displayMode={displayMode}
+      focusedOrderCode={focusOrderCode}
     />
 
     <KitchenLane
@@ -1782,6 +1614,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       type="ready"
       showHistory={showHistory}
       displayMode={displayMode}
+      focusedOrderCode={focusOrderCode}
     />
   </div>
 ) : isTvMode ? (
@@ -1852,6 +1685,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       type="pending"
       showHistory={showHistory}
       displayMode={displayMode}
+      focusedOrderCode={focusOrderCode}
     />
 
     <KitchenLane
@@ -1861,6 +1695,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       type="preparing"
       showHistory={showHistory}
       displayMode={displayMode}
+      focusedOrderCode={focusOrderCode}
     />
 
     <KitchenLane
@@ -1870,6 +1705,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       type="ready"
       showHistory={showHistory}
       displayMode={displayMode}
+      focusedOrderCode={focusOrderCode}
     />
   </div>
 )}

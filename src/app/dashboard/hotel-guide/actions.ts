@@ -1,13 +1,13 @@
 'use server';
 
-import { HotelGuideItemType, Role } from '@prisma/client';
+import { DashboardModule, HotelGuideItemType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import path from 'path';
 import { assertHotelScope, scopedHotelId } from '@/lib/access';
-import { requireRole, requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 
@@ -465,8 +465,10 @@ async function deleteReplacedCoverImage(
 }
 
 export async function createGuideSectionAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canCreate'
+  );
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
   const title = cleanText(formData.get('title'), 120);
@@ -519,8 +521,10 @@ try {
 }
 
 export async function updateGuideSectionAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canEdit'
+  );
 
   const sectionId = cleanText(formData.get('sectionId'));
   const title = cleanText(formData.get('title'), 120);
@@ -601,8 +605,10 @@ try {
 }
 
 export async function deleteGuideSectionAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canDelete'
+  );
 
   const sectionId = cleanText(formData.get('sectionId'));
 
@@ -656,8 +662,10 @@ export async function deleteGuideSectionAction(formData: FormData) {
 }
 
 export async function createGuideItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canCreate'
+  );
 
   const sectionId = cleanText(formData.get('sectionId'));
   const title = cleanText(formData.get('title'), 120);
@@ -738,8 +746,10 @@ try {
 }
 
 export async function updateGuideItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canEdit'
+  );
 
   const itemId = cleanText(formData.get('itemId'));
   const title = cleanText(formData.get('title'), 120);
@@ -826,8 +836,10 @@ try {
 }
 
 export async function deleteGuideItemAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canDelete'
+  );
 
   const itemId = cleanText(formData.get('itemId'));
 
@@ -871,8 +883,10 @@ export async function deleteGuideItemAction(formData: FormData) {
 }
 
 export async function uploadGuideImageAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canCreate'
+  );
 
   const sectionId = cleanText(formData.get('sectionId'));
   const itemId = cleanText(formData.get('itemId'));
@@ -1000,8 +1014,10 @@ export async function uploadGuideImageAction(formData: FormData) {
 }
 
 export async function deleteGuideImageAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canDelete'
+  );
 
   const imageId = cleanText(formData.get('imageId'));
 
@@ -1038,8 +1054,10 @@ export async function deleteGuideImageAction(formData: FormData) {
 }
 
 export async function seedPoolGuideContentAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canCreate'
+  );
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
 
@@ -1128,8 +1146,10 @@ export async function seedPoolGuideContentAction(formData: FormData) {
 }
 
 export async function seedDefaultHotelGuideAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_GUIDE,
+    'canCreate'
+  );
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
 

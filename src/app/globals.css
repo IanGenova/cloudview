@@ -4,8 +4,135 @@
 @tailwind utilities;
 
 :root {
-  --background: #fbfaf7;
-  --foreground: #111111;
+  --background: #faf7f0;
+  --foreground: #171717;
+
+  --cv-ink: #11100b;
+  --cv-ink-soft: #1c1710;
+  --cv-on-accent: #090806;
+  --cv-accent: #c99c38;
+  --cv-accent-strong: #9a6b18;
+  --cv-accent-hover: #f1c66a;
+  --cv-accent-soft: #fff8e7;
+  --cv-bg: #faf7f0;
+  --cv-card: #ffffff;
+  --cv-card-muted: #f6f1e8;
+  --cv-border: #e8e1d4;
+  --cv-text: #171717;
+  --cv-muted: #6b665c;
+  --cv-sidebar-bg: #070604;
+  --cv-sidebar-strong: #15110a;
+  --cv-sidebar-glow: #39290f;
+  --cv-sidebar-border: #272014;
+  --cv-sidebar-text: #d8caa7;
+  --cv-sidebar-text-strong: #fff2c9;
+  --cv-sidebar-muted: #8a7a58;
+
+  --cv-status-active: #10b981;
+  --cv-status-pending: #f59e0b;
+  --cv-status-preparing: #3b82f6;
+  --cv-status-ready: #34d399;
+  --cv-status-danger: #dc2626;
+}
+
+:root[data-cloudview-palette='emerald-hotel'] {
+  --background: #f3fbf7;
+  --foreground: #10221b;
+  --cv-ink: #071a13;
+  --cv-ink-soft: #0e2a20;
+  --cv-on-accent: #04110c;
+  --cv-accent: #10b981;
+  --cv-accent-strong: #047857;
+  --cv-accent-hover: #6ee7b7;
+  --cv-accent-soft: #dffbf0;
+  --cv-bg: #f3fbf7;
+  --cv-card: #ffffff;
+  --cv-card-muted: #ecfdf5;
+  --cv-border: #cdefe1;
+  --cv-text: #10221b;
+  --cv-muted: #527064;
+  --cv-sidebar-bg: #04110c;
+  --cv-sidebar-strong: #0b241a;
+  --cv-sidebar-glow: #0e3b2b;
+  --cv-sidebar-border: #123d2d;
+  --cv-sidebar-text: #bfe8d7;
+  --cv-sidebar-text-strong: #e9fff5;
+  --cv-sidebar-muted: #72a48f;
+}
+
+:root[data-cloudview-palette='sapphire-desk'] {
+  --background: #f5f8ff;
+  --foreground: #0f172a;
+  --cv-ink: #071225;
+  --cv-ink-soft: #101b33;
+  --cv-on-accent: #f8fbff;
+  --cv-accent: #2563eb;
+  --cv-accent-strong: #1d4ed8;
+  --cv-accent-hover: #93c5fd;
+  --cv-accent-soft: #dbeafe;
+  --cv-bg: #f5f8ff;
+  --cv-card: #ffffff;
+  --cv-card-muted: #eff6ff;
+  --cv-border: #d7e4f8;
+  --cv-text: #0f172a;
+  --cv-muted: #52627a;
+  --cv-sidebar-bg: #030a18;
+  --cv-sidebar-strong: #071225;
+  --cv-sidebar-glow: #123a78;
+  --cv-sidebar-border: #15294d;
+  --cv-sidebar-text: #bfdbfe;
+  --cv-sidebar-text-strong: #eff6ff;
+  --cv-sidebar-muted: #7ea6d9;
+}
+
+:root[data-cloudview-palette='rose-premium'] {
+  --background: #fff5f7;
+  --foreground: #241018;
+  --cv-ink: #1c0711;
+  --cv-ink-soft: #2a0d19;
+  --cv-on-accent: #fff7f9;
+  --cv-accent: #e11d48;
+  --cv-accent-strong: #be123c;
+  --cv-accent-hover: #fda4af;
+  --cv-accent-soft: #ffe4e6;
+  --cv-bg: #fff5f7;
+  --cv-card: #ffffff;
+  --cv-card-muted: #fff1f2;
+  --cv-border: #f6d5db;
+  --cv-text: #241018;
+  --cv-muted: #785a63;
+  --cv-sidebar-bg: #12050b;
+  --cv-sidebar-strong: #230814;
+  --cv-sidebar-glow: #4a1023;
+  --cv-sidebar-border: #3b1020;
+  --cv-sidebar-text: #fbcdd5;
+  --cv-sidebar-text-strong: #fff1f3;
+  --cv-sidebar-muted: #b47a88;
+}
+
+:root[data-cloudview-palette='minimal-slate'] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --cv-ink: #0f172a;
+  --cv-ink-soft: #1e293b;
+  --cv-on-accent: #f8fafc;
+  --cv-accent: #64748b;
+  --cv-accent-strong: #334155;
+  --cv-accent-hover: #cbd5e1;
+  --cv-accent-soft: #f1f5f9;
+  --cv-bg: #f8fafc;
+  --cv-card: #ffffff;
+  --cv-card-muted: #f1f5f9;
+  --cv-border: #e2e8f0;
+  --cv-text: #0f172a;
+  --cv-muted: #64748b;
+  --cv-sidebar-bg: #020617;
+  --cv-sidebar-strong: #0f172a;
+  --cv-sidebar-glow: #1e293b;
+  --cv-sidebar-border: #1e293b;
+  --cv-sidebar-text: #cbd5e1;
+  --cv-sidebar-text-strong: #f8fafc;
+  --cv-sidebar-muted: #94a3b8;
 }
 
 html {
@@ -18,11 +145,21 @@ body {
 }
 
 .gold-gradient {
-  background: linear-gradient(135deg, #111111 0%, #2a241d 58%, #b88938 160%);
+  background: linear-gradient(
+    135deg,
+    var(--cv-ink) 0%,
+    var(--cv-ink-soft) 58%,
+    var(--cv-accent) 160%
+  );
 }
 
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 @layer utilities {
   .dark .cloudview-dashboard-shell .bg-white {

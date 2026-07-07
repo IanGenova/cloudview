@@ -4,11 +4,14 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { revalidatePath } from 'next/cache';
-import { requireUser, requireRole } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { DashboardModule, Role } from '@prisma/client';
+import { requireRole } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { scopedHotelId } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
-import { redirect } from 'next/navigation';
+
 const SETTINGS_UPLOAD_DIR = path.join(
   process.cwd(),
   'public',
@@ -99,8 +102,11 @@ async function resolveGuestPortalHeroImageUrl(
 }
 
 export async function saveHotelSettingsAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN']);
+  const user = await requireDashboardPermission(
+    DashboardModule.HOTEL_SETTINGS,
+    'canEdit'
+  );
+  requireRole(user.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
 
   const hotelId = scopedHotelId(user, cleanText(formData.get('hotelId')));
 

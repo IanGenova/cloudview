@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  DashboardModule,
   GuestStayCheckoutPaymentMethod,
   GuestStayFolioLineType,
   GuestStayFolioStatus,
@@ -13,7 +14,10 @@ import {
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import {
+  requireDashboardPermission,
+  type DashboardPermissionAction,
+} from '@/lib/dashboard-permissions';
 import {
   createGuestStayWithPasscode,
   decryptGuestStayPasscode,
@@ -74,7 +78,10 @@ function parseGuestStayStatus(value: FormDataEntryValue | null) {
 }
 
 async function getActionHotelId(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.GUEST_STAYS,
+    'canCreate'
+  );
 
   if (user.role === Role.SUPER_ADMIN) {
     const hotelId = cleanText(formData.get('hotelId'), 120);
@@ -101,10 +108,15 @@ async function getActionHotelId(formData: FormData) {
 
 async function getScopedGuestStay({
   guestStayId,
+  permission = 'canView',
 }: {
   guestStayId: string;
+  permission?: DashboardPermissionAction;
 }) {
-  const user = await requireUser();
+  const user = await requireDashboardPermission(
+    DashboardModule.GUEST_STAYS,
+    permission
+  );
 
   const guestStay = await db.guestStay.findFirst({
     where:
@@ -276,6 +288,7 @@ export async function updateGuestStayAction(formData: FormData) {
 
     const { guestStay } = await getScopedGuestStay({
       guestStayId,
+      permission: 'canEdit',
     });
 
     if (!guestStay) {
@@ -617,6 +630,7 @@ export async function checkoutGuestStayAction(formData: FormData) {
 
     const { user, guestStay } = await getScopedGuestStay({
       guestStayId,
+      permission: 'canEdit',
     });
 
     if (!guestStay) {
@@ -1193,6 +1207,7 @@ export async function markGuestStayReceiptPrintedAction(formData: FormData) {
 
     const { user, guestStay } = await getScopedGuestStay({
       guestStayId,
+      permission: 'canEdit',
     });
 
     if (!guestStay) {
@@ -1260,6 +1275,7 @@ export async function getGuestStayPasscodeAction(formData: FormData) {
 
     const { guestStay } = await getScopedGuestStay({
       guestStayId,
+      permission: 'canEdit',
     });
 
     if (!guestStay) {
@@ -1307,6 +1323,7 @@ export async function resetGuestStayPasscodeAction(formData: FormData) {
 
     const { guestStay } = await getScopedGuestStay({
       guestStayId,
+      permission: 'canEdit',
     });
 
     if (!guestStay) {

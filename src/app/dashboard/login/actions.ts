@@ -2,11 +2,11 @@
 
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
+import { createSession, dashboardHomeForRole, verifyPassword } from '@/lib/auth';
 import {
-  createSession,
-  dashboardHomeForRole,
-  verifyPassword,
-} from '@/lib/auth';
+  getFirstVisibleDashboardHref,
+  getVisibleDashboardNavItems,
+} from '@/lib/dashboard-permissions';
 import type { Role, User } from '@prisma/client';
 
 export type LoginActionState =
@@ -35,57 +35,67 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function isSafeDashboardPath(value: string) {
-  if (!value) return false;
-  if (!value.startsWith('/dashboard')) return false;
-  if (value.startsWith('//')) return false;
-  if (value.includes('://')) return false;
-  if (value === '/dashboard/login') return false;
+function parseSafeDashboardRedirect(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string') {
+    return null;
+  }
 
-  return true;
+  const rawNext = value.trim();
+
+  if (!rawNext || rawNext.startsWith('//') || rawNext.includes('://')) {
+    return null;
+  }
+
+  try {
+    const url = new URL(rawNext, 'http://cloudview.local');
+
+    if (!url.pathname.startsWith('/dashboard')) {
+      return null;
+    }
+
+    if (url.pathname === '/dashboard/login') {
+      return null;
+    }
+
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
 }
 
-function isAdminOnlyDashboardPath(pathname: string) {
-  const adminOnlyPrefixes = [
-    '/dashboard/settings',
-    '/dashboard/hotels',
-    '/dashboard/rewards',
-  ];
+function isRouteWithinNavHref(pathname: string, href: string) {
+  if (href === '/dashboard') {
+    return pathname === '/dashboard';
+  }
 
-  return adminOnlyPrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+async function getPermissionAwareDashboardRedirect({
+  nextValue,
+  user,
+}: {
+  nextValue: FormDataEntryValue | null;
+  user: User;
+}) {
+  const firstVisibleHref = await getFirstVisibleDashboardHref(
+    user.id,
+    user.role
   );
-}
+  const fallback = firstVisibleHref ?? dashboardHomeForRole(user.role);
+  const safeNext = parseSafeDashboardRedirect(nextValue);
 
-function getSafeDashboardRedirect(
-  nextValue: FormDataEntryValue | null,
-  role: Role
-) {
-  const fallback = dashboardHomeForRole(role);
-
-  if (typeof nextValue !== 'string') {
+  if (!safeNext) {
     return fallback;
   }
 
-  const next = nextValue.trim();
+  const nextUrl = new URL(safeNext, 'http://cloudview.local');
+  const visibleNavItems = await getVisibleDashboardNavItems(user.id, user.role);
+  const canOpenRequestedModule = visibleNavItems.some((item) =>
+    isRouteWithinNavHref(nextUrl.pathname, item.href)
+  );
 
-  if (!isSafeDashboardPath(next)) {
-    return fallback;
-  }
-
-  /**
-   * Do not honor stale admin-only next URLs for non-admin users.
-   * This prevents successful Staff/Kitchen logins from landing on Forbidden pages.
-   */
-  if (
-    role !== 'SUPER_ADMIN' &&
-    role !== 'HOTEL_ADMIN' &&
-    isAdminOnlyDashboardPath(next)
-  ) {
-    return fallback;
-  }
-
-  return next;
+  return canOpenRequestedModule ? safeNext : fallback;
 }
 
 function loginErrorUrl(message: string) {
@@ -166,7 +176,10 @@ async function authenticateDashboardLogin(
   return {
     ok: true,
     user,
-    redirectTo: getSafeDashboardRedirect(formData.get('next'), user.role),
+    redirectTo: await getPermissionAwareDashboardRedirect({
+      nextValue: formData.get('next'),
+      user,
+    }),
   };
 }
 

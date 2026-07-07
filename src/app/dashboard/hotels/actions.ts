@@ -1,13 +1,13 @@
 'use server';
 
-import { Prisma, Role } from '@prisma/client';
+import { DashboardModule, Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireRole, requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 
-function redirectToHotels(params: { success?: string; error?: string }) {
+function redirectToHotels(params: { success?: string; error?: string }): never {
   const searchParams = new URLSearchParams();
 
   if (params.success) {
@@ -64,11 +64,16 @@ function getReadablePrismaError(error: unknown) {
   return 'action-failed';
 }
 
-export async function createHotelAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN]);
+function revalidateHotelPaths() {
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/hotels');
+  revalidatePath('/dashboard/settings/users');
+}
 
-  const name = cleanText(formData.get('name'), 120);
+export async function createHotelAction(formData: FormData) {
+  await requireDashboardPermission(DashboardModule.HOTELS, 'canCreate');
+
+  const name = cleanText(formData.get('name'), 120) ?? '';
   const slug = normalizeSlug(formData.get('slug'));
   const brandColor = normalizeHexColor(formData.get('brandColor'), '#111111');
   const accentColor = normalizeHexColor(formData.get('accentColor'), '#B88938');
@@ -76,10 +81,6 @@ export async function createHotelAction(formData: FormData) {
   if (!name || !slug) {
     redirectToHotels({ error: 'hotel-required' });
   }
-
-if (!name) {
-  throw new Error('Hotel name is required.');
-}
 
   try {
     await db.hotel.create({
@@ -99,17 +100,16 @@ if (!name) {
     redirectToHotels({ error: getReadablePrismaError(error) });
   }
 
-  revalidatePath('/dashboard/hotels');
+  revalidateHotelPaths();
 
   redirectToHotels({ success: 'hotel-created' });
 }
 
 export async function updateHotelAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN]);
+  await requireDashboardPermission(DashboardModule.HOTELS, 'canEdit');
 
-  const hotelId = cleanText(formData.get('hotelId'));
-  const name = cleanText(formData.get('name'), 120);
+  const hotelId = cleanText(formData.get('hotelId')) ?? '';
+  const name = cleanText(formData.get('name'), 120) ?? '';
   const slug = normalizeSlug(formData.get('slug'));
   const brandColor = normalizeHexColor(formData.get('brandColor'), '#111111');
   const accentColor = normalizeHexColor(formData.get('accentColor'), '#B88938');
@@ -138,16 +138,15 @@ export async function updateHotelAction(formData: FormData) {
     redirectToHotels({ error: getReadablePrismaError(error) });
   }
 
-  revalidatePath('/dashboard/hotels');
+  revalidateHotelPaths();
 
   redirectToHotels({ success: 'hotel-updated' });
 }
 
 export async function deleteHotelAction(formData: FormData) {
-  const user = await requireUser();
-  requireRole(user.role, [Role.SUPER_ADMIN]);
+  await requireDashboardPermission(DashboardModule.HOTELS, 'canDelete');
 
-  const hotelId = cleanText(formData.get('hotelId'));
+  const hotelId = cleanText(formData.get('hotelId')) ?? '';
 
   if (!hotelId) {
     redirectToHotels({ error: 'hotel-not-found' });
@@ -163,7 +162,7 @@ export async function deleteHotelAction(formData: FormData) {
     redirectToHotels({ error: getReadablePrismaError(error) });
   }
 
-  revalidatePath('/dashboard/hotels');
+  revalidateHotelPaths();
 
   redirectToHotels({ success: 'hotel-deleted' });
 }
