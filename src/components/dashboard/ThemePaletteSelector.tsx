@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Palette, Search } from 'lucide-react';
+import { Check, Palette, Search, X } from 'lucide-react';
 import {
   applyDashboardThemePalette,
   DASHBOARD_THEME_PALETTES,
@@ -118,6 +118,117 @@ function PaletteOption({
   );
 }
 
+function PaletteFilters({
+  search,
+  category,
+  onSearchChange,
+  onCategoryChange,
+  compact = false,
+}: {
+  search: string;
+  category: DashboardThemePaletteCategory | 'ALL';
+  onSearchChange: (value: string) => void;
+  onCategoryChange: (value: DashboardThemePaletteCategory | 'ALL') => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? 'grid gap-2' : 'grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]'}>
+      <label className="relative block">
+        <Search
+          className={cx(
+            'pointer-events-none absolute top-1/2 -translate-y-1/2 text-[var(--cv-muted)]',
+            compact ? 'left-3 size-4' : 'left-4 size-4'
+          )}
+        />
+        <input
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder={
+            compact
+              ? 'Search palette...'
+              : 'Search palette, category, mood, or scheme...'
+          }
+          className={cx(
+            'w-full rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card-muted)] font-bold text-[var(--cv-text)] outline-none focus:border-[var(--cv-accent)]',
+            compact
+              ? 'h-10 pl-9 pr-3 text-xs'
+              : 'h-11 pl-11 pr-4 text-sm'
+          )}
+        />
+      </label>
+
+      <select
+        value={category}
+        onChange={(event) =>
+          onCategoryChange(
+            event.target.value as DashboardThemePaletteCategory | 'ALL'
+          )
+        }
+        className={cx(
+          'rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card-muted)] font-black text-[var(--cv-text)] outline-none focus:border-[var(--cv-accent)]',
+          compact ? 'h-10 px-3 text-xs' : 'h-11 px-4 text-sm'
+        )}
+      >
+        <option value="ALL">All palettes</option>
+        {DASHBOARD_THEME_PALETTE_CATEGORIES.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function PaletteGroupList({
+  groupedPalettes,
+  paletteId,
+  onSelect,
+  twoColumns = false,
+}: {
+  groupedPalettes: ReturnType<typeof groupPalettes>;
+  paletteId: DashboardThemePaletteId;
+  onSelect: (paletteId: DashboardThemePaletteId) => void;
+  twoColumns?: boolean;
+}) {
+  if (!groupedPalettes.length) {
+    return (
+      <p className="rounded-2xl border border-dashed border-[var(--cv-border)] p-4 text-center text-xs font-bold text-[var(--cv-muted)]">
+        No palette found.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      {groupedPalettes.map((group) => (
+        <div key={group.category}>
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--cv-accent-strong)]">
+              {group.category}
+            </p>
+            <span className="rounded-full bg-[var(--cv-card-muted)] px-2.5 py-1 text-[10px] font-black text-[var(--cv-muted)]">
+              {group.palettes.length}
+            </span>
+          </div>
+
+          <div className={cx('grid gap-2', twoColumns && 'md:grid-cols-2')}>
+            {group.palettes.map((palette) => (
+              <PaletteOption
+                key={palette.id}
+                palette={palette}
+                active={palette.id === paletteId}
+                compact
+                onClick={() => onSelect(palette.id)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ThemePaletteSelector({
   compact = false,
   className,
@@ -131,6 +242,7 @@ export function ThemePaletteSelector({
     'ALL'
   );
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
 
   const activePalette = useMemo(
     () => getDashboardThemePalette(paletteId),
@@ -158,6 +270,10 @@ export function ThemePaletteSelector({
   }, []);
 
   useEffect(() => {
+    if (!compact) {
+      return undefined;
+    }
+
     function handlePointerDown(event: PointerEvent) {
       if (!wrapperRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -167,7 +283,27 @@ export function ThemePaletteSelector({
     document.addEventListener('pointerdown', handlePointerDown);
 
     return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, []);
+  }, [compact]);
+
+  useEffect(() => {
+    if (compact) {
+      return;
+    }
+
+    const dialog = dialogRef.current;
+
+    if (!dialog) {
+      return;
+    }
+
+    if (open && !dialog.open) {
+      dialog.showModal();
+    }
+
+    if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [compact, open]);
 
   function updatePalette(nextPaletteId: DashboardThemePaletteId) {
     setPaletteId(nextPaletteId);
@@ -200,64 +336,26 @@ export function ThemePaletteSelector({
                 Admin Palette
               </p>
               <p className="mt-1 text-xs font-semibold text-[var(--cv-muted)]">
-                Includes CloudView palettes plus Figma Resource Library-inspired website color schemes.
+                Compact palette switcher for the admin dashboard.
               </p>
             </div>
 
-            <div className="mb-3 grid gap-2">
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--cv-muted)]" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search palette..."
-                  className="h-10 w-full rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card-muted)] pl-9 pr-3 text-xs font-bold outline-none focus:border-[var(--cv-accent)]"
-                />
-              </label>
-
-              <select
-                value={category}
-                onChange={(event) =>
-                  setCategory(
-                    event.target.value as DashboardThemePaletteCategory | 'ALL'
-                  )
-                }
-                className="h-10 rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card-muted)] px-3 text-xs font-black text-[var(--cv-text)] outline-none focus:border-[var(--cv-accent)]"
-              >
-                <option value="ALL">All palettes</option>
-                {DASHBOARD_THEME_PALETTE_CATEGORIES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+            <div className="mb-3">
+              <PaletteFilters
+                search={search}
+                category={category}
+                onSearchChange={setSearch}
+                onCategoryChange={setCategory}
+                compact
+              />
             </div>
 
             <div className="max-h-[65vh] overflow-y-auto pr-1 [scrollbar-width:thin]">
-              {groupedPalettes.length ? (
-                groupedPalettes.map((group) => (
-                  <div key={group.category} className="mb-3 last:mb-0">
-                    <p className="mb-1 px-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--cv-accent-strong)]">
-                      {group.category}
-                    </p>
-                    <div className="grid gap-1.5">
-                      {group.palettes.map((palette) => (
-                        <PaletteOption
-                          key={palette.id}
-                          palette={palette}
-                          active={palette.id === paletteId}
-                          compact
-                          onClick={() => updatePalette(palette.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-2xl border border-dashed border-[var(--cv-border)] p-4 text-center text-xs font-bold text-[var(--cv-muted)]">
-                  No palette found.
-                </p>
-              )}
+              <PaletteGroupList
+                groupedPalettes={groupedPalettes}
+                paletteId={paletteId}
+                onSelect={updatePalette}
+              />
             </div>
           </div>
         ) : null}
@@ -266,9 +364,9 @@ export function ThemePaletteSelector({
   }
 
   return (
-    <section className={cx('grid gap-4', className)}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+    <section className={cx('grid gap-3', className)}>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--cv-accent-strong)]">
             Admin Portal Palette
           </p>
@@ -276,99 +374,119 @@ export function ThemePaletteSelector({
             Theme color setting
           </h3>
           <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-[var(--cv-muted)]">
-            This controls the dashboard sidebar, header accents, buttons, and admin interface colors.
-            It is saved in this browser and does not change guest portal branding.
+            This controls dashboard colors only. It is saved in this browser and does not change guest portal branding.
           </p>
         </div>
 
-        <span className="w-fit rounded-full bg-[var(--cv-accent-soft)] px-3 py-1 text-xs font-black text-[var(--cv-accent-strong)]">
-          {activePalette.shortName} · {DASHBOARD_THEME_PALETTES.length} palettes
-        </span>
-      </div>
+        <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--cv-border)] bg-[var(--cv-card)] p-3 sm:flex-row sm:items-center sm:justify-between xl:min-w-[26rem]">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[var(--cv-accent-soft)] text-[var(--cv-accent-strong)]">
+              <Palette className="size-5" />
+            </span>
 
-      <div className="grid gap-3 rounded-[1.5rem] border border-[var(--cv-border)] bg-[var(--cv-card)] p-3 md:grid-cols-[minmax(0,1fr)_240px]">
-        <label className="relative block">
-          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[var(--cv-muted)]" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search Figma scheme, CloudView palette, category, or mood..."
-            className="h-12 w-full rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card-muted)] pl-11 pr-4 text-sm font-bold text-[var(--cv-text)] outline-none focus:border-[var(--cv-accent)]"
-          />
-        </label>
-
-        <select
-          value={category}
-          onChange={(event) =>
-            setCategory(event.target.value as DashboardThemePaletteCategory | 'ALL')
-          }
-          className="h-12 rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card-muted)] px-4 text-sm font-black text-[var(--cv-text)] outline-none focus:border-[var(--cv-accent)]"
-        >
-          <option value="ALL">All categories</option>
-          {DASHBOARD_THEME_PALETTE_CATEGORIES.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="grid gap-5">
-        {groupedPalettes.length ? (
-          groupedPalettes.map((group) => (
-            <div key={group.category}>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--cv-accent-strong)]">
-                  {group.category}
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="truncate text-sm font-black text-[var(--cv-text)]">
+                  {activePalette.name}
                 </p>
-                <span className="rounded-full bg-[var(--cv-card-muted)] px-3 py-1 text-[11px] font-black text-[var(--cv-muted)]">
-                  {group.palettes.length} option{group.palettes.length === 1 ? '' : 's'}
-                </span>
+                <PaletteSwatches swatches={activePalette.swatches.slice(0, 4)} />
+              </div>
+              <p className="mt-1 truncate text-xs font-semibold text-[var(--cv-muted)]">
+                {activePalette.description}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[var(--cv-accent)] px-4 text-xs font-black text-[var(--cv-on-accent)] shadow-sm transition hover:opacity-90"
+          >
+            <Palette className="size-4" />
+            Change Palette
+          </button>
+        </div>
+      </div>
+
+      <dialog
+        ref={dialogRef}
+        onClose={() => setOpen(false)}
+        onCancel={(event) => {
+          event.preventDefault();
+          setOpen(false);
+        }}
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setOpen(false);
+          }
+        }}
+        className="w-[calc(100%-1rem)] max-w-4xl rounded-[2rem] border border-[var(--cv-border)] bg-[var(--cv-card)] p-0 text-[var(--cv-text)] shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      >
+        <div className="overflow-hidden rounded-[2rem] bg-[var(--cv-card)]">
+          <div className="sticky top-0 z-10 border-b border-[var(--cv-border)] bg-[var(--cv-card)] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--cv-accent-strong)]">
+                  Admin Palette
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-[var(--cv-text)]">
+                  Choose dashboard theme
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-[var(--cv-muted)]">
+                  Pick a color palette without expanding the Hotel Settings page. The selected theme applies instantly.
+                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
-                {group.palettes.map((palette) => {
-                  const active = palette.id === paletteId;
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--cv-card-muted)] text-[var(--cv-text)] transition hover:bg-[var(--cv-accent-soft)]"
+                aria-label="Close palette selector"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
 
-                  return (
-                    <button
-                      key={palette.id}
-                      type="button"
-                      onClick={() => updatePalette(palette.id)}
-                      className={cx(
-                        'rounded-[1.25rem] border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg',
-                        active
-                          ? 'border-[var(--cv-accent)] bg-[var(--cv-accent-soft)] shadow-sm'
-                          : 'border-[var(--cv-border)] bg-[var(--cv-card)] hover:border-[var(--cv-accent)]'
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <PaletteSwatches swatches={palette.swatches} />
-                        {active ? (
-                          <span className="grid size-7 place-items-center rounded-full bg-[var(--cv-accent)] text-[var(--cv-on-accent)]">
-                            <Check className="size-4" />
-                          </span>
-                        ) : null}
-                      </div>
+            <div className="mt-4">
+              <PaletteFilters
+                search={search}
+                category={category}
+                onSearchChange={setSearch}
+                onCategoryChange={setCategory}
+              />
+            </div>
+          </div>
 
-                      <p className="mt-4 text-sm font-black text-[var(--cv-text)]">
-                        {palette.name}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold leading-5 text-[var(--cv-muted)]">
-                        {palette.description}
-                      </p>
-                    </button>
-                  );
-                })}
+          <div className="max-h-[min(62vh,42rem)] overflow-y-auto p-4 [scrollbar-width:thin]">
+            <div className="mb-4 rounded-[1.25rem] border border-[var(--cv-border)] bg-[var(--cv-card-muted)] p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--cv-accent-strong)]">
+                    Current palette
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-[var(--cv-text)]">
+                    {activePalette.name}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[var(--cv-muted)]">
+                    {activePalette.shortName} · {DASHBOARD_THEME_PALETTES.length} total palettes
+                  </p>
+                </div>
+
+                <PaletteSwatches swatches={activePalette.swatches} />
               </div>
             </div>
-          ))
-        ) : (
-          <p className="rounded-[1.5rem] border border-dashed border-[var(--cv-border)] bg-[var(--cv-card)] p-8 text-center text-sm font-bold text-[var(--cv-muted)]">
-            No palette found. Try another search term.
-          </p>
-        )}
-      </div>
+
+            <PaletteGroupList
+              groupedPalettes={groupedPalettes}
+              paletteId={paletteId}
+              onSelect={updatePalette}
+              twoColumns
+            />
+          </div>
+        </div>
+      </dialog>
     </section>
   );
 }

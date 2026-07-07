@@ -25,41 +25,14 @@ const mobileLabelMap: Record<string, string> = {
   SERVICE_REQUESTS: 'Requests',
   POS_TERMINAL: 'POS',
   ANALYTICS: 'Analytics',
+  REPORTS: 'Reports',
   HOTEL_SETTINGS: 'Hotel Settings',
   USER_ACCOUNT_SETTINGS: 'Users',
-};
-
-const guestStaysNavItem: DashboardNavItem = {
-  module: 'GUEST_STAYS',
-  label: 'Guest Stays',
-  href: '/dashboard/guest-stays',
+  REWARDS: 'Rewards',
 };
 
 function getMobileLabel(item: DashboardNavItem) {
   return mobileLabelMap[item.module] ?? item.label;
-}
-
-function insertGuestStaysItem(items: DashboardNavItem[]) {
-  const hasGuestStays = items.some(
-    (item) =>
-      item.module === 'GUEST_STAYS' || item.href === '/dashboard/guest-stays'
-  );
-
-  if (hasGuestStays) {
-    return items;
-  }
-
-  const ordersIndex = items.findIndex((item) => item.module === 'ORDERS');
-
-  if (ordersIndex >= 0) {
-    return [
-      ...items.slice(0, ordersIndex),
-      guestStaysNavItem,
-      ...items.slice(ordersIndex),
-    ];
-  }
-
-  return [...items, guestStaysNavItem];
 }
 
 function isActiveRoute(pathname: string, href: string) {
@@ -81,22 +54,32 @@ export function MobileNav({
 }) {
   const pathname = usePathname();
 
- if (!navItems.length) {
-  return null;
-}
+  /**
+   * Important:
+   * Do not manually add hidden modules here.
+   * The layout already passes permission-filtered navItems, so MobileNav must
+   * render only those items to avoid exposing direct links on mobile.
+   */
+  const mobileNavItems = navItems.filter((item) => item.href && item.label);
 
-const mobileNavItems = insertGuestStaysItem(navItems);
+  if (!mobileNavItems.length) {
+    return null;
+  }
 
-return (
-    <div className="sticky top-0 z-40 border-b border-[#2b2416] bg-[#090806]/95 p-3 shadow-[0_14px_35px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden">
+  return (
+    <nav
+      aria-label="Mobile dashboard navigation"
+      className="sticky top-0 z-40 border-b border-[#2b2416] bg-[#090806]/95 p-3 shadow-[0_14px_35px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
+    >
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {mobileNavItems.map((item) => {
           const active = isActiveRoute(pathname, item.href);
 
           return (
             <Link
-              key={item.module}
+              key={`${item.module}-${item.href}`}
               href={item.href}
+              aria-current={active ? 'page' : undefined}
               className={cx(
                 'shrink-0 rounded-full border px-4 py-2 text-sm font-black transition',
                 active
@@ -109,6 +92,6 @@ return (
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }
