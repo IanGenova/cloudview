@@ -1714,3 +1714,45 @@ model DashboardNotification {
   @@index([userId, isRead, createdAt])
   @@index([type])
 }
+
+
+enum POSPayMongoStatus {
+  PENDING
+  PAID
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  FAILED
+  PAID_REVIEW_REQUIRED
+}
+
+model PosPayMongoSession {
+  id                    String              @id @default(cuid())
+  hotelId               String
+  createdById           String
+  checkoutSessionId     String?             @unique
+  checkoutUrl           String?             @db.Text
+  amountCents           Int
+  currency              String              @default("PHP") @db.VarChar(3)
+  payload               Json
+  status                POSPayMongoStatus   @default(PENDING)
+  paymongoPaymentId     String?             @db.VarChar(191)
+  orderCode             String?             @db.VarChar(191)
+  serviceRequestCodes   Json?
+  errorMessage          String?             @db.Text
+  paidAt                DateTime?
+  processingStartedAt   DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([hotelId, status])
+  @@index([createdById, createdAt])
+}
+
+model PayMongoWebhookEvent {
+  id          String   @id @db.VarChar(191)
+  type        String   @db.VarChar(191)
+  livemode    Boolean
+  processedAt DateTime @default(now())
+}

@@ -18,6 +18,11 @@ import {
 import { ServiceBillingMode } from '@prisma/client';
 import { cn } from '@/lib/utils';
 import { createPOSOrder } from './actions';
+import {
+  createPayMongoPOSCheckout,
+  finalizePayMongoPOSCheckout,
+  getPayMongoPOSStatus,
+} from './paymongo-actions';
 
 type POSHotel = {
   id: string;
@@ -520,6 +525,8 @@ export function POSClient({
   products,
   services,
   currency,
+  returnedPayMongoSessionId = null,
+  returnedPayMongoResult = null,
 }: {
   selectedHotelId: string;
   hotels: POSHotel[];
@@ -527,6 +534,8 @@ export function POSClient({
   products: POSProduct[];
   services: POSService[];
   currency: string;
+  returnedPayMongoSessionId?: string | null;
+  returnedPayMongoResult?: 'success' | 'cancelled' | null;
 }) {
   const router = useRouter();
 
@@ -550,7 +559,7 @@ export function POSClient({
   const [roomId, setRoomId] = useState('');
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
-    'CASH' | 'POS' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER'
+    'CASH' | 'POS' | 'PAYMONGO' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER'
   >('CASH');
   const [cashTendered, setCashTendered] = useState('');
   const [lastReceiptLabel, setLastReceiptLabel] = useState<string | null>(null);
@@ -579,6 +588,123 @@ export function POSClient({
 
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    if (!returnedPayMongoSessionId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timer: number | null = null;
+
+    function cleanPayMongoQuery() {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('paymongo');
+      url.searchParams.delete('paymongoResult');
+      router.replace(`${url.pathname}${url.search}`, { scroll: false });
+    }
+
+    if (returnedPayMongoResult === 'cancelled') {
+      showError('PayMongo checkout was cancelled. No sale was created.');
+      cleanPayMongoQuery();
+      return;
+    }
+
+    async function waitForPaymentConfirmation(attempt = 0) {
+      try {
+        const status = await getPayMongoPOSStatus(
+          returnedPayMongoSessionId!
+        );
+
+        if (cancelled) return;
+
+        if (status.status === 'COMPLETED') {
+          const parts = [
+            status.orderCode ? `Order ${status.orderCode}` : null,
+            status.serviceRequestCodes.length
+              ? `Requests ${status.serviceRequestCodes.join(', ')}`
+              : null,
+          ].filter(Boolean);
+
+          clearCart();
+          setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
+          showSuccessAfterRefresh('PayMongo payment confirmed and POS sale completed.');
+          cleanPayMongoQuery();
+          router.refresh();
+          return;
+        }
+
+        if (status.status === 'PAID') {
+          const result = await finalizePayMongoPOSCheckout(
+            returnedPayMongoSessionId!
+          );
+
+          if (cancelled) return;
+
+          if (result.ok) {
+            const parts = [
+              result.orderCode ? `Order ${result.orderCode}` : null,
+              result.serviceRequestCodes.length
+                ? `Requests ${result.serviceRequestCodes.join(', ')}`
+                : null,
+            ].filter(Boolean);
+
+            clearCart();
+            setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
+            showSuccessAfterRefresh('PayMongo payment confirmed and POS sale completed.');
+            cleanPayMongoQuery();
+            router.refresh();
+            return;
+          }
+        }
+
+        if (
+          status.status === 'FAILED' ||
+          status.status === 'PAID_REVIEW_REQUIRED'
+        ) {
+          showError(
+            status.errorMessage ||
+              'The PayMongo payment needs manual review.'
+          );
+          cleanPayMongoQuery();
+          return;
+        }
+
+        if (attempt >= 39) {
+          showError(
+            'Payment is still being confirmed. Open this POS session again in a moment.'
+          );
+          cleanPayMongoQuery();
+          return;
+        }
+
+        timer = window.setTimeout(
+          () => waitForPaymentConfirmation(attempt + 1),
+          1500
+        );
+      } catch (err) {
+        if (cancelled) return;
+
+        showError(
+          err instanceof Error
+            ? err.message
+            : 'Unable to confirm the PayMongo payment.'
+        );
+        cleanPayMongoQuery();
+      }
+    }
+
+    void waitForPaymentConfirmation();
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
+    // The return identifiers should be handled only once per page load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnedPayMongoResult, returnedPayMongoSessionId]);
 
   function showToast(nextToast: Exclude<POSToast, null>) {
     clearQueuedPOSToast();
@@ -947,6 +1073,24 @@ export function POSClient({
 
     startTransition(async () => {
       try {
+        if (paymentMethod === 'PAYMONGO') {
+          const checkout = await createPayMongoPOSCheckout({
+            hotelId: selectedHotelId,
+            roomId: roomId || null,
+            guestName,
+            notes,
+            items: foodCart,
+            services: serviceCart,
+          });
+
+          queuePOSToast({
+            type: 'success',
+            text: 'Opening secure PayMongo checkout...',
+          });
+          window.location.assign(checkout.checkoutUrl);
+          return;
+        }
+
         const response = await createPOSOrder({
           hotelId: selectedHotelId,
           roomId: roomId || null,
@@ -1678,12 +1822,13 @@ export function POSClient({
                     className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold outline-none"
                   >
                     <option value="CASH">Cash</option>
-                    <option value="POS">Card / E-wallet</option>
+                    <option value="POS">Card / E-wallet (manual terminal)</option>
+                    <option value="PAYMONGO">PayMongo (GCash / Card / QR Ph)</option>
                     <option value="ROOM_CHARGE">Room Charge</option>
                     <option value="PAY_AT_COUNTER">Pay Later</option>
                   </select>
                   <p className="mt-1 text-[11px] font-bold text-neutral-500">
-                    Cash/Card/E-wallet sales are marked PAID and sent directly to Preparing.
+                    Cash/manual terminal sales are completed immediately. PayMongo opens a secure hosted checkout and creates the POS sale only after payment confirmation.
                   </p>
                 </div>
 
@@ -1771,7 +1916,13 @@ export function POSClient({
                   disabled={pending || itemCount === 0}
                   className="min-h-10 touch-manipulation rounded-xl bg-black px-3 py-2 text-xs font-black text-white hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {pending ? 'Processing...' : 'Complete Sale'}
+                  {pending
+                    ? paymentMethod === 'PAYMONGO'
+                      ? 'Opening PayMongo...'
+                      : 'Processing...'
+                    : paymentMethod === 'PAYMONGO'
+                      ? 'Pay with PayMongo'
+                      : 'Complete Sale'}
                 </button>
               </div>
             </div>
