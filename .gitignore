@@ -38,3 +38,4 @@ pnpm-debug.log*
 # cache
 .cache/
 certificates
+ecosystem.config.js

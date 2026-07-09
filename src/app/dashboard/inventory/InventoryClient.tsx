@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Boxes,
   CheckCircle2,
   CheckSquare2,
@@ -234,6 +237,96 @@ type ServiceFilterValue =
   | 'SOLD_OUT'
   | 'HIDDEN';
 
+type SortDirection = 'asc' | 'desc';
+
+type MenuSortKey =
+  | 'menuItem'
+  | 'typeStatus'
+  | 'available'
+  | 'sold'
+  | 'stockDetail'
+  | 'updatedAt';
+
+type ServiceSortKey =
+  | 'serviceItem'
+  | 'trackingBilling'
+  | 'available'
+  | 'used'
+  | 'detail'
+  | 'updatedAt';
+
+function compareText(left: string, right: string) {
+  return left.localeCompare(right, 'en', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
+function compareDateValues(
+  left: string | Date | null,
+  right: string | Date | null
+) {
+  const leftTime = left ? new Date(left).getTime() : 0;
+  const rightTime = right ? new Date(right).getTime() : 0;
+
+  return leftTime - rightTime;
+}
+
+function SortableTableHeader({
+  label,
+  sortKey,
+  activeSortKey,
+  direction,
+  onSort,
+  align = 'left',
+}: {
+  label: string;
+  sortKey: string;
+  activeSortKey: string;
+  direction: SortDirection;
+  onSort: (sortKey: string) => void;
+  align?: 'left' | 'center' | 'right';
+}) {
+  const isActive = activeSortKey === sortKey;
+  const alignmentClass =
+    align === 'center'
+      ? 'justify-center text-center'
+      : align === 'right'
+        ? 'justify-end text-right'
+        : 'justify-start text-left';
+
+  return (
+    <th
+      className="px-4 py-3 text-xs font-black uppercase text-neutral-500"
+      aria-sort={
+        isActive
+          ? direction === 'asc'
+            ? 'ascending'
+            : 'descending'
+          : 'none'
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`group inline-flex w-full items-center gap-1.5 rounded-lg py-1 transition hover:text-neutral-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a62a]/50 ${alignmentClass}`}
+        title={`Sort by ${label}`}
+      >
+        <span>{label}</span>
+
+        {isActive ? (
+          direction === 'asc' ? (
+            <ArrowUp className="size-3.5 text-[#b68510]" />
+          ) : (
+            <ArrowDown className="size-3.5 text-[#b68510]" />
+          )
+        ) : (
+          <ArrowUpDown className="size-3.5 text-neutral-300 transition group-hover:text-neutral-500" />
+        )}
+      </button>
+    </th>
+  );
+}
 
 function Toast({
   message,
@@ -1337,6 +1430,13 @@ export function InventoryClient({
   const [menuPage, setMenuPage] = useState(1);
   const [menuPageSize, setMenuPageSize] =
     useState<InventoryPageSize>(20);
+  const [menuSort, setMenuSort] = useState<{
+    key: MenuSortKey;
+    direction: SortDirection;
+  }>({
+    key: 'menuItem',
+    direction: 'asc',
+  });
   const [selectedMenuIds, setSelectedMenuIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -1351,6 +1451,13 @@ export function InventoryClient({
   const [servicePage, setServicePage] = useState(1);
   const [servicePageSize, setServicePageSize] =
     useState<InventoryPageSize>(20);
+  const [serviceSort, setServiceSort] = useState<{
+    key: ServiceSortKey;
+    direction: SortDirection;
+  }>({
+    key: 'serviceItem',
+    direction: 'asc',
+  });
   const [controllingServiceItem, setControllingServiceItem] =
     useState<ServiceItem | null>(null);
   const [showServiceMovements, setShowServiceMovements] = useState(false);
@@ -1629,14 +1736,87 @@ export function InventoryClient({
     menuSearch,
   ]);
 
+  const sortedMenuItems = useMemo(() => {
+    const directionMultiplier = menuSort.direction === 'asc' ? 1 : -1;
+
+    return [...filteredMenuItems].sort((left, right) => {
+      let comparison = 0;
+
+      if (menuSort.key === 'menuItem') {
+        comparison = compareText(left.name, right.name);
+
+        if (comparison === 0) {
+          comparison = compareText(left.hotelName, right.hotelName);
+        }
+
+        if (comparison === 0) {
+          comparison = compareText(left.categoryName, right.categoryName);
+        }
+      } else if (menuSort.key === 'typeStatus') {
+        comparison = compareText(
+          `${getProductTypeLabel(left)} ${getMenuStatusLabel(left)}`,
+          `${getProductTypeLabel(right)} ${getMenuStatusLabel(right)}`
+        );
+      } else if (menuSort.key === 'available') {
+        comparison = left.availableQty - right.availableQty;
+      } else if (menuSort.key === 'sold') {
+        comparison = left.soldQty - right.soldQty;
+      } else if (menuSort.key === 'stockDetail') {
+        comparison = compareText(
+          left.isDerivedStock
+            ? `${left.limitingComponentName ?? ''} ${left.notes}`
+            : left.notes,
+          right.isDerivedStock
+            ? `${right.limitingComponentName ?? ''} ${right.notes}`
+            : right.notes
+        );
+      } else if (menuSort.key === 'updatedAt') {
+        comparison = compareDateValues(left.updatedAt, right.updatedAt);
+      }
+
+      if (comparison === 0) {
+        comparison = compareText(left.name, right.name);
+      }
+
+      return comparison * directionMultiplier;
+    });
+  }, [filteredMenuItems, menuSort]);
+
+  function handleMenuSort(sortKey: string) {
+    const nextKey = sortKey as MenuSortKey;
+
+    setMenuSort((current) => ({
+      key: nextKey,
+      direction:
+        current.key === nextKey
+          ? current.direction === 'asc'
+            ? 'desc'
+            : 'asc'
+          : nextKey === 'available' ||
+              nextKey === 'sold' ||
+              nextKey === 'updatedAt'
+            ? 'desc'
+            : 'asc',
+    }));
+
+    setMenuPage(1);
+  }
+
   const menuTotalPages = Math.max(
     1,
-    Math.ceil(filteredMenuItems.length / menuPageSize)
+    Math.ceil(sortedMenuItems.length / menuPageSize)
   );
 
   useEffect(() => {
     setMenuPage(1);
-  }, [menuCategoryFilter, menuFilter, menuPageSize, menuSearch]);
+  }, [
+    menuCategoryFilter,
+    menuFilter,
+    menuPageSize,
+    menuSearch,
+    menuSort.direction,
+    menuSort.key,
+  ]);
 
   useEffect(() => {
     setMenuPage((current) => Math.min(current, menuTotalPages));
@@ -1644,12 +1824,12 @@ export function InventoryClient({
 
   const paginatedMenuItems = useMemo(() => {
     const startIndex = (menuPage - 1) * menuPageSize;
-    return filteredMenuItems.slice(startIndex, startIndex + menuPageSize);
-  }, [filteredMenuItems, menuPage, menuPageSize]);
+    return sortedMenuItems.slice(startIndex, startIndex + menuPageSize);
+  }, [menuPage, menuPageSize, sortedMenuItems]);
 
   const selectableFilteredMenuItems = useMemo(
-    () => filteredMenuItems.filter((item) => !item.isDerivedStock),
-    [filteredMenuItems]
+    () => sortedMenuItems.filter((item) => !item.isDerivedStock),
+    [sortedMenuItems]
   );
 
   const selectableCurrentMenuPageItems = useMemo(
@@ -1747,14 +1927,86 @@ export function InventoryClient({
     });
   }, [localServiceItems, serviceFilter, serviceSearch]);
 
+  const sortedServiceItems = useMemo(() => {
+    const directionMultiplier = serviceSort.direction === 'asc' ? 1 : -1;
+
+    return [...filteredServiceItems].sort((left, right) => {
+      let comparison = 0;
+
+      if (serviceSort.key === 'serviceItem') {
+        comparison = compareText(left.name, right.name);
+
+        if (comparison === 0) {
+          comparison = compareText(left.hotelName, right.hotelName);
+        }
+
+        if (comparison === 0) {
+          comparison = compareText(left.category, right.category);
+        }
+      } else if (serviceSort.key === 'trackingBilling') {
+        comparison = compareText(
+          `${left.inventoryTracked ? 'Tracked' : 'Not Tracked'} ${getBillingLabel(
+            left.billingMode
+          )} ${getServiceStatusLabel(left)}`,
+          `${right.inventoryTracked ? 'Tracked' : 'Not Tracked'} ${getBillingLabel(
+            right.billingMode
+          )} ${getServiceStatusLabel(right)}`
+        );
+      } else if (serviceSort.key === 'available') {
+        comparison = left.availableQty - right.availableQty;
+      } else if (serviceSort.key === 'used') {
+        comparison = left.usedQty - right.usedQty;
+      } else if (serviceSort.key === 'detail') {
+        comparison = compareText(
+          left.description || left.notes,
+          right.description || right.notes
+        );
+      } else if (serviceSort.key === 'updatedAt') {
+        comparison = compareDateValues(left.updatedAt, right.updatedAt);
+      }
+
+      if (comparison === 0) {
+        comparison = compareText(left.name, right.name);
+      }
+
+      return comparison * directionMultiplier;
+    });
+  }, [filteredServiceItems, serviceSort]);
+
+  function handleServiceSort(sortKey: string) {
+    const nextKey = sortKey as ServiceSortKey;
+
+    setServiceSort((current) => ({
+      key: nextKey,
+      direction:
+        current.key === nextKey
+          ? current.direction === 'asc'
+            ? 'desc'
+            : 'asc'
+          : nextKey === 'available' ||
+              nextKey === 'used' ||
+              nextKey === 'updatedAt'
+            ? 'desc'
+            : 'asc',
+    }));
+
+    setServicePage(1);
+  }
+
   const serviceTotalPages = Math.max(
     1,
-    Math.ceil(filteredServiceItems.length / servicePageSize)
+    Math.ceil(sortedServiceItems.length / servicePageSize)
   );
 
   useEffect(() => {
     setServicePage(1);
-  }, [serviceFilter, servicePageSize, serviceSearch]);
+  }, [
+    serviceFilter,
+    servicePageSize,
+    serviceSearch,
+    serviceSort.direction,
+    serviceSort.key,
+  ]);
 
   useEffect(() => {
     setServicePage((current) => Math.min(current, serviceTotalPages));
@@ -1762,8 +2014,8 @@ export function InventoryClient({
 
   const paginatedServiceItems = useMemo(() => {
     const startIndex = (servicePage - 1) * servicePageSize;
-    return filteredServiceItems.slice(startIndex, startIndex + servicePageSize);
-  }, [filteredServiceItems, servicePage, servicePageSize]);
+    return sortedServiceItems.slice(startIndex, startIndex + servicePageSize);
+  }, [servicePage, servicePageSize, sortedServiceItems]);
 
   return (
     <>
@@ -2012,24 +2264,50 @@ export function InventoryClient({
                             )}
                           </button>
                         </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Menu Item
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Type / Status
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
-                          Available
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
-                          Sold
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Stock Detail
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Last Updated
-                        </th>
+                        <SortableTableHeader
+                          label="Menu Item"
+                          sortKey="menuItem"
+                          activeSortKey={menuSort.key}
+                          direction={menuSort.direction}
+                          onSort={handleMenuSort}
+                        />
+                        <SortableTableHeader
+                          label="Type / Status"
+                          sortKey="typeStatus"
+                          activeSortKey={menuSort.key}
+                          direction={menuSort.direction}
+                          onSort={handleMenuSort}
+                        />
+                        <SortableTableHeader
+                          label="Available"
+                          sortKey="available"
+                          activeSortKey={menuSort.key}
+                          direction={menuSort.direction}
+                          onSort={handleMenuSort}
+                          align="center"
+                        />
+                        <SortableTableHeader
+                          label="Sold"
+                          sortKey="sold"
+                          activeSortKey={menuSort.key}
+                          direction={menuSort.direction}
+                          onSort={handleMenuSort}
+                          align="center"
+                        />
+                        <SortableTableHeader
+                          label="Stock Detail"
+                          sortKey="stockDetail"
+                          activeSortKey={menuSort.key}
+                          direction={menuSort.direction}
+                          onSort={handleMenuSort}
+                        />
+                        <SortableTableHeader
+                          label="Last Updated"
+                          sortKey="updatedAt"
+                          activeSortKey={menuSort.key}
+                          direction={menuSort.direction}
+                          onSort={handleMenuSort}
+                        />
                         <th className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
                           Action
                         </th>
@@ -2345,24 +2623,50 @@ export function InventoryClient({
                   <table className="w-full min-w-[1180px] text-left">
                     <thead className="bg-neutral-50">
                       <tr>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Service Item
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Tracking / Billing
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
-                          Available
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-black uppercase text-neutral-500">
-                          Used
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Detail
-                        </th>
-                        <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
-                          Last Updated
-                        </th>
+                        <SortableTableHeader
+                          label="Service Item"
+                          sortKey="serviceItem"
+                          activeSortKey={serviceSort.key}
+                          direction={serviceSort.direction}
+                          onSort={handleServiceSort}
+                        />
+                        <SortableTableHeader
+                          label="Tracking / Billing"
+                          sortKey="trackingBilling"
+                          activeSortKey={serviceSort.key}
+                          direction={serviceSort.direction}
+                          onSort={handleServiceSort}
+                        />
+                        <SortableTableHeader
+                          label="Available"
+                          sortKey="available"
+                          activeSortKey={serviceSort.key}
+                          direction={serviceSort.direction}
+                          onSort={handleServiceSort}
+                          align="center"
+                        />
+                        <SortableTableHeader
+                          label="Used"
+                          sortKey="used"
+                          activeSortKey={serviceSort.key}
+                          direction={serviceSort.direction}
+                          onSort={handleServiceSort}
+                          align="center"
+                        />
+                        <SortableTableHeader
+                          label="Detail"
+                          sortKey="detail"
+                          activeSortKey={serviceSort.key}
+                          direction={serviceSort.direction}
+                          onSort={handleServiceSort}
+                        />
+                        <SortableTableHeader
+                          label="Last Updated"
+                          sortKey="updatedAt"
+                          activeSortKey={serviceSort.key}
+                          direction={serviceSort.direction}
+                          onSort={handleServiceSort}
+                        />
                         <th className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
                           Actions
                         </th>

@@ -2,11 +2,19 @@ import Link from 'next/link';
 import {
   Activity,
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ClipboardList,
   Download,
   FileSpreadsheet,
   ReceiptText,
   RefreshCcw,
+  Search,
   ShieldCheck,
   ShoppingBag,
 } from 'lucide-react';
@@ -38,7 +46,15 @@ type SearchParams = Promise<{
   hotelId?: string;
   start?: string;
   end?: string;
+  q?: string;
+  page?: string;
+  pageSize?: string;
+  sort?: string;
+  direction?: string;
 }> | undefined;
+
+type SortDirection = 'asc' | 'desc';
+type ReportPageSize = 10 | 20 | 50 | 100;
 
 type HotelIdFilter = string | { in: string[] };
 
@@ -250,6 +266,11 @@ function buildReportUrl(params: {
   hotelId: string;
   start: string;
   end: string;
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  sort?: string;
+  direction?: SortDirection;
   format?: 'pdf' | 'csv' | 'xlsx';
 }) {
   const query = new URLSearchParams({
@@ -259,13 +280,31 @@ function buildReportUrl(params: {
     end: params.end,
   });
 
-  let url = `/dashboard/reports?${query.toString()}`;
-
-  if (params.format) {
-    url += `&format=${params.format}`;
+  if (params.q) {
+    query.set('q', params.q);
   }
 
-  return url;
+  if (params.page && params.page > 1) {
+    query.set('page', String(params.page));
+  }
+
+  if (params.pageSize && params.pageSize !== 20) {
+    query.set('pageSize', String(params.pageSize));
+  }
+
+  if (params.sort) {
+    query.set('sort', params.sort);
+  }
+
+  if (params.direction) {
+    query.set('direction', params.direction);
+  }
+
+  if (params.format) {
+    query.set('format', params.format);
+  }
+
+  return `/dashboard/reports?${query.toString()}`;
 }
 
 function getSelectedHotelId({
@@ -315,6 +354,106 @@ function normalizeDateRange(startDate: Date, endDate: Date) {
     startDate: startOfDay(endDate),
     endDate: endOfDay(startDate),
   };
+}
+
+function parsePositiveInteger(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseReportPageSize(value: string | undefined): ReportPageSize {
+  const parsed = Number(value);
+
+  return parsed === 10 || parsed === 20 || parsed === 50 || parsed === 100
+    ? parsed
+    : 20;
+}
+
+function getNodeText(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return '';
+  }
+
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join(' ');
+  }
+
+  if (typeof node === 'object' && 'props' in node) {
+    const element = node as React.ReactElement<{ children?: React.ReactNode }>;
+    return getNodeText(element.props.children);
+  }
+
+  return '';
+}
+
+function getComparableValue(
+  node: React.ReactNode,
+  column: string
+): string | number {
+  const text = getNodeText(node).trim();
+  const normalizedColumn = column.toLowerCase();
+
+  if (!text || text === '—') {
+    return '';
+  }
+
+  const dateLike =
+    normalizedColumn.includes('date') ||
+    normalizedColumn.includes('created') ||
+    normalizedColumn.includes('updated') ||
+    normalizedColumn.includes('cancelled at') ||
+    normalizedColumn.includes('started at');
+
+  if (dateLike) {
+    const timestamp = Date.parse(text);
+
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+
+  const numericLike =
+    normalizedColumn.includes('qty') ||
+    normalizedColumn.includes('quantity') ||
+    normalizedColumn.includes('items') ||
+    normalizedColumn.includes('total') ||
+    normalizedColumn.includes('value') ||
+    normalizedColumn.includes('impact') ||
+    normalizedColumn.includes('age') ||
+    normalizedColumn.includes('time');
+
+  if (numericLike) {
+    const numericText = text.replace(/[^0-9.-]/g, '');
+    const numericValue = Number(numericText);
+
+    if (numericText && Number.isFinite(numericValue)) {
+      return numericValue;
+    }
+  }
+
+  return text.toLocaleLowerCase('en-PH');
+}
+
+function compareReportValues(
+  left: string | number,
+  right: string | number,
+  direction: SortDirection
+) {
+  const multiplier = direction === 'asc' ? 1 : -1;
+
+  if (typeof left === 'number' && typeof right === 'number') {
+    return (left - right) * multiplier;
+  }
+
+  return String(left).localeCompare(String(right), 'en-PH', {
+    numeric: true,
+    sensitivity: 'base',
+  }) * multiplier;
 }
 
 function StatusPill({
@@ -394,32 +533,206 @@ function SummaryCard({
 function ReportTable({
   columns,
   rows,
+  report,
+  hotelId,
+  start,
+  end,
+  query,
+  page,
+  pageSize,
+  sort,
+  direction,
 }: {
   columns: string[];
   rows: React.ReactNode[][];
+  report: ReportKey;
+  hotelId: string;
+  start: string;
+  end: string;
+  query: string;
+  page: number;
+  pageSize: ReportPageSize;
+  sort?: string;
+  direction: SortDirection;
 }) {
+  const normalizedQuery = query.trim().toLocaleLowerCase('en-PH');
+
+  const searchableRows = normalizedQuery
+    ? rows.filter((row) =>
+        row
+          .map((cell) => getNodeText(cell))
+          .join(' ')
+          .toLocaleLowerCase('en-PH')
+          .includes(normalizedQuery)
+      )
+    : rows;
+
+  const requestedSortIndex =
+    sort && /^c\d+$/.test(sort) ? Number(sort.slice(1)) : 0;
+
+  const sortIndex =
+    requestedSortIndex >= 0 && requestedSortIndex < columns.length
+      ? requestedSortIndex
+      : 0;
+
+  const sortedRows = [...searchableRows].sort((leftRow, rightRow) =>
+    compareReportValues(
+      getComparableValue(leftRow[sortIndex], columns[sortIndex]),
+      getComparableValue(rightRow[sortIndex], columns[sortIndex]),
+      direction
+    )
+  );
+
+  const totalRows = sortedRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const firstRow = totalRows === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const lastRow = Math.min(safePage * pageSize, totalRows);
+  const visibleRows = sortedRows.slice(
+    (safePage - 1) * pageSize,
+    safePage * pageSize
+  );
+
+  function tableUrl(params: {
+    page?: number;
+    pageSize?: number;
+    sort?: string;
+    direction?: SortDirection;
+    q?: string;
+  }) {
+    return buildReportUrl({
+      report,
+      hotelId,
+      start,
+      end,
+      q: params.q ?? query,
+      page: params.page ?? safePage,
+      pageSize: params.pageSize ?? pageSize,
+      sort: params.sort ?? `c${sortIndex}`,
+      direction: params.direction ?? direction,
+    });
+  }
+
   return (
     <div className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-col gap-3 border-b border-neutral-100 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
+        <form method="GET" className="flex min-w-0 flex-1 gap-2">
+          <input type="hidden" name="report" value={report} />
+          <input type="hidden" name="hotelId" value={hotelId} />
+          <input type="hidden" name="start" value={start} />
+          <input type="hidden" name="end" value={end} />
+          <input type="hidden" name="pageSize" value={pageSize} />
+          <input type="hidden" name="sort" value={`c${sortIndex}`} />
+          <input type="hidden" name="direction" value={direction} />
+
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+            <input
+              name="q"
+              defaultValue={query}
+              placeholder="Search within this report..."
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-[#c99c38] focus:bg-white"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="h-11 shrink-0 rounded-2xl bg-[#11100b] px-4 text-sm font-black text-white transition hover:bg-black"
+          >
+            Search
+          </button>
+
+          {query ? (
+            <Link
+              href={buildReportUrl({
+                report,
+                hotelId,
+                start,
+                end,
+                pageSize,
+                sort: `c${sortIndex}`,
+                direction,
+              })}
+              className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-600 transition hover:bg-neutral-50"
+            >
+              Clear
+            </Link>
+          ) : null}
+        </form>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-neutral-500">Rows:</span>
+          {([10, 20, 50, 100] as const).map((size) => (
+            <Link
+              key={size}
+              href={tableUrl({
+                page: 1,
+                pageSize: size,
+              })}
+              className={
+                pageSize === size
+                  ? 'inline-flex size-9 items-center justify-center rounded-xl bg-[#11100b] text-xs font-black text-white'
+                  : 'inline-flex size-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-xs font-black text-neutral-600 hover:bg-neutral-50'
+              }
+            >
+              {size}
+            </Link>
+          ))}
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[920px] text-left">
           <thead className="bg-neutral-50">
             <tr>
-              {columns.map((column) => (
-                <th
-                  key={column}
-                  className="border-b border-neutral-100 px-4 py-3 text-xs font-black uppercase tracking-wide text-neutral-500"
-                >
-                  {column}
-                </th>
-              ))}
+              {columns.map((column, columnIndex) => {
+                const columnKey = `c${columnIndex}`;
+                const isActive = sortIndex === columnIndex;
+                const nextDirection: SortDirection =
+                  isActive && direction === 'asc' ? 'desc' : 'asc';
+
+                return (
+                  <th
+                    key={`${column}-${columnIndex}`}
+                    className="border-b border-neutral-100 px-4 py-3 text-xs font-black uppercase tracking-wide text-neutral-500"
+                    aria-sort={
+                      isActive
+                        ? direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                  >
+                    <Link
+                      href={tableUrl({
+                        page: 1,
+                        sort: columnKey,
+                        direction: nextDirection,
+                      })}
+                      className="inline-flex items-center gap-2 rounded-lg transition hover:text-neutral-950"
+                    >
+                      <span>{column}</span>
+                      {isActive ? (
+                        direction === 'asc' ? (
+                          <ArrowUp className="size-3.5 text-[#b88938]" />
+                        ) : (
+                          <ArrowDown className="size-3.5 text-[#b88938]" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="size-3.5 text-neutral-300" />
+                      )}
+                    </Link>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
           <tbody>
-            {rows.length ? (
-              rows.map((row, rowIndex) => (
+            {visibleRows.length ? (
+              visibleRows.map((row, rowIndex) => (
                 <tr
-                  key={rowIndex}
+                  key={`${safePage}-${rowIndex}`}
                   className="border-b border-neutral-100 last:border-b-0 hover:bg-[#fffaf0]"
                 >
                   {row.map((cell, cellIndex) => (
@@ -442,13 +755,85 @@ function ReportTable({
                     No report data found.
                   </p>
                   <p className="mt-1 text-sm text-neutral-500">
-                    Try changing the date range, hotel, or report type.
+                    Try changing the date range, hotel, report type, or search.
                   </p>
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-neutral-100 bg-neutral-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-bold text-neutral-600">
+          Showing{' '}
+          <span className="font-black text-neutral-950">{firstRow}</span>
+          {'–'}
+          <span className="font-black text-neutral-950">{lastRow}</span> of{' '}
+          <span className="font-black text-neutral-950">{totalRows}</span>{' '}
+          records
+          {query ? (
+            <span className="text-neutral-400"> matching “{query}”</span>
+          ) : null}
+        </p>
+
+        <div className="flex items-center gap-2">
+          <span className="mr-1 text-xs font-black text-neutral-600">
+            Page {safePage} of {totalPages}
+          </span>
+
+          <Link
+            href={tableUrl({ page: 1 })}
+            aria-disabled={safePage <= 1}
+            className={
+              safePage <= 1
+                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+            }
+            aria-label="First page"
+          >
+            <ChevronsLeft className="size-4" />
+          </Link>
+
+          <Link
+            href={tableUrl({ page: Math.max(1, safePage - 1) })}
+            aria-disabled={safePage <= 1}
+            className={
+              safePage <= 1
+                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+            }
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="size-4" />
+          </Link>
+
+          <Link
+            href={tableUrl({ page: Math.min(totalPages, safePage + 1) })}
+            aria-disabled={safePage >= totalPages}
+            className={
+              safePage >= totalPages
+                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+            }
+            aria-label="Next page"
+          >
+            <ChevronRight className="size-4" />
+          </Link>
+
+          <Link
+            href={tableUrl({ page: totalPages })}
+            aria-disabled={safePage >= totalPages}
+            className={
+              safePage >= totalPages
+                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+            }
+            aria-label="Last page"
+          >
+            <ChevronsRight className="size-4" />
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -474,6 +859,17 @@ export default async function ReportsPage({
   const endInput = getParam(resolvedSearchParams.end);
   const reportInput = getParam(resolvedSearchParams.report);
   const hotelInput = getParam(resolvedSearchParams.hotelId);
+  const tableQuery = getParam(resolvedSearchParams.q) ?? '';
+  const tablePage = parsePositiveInteger(
+    getParam(resolvedSearchParams.page),
+    1
+  );
+  const tablePageSize = parseReportPageSize(
+    getParam(resolvedSearchParams.pageSize)
+  );
+  const tableSort = getParam(resolvedSearchParams.sort);
+  const tableDirection: SortDirection =
+    getParam(resolvedSearchParams.direction) === 'desc' ? 'desc' : 'asc';
 
   const normalizedRange = normalizeDateRange(
     startOfDay(parseDate(startInput, defaultStart)),
@@ -1221,7 +1617,68 @@ export default async function ReportsPage({
       ]);
   }
 
-  const exportReport: ReportKey = activeReport === 'export' ? 'daily' : activeReport;
+  const exportReport: ReportKey =
+    activeReport === 'export' ? 'daily' : activeReport;
+
+  const paymentCollectionRate = totalSalesCents
+    ? Math.round((paidSalesCents / totalSalesCents) * 100)
+    : 0;
+
+  const orderCompletionRate = nonCancelledOrders.length
+    ? Math.round((deliveredOrders.length / nonCancelledOrders.length) * 100)
+    : 0;
+
+  const serviceCompletionRate = serviceRequests.length
+    ? Math.round(
+        (completedServiceRequests.length / serviceRequests.length) * 100
+      )
+    : 0;
+
+  const healthyInventoryItems = menuStocks.filter((stock) => {
+    const availableQty = Number(stock.availableQty);
+
+    return (
+      stock.product.isAvailable &&
+      !stock.isSoldOut &&
+      availableQty > 5
+    );
+  }).length;
+
+  const inventoryHealthRate = menuStocks.length
+    ? Math.round((healthyInventoryItems / menuStocks.length) * 100)
+    : 0;
+
+  const todayPreset = toInputDate(today);
+  const last7DaysStart = new Date(today);
+  last7DaysStart.setDate(today.getDate() - 6);
+
+  const last30DaysStart = new Date(today);
+  last30DaysStart.setDate(today.getDate() - 29);
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  const datePresets = [
+    {
+      label: 'Today',
+      start: todayPreset,
+      end: todayPreset,
+    },
+    {
+      label: 'Last 7 Days',
+      start: toInputDate(last7DaysStart),
+      end: todayPreset,
+    },
+    {
+      label: 'Last 30 Days',
+      start: toInputDate(last30DaysStart),
+      end: todayPreset,
+    },
+    {
+      label: 'This Month',
+      start: toInputDate(monthStart),
+      end: todayPreset,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -1337,6 +1794,36 @@ export default async function ReportsPage({
             </button>
           </div>
         </form>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-4">
+          <span className="mr-1 text-xs font-black uppercase tracking-wide text-neutral-400">
+            Quick Range
+          </span>
+
+          {datePresets.map((preset) => {
+            const isActive =
+              startValue === preset.start && endValue === preset.end;
+
+            return (
+              <Link
+                key={preset.label}
+                href={buildReportUrl({
+                  report: activeReport,
+                  hotelId: selectedHotelId,
+                  start: preset.start,
+                  end: preset.end,
+                })}
+                className={
+                  isActive
+                    ? 'rounded-full bg-[#11100b] px-4 py-2 text-xs font-black text-white'
+                    : 'rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-black text-neutral-600 transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]'
+                }
+              >
+                {preset.label}
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1388,7 +1875,19 @@ export default async function ReportsPage({
             </p>
           </div>
 
-          <ReportTable columns={columns} rows={rows} />
+          <ReportTable
+            columns={columns}
+            rows={rows}
+            report={activeReport}
+            hotelId={selectedHotelId}
+            start={startValue}
+            end={endValue}
+            query={tableQuery}
+            page={tablePage}
+            pageSize={tablePageSize}
+            sort={tableSort}
+            direction={tableDirection}
+          />
         </div>
 
         <aside className="space-y-4">
@@ -1462,6 +1961,54 @@ export default async function ReportsPage({
                   {formatNumber(activityLogs.length)}
                 </span>
               </p>
+            </div>
+          </div>
+
+          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+            <h3 className="flex items-center gap-2 font-black text-neutral-950">
+              <Activity className="size-5 text-[#c99c38]" />
+              Performance Pulse
+            </h3>
+
+            <p className="mt-1 text-xs font-semibold leading-5 text-neutral-500">
+              Operational rates for the selected period.
+            </p>
+
+            <div className="mt-4 space-y-4">
+              {[
+                {
+                  label: 'Payment Collection',
+                  value: paymentCollectionRate,
+                },
+                {
+                  label: 'Order Completion',
+                  value: orderCompletionRate,
+                },
+                {
+                  label: 'Service Completion',
+                  value: serviceCompletionRate,
+                },
+                {
+                  label: 'Inventory Health',
+                  value: inventoryHealthRate,
+                },
+              ].map((metric) => (
+                <div key={metric.label}>
+                  <div className="flex items-center justify-between gap-3 text-xs font-black">
+                    <span className="text-neutral-600">{metric.label}</span>
+                    <span className="text-neutral-950">{metric.value}%</span>
+                  </div>
+
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
+                    <div
+                      className="h-full rounded-full bg-[#c99c38]"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, metric.value))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
