@@ -3,7 +3,18 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Boxes, CheckCircle2, CheckSquare2, Loader2, Square, X } from 'lucide-react';
+import {
+  Boxes,
+  CheckCircle2,
+  CheckSquare2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader2,
+  Square,
+  X,
+} from 'lucide-react';
 import {
   MenuAvailabilityMovementType,
   MenuProductType,
@@ -530,6 +541,103 @@ function SummaryCard({
         {label}
       </p>
       <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
+  );
+}
+
+type InventoryPageSize = 10 | 20 | 50 | 100;
+
+function PaginationControls({
+  page,
+  pageSize,
+  totalItems,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  pageSize: InventoryPageSize;
+  totalItems: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: InventoryPageSize) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const startItem = totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endItem = Math.min(safePage * pageSize, totalItems);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-neutral-200 bg-neutral-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-xs font-bold text-neutral-600">
+          Showing <span className="font-black text-neutral-950">{startItem}</span>
+          {'–'}
+          <span className="font-black text-neutral-950">{endItem}</span> of{' '}
+          <span className="font-black text-neutral-950">{totalItems}</span> items
+        </p>
+
+        <label className="flex items-center gap-2 text-xs font-bold text-neutral-600">
+          Rows
+          <select
+            value={pageSize}
+            onChange={(event) =>
+              onPageSizeChange(Number(event.target.value) as InventoryPageSize)
+            }
+            className="h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-800 outline-none focus:border-neutral-400"
+            aria-label="Rows per page"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 sm:justify-end">
+        <span className="mr-1 text-xs font-black text-neutral-600">
+          Page {safePage} of {totalPages}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(1)}
+          disabled={safePage <= 1}
+          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="First page"
+        >
+          <ChevronsLeft className="size-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(safePage - 1)}
+          disabled={safePage <= 1}
+          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(safePage + 1)}
+          disabled={safePage >= totalPages}
+          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Next page"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(totalPages)}
+          disabled={safePage >= totalPages}
+          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Last page"
+        >
+          <ChevronsRight className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -1226,6 +1334,9 @@ export function InventoryClient({
   const [menuSearch, setMenuSearch] = useState('');
   const [menuFilter, setMenuFilter] = useState<MenuFilterValue>('ALL');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState('ALL');
+  const [menuPage, setMenuPage] = useState(1);
+  const [menuPageSize, setMenuPageSize] =
+    useState<InventoryPageSize>(20);
   const [selectedMenuIds, setSelectedMenuIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -1237,6 +1348,9 @@ export function InventoryClient({
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceFilter, setServiceFilter] =
     useState<ServiceFilterValue>('ALL');
+  const [servicePage, setServicePage] = useState(1);
+  const [servicePageSize, setServicePageSize] =
+    useState<InventoryPageSize>(20);
   const [controllingServiceItem, setControllingServiceItem] =
     useState<ServiceItem | null>(null);
   const [showServiceMovements, setShowServiceMovements] = useState(false);
@@ -1515,9 +1629,32 @@ export function InventoryClient({
     menuSearch,
   ]);
 
+  const menuTotalPages = Math.max(
+    1,
+    Math.ceil(filteredMenuItems.length / menuPageSize)
+  );
+
+  useEffect(() => {
+    setMenuPage(1);
+  }, [menuCategoryFilter, menuFilter, menuPageSize, menuSearch]);
+
+  useEffect(() => {
+    setMenuPage((current) => Math.min(current, menuTotalPages));
+  }, [menuTotalPages]);
+
+  const paginatedMenuItems = useMemo(() => {
+    const startIndex = (menuPage - 1) * menuPageSize;
+    return filteredMenuItems.slice(startIndex, startIndex + menuPageSize);
+  }, [filteredMenuItems, menuPage, menuPageSize]);
+
   const selectableFilteredMenuItems = useMemo(
     () => filteredMenuItems.filter((item) => !item.isDerivedStock),
     [filteredMenuItems]
+  );
+
+  const selectableCurrentMenuPageItems = useMemo(
+    () => paginatedMenuItems.filter((item) => !item.isDerivedStock),
+    [paginatedMenuItems]
   );
 
   const selectedMenuItems = useMemo(
@@ -1531,6 +1668,13 @@ export function InventoryClient({
   const allFilteredMenuItemsSelected =
     selectableFilteredMenuItems.length > 0 &&
     selectableFilteredMenuItems.every((item) =>
+      selectedMenuIds.has(item.id)
+    );
+
+
+  const allCurrentMenuPageItemsSelected =
+    selectableCurrentMenuPageItems.length > 0 &&
+    selectableCurrentMenuPageItems.every((item) =>
       selectedMenuIds.has(item.id)
     );
 
@@ -1562,6 +1706,21 @@ export function InventoryClient({
     });
   }
 
+
+  function toggleCurrentMenuPageItems() {
+    setSelectedMenuIds((current) => {
+      const next = new Set(current);
+
+      if (allCurrentMenuPageItemsSelected) {
+        selectableCurrentMenuPageItems.forEach((item) => next.delete(item.id));
+      } else {
+        selectableCurrentMenuPageItems.forEach((item) => next.add(item.id));
+      }
+
+      return next;
+    });
+  }
+
   const filteredServiceItems = useMemo(() => {
     const searchText = serviceSearch.trim().toLowerCase();
 
@@ -1587,6 +1746,24 @@ export function InventoryClient({
       return matchesSearch && matchesFilter;
     });
   }, [localServiceItems, serviceFilter, serviceSearch]);
+
+  const serviceTotalPages = Math.max(
+    1,
+    Math.ceil(filteredServiceItems.length / servicePageSize)
+  );
+
+  useEffect(() => {
+    setServicePage(1);
+  }, [serviceFilter, servicePageSize, serviceSearch]);
+
+  useEffect(() => {
+    setServicePage((current) => Math.min(current, serviceTotalPages));
+  }, [serviceTotalPages]);
+
+  const paginatedServiceItems = useMemo(() => {
+    const startIndex = (servicePage - 1) * servicePageSize;
+    return filteredServiceItems.slice(startIndex, startIndex + servicePageSize);
+  }, [filteredServiceItems, servicePage, servicePageSize]);
 
   return (
     <>
@@ -1819,16 +1996,16 @@ export function InventoryClient({
                         <th className="w-14 px-4 py-3 text-center">
                           <button
                             type="button"
-                            onClick={toggleAllFilteredMenuItems}
-                            disabled={selectableFilteredMenuItems.length === 0}
+                            onClick={toggleCurrentMenuPageItems}
+                            disabled={selectableCurrentMenuPageItems.length === 0}
                             className="inline-grid size-8 place-items-center rounded-xl text-[#b68510] transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-35"
                             aria-label={
-                              allFilteredMenuItemsSelected
-                                ? 'Unselect all filtered single items'
-                                : 'Select all filtered single items'
+                              allCurrentMenuPageItemsSelected
+                                ? 'Unselect single items on this page'
+                                : 'Select single items on this page'
                             }
                           >
-                            {allFilteredMenuItemsSelected ? (
+                            {allCurrentMenuPageItemsSelected ? (
                               <CheckSquare2 className="size-5" />
                             ) : (
                               <Square className="size-5" />
@@ -1860,7 +2037,7 @@ export function InventoryClient({
                     </thead>
 
                     <tbody className="divide-y divide-neutral-100">
-                      {filteredMenuItems.map((item) => {
+                      {paginatedMenuItems.map((item) => {
                         const status = getMenuStatusLabel(item);
 
                         return (
@@ -2042,6 +2219,17 @@ export function InventoryClient({
                     </tbody>
                   </table>
                 </div>
+
+                <PaginationControls
+                  page={menuPage}
+                  pageSize={menuPageSize}
+                  totalItems={filteredMenuItems.length}
+                  onPageChange={setMenuPage}
+                  onPageSizeChange={(nextPageSize) => {
+                    setMenuPageSize(nextPageSize);
+                    setMenuPage(1);
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -2182,7 +2370,7 @@ export function InventoryClient({
                     </thead>
 
                     <tbody className="divide-y divide-neutral-100">
-                      {filteredServiceItems.map((item) => {
+                      {paginatedServiceItems.map((item) => {
                         const status = getServiceStatusLabel(item);
 
                         return (
@@ -2371,6 +2559,17 @@ export function InventoryClient({
                     </tbody>
                   </table>
                 </div>
+
+                <PaginationControls
+                  page={servicePage}
+                  pageSize={servicePageSize}
+                  totalItems={filteredServiceItems.length}
+                  onPageChange={setServicePage}
+                  onPageSizeChange={(nextPageSize) => {
+                    setServicePageSize(nextPageSize);
+                    setServicePage(1);
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
