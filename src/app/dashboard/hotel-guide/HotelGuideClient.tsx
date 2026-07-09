@@ -1,15 +1,11 @@
-'use client';
+"use client";
 
-import {
-  type ChangeEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { HotelGuideItemType } from '@prisma/client';
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { HotelGuideItemType } from "@prisma/client";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
+  Building2,
   CheckCircle2,
   ChevronRight,
   FileText,
@@ -23,11 +19,10 @@ import {
   Upload,
   X,
   Maximize2,
-
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
-import { Select } from '@/components/ui/Select';
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import { Select } from "@/components/ui/Select";
 import {
   createGuideItemAction,
   createGuideSectionAction,
@@ -39,7 +34,7 @@ import {
   updateGuideItemAction,
   updateGuideSectionAction,
   uploadGuideImageAction,
-} from './actions';
+} from "./actions";
 
 type HotelOption = {
   id: string;
@@ -99,30 +94,28 @@ type GuideSection = {
   items: GuideItem[];
 };
 
-type Message =
-  | {
-      type: 'success' | 'error';
-      text: string;
-    }
-  | null;
+type Message = {
+  type: "success" | "error";
+  text: string;
+} | null;
 
 const iconOptions = [
-  'Info',
-  'Wifi',
-  'BedDouble',
-  'Hotel',
-  'MapPin',
-  'Utensils',
-  'Car',
-  'Phone',
-  'Clock',
-  'Waves',
-  'Search',
-  'Shield',
-  'HelpCircle',
-  'Sparkles',
-'ShieldCheck',
-'Clock3',
+  "Info",
+  "Wifi",
+  "BedDouble",
+  "Hotel",
+  "MapPin",
+  "Utensils",
+  "Car",
+  "Phone",
+  "Clock",
+  "Waves",
+  "Search",
+  "Shield",
+  "HelpCircle",
+  "Sparkles",
+  "ShieldCheck",
+  "Clock3",
 ];
 
 const itemTypeOptions = Object.values(HotelGuideItemType);
@@ -153,19 +146,19 @@ function Toast({ message }: { message: Message }) {
     <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
       <div
         className={
-          message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+          message.type === "success"
+            ? "flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl"
+            : "flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl"
         }
       >
         <div
           className={
-            message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+            message.type === "success"
+              ? "grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"
+              : "grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white"
           }
         >
-          {message.type === 'success' ? (
+          {message.type === "success" ? (
             <CheckCircle2 className="size-5" />
           ) : (
             <X className="size-5" />
@@ -174,7 +167,7 @@ function Toast({ message }: { message: Message }) {
 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-black">
-            {message.type === 'success' ? 'Success' : 'Action failed'}
+            {message.type === "success" ? "Success" : "Action failed"}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
         </div>
@@ -270,9 +263,9 @@ function CoverPhotoField({
   imageUrl?: string;
   label: string;
 }) {
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     return () => {
@@ -285,26 +278,26 @@ function CoverPhotoField({
   function handleCoverImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
-    setPreviewUrl('');
-    setFileName('');
-    setError('');
+    setPreviewUrl("");
+    setFileName("");
+    setError("");
 
     if (!file) {
       return;
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     const maxFileSize = 4 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
-      event.target.value = '';
-      setError('Use JPG, PNG, or WEBP only.');
+      event.target.value = "";
+      setError("Use JPG, PNG, or WEBP only.");
       return;
     }
 
     if (file.size > maxFileSize) {
-      event.target.value = '';
-      setError('Cover photo must be 4MB or smaller.');
+      event.target.value = "";
+      setError("Cover photo must be 4MB or smaller.");
       return;
     }
 
@@ -312,7 +305,7 @@ function CoverPhotoField({
     setFileName(file.name);
   }
 
-  const displayImageUrl = previewUrl || imageUrl || '';
+  const displayImageUrl = previewUrl || imageUrl || "";
 
   return (
     <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
@@ -370,7 +363,7 @@ function CoverPhotoField({
             </label>
             <input
               name="imageUrl"
-              defaultValue={imageUrl ?? ''}
+              defaultValue={imageUrl ?? ""}
               placeholder="https://..."
               className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
@@ -390,9 +383,9 @@ function PanoramaField({
   panoramaImageUrl?: string;
   label: string;
 }) {
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     return () => {
@@ -405,26 +398,26 @@ function PanoramaField({
   function handlePanoramaChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
-    setPreviewUrl('');
-    setFileName('');
-    setError('');
+    setPreviewUrl("");
+    setFileName("");
+    setError("");
 
     if (!file) {
       return;
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     const maxFileSize = 12 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
-      event.target.value = '';
-      setError('Use JPG, PNG, or WEBP only.');
+      event.target.value = "";
+      setError("Use JPG, PNG, or WEBP only.");
       return;
     }
 
     if (file.size > maxFileSize) {
-      event.target.value = '';
-      setError('360° panorama must be 12MB or smaller.');
+      event.target.value = "";
+      setError("360° panorama must be 12MB or smaller.");
       return;
     }
 
@@ -432,7 +425,7 @@ function PanoramaField({
     setFileName(file.name);
   }
 
-  const displayImageUrl = previewUrl || panoramaImageUrl || '';
+  const displayImageUrl = previewUrl || panoramaImageUrl || "";
 
   return (
     <div className="rounded-[1.5rem] border border-[#c99c38]/30 bg-[#fffaf0] p-4">
@@ -507,7 +500,7 @@ function PanoramaField({
             </label>
             <input
               name="panoramaImageUrl"
-              defaultValue={panoramaImageUrl ?? ''}
+              defaultValue={panoramaImageUrl ?? ""}
               placeholder="https://yourdomain.com/pool-360.jpg"
               className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
@@ -517,7 +510,6 @@ function PanoramaField({
     </div>
   );
 }
-
 
 function SectionFormFields({
   hotels,
@@ -559,7 +551,7 @@ function SectionFormFields({
           <input
             name="title"
             required
-            defaultValue={section?.title ?? ''}
+            defaultValue={section?.title ?? ""}
             placeholder="Dining"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
@@ -571,7 +563,7 @@ function SectionFormFields({
           </label>
           <input
             name="subtitle"
-            defaultValue={section?.subtitle ?? ''}
+            defaultValue={section?.subtitle ?? ""}
             placeholder="Explore our restaurants and bars"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
@@ -585,49 +577,49 @@ function SectionFormFields({
         <textarea
           name="description"
           rows={3}
-          defaultValue={section?.description ?? ''}
+          defaultValue={section?.description ?? ""}
           placeholder="Short description for this guide section."
           className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
         />
       </div>
 
-             <CoverPhotoField
-  imageUrl={section?.imageUrl ?? ''}
-  label="Section Cover Photo"
-/>
-        <PanoramaField
-          enabled={section?.panoramaEnabled ?? false}
-          panoramaImageUrl={section?.panoramaImageUrl ?? ''}
-          label="Section 360° Panorama"
-        />
+      <CoverPhotoField
+        imageUrl={section?.imageUrl ?? ""}
+        label="Section Cover Photo"
+      />
+      <PanoramaField
+        enabled={section?.panoramaEnabled ?? false}
+        panoramaImageUrl={section?.panoramaImageUrl ?? ""}
+        label="Section 360° Panorama"
+      />
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Icon
-              </label>
-              <Select name="iconKey" defaultValue={section?.iconKey ?? 'Info'}>
-                {iconOptions.map((icon) => (
-                  <option key={icon} value={icon}>
-                    {icon}
-                  </option>
-                ))}
-              </Select>
-            </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Icon
+          </label>
+          <Select name="iconKey" defaultValue={section?.iconKey ?? "Info"}>
+            {iconOptions.map((icon) => (
+              <option key={icon} value={icon}>
+                {icon}
+              </option>
+            ))}
+          </Select>
+        </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Sort Order
-              </label>
-              <input
-                name="sortOrder"
-                type="number"
-                step="1"
-                defaultValue={section?.sortOrder ?? 0}
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
-          </div>
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Sort Order
+          </label>
+          <input
+            name="sortOrder"
+            type="number"
+            step="1"
+            defaultValue={section?.sortOrder ?? 0}
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
+      </div>
 
       <label className="flex items-center gap-2 text-sm font-bold">
         <input
@@ -661,7 +653,7 @@ function ItemFormFields({
           </label>
           <Select
             name="sectionId"
-            defaultValue={defaultSectionId ?? sections[0]?.id ?? ''}
+            defaultValue={defaultSectionId ?? sections[0]?.id ?? ""}
           >
             {sections.map((section) => (
               <option key={section.id} value={section.id}>
@@ -680,7 +672,7 @@ function ItemFormFields({
           <input
             name="title"
             required
-            defaultValue={item?.title ?? ''}
+            defaultValue={item?.title ?? ""}
             placeholder="Wi-Fi"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
@@ -692,7 +684,7 @@ function ItemFormFields({
           </label>
           <input
             name="subtitle"
-            defaultValue={item?.subtitle ?? ''}
+            defaultValue={item?.subtitle ?? ""}
             placeholder="Guest internet access"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
@@ -706,7 +698,7 @@ function ItemFormFields({
         <textarea
           name="content"
           rows={5}
-          defaultValue={item?.content ?? ''}
+          defaultValue={item?.content ?? ""}
           placeholder="Write the guide information here."
           className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
         />
@@ -717,7 +709,10 @@ function ItemFormFields({
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
             Type
           </label>
-          <Select name="itemType" defaultValue={item?.itemType ?? 'INFORMATION'}>
+          <Select
+            name="itemType"
+            defaultValue={item?.itemType ?? "INFORMATION"}
+          >
             {itemTypeOptions.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -730,7 +725,7 @@ function ItemFormFields({
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
             Icon
           </label>
-          <Select name="iconKey" defaultValue={item?.iconKey ?? 'Info'}>
+          <Select name="iconKey" defaultValue={item?.iconKey ?? "Info"}>
             {iconOptions.map((icon) => (
               <option key={icon} value={icon}>
                 {icon}
@@ -753,95 +748,95 @@ function ItemFormFields({
         </div>
       </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Hours
-              </label>
-              <input
-                name="hours"
-                defaultValue={item?.hours ?? ''}
-                placeholder="e.g. 7:00 AM - 9:00 PM"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Hours
+          </label>
+          <input
+            name="hours"
+            defaultValue={item?.hours ?? ""}
+            placeholder="e.g. 7:00 AM - 9:00 PM"
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Location
-              </label>
-              <input
-                name="location"
-                defaultValue={item?.location ?? ''}
-                placeholder="e.g. Pool Deck, Ground Floor, Lobby"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Location
+          </label>
+          <input
+            name="location"
+            defaultValue={item?.location ?? ""}
+            placeholder="e.g. Pool Deck, Ground Floor, Lobby"
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Contact / Extension
-              </label>
-              <input
-                name="contact"
-                defaultValue={item?.contact ?? ''}
-                placeholder="e.g. Front Desk 0, Housekeeping 102"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Contact / Extension
+          </label>
+          <input
+            name="contact"
+            defaultValue={item?.contact ?? ""}
+            placeholder="e.g. Front Desk 0, Housekeeping 102"
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Map URL
-              </label>
-              <input
-                name="mapUrl"
-                defaultValue={item?.mapUrl ?? ''}
-                placeholder="Paste Google Maps or internal location link"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Map URL
+          </label>
+          <input
+            name="mapUrl"
+            defaultValue={item?.mapUrl ?? ""}
+            placeholder="Paste Google Maps or internal location link"
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Button Label
-              </label>
-              <input
-                name="buttonLabel"
-                defaultValue={item?.buttonLabel ?? ''}
-                placeholder="e.g. View Menu, Request Service, Open Pool Page"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Button Label
+          </label>
+          <input
+            name="buttonLabel"
+            defaultValue={item?.buttonLabel ?? ""}
+            placeholder="e.g. View Menu, Request Service, Open Pool Page"
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-                Button Link
-              </label>
-              <input
-                name="buttonHref"
-                defaultValue={item?.buttonHref ?? ''}
-                placeholder="e.g. menu, service, pool, https://..."
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
-              />
-            </div>
-          </div>
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Button Link
+          </label>
+          <input
+            name="buttonHref"
+            defaultValue={item?.buttonHref ?? ""}
+            placeholder="e.g. menu, service, pool, https://..."
+            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+          />
+        </div>
+      </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-              Cover Image URL
-            </label>
-                          <CoverPhotoField
-                imageUrl={item?.imageUrl ?? ''}
-                label="Guide Item Cover Photo"
-              />
-            </div>
+      <div>
+        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          Cover Image URL
+        </label>
+        <CoverPhotoField
+          imageUrl={item?.imageUrl ?? ""}
+          label="Guide Item Cover Photo"
+        />
+      </div>
 
-            <PanoramaField
-              enabled={item?.panoramaEnabled ?? false}
-              panoramaImageUrl={item?.panoramaImageUrl ?? ''}
-              label="Guide Item 360° Panorama"
-            />
+      <PanoramaField
+        enabled={item?.panoramaEnabled ?? false}
+        panoramaImageUrl={item?.panoramaImageUrl ?? ""}
+        label="Guide Item 360° Panorama"
+      />
 
       <label className="flex items-center gap-2 text-sm font-bold">
         <input
@@ -883,17 +878,17 @@ function GalleryPreview({ images }: { images: GuideImage[] }) {
           <div className="p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-xs font-black">
-                {image.title || 'Gallery Image'}
+                {image.title || "Gallery Image"}
               </p>
 
               <span
                 className={
                   image.isActive
-                    ? 'rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700'
-                    : 'rounded-full bg-neutral-100 px-2 py-1 text-[9px] font-black text-neutral-500'
+                    ? "rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700"
+                    : "rounded-full bg-neutral-100 px-2 py-1 text-[9px] font-black text-neutral-500"
                 }
               >
-                {image.isActive ? 'ACTIVE' : 'HIDDEN'}
+                {image.isActive ? "ACTIVE" : "HIDDEN"}
               </span>
             </div>
 
@@ -930,24 +925,24 @@ function UploadImageModal({
   item?: GuideItem;
   onClose: () => void;
 }) {
- const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-    const [previews, setPreviews] = useState<
-      {
-        id: string;
-        name: string;
-        sizeLabel: string;
-        url: string;
-        file: File;
-      }[]
-    >([]);
+  const [previews, setPreviews] = useState<
+    {
+      id: string;
+      name: string;
+      sizeLabel: string;
+      url: string;
+      file: File;
+    }[]
+  >([]);
 
-    const [previewError, setPreviewError] = useState('');
-    const [selectedPreview, setSelectedPreview] = useState<{
-      title?: string;
-      caption?: string;
-      imageUrl: string;
-    } | null>(null);
+  const [previewError, setPreviewError] = useState("");
+  const [selectedPreview, setSelectedPreview] = useState<{
+    title?: string;
+    caption?: string;
+    imageUrl: string;
+  } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -964,104 +959,102 @@ function UploadImageModal({
   }
 
   function syncInputFiles(nextPreviews: typeof previews) {
-  if (!fileInputRef.current) {
-    return;
+    if (!fileInputRef.current) {
+      return;
+    }
+
+    const dataTransfer = new DataTransfer();
+
+    nextPreviews.forEach((preview) => {
+      dataTransfer.items.add(preview.file);
+    });
+
+    fileInputRef.current.files = dataTransfer.files;
   }
 
-  const dataTransfer = new DataTransfer();
+  function clearPreviews() {
+    previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    setPreviews([]);
+    setPreviewError("");
 
-  nextPreviews.forEach((preview) => {
-    dataTransfer.items.add(preview.file);
-  });
-
-  fileInputRef.current.files = dataTransfer.files;
-}
-
-function clearPreviews() {
-  previews.forEach((preview) => URL.revokeObjectURL(preview.url));
-  setPreviews([]);
-  setPreviewError('');
-
-  if (fileInputRef.current) {
-    fileInputRef.current.value = '';
-  }
-}
-
-
-
-function removePreview(previewId: string) {
-  const removedPreview = previews.find((preview) => preview.id === previewId);
-  const nextPreviews = previews.filter((preview) => preview.id !== previewId);
-
-  if (removedPreview) {
-    URL.revokeObjectURL(removedPreview.url);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
-  setPreviews(nextPreviews);
-  syncInputFiles(nextPreviews);
+  function removePreview(previewId: string) {
+    const removedPreview = previews.find((preview) => preview.id === previewId);
+    const nextPreviews = previews.filter((preview) => preview.id !== previewId);
 
-  if (!nextPreviews.length && fileInputRef.current) {
-    fileInputRef.current.value = '';
-  }
-}
+    if (removedPreview) {
+      URL.revokeObjectURL(removedPreview.url);
+    }
 
-function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
-  const files = Array.from(event.target.files ?? []);
+    setPreviews(nextPreviews);
+    syncInputFiles(nextPreviews);
 
-  previews.forEach((preview) => URL.revokeObjectURL(preview.url));
-
-  setPreviews([]);
-  setPreviewError('');
-
-  if (!files.length) {
-    return;
+    if (!nextPreviews.length && fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  const maxFileSize = 4 * 1024 * 1024;
-  const maxFiles = 10;
+  function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
 
-  if (files.length > maxFiles) {
-    event.target.value = '';
-    setPreviewError(`You can upload up to ${maxFiles} images at once.`);
-    return;
+    previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+
+    setPreviews([]);
+    setPreviewError("");
+
+    if (!files.length) {
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxFileSize = 4 * 1024 * 1024;
+    const maxFiles = 10;
+
+    if (files.length > maxFiles) {
+      event.target.value = "";
+      setPreviewError(`You can upload up to ${maxFiles} images at once.`);
+      return;
+    }
+
+    const invalidFile = files.find((file) => !allowedTypes.includes(file.type));
+
+    if (invalidFile) {
+      event.target.value = "";
+      setPreviewError(
+        `${invalidFile.name} is not allowed. Use JPG, PNG, or WEBP only.`,
+      );
+      return;
+    }
+
+    const oversizedFile = files.find((file) => file.size > maxFileSize);
+
+    if (oversizedFile) {
+      event.target.value = "";
+      setPreviewError(`${oversizedFile.name} is larger than 4MB.`);
+      return;
+    }
+
+    const nextPreviews = files.map((file, index) => ({
+      id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
+      name: file.name,
+      sizeLabel: formatFileSize(file.size),
+      url: URL.createObjectURL(file),
+      file,
+    }));
+
+    setPreviews(nextPreviews);
+    syncInputFiles(nextPreviews);
   }
-
-  const invalidFile = files.find((file) => !allowedTypes.includes(file.type));
-
-  if (invalidFile) {
-    event.target.value = '';
-    setPreviewError(
-      `${invalidFile.name} is not allowed. Use JPG, PNG, or WEBP only.`
-    );
-    return;
-  }
-
-  const oversizedFile = files.find((file) => file.size > maxFileSize);
-
-  if (oversizedFile) {
-    event.target.value = '';
-    setPreviewError(`${oversizedFile.name} is larger than 4MB.`);
-    return;
-  }
-
-  const nextPreviews = files.map((file, index) => ({
-    id: `${file.name}-${file.size}-${file.lastModified}-${index}`,
-    name: file.name,
-    sizeLabel: formatFileSize(file.size),
-    url: URL.createObjectURL(file),
-    file,
-  }));
-
-  setPreviews(nextPreviews);
-  syncInputFiles(nextPreviews);
-}
 
   const uploadTargetLabel = item
     ? `Guide Item: ${item.title}`
     : section
       ? `Section: ${section.title}`
-      : 'Selected section';
+      : "Selected section";
 
   return (
     <Modal
@@ -1082,7 +1075,7 @@ function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
             <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
               Section
             </label>
-            <Select name="sectionId" defaultValue={sections[0]?.id ?? ''}>
+            <Select name="sectionId" defaultValue={sections[0]?.id ?? ""}>
               {sections.map((sectionOption) => (
                 <option key={sectionOption.id} value={sectionOption.id}>
                   {sectionOption.hotelName} · {sectionOption.title}
@@ -1137,7 +1130,7 @@ function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
                   Image Preview
                 </p>
                 <p className="mt-1 text-sm font-black text-neutral-800">
-                  {previews.length} image{previews.length === 1 ? '' : 's'}{' '}
+                  {previews.length} image{previews.length === 1 ? "" : "s"}{" "}
                   selected
                 </p>
               </div>
@@ -1152,56 +1145,56 @@ function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
             </div>
 
             <div className="grid gap-3 bg-neutral-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
-             {previews.map((preview) => (
-                    <div
-                      key={preview.id}
-                      className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white"
-                    >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedPreview({
-                            title: preview.name,
-                            imageUrl: preview.url,
-                          })
-                        }
-                        className="block w-full"
-                      >
-                        <div className="relative flex h-40 items-center justify-center bg-neutral-100">
-                          <img
-                            src={preview.url}
-                            alt={preview.name}
-                            className="h-full w-full object-cover"
-                          />
+              {previews.map((preview) => (
+                <div
+                  key={preview.id}
+                  className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedPreview({
+                        title: preview.name,
+                        imageUrl: preview.url,
+                      })
+                    }
+                    className="block w-full"
+                  >
+                    <div className="relative flex h-40 items-center justify-center bg-neutral-100">
+                      <img
+                        src={preview.url}
+                        alt={preview.name}
+                        className="h-full w-full object-cover"
+                      />
 
-                          <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
+                      <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
 
-                          <span className="absolute left-3 top-3 grid size-8 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
-                            <Maximize2 className="size-4" />
-                          </span>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => removePreview(preview.id)}
-                        className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-700"
-                        title="Remove from upload"
-                        aria-label="Remove from upload"
-                      >
-                        <X className="size-4" />
-                      </button>
-
-                      <div className="p-3">
-                        <p className="truncate text-xs font-black text-neutral-800">
-                          {preview.name}
-                        </p>
-                        <p className="mt-1 text-xs font-bold text-neutral-500">
-                          {preview.sizeLabel}
-                        </p>
-                      </div>
+                      <span className="absolute left-3 top-3 grid size-8 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+                        <Maximize2 className="size-4" />
+                      </span>
                     </div>
-                  ))}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => removePreview(preview.id)}
+                    className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-700"
+                    title="Remove from upload"
+                    aria-label="Remove from upload"
+                  >
+                    <X className="size-4" />
+                  </button>
+
+                  <div className="p-3">
+                    <p className="truncate text-xs font-black text-neutral-800">
+                      {preview.name}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-neutral-500">
+                      {preview.sizeLabel}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ) : (
@@ -1285,41 +1278,41 @@ function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
           <Button>
             {previews.length > 1
               ? `Upload ${previews.length} Images`
-              : 'Upload Image'}
+              : "Upload Image"}
           </Button>
         </div>
       </form>
-              {selectedPreview ? (
-              <ImageLightbox
-                image={selectedPreview}
-                onClose={() => setSelectedPreview(null)}
-              />
-            ) : null}
+      {selectedPreview ? (
+        <ImageLightbox
+          image={selectedPreview}
+          onClose={() => setSelectedPreview(null)}
+        />
+      ) : null}
     </Modal>
   );
 }
 
-type StatusFilter = 'ALL' | 'ACTIVE' | 'HIDDEN';
-type SortMode = 'custom' | 'title-asc' | 'items-desc';
-type ViewMode = 'sections' | 'items';
+type StatusFilter = "ALL" | "ACTIVE" | "HIDDEN";
+type SortMode = "custom" | "title-asc" | "items-desc";
+type ViewMode = "sections" | "items";
 
 function StatusPill({ isActive }: { isActive: boolean }) {
   return (
     <span
       className={
         isActive
-          ? 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-700'
-          : 'inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black uppercase text-neutral-500'
+          ? "inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-700"
+          : "inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black uppercase text-neutral-500"
       }
     >
       <span
         className={
           isActive
-            ? 'size-1.5 rounded-full bg-emerald-500'
-            : 'size-1.5 rounded-full bg-neutral-400'
+            ? "size-1.5 rounded-full bg-emerald-500"
+            : "size-1.5 rounded-full bg-neutral-400"
         }
       />
-      {isActive ? 'Active' : 'Hidden'}
+      {isActive ? "Active" : "Hidden"}
     </span>
   );
 }
@@ -1382,12 +1375,12 @@ function ImageLightbox({
         <div className="min-h-0 flex-1 bg-black">
           <img
             src={image.imageUrl}
-            alt={image.title || 'Hotel guide image'}
+            alt={image.title || "Hotel guide image"}
             className="max-h-[80dvh] w-full object-contain"
           />
         </div>
 
-        {(image.title || image.caption) ? (
+        {image.title || image.caption ? (
           <div className="border-t border-white/10 bg-black px-5 py-4 text-white">
             {image.title ? (
               <p className="text-sm font-black">{image.title}</p>
@@ -1411,7 +1404,7 @@ function ConfirmDeleteDialog({
   action,
   hiddenName,
   hiddenValue,
-  confirmLabel = 'Delete',
+  confirmLabel = "Delete",
   onClose,
 }: {
   title: string;
@@ -1495,7 +1488,7 @@ function GalleryImageDeleteButton({
         <ConfirmDeleteDialog
           title="Delete Hotel Guide Image"
           message={`Are you sure you want to delete ${
-            imageTitle ? `"${imageTitle}"` : 'this image'
+            imageTitle ? `"${imageTitle}"` : "this image"
           }? This action cannot be undone.`}
           action={deleteGuideImageAction}
           hiddenName="imageId"
@@ -1530,7 +1523,7 @@ function MiniGallery({ images }: { images: GuideImage[] }) {
               style={{
                 backgroundImage: `url(${image.imageUrl})`,
               }}
-              title={image.title || 'Open image'}
+              title={image.title || "Open image"}
               aria-label="Open image in full screen"
             >
               <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
@@ -1617,7 +1610,7 @@ function sectionMatches(section: GuideSection, query: string) {
     section.hotelName,
     section.iconKey,
   ]
-    .join(' ')
+    .join(" ")
     .toLowerCase();
 
   const itemText = section.items
@@ -1630,9 +1623,9 @@ function sectionMatches(section: GuideSection, query: string) {
         item.hours,
         item.location,
         item.contact,
-      ].join(' ')
+      ].join(" "),
     )
-    .join(' ')
+    .join(" ")
     .toLowerCase();
 
   return sectionText.includes(query) || itemText.includes(query);
@@ -1652,17 +1645,17 @@ function itemMatches(item: GuideItem, query: string) {
     item.location,
     item.contact,
   ]
-    .join(' ')
+    .join(" ")
     .toLowerCase()
     .includes(query);
 }
 
 function statusMatches(isActive: boolean, status: StatusFilter) {
-  if (status === 'ACTIVE') {
+  if (status === "ACTIVE") {
     return isActive;
   }
 
-  if (status === 'HIDDEN') {
+  if (status === "HIDDEN") {
     return !isActive;
   }
 
@@ -1672,21 +1665,18 @@ function statusMatches(isActive: boolean, status: StatusFilter) {
 function getSectionImageCount(section: GuideSection) {
   return (
     section.galleryImages.length +
-    section.items.reduce(
-      (sum, item) => sum + item.galleryImages.length,
-      0
-    )
+    section.items.reduce((sum, item) => sum + item.galleryImages.length, 0)
   );
 }
 
 function sortSections(sections: GuideSection[], sortMode: SortMode) {
   const nextSections = [...sections];
 
-  if (sortMode === 'title-asc') {
+  if (sortMode === "title-asc") {
     return nextSections.sort((a, b) => a.title.localeCompare(b.title));
   }
 
-  if (sortMode === 'items-desc') {
+  if (sortMode === "items-desc") {
     return nextSections.sort((a, b) => b.items.length - a.items.length);
   }
 
@@ -1721,12 +1711,12 @@ function GuideItemRow({
           </div>
 
           <p className="mt-1 text-xs font-bold uppercase tracking-wide text-neutral-500">
-            {sectionTitle ? `${sectionTitle} · ` : ''}
+            {sectionTitle ? `${sectionTitle} · ` : ""}
             {item.itemType}
           </p>
 
           <p className="mt-1 text-sm font-semibold text-neutral-600">
-            {item.subtitle || 'No subtitle'}
+            {item.subtitle || "No subtitle"}
           </p>
 
           {item.content ? (
@@ -1792,19 +1782,19 @@ function SectionNavigationCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full rounded-2xl border p-3 text-left transition',
+        "w-full rounded-2xl border p-3 text-left transition",
         selected
-          ? 'border-[#11100b] bg-[#11100b] text-white shadow-lg'
-          : 'border-neutral-200 bg-white text-neutral-900 hover:border-[#c99c38]/60 hover:bg-[#fffaf0]'
+          ? "border-[#11100b] bg-[#11100b] text-white shadow-lg"
+          : "border-neutral-200 bg-white text-neutral-900 hover:border-[#c99c38]/60 hover:bg-[#fffaf0]",
       )}
     >
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            'mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl',
+            "mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl",
             selected
-              ? 'bg-[#d6a738] text-black'
-              : 'bg-[#f7f1e5] text-[#a8781d]'
+              ? "bg-[#d6a738] text-black"
+              : "bg-[#f7f1e5] text-[#a8781d]",
           )}
         >
           <Layers className="size-4" />
@@ -1815,30 +1805,30 @@ function SectionNavigationCard({
             <span className="truncate text-sm font-black">{section.title}</span>
             <ChevronRight
               className={cn(
-                'size-4 shrink-0',
-                selected ? 'text-[#d6a738]' : 'text-neutral-300'
+                "size-4 shrink-0",
+                selected ? "text-[#d6a738]" : "text-neutral-300",
               )}
             />
           </span>
 
           <span
             className={cn(
-              'mt-1 block truncate text-xs font-semibold',
-              selected ? 'text-white/55' : 'text-neutral-500'
+              "mt-1 block truncate text-xs font-semibold",
+              selected ? "text-white/55" : "text-neutral-500",
             )}
           >
-            {section.subtitle || 'No subtitle'}
+            {section.subtitle || "No subtitle"}
           </span>
 
           <span
             className={cn(
-              'mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide',
-              selected ? 'text-white/45' : 'text-neutral-400'
+              "mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide",
+              selected ? "text-white/45" : "text-neutral-400",
             )}
           >
             <span>{section.items.length} items</span>
             <span>{imageCount} photos</span>
-            <span>{section.isActive ? 'Published' : 'Hidden'}</span>
+            <span>{section.isActive ? "Published" : "Hidden"}</span>
           </span>
         </span>
       </div>
@@ -1866,7 +1856,7 @@ function SelectedSectionWorkspace({
   const coverImage =
     section.imageUrl ||
     section.galleryImages.find((image) => image.isActive)?.imageUrl ||
-    '';
+    "";
 
   return (
     <div className="min-w-0">
@@ -1901,7 +1891,7 @@ function SelectedSectionWorkspace({
                 </div>
 
                 <p className="mt-1 text-sm font-semibold text-neutral-500">
-                  {section.subtitle || 'No subtitle added'}
+                  {section.subtitle || "No subtitle added"}
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black text-neutral-500">
@@ -2026,6 +2016,10 @@ export function HotelGuideClient({
   defaultHotelId: string;
   canChangeHotel: boolean;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const currentSearchParams = useSearchParams();
+
   const [creatingSection, setCreatingSection] = useState(false);
   const [creatingItem, setCreatingItem] = useState(false);
   const [defaultItemSectionId, setDefaultItemSectionId] = useState<
@@ -2033,23 +2027,29 @@ export function HotelGuideClient({
   >(undefined);
 
   const [editingSection, setEditingSection] = useState<GuideSection | null>(
-    null
+    null,
   );
   const [editingItem, setEditingItem] = useState<GuideItem | null>(null);
   const [uploadSection, setUploadSection] = useState<GuideSection | null>(null);
   const [uploadItem, setUploadItem] = useState<GuideItem | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [sortMode, setSortMode] = useState<SortMode>('custom');
-  const [viewMode, setViewMode] = useState<ViewMode>('sections');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [sortMode, setSortMode] = useState<SortMode>("custom");
+  const [viewMode, setViewMode] = useState<ViewMode>("sections");
   const [selectedSectionId, setSelectedSectionId] = useState(
-    sections[0]?.id ?? ''
+    sections[0]?.id ?? "",
+  );
+
+  const selectedHotel = useMemo(
+    () =>
+      hotels.find((hotel) => hotel.id === defaultHotelId) ?? hotels[0] ?? null,
+    [defaultHotelId, hotels],
   );
 
   const totalItems = useMemo(
     () => sections.reduce((sum, section) => sum + section.items.length, 0),
-    [sections]
+    [sections],
   );
 
   const totalImages = useMemo(
@@ -2060,16 +2060,16 @@ export function HotelGuideClient({
           section.galleryImages.length +
           section.items.reduce(
             (itemSum, item) => itemSum + item.galleryImages.length,
-            0
+            0,
           ),
-        0
+        0,
       ),
-    [sections]
+    [sections],
   );
 
   const publishedSections = useMemo(
     () => sections.filter((section) => section.isActive).length,
-    [sections]
+    [sections],
   );
 
   const normalizedQuery = normalizeSearch(searchQuery);
@@ -2090,7 +2090,7 @@ export function HotelGuideClient({
       visibleSections.find((section) => section.id === selectedSectionId) ??
       visibleSections[0] ??
       null,
-    [selectedSectionId, visibleSections]
+    [selectedSectionId, visibleSections],
   );
 
   const selectedVisibleItems = useMemo(() => {
@@ -2103,7 +2103,7 @@ export function HotelGuideClient({
         ...selectedSection,
         items: [],
       },
-      normalizedQuery
+      normalizedQuery,
     );
 
     return selectedSection.items.filter((item) => {
@@ -2123,7 +2123,7 @@ export function HotelGuideClient({
           ...section,
           items: [],
         },
-        normalizedQuery
+        normalizedQuery,
       );
 
       return section.items
@@ -2141,7 +2141,7 @@ export function HotelGuideClient({
 
   useEffect(() => {
     if (!visibleSections.length) {
-      setSelectedSectionId('');
+      setSelectedSectionId("");
       return;
     }
 
@@ -2149,6 +2149,24 @@ export function HotelGuideClient({
       setSelectedSectionId(visibleSections[0].id);
     }
   }, [selectedSectionId, visibleSections]);
+
+  function handleHotelChange(hotelId: string) {
+    if (!hotelId || hotelId === defaultHotelId) {
+      return;
+    }
+
+    const params = new URLSearchParams(currentSearchParams.toString());
+    params.set("hotelId", hotelId);
+    params.delete("success");
+    params.delete("error");
+
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setSortMode("custom");
+    setSelectedSectionId("");
+
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   function openCreateItem(sectionId?: string) {
     setDefaultItemSectionId(sectionId);
@@ -2161,9 +2179,9 @@ export function HotelGuideClient({
   }
 
   function clearFilters() {
-    setSearchQuery('');
-    setStatusFilter('ALL');
-    setSortMode('custom');
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setSortMode("custom");
   }
 
   return (
@@ -2184,6 +2202,13 @@ export function HotelGuideClient({
                 Organize the guest guide by section, then add the information
                 cards guests should see inside each section.
               </p>
+
+              {selectedHotel ? (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#c99c38]/30 bg-[#fffaf0] px-3 py-1.5 text-xs font-black text-[#8a651f]">
+                  <Building2 className="size-4" />
+                  Managing: {selectedHotel.name}
+                </div>
+              ) : null}
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
@@ -2237,7 +2262,7 @@ export function HotelGuideClient({
         </section>
 
         <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_170px_190px_auto]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_230px_170px_190px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
               <input
@@ -2246,6 +2271,24 @@ export function HotelGuideClient({
                 placeholder="Search sections, items, hours, location, or content..."
                 className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:bg-white focus:ring-4 focus:ring-[#c99c38]/10"
               />
+            </div>
+
+            <div className="relative">
+              <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a8781d]" />
+              <select
+                value={defaultHotelId}
+                onChange={(event) => handleHotelChange(event.target.value)}
+                disabled={!canChangeHotel || hotels.length <= 1}
+                className="h-11 w-full appearance-none rounded-xl border border-[#c99c38]/35 bg-[#fffaf0] pl-10 pr-9 text-sm font-black text-neutral-900 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
+                aria-label="Filter hotel guide by hotel"
+              >
+                {hotels.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id}>
+                    {hotel.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronRight className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 rotate-90 text-neutral-400" />
             </div>
 
             <select
@@ -2273,24 +2316,24 @@ export function HotelGuideClient({
             <div className="flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
               <button
                 type="button"
-                onClick={() => setViewMode('sections')}
+                onClick={() => setViewMode("sections")}
                 className={cn(
-                  'h-9 rounded-lg px-3 text-xs font-black transition',
-                  viewMode === 'sections'
-                    ? 'bg-[#11100b] text-white shadow-sm'
-                    : 'text-neutral-500 hover:bg-white'
+                  "h-9 rounded-lg px-3 text-xs font-black transition",
+                  viewMode === "sections"
+                    ? "bg-[#11100b] text-white shadow-sm"
+                    : "text-neutral-500 hover:bg-white",
                 )}
               >
                 Structure
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode('items')}
+                onClick={() => setViewMode("items")}
                 className={cn(
-                  'h-9 rounded-lg px-3 text-xs font-black transition',
-                  viewMode === 'items'
-                    ? 'bg-[#11100b] text-white shadow-sm'
-                    : 'text-neutral-500 hover:bg-white'
+                  "h-9 rounded-lg px-3 text-xs font-black transition",
+                  viewMode === "items"
+                    ? "bg-[#11100b] text-white shadow-sm"
+                    : "text-neutral-500 hover:bg-white",
                 )}
               >
                 All Items
@@ -2300,16 +2343,17 @@ export function HotelGuideClient({
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-bold text-neutral-500">
-              {viewMode === 'sections'
+              {viewMode === "sections"
                 ? `${visibleSections.length} section${
-                    visibleSections.length === 1 ? '' : 's'
+                    visibleSections.length === 1 ? "" : "s"
                   } shown`
                 : `${flatVisibleItems.length} item${
-                    flatVisibleItems.length === 1 ? '' : 's'
+                    flatVisibleItems.length === 1 ? "" : "s"
                   } shown`}
+              {selectedHotel ? ` · ${selectedHotel.name}` : ""}
             </p>
 
-            {searchQuery || statusFilter !== 'ALL' || sortMode !== 'custom' ? (
+            {searchQuery || statusFilter !== "ALL" || sortMode !== "custom" ? (
               <button
                 type="button"
                 onClick={clearFilters}
@@ -2321,7 +2365,7 @@ export function HotelGuideClient({
           </div>
         </section>
 
-        {viewMode === 'sections' ? (
+        {viewMode === "sections" ? (
           <section className="grid gap-4 xl:grid-cols-[310px_minmax(0,1fr)] xl:items-start">
             <aside className="rounded-[1.75rem] border border-neutral-200 bg-white p-3 shadow-sm xl:sticky xl:top-20">
               <div className="flex items-center justify-between px-2 pb-3 pt-1">
@@ -2330,7 +2374,9 @@ export function HotelGuideClient({
                     Guide structure
                   </p>
                   <p className="mt-1 text-sm font-black text-neutral-900">
-                    Select a section to manage
+                    {selectedHotel
+                      ? `${selectedHotel.name} sections`
+                      : "Select a section to manage"}
                   </p>
                 </div>
                 <span className="grid size-9 place-items-center rounded-xl bg-[#f7f1e5] text-[#a8781d]">
@@ -2366,7 +2412,7 @@ export function HotelGuideClient({
                   onSubmit={(event) => {
                     if (
                       !window.confirm(
-                        'Add the default hotel guide sections and items?'
+                        "Add the default hotel guide sections and items?",
                       )
                     ) {
                       event.preventDefault();
@@ -2387,7 +2433,7 @@ export function HotelGuideClient({
                   onSubmit={(event) => {
                     if (
                       !window.confirm(
-                        'Add or update the dynamic Pool & Amenities content?'
+                        "Add or update the dynamic Pool & Amenities content?",
                       )
                     ) {
                       event.preventDefault();

@@ -1,0 +1,6 @@
+﻿product_type,category,name,price,prep_time_minutes,description,image_url,is_available,components
+SINGLE,Breakfast,Classic Pancakes,180,15,Fluffy pancakes served with syrup,,TRUE,
+SINGLE,Drinks,Iced Tea,85,5,Freshly brewed iced tea,,TRUE,
+SINGLE,Mains,Chicken Adobo,250,25,Classic Filipino chicken adobo,,TRUE,
+BUNDLE,Combos,Breakfast Combo,240,18,Pancakes with iced tea,,TRUE,Breakfast::Classic Pancakes::1|Drinks::Iced Tea::1
+BUNDLE,Combos,Family Adobo Set,899,35,Four servings of chicken adobo with drinks,,TRUE,Mains::Chicken Adobo::4|Drinks::Iced Tea::4

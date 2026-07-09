@@ -328,6 +328,216 @@ export async function controlMenuStockAction(formData: FormData) {
   });
 }
 
+
+export async function bulkControlMenuStockAction(formData: FormData) {
+  const user = await requireDashboardPermission(
+    DashboardModule.INVENTORY,
+    'canEdit'
+  );
+
+  const productIds: string[] = Array.from(
+    new Set(
+      formData
+        .getAll('productId')
+        .map((value) => cleanText(value))
+        .filter(
+          (value): value is string =>
+            typeof value === 'string' && value.length > 0
+        )
+    )
+  );
+
+  const operation = formData.get(
+    'operation'
+  ) as MenuAvailabilityMovementType;
+  const quantity = parseWholeNumber(formData.get('quantity'));
+  const reason = cleanText(formData.get('reason'), 300);
+  const notes = cleanText(formData.get('notes'), 300);
+
+  if (!productIds.length) {
+    throw new Error('Select at least one menu item.');
+  }
+
+  if (productIds.length > 500) {
+    throw new Error('You can update up to 500 menu items at a time.');
+  }
+
+  if (
+    !Object.values(MenuAvailabilityMovementType).includes(operation) ||
+    !MENU_MANUAL_OPERATIONS.includes(operation)
+  ) {
+    throw new Error('Invalid inventory operation.');
+  }
+
+  const requiresPositiveQuantity =
+    operation === MenuAvailabilityMovementType.ADD_STOCK ||
+    operation === MenuAvailabilityMovementType.REMOVE_STOCK ||
+    operation === MenuAvailabilityMovementType.REOPEN;
+
+  const requiresQuantity =
+    operation === MenuAvailabilityMovementType.SET_STOCK ||
+    requiresPositiveQuantity;
+
+  if (requiresQuantity && quantity === null) {
+    throw new Error('Please enter a valid quantity.');
+  }
+
+  if (requiresPositiveQuantity && (!quantity || quantity <= 0)) {
+    throw new Error('Quantity must be greater than zero.');
+  }
+
+  const products = await db.menuProduct.findMany({
+    where: {
+      id: {
+        in: productIds,
+      },
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      name: true,
+      productType: true,
+    },
+  });
+
+  if (products.length !== productIds.length) {
+    throw new Error(
+      'One or more selected menu items no longer exist. Refresh the page and try again.'
+    );
+  }
+
+  for (const product of products) {
+    assertHotelScope(user, product.hotelId);
+  }
+
+  const selectedHotelIds = new Set(
+    products.map((product) => product.hotelId)
+  );
+
+  if (selectedHotelIds.size > 1) {
+    throw new Error(
+      'Bulk stock control can only update one hotel at a time. Filter the inventory by hotel and try again.'
+    );
+  }
+
+  const bundles = products.filter(
+    (product) => product.productType === MenuProductType.BUNDLE
+  );
+
+  if (bundles.length) {
+    throw new Error(
+      `Bundle stock is derived from component items. Remove these bundles from the selection: ${bundles
+        .slice(0, 5)
+        .map((product) => product.name)
+        .join(', ')}${bundles.length > 5 ? ', and more' : ''}.`
+    );
+  }
+
+  await db.$transaction(
+    async (tx) => {
+      const existingStocks = await tx.menuAvailabilityStock.findMany({
+        where: {
+          productId: {
+            in: productIds,
+          },
+        },
+      });
+
+      const stockByProductId = new Map(
+        existingStocks.map((stock) => [stock.productId, stock])
+      );
+
+      for (const product of products) {
+        const existingStock = stockByProductId.get(product.id);
+        const currentQty = existingStock?.availableQty ?? 0;
+
+        let nextQty = currentQty;
+        let movementQty = quantity ?? 0;
+
+        if (operation === MenuAvailabilityMovementType.SET_STOCK) {
+          nextQty = quantity ?? 0;
+          movementQty = nextQty;
+        }
+
+        if (operation === MenuAvailabilityMovementType.ADD_STOCK) {
+          nextQty = currentQty + quantity!;
+          movementQty = quantity!;
+        }
+
+        if (operation === MenuAvailabilityMovementType.REMOVE_STOCK) {
+          movementQty = Math.min(quantity!, currentQty);
+          nextQty = Math.max(currentQty - quantity!, 0);
+        }
+
+        if (operation === MenuAvailabilityMovementType.SOLD_OUT) {
+          movementQty = currentQty;
+          nextQty = 0;
+        }
+
+        if (operation === MenuAvailabilityMovementType.REOPEN) {
+          nextQty = currentQty + quantity!;
+          movementQty = quantity!;
+        }
+
+        const stock = await tx.menuAvailabilityStock.upsert({
+          where: {
+            hotelId_productId: {
+              hotelId: product.hotelId,
+              productId: product.id,
+            },
+          },
+          update: {
+            availableQty: nextQty,
+            isSoldOut: nextQty <= 0,
+            ...(notes ? { notes } : {}),
+          },
+          create: {
+            hotelId: product.hotelId,
+            productId: product.id,
+            availableQty: nextQty,
+            soldQty: 0,
+            isSoldOut: nextQty <= 0,
+            notes: notes || 'Bulk stock control',
+          },
+        });
+
+        await tx.menuAvailabilityMovement.create({
+          data: {
+            hotelId: product.hotelId,
+            productId: product.id,
+            stockId: stock.id,
+            type: operation,
+            quantity: movementQty,
+            balanceAfter: nextQty,
+            reason:
+              reason ||
+              `Bulk update: ${getDefaultMenuMovementReason(operation)}`,
+            userId: user.id,
+          },
+        });
+
+      }
+
+    },
+    {
+      maxWait: 10_000,
+      timeout: 30_000,
+    }
+  );
+
+  // Bulk operations are intentional staff actions. Avoid generating one
+  // low-stock notification per selected item and flooding the dashboard.
+
+  revalidateInventoryPages();
+
+  return {
+    ok: true,
+    success: 'bulk-stock-updated',
+    tab: 'menu' as const,
+    updatedCount: products.length,
+  };
+}
+
 export async function initializeMenuStocksAction() {
   const user = await requireDashboardPermission(
     DashboardModule.INVENTORY,

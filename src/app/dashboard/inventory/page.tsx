@@ -16,6 +16,8 @@ function getMessage(error?: string, success?: string) {
     const messages: Record<string, string> = {
       'stock-updated':
         'Menu stock was updated successfully.',
+      'bulk-stock-updated':
+        'Selected menu stocks were updated successfully.',
       'stocks-initialized':
         'Missing menu stock records were initialized successfully.',
       'service-stock-enabled':
@@ -106,6 +108,11 @@ export default async function InventoryPage({
       where,
       include: {
         hotel: {
+          select: {
+            name: true,
+          },
+        },
+        category: {
           select: {
             name: true,
           },
@@ -280,6 +287,7 @@ export default async function InventoryPage({
         id: product.id,
         hotelId: product.hotelId,
         hotelName: product.hotel.name,
+        categoryName: product.category.name,
         name: product.name,
         productType: product.productType,
         isBundle: false,
@@ -362,6 +370,7 @@ export default async function InventoryPage({
       id: product.id,
       hotelId: product.hotelId,
       hotelName: product.hotel.name,
+      categoryName: product.category.name,
       name: product.name,
       productType: product.productType,
       isBundle: true,

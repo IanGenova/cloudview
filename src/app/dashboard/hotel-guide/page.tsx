@@ -1,47 +1,47 @@
-import { DashboardModule, Role } from '@prisma/client';
-import { PageHeader } from '@/components/dashboard/PageHeader';
-import { requireDashboardPermission } from '@/lib/dashboard-permissions';
-import { db } from '@/lib/db';
-import { HotelGuideClient } from './HotelGuideClient';
+import { DashboardModule, Role } from "@prisma/client";
+import { PageHeader } from "@/components/dashboard/PageHeader";
+import { requireDashboardPermission } from "@/lib/dashboard-permissions";
+import { db } from "@/lib/db";
+import { HotelGuideClient } from "./HotelGuideClient";
 
 function getMessage(error?: string, success?: string) {
   if (success) {
     const messages: Record<string, string> = {
-      'section-created': 'Guide section created successfully.',
-      'section-updated': 'Guide section updated successfully.',
-      'section-deleted': 'Guide section deleted successfully.',
-      'item-created': 'Guide item created successfully.',
-      'item-updated': 'Guide item updated successfully.',
-      'item-deleted': 'Guide item deleted successfully.',
-      'image-uploaded': 'Gallery image(s) uploaded successfully.',
-      'image-deleted': 'Gallery image deleted successfully.',
-      seeded: 'Default hotel guide content added successfully.',
-      'pool-seeded': 'Pool guide content added or updated successfully.',
+      "section-created": "Guide section created successfully.",
+      "section-updated": "Guide section updated successfully.",
+      "section-deleted": "Guide section deleted successfully.",
+      "item-created": "Guide item created successfully.",
+      "item-updated": "Guide item updated successfully.",
+      "item-deleted": "Guide item deleted successfully.",
+      "image-uploaded": "Gallery image(s) uploaded successfully.",
+      "image-deleted": "Gallery image deleted successfully.",
+      seeded: "Default hotel guide content added successfully.",
+      "pool-seeded": "Pool guide content added or updated successfully.",
     };
 
     return {
-      type: 'success' as const,
-      text: messages[success] ?? 'Action completed successfully.',
+      type: "success" as const,
+      text: messages[success] ?? "Action completed successfully.",
     };
   }
 
   if (error) {
     const messages: Record<string, string> = {
-      'hotel-required': 'Hotel is required.',
-      'title-required': 'Title is required.',
-      'section-required': 'Section is required.',
-      'section-not-found': 'Guide section was not found.',
-      'item-required': 'Guide item is required.',
-      'item-not-found': 'Guide item was not found.',
-      'item-type-required': 'Guide item type is required.',
-      'image-required': 'Image is required.',
-      'image-not-found': 'Gallery image was not found.',
-      'image-upload-failed': 'Image upload failed. Please try again.',
+      "hotel-required": "Hotel is required.",
+      "title-required": "Title is required.",
+      "section-required": "Section is required.",
+      "section-not-found": "Guide section was not found.",
+      "item-required": "Guide item is required.",
+      "item-not-found": "Guide item was not found.",
+      "item-type-required": "Guide item type is required.",
+      "image-required": "Image is required.",
+      "image-not-found": "Gallery image was not found.",
+      "image-upload-failed": "Image upload failed. Please try again.",
     };
 
     return {
-      type: 'error' as const,
-      text: messages[error] ?? 'Something went wrong.',
+      type: "error" as const,
+      text: messages[error] ?? "Something went wrong.",
     };
   }
 
@@ -54,6 +54,7 @@ export default async function HotelGuideModulePage({
   searchParams?: Promise<{
     error?: string;
     success?: string;
+    hotelId?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -62,21 +63,21 @@ export default async function HotelGuideModulePage({
 
   const user = await requireDashboardPermission(
     DashboardModule.HOTEL_GUIDE,
-    'canView'
+    "canView",
   );
 
-  const [hotels, sections] = await Promise.all([
+  const hotels =
     user.role === Role.SUPER_ADMIN
-      ? db.hotel.findMany({
+      ? await db.hotel.findMany({
           select: {
             id: true,
             name: true,
           },
           orderBy: {
-            name: 'asc',
+            name: "asc",
           },
         })
-      : db.hotel.findMany({
+      : await db.hotel.findMany({
           where: {
             id: user.hotelId!,
           },
@@ -84,72 +85,70 @@ export default async function HotelGuideModulePage({
             id: true,
             name: true,
           },
-        }),
+        });
 
-    db.hotelGuideSection.findMany({
-      where:
-        user.role === Role.SUPER_ADMIN
-          ? {}
-          : {
-              hotelId: user.hotelId!,
-            },
-      include: {
-        hotel: {
-          select: {
-            name: true,
-          },
+  const requestedHotelId = params?.hotelId;
+  const selectedHotelId =
+    user.role === Role.SUPER_ADMIN
+      ? hotels.some((hotel) => hotel.id === requestedHotelId)
+        ? requestedHotelId!
+        : (hotels[0]?.id ?? "")
+      : user.hotelId!;
+
+  const sections = selectedHotelId
+    ? await db.hotelGuideSection.findMany({
+        where: {
+          hotelId: selectedHotelId,
         },
-        galleryImages: {
-          orderBy: [
-            {
-              sortOrder: 'asc',
-            },
-            {
-              createdAt: 'desc',
-            },
-          ],
-        },
-        items: {
-          include: {
-            galleryImages: {
-              orderBy: [
-                {
-                  sortOrder: 'asc',
-                },
-                {
-                  createdAt: 'desc',
-                },
-              ],
-            },
-          },
-          orderBy: [
-            {
-              sortOrder: 'asc',
-            },
-            {
-              title: 'asc',
-            },
-          ],
-        },
-      },
-      orderBy: [
-        {
+        include: {
           hotel: {
-            name: 'asc',
+            select: {
+              name: true,
+            },
+          },
+          galleryImages: {
+            orderBy: [
+              {
+                sortOrder: "asc",
+              },
+              {
+                createdAt: "desc",
+              },
+            ],
+          },
+          items: {
+            include: {
+              galleryImages: {
+                orderBy: [
+                  {
+                    sortOrder: "asc",
+                  },
+                  {
+                    createdAt: "desc",
+                  },
+                ],
+              },
+            },
+            orderBy: [
+              {
+                sortOrder: "asc",
+              },
+              {
+                title: "asc",
+              },
+            ],
           },
         },
-        {
-          sortOrder: 'asc',
-        },
-        {
-          title: 'asc',
-        },
-      ],
-    }),
-  ]);
-
-  const defaultHotelId =
-    user.role === Role.SUPER_ADMIN ? hotels[0]?.id ?? '' : user.hotelId!;
+        orderBy: [
+          {
+            sortOrder: "asc",
+          },
+          {
+            title: "asc",
+          },
+        ],
+      })
+    : [];
 
   return (
     <div>
@@ -165,18 +164,18 @@ export default async function HotelGuideModulePage({
           hotelId: section.hotelId,
           hotelName: section.hotel.name,
           title: section.title,
-          subtitle: section.subtitle ?? '',
-          description: section.description ?? '',
-          imageUrl: section.imageUrl ?? '',
+          subtitle: section.subtitle ?? "",
+          description: section.description ?? "",
+          imageUrl: section.imageUrl ?? "",
           iconKey: section.iconKey,
           panoramaEnabled: section.panoramaEnabled,
-          panoramaImageUrl: section.panoramaImageUrl ?? '',
+          panoramaImageUrl: section.panoramaImageUrl ?? "",
           sortOrder: section.sortOrder,
           isActive: section.isActive,
           galleryImages: section.galleryImages.map((image) => ({
             id: image.id,
-            title: image.title ?? '',
-            caption: image.caption ?? '',
+            title: image.title ?? "",
+            caption: image.caption ?? "",
             imageUrl: image.imageUrl,
             sortOrder: image.sortOrder,
             isActive: image.isActive,
@@ -186,25 +185,25 @@ export default async function HotelGuideModulePage({
             sectionId: item.sectionId,
             hotelId: item.hotelId,
             title: item.title,
-            subtitle: item.subtitle ?? '',
-            content: item.content ?? '',
+            subtitle: item.subtitle ?? "",
+            content: item.content ?? "",
             itemType: item.itemType,
-            imageUrl: item.imageUrl ?? '',
+            imageUrl: item.imageUrl ?? "",
             iconKey: item.iconKey,
             panoramaEnabled: item.panoramaEnabled,
-            panoramaImageUrl: item.panoramaImageUrl ?? '',
-            hours: item.hours ?? '',
-            location: item.location ?? '',
-            contact: item.contact ?? '',
-            mapUrl: item.mapUrl ?? '',
-            buttonLabel: item.buttonLabel ?? '',
-            buttonHref: item.buttonHref ?? '',
+            panoramaImageUrl: item.panoramaImageUrl ?? "",
+            hours: item.hours ?? "",
+            location: item.location ?? "",
+            contact: item.contact ?? "",
+            mapUrl: item.mapUrl ?? "",
+            buttonLabel: item.buttonLabel ?? "",
+            buttonHref: item.buttonHref ?? "",
             sortOrder: item.sortOrder,
             isActive: item.isActive,
             galleryImages: item.galleryImages.map((image) => ({
               id: image.id,
-              title: image.title ?? '',
-              caption: image.caption ?? '',
+              title: image.title ?? "",
+              caption: image.caption ?? "",
               imageUrl: image.imageUrl,
               sortOrder: image.sortOrder,
               isActive: image.isActive,
@@ -212,7 +211,7 @@ export default async function HotelGuideModulePage({
           })),
         }))}
         message={getMessage(error, success)}
-        defaultHotelId={defaultHotelId}
+        defaultHotelId={selectedHotelId}
         canChangeHotel={user.role === Role.SUPER_ADMIN}
       />
     </div>

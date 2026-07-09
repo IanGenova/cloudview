@@ -12,6 +12,7 @@ import { ModalOpenButton } from '@/components/dashboard/ModalOpenButton';
 import {
   DirectoryActionForm,
   DirectoryConfirmButton,
+  DirectoryHotelFilter,
 } from './DirectoryClientActions';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
@@ -189,10 +190,18 @@ function matchesSearch(values: unknown[], query: string) {
   );
 }
 
-function buildDirectoryHref(tab: DirectoryTab, query?: string) {
+function buildDirectoryHref(
+  tab: DirectoryTab,
+  query?: string,
+  hotelId?: string
+) {
   const params = new URLSearchParams();
 
   params.set('tab', tab);
+
+  if (hotelId) {
+    params.set('hotelId', hotelId);
+  }
 
   if (query) {
     params.set('q', query);
@@ -272,6 +281,7 @@ export default async function RoomsAndLocationsPage({
     error?: string;
     tab?: string;
     q?: string;
+    hotelId?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -284,58 +294,63 @@ export default async function RoomsAndLocationsPage({
     'canView'
   );
 
-  const hotelWhere = user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
-  const itemWhere =
-    user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
+  const hotelWhere =
+    user.role === 'SUPER_ADMIN' ? {} : { id: user.hotelId! };
 
-  const [hotels, roomsRaw, locationsRaw] = await Promise.all([
-    db.hotel.findMany({
-      where: hotelWhere,
-      orderBy: {
-        name: 'asc',
-      },
-    }),
+  const hotels = await db.hotel.findMany({
+    where: hotelWhere,
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: {
+      name: 'asc',
+    },
+  });
 
+  const requestedHotelId = String(params?.hotelId || '').trim();
+
+  const selectedHotelId =
+    user.role === 'SUPER_ADMIN'
+      ? hotels.some((hotel) => hotel.id === requestedHotelId)
+        ? requestedHotelId
+        : hotels[0]?.id ?? ''
+      : user.hotelId ?? hotels[0]?.id ?? '';
+
+  const selectedHotel =
+    hotels.find((hotel) => hotel.id === selectedHotelId) ?? null;
+
+  /*
+   * Load one property at a time. This prevents rooms or locations with the
+   * same names from different hotels appearing together in the directory.
+   */
+  const [roomsRaw, locationsRaw] = await Promise.all([
     db.room.findMany({
       where: {
-        ...itemWhere,
+        hotelId: selectedHotelId,
         deletedAt: null,
       },
       include: {
         hotel: true,
         nfcTags: true,
       },
-      orderBy: [
-        {
-          hotel: {
-            name: 'asc',
-          },
-        },
-        {
-          number: 'asc',
-        },
-      ],
+      orderBy: {
+        number: 'asc',
+      },
     }),
 
     db.location.findMany({
       where: {
-        ...itemWhere,
+        hotelId: selectedHotelId,
         deletedAt: null,
       },
       include: {
         hotel: true,
         nfcTags: true,
       },
-      orderBy: [
-        {
-          hotel: {
-            name: 'asc',
-          },
-        },
-        {
-          name: 'asc',
-        },
-      ],
+      orderBy: {
+        name: 'asc',
+      },
     }),
   ]);
 
@@ -369,7 +384,14 @@ export default async function RoomsAndLocationsPage({
 
   return (
     <div>
-      <Toast message={message} closeHref={buildDirectoryHref(activeTab, searchQuery)} />
+      <Toast
+        message={message}
+        closeHref={buildDirectoryHref(
+          activeTab,
+          searchQuery,
+          selectedHotelId
+        )}
+      />
 
       <PageHeader
         title="Rooms & Locations"
@@ -384,6 +406,13 @@ export default async function RoomsAndLocationsPage({
               Use the tabs to manage rooms or non-room locations in a full-width
               workspace.
             </p>
+
+            {selectedHotel ? (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#c99c38]/25 bg-[#fffaf0] px-3 py-1.5 text-xs font-black text-[#8b641c]">
+                <Building2 className="size-3.5" />
+                Managing: {selectedHotel.name}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -413,10 +442,35 @@ export default async function RoomsAndLocationsPage({
           </div>
         </div>
 
-       <div className="mt-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-3">
+          {user.role === 'SUPER_ADMIN' ? (
+            <DirectoryHotelFilter
+              hotels={hotels}
+              selectedHotelId={selectedHotelId}
+              activeTab={activeTab}
+              searchQuery={searchQuery}
+            />
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-[#f7f1e5] text-[#a8781d]">
+                <Building2 className="size-5" />
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-neutral-400">
+                  Hotel / Property
+                </p>
+                <p className="mt-0.5 text-sm font-black text-neutral-900">
+                  {selectedHotel?.name || 'No hotel assigned'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+       <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-col gap-2 rounded-[1.5rem] bg-neutral-50 p-2 sm:flex-row">
               <Link
-                href={buildDirectoryHref('rooms', searchQuery)}
+                href={buildDirectoryHref('rooms', searchQuery, selectedHotelId)}
                 replace
                 scroll={false}
                 prefetch
@@ -430,7 +484,7 @@ export default async function RoomsAndLocationsPage({
               </Link>
 
               <Link
-                href={buildDirectoryHref('locations', searchQuery)}
+                href={buildDirectoryHref('locations', searchQuery, selectedHotelId)}
                 replace
                 scroll={false}
                 prefetch
@@ -450,6 +504,7 @@ export default async function RoomsAndLocationsPage({
               className="flex w-full flex-col gap-2 sm:flex-row xl:max-w-xl"
             >
               <input type="hidden" name="tab" value={activeTab} />
+              <input type="hidden" name="hotelId" value={selectedHotelId} />
 
               <div className="flex h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
                 <Search className="size-4 shrink-0 text-neutral-400" />
@@ -475,7 +530,7 @@ export default async function RoomsAndLocationsPage({
 
               {searchQuery ? (
                 <Link
-                  href={buildDirectoryHref(activeTab)}
+                  href={buildDirectoryHref(activeTab, undefined, selectedHotelId)}
                   replace
                   scroll={false}
                   className="inline-flex h-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50"
@@ -487,7 +542,8 @@ export default async function RoomsAndLocationsPage({
           </div>
         {searchQuery ? (
           <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-            Showing results for “{searchQuery}”.
+            Showing results for “{searchQuery}” in{' '}
+            {selectedHotel?.name || 'the selected hotel'}.
           </div>
         ) : null}
       </div>
@@ -595,27 +651,20 @@ export default async function RoomsAndLocationsPage({
                       >
                       <input type="hidden" name="roomId" value={room.id} />
 
-                      {user.role === 'SUPER_ADMIN' ? (
-                        <FormField label="Hotel / Property">
-                          <Select
-                            name="hotelId"
-                            defaultValue={room.hotelId}
-                            required
-                          >
-                            {hotels.map((hotel) => (
-                              <option key={hotel.id} value={hotel.id}>
-                                {hotel.name}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                      ) : (
-                        <input
-                          type="hidden"
-                          name="hotelId"
-                          value={room.hotelId}
-                        />
-                      )}
+                      <input
+                        type="hidden"
+                        name="hotelId"
+                        value={room.hotelId}
+                      />
+
+                      <FormField
+                        label="Hotel / Property"
+                        helper="Rooms are managed within the currently selected hotel."
+                      >
+                        <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+                          {room.hotel.name}
+                        </div>
+                      </FormField>
 
                       <FormField label="Room Number">
                         <Input
@@ -777,27 +826,20 @@ export default async function RoomsAndLocationsPage({
                         value={location.id}
                       />
 
-                      {user.role === 'SUPER_ADMIN' ? (
-                        <FormField label="Hotel / Property">
-                          <Select
-                            name="hotelId"
-                            defaultValue={location.hotelId}
-                            required
-                          >
-                            {hotels.map((hotel) => (
-                              <option key={hotel.id} value={hotel.id}>
-                                {hotel.name}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormField>
-                      ) : (
-                        <input
-                          type="hidden"
-                          name="hotelId"
-                          value={location.hotelId}
-                        />
-                      )}
+                      <input
+                        type="hidden"
+                        name="hotelId"
+                        value={location.hotelId}
+                      />
+
+                      <FormField
+                        label="Hotel / Property"
+                        helper="Locations are managed within the currently selected hotel."
+                      >
+                        <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+                          {location.hotel.name}
+                        </div>
+                      </FormField>
 
                       <FormField label="Location Name">
                         <Input
@@ -873,22 +915,16 @@ export default async function RoomsAndLocationsPage({
             successMessage="Room successfully created."
             className="grid gap-5 md:grid-cols-2"
           >
-          {user.role === 'SUPER_ADMIN' ? (
-            <FormField
-              label="Hotel / Property"
-              helper="Choose the hotel where this room belongs."
-            >
-              <Select name="hotelId" required>
-                {hotels.map((hotel) => (
-                  <option key={hotel.id} value={hotel.id}>
-                    {hotel.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          ) : (
-            <input type="hidden" name="hotelId" value={user.hotelId!} />
-          )}
+          <input type="hidden" name="hotelId" value={selectedHotelId} />
+
+          <FormField
+            label="Hotel / Property"
+            helper="The room will be added to the hotel currently selected in the filter."
+          >
+            <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+              {selectedHotel?.name || 'No hotel selected'}
+            </div>
+          </FormField>
 
           <FormField label="Room Number" helper="Example: 305 or Villa A.">
             <Input name="number" placeholder="305" required />
@@ -924,22 +960,16 @@ export default async function RoomsAndLocationsPage({
             successMessage="Location successfully created."
             className="grid gap-5 md:grid-cols-2"
           >
-          {user.role === 'SUPER_ADMIN' ? (
-            <FormField
-              label="Hotel / Property"
-              helper="Choose the hotel where this location belongs."
-            >
-              <Select name="hotelId" required>
-                {hotels.map((hotel) => (
-                  <option key={hotel.id} value={hotel.id}>
-                    {hotel.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          ) : (
-            <input type="hidden" name="hotelId" value={user.hotelId!} />
-          )}
+          <input type="hidden" name="hotelId" value={selectedHotelId} />
+
+          <FormField
+            label="Hotel / Property"
+            helper="The location will be added to the hotel currently selected in the filter."
+          >
+            <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+              {selectedHotel?.name || 'No hotel selected'}
+            </div>
+          </FormField>
 
           <FormField
             label="Location Name"

@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { DashboardModule, MenuProductType, type Prisma } from '@prisma/client';
-import { Plus, Pencil, X, CheckCircle2, Search, SlidersHorizontal } from 'lucide-react';
+import { Plus, Pencil, X, CheckCircle2, Search, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,10 +16,12 @@ import { money } from '@/lib/money';
 import {
   MenuActionForm,
   MenuConfirmDeleteButton,
+  MenuBulkImportForm,
   MenuPageToast,
   MenuToastListener,
 } from './MenuClientActions';
 import {
+  bulkImportMenuAction,
   createCategoryAction,
   createProductAction,
   deleteCategoryAction,
@@ -71,6 +73,7 @@ function getMenuMessage(success?: string, error?: string): Message {
       'product-created': 'Menu item was created successfully.',
       'product-updated': 'Menu item was updated successfully.',
       'product-deleted': 'Menu item was deleted successfully.',
+      'bulk-menu-imported': 'Menu CSV was imported successfully.',
     };
 
     return {
@@ -487,6 +490,11 @@ const hasActiveFilters = Boolean(
     selectedAvailability
 );
 
+const bulkDefaultHotelId =
+  user.role === 'SUPER_ADMIN'
+    ? selectedHotelId || hotels[0]?.id || ''
+    : user.hotelId!;
+
   return (
     <div>
       <MenuPageToast initialMessage={message} />
@@ -512,6 +520,14 @@ const hasActiveFilters = Boolean(
     >
       <Plus className="size-4" />
       Add / Manage Categories
+    </ModalOpenButton>
+
+    <ModalOpenButton
+      modalId="bulk-menu-modal"
+      className="gap-2 border border-[#c99c38]/40 bg-[#fff8e7] text-[#8a641b] hover:bg-[#fff1c7]"
+    >
+      <UploadCloud className="size-4" />
+      Bulk Upload
     </ModalOpenButton>
 
     <ModalOpenButton
@@ -973,6 +989,23 @@ return (
               </div>
             </ProductBundleProvider>
           </MenuActionForm>
+      </Modal>
+
+      <Modal
+        id="bulk-menu-modal"
+        title="Bulk Upload Menu"
+        description="Import hundreds of single items and bundle/combo products from one CSV file."
+        size="max-w-5xl"
+      >
+        <MenuBulkImportForm
+          action={bulkImportMenuAction}
+          hotels={hotels.map((hotel) => ({
+            id: hotel.id,
+            name: hotel.name,
+          }))}
+          defaultHotelId={bulkDefaultHotelId}
+          canChangeHotel={user.role === 'SUPER_ADMIN'}
+        />
       </Modal>
 
       <Modal

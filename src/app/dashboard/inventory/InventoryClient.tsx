@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle2, Loader2, X } from 'lucide-react';
+import { Boxes, CheckCircle2, CheckSquare2, Loader2, Square, X } from 'lucide-react';
 import {
   MenuAvailabilityMovementType,
   MenuProductType,
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import {
+  bulkControlMenuStockAction,
   controlMenuStockAction,
   controlServiceStockAction,
   disableServiceInventoryAction,
@@ -42,6 +43,7 @@ type MenuItem = {
   id: string;
   hotelId: string;
   hotelName: string;
+  categoryName: string;
   name: string;
   productType: MenuProductType;
   isBundle: boolean;
@@ -753,6 +755,201 @@ function ControlMenuStockModal({
   );
 }
 
+
+function BulkControlMenuStockModal({
+  items,
+  onClose,
+  action,
+  pending,
+}: {
+  items: MenuItem[];
+  onClose: () => void;
+  action: InventoryFormAction;
+  pending?: boolean;
+}) {
+  const [operation, setOperation] = useState<MenuAvailabilityMovementType>(
+    MenuAvailabilityMovementType.SET_STOCK
+  );
+
+  const quantityRequired =
+    operation === MenuAvailabilityMovementType.SET_STOCK ||
+    operation === MenuAvailabilityMovementType.ADD_STOCK ||
+    operation === MenuAvailabilityMovementType.REMOVE_STOCK ||
+    operation === MenuAvailabilityMovementType.REOPEN;
+
+  const positiveQuantityRequired =
+    operation === MenuAvailabilityMovementType.ADD_STOCK ||
+    operation === MenuAvailabilityMovementType.REMOVE_STOCK ||
+    operation === MenuAvailabilityMovementType.REOPEN;
+
+  return (
+    <Modal
+      title="Bulk Menu Stock Control"
+      description="Apply one stock operation to every selected single menu item."
+      onClose={onClose}
+      maxWidth="max-w-3xl"
+    >
+      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+              Selected Menu Items
+            </p>
+            <p className="mt-1 text-2xl font-black text-neutral-950">
+              {items.length} item{items.length === 1 ? '' : 's'}
+            </p>
+          </div>
+
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-800">
+            Single items only
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {items.slice(0, 8).map((item) => (
+            <span
+              key={item.id}
+              className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-neutral-700"
+            >
+              {item.name}
+            </span>
+          ))}
+
+          {items.length > 8 ? (
+            <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-black text-amber-800">
+              +{items.length - 8} more
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <form action={action} className="mt-5 space-y-4">
+        {items.map((item) => (
+          <input
+            key={item.id}
+            type="hidden"
+            name="productId"
+            value={item.id}
+          />
+        ))}
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Bulk Operation
+          </label>
+          <Select
+            name="operation"
+            value={operation}
+            onChange={(event) =>
+              setOperation(
+                event.target.value as MenuAvailabilityMovementType
+              )
+            }
+          >
+            <option value={MenuAvailabilityMovementType.SET_STOCK}>
+              Set the same exact stock for all selected items
+            </option>
+            <option value={MenuAvailabilityMovementType.ADD_STOCK}>
+              Add the same quantity to all selected items
+            </option>
+            <option value={MenuAvailabilityMovementType.REMOVE_STOCK}>
+              Remove the same quantity from all selected items
+            </option>
+            <option value={MenuAvailabilityMovementType.SOLD_OUT}>
+              Mark all selected items as sold out
+            </option>
+            <option value={MenuAvailabilityMovementType.REOPEN}>
+              Reopen all selected items and add stock
+            </option>
+          </Select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Quantity
+          </label>
+          <Input
+            name="quantity"
+            type="number"
+            min={positiveQuantityRequired ? 1 : 0}
+            step="1"
+            required={quantityRequired}
+            disabled={!quantityRequired}
+            placeholder={
+              operation === MenuAvailabilityMovementType.SET_STOCK
+                ? 'Example: 25'
+                : operation === MenuAvailabilityMovementType.SOLD_OUT
+                  ? 'Not required'
+                  : 'Example: 10'
+            }
+          />
+          <p className="mt-1 text-xs font-semibold text-neutral-500">
+            {operation === MenuAvailabilityMovementType.SET_STOCK
+              ? 'Every selected item will receive this exact available quantity.'
+              : operation === MenuAvailabilityMovementType.ADD_STOCK
+                ? 'This quantity will be added to every selected item.'
+                : operation === MenuAvailabilityMovementType.REMOVE_STOCK
+                  ? 'This quantity will be removed from every selected item, without going below zero.'
+                  : operation === MenuAvailabilityMovementType.REOPEN
+                    ? 'Every selected item will reopen and receive this additional quantity.'
+                    : 'Every selected item will be set to zero and marked sold out.'}
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Movement Reason
+          </label>
+          <Input
+            name="reason"
+            placeholder="Example: Party tray inventory reset for today"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            Internal Stock Note
+          </label>
+          <Input
+            name="notes"
+            placeholder="Optional. Leave blank to keep existing notes."
+          />
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm font-semibold leading-6 text-neutral-600">
+          Bundle quantities are not directly edited because they are calculated
+          from their component items. Updating the selected single items will
+          automatically recalculate any related bundles.
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <Button
+            disabled={pending || items.length === 0}
+            className={
+              operation === MenuAvailabilityMovementType.SOLD_OUT
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : ''
+            }
+          >
+            {pending
+              ? 'Updating inventory...'
+              : `Update ${items.length} item${items.length === 1 ? '' : 's'}`}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function ControlServiceStockModal({
   item,
   onClose,
@@ -1028,6 +1225,11 @@ export function InventoryClient({
 
   const [menuSearch, setMenuSearch] = useState('');
   const [menuFilter, setMenuFilter] = useState<MenuFilterValue>('ALL');
+  const [menuCategoryFilter, setMenuCategoryFilter] = useState('ALL');
+  const [selectedMenuIds, setSelectedMenuIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [showBulkMenuControl, setShowBulkMenuControl] = useState(false);
   const [controllingMenuItem, setControllingMenuItem] =
     useState<MenuItem | null>(null);
   const [showMenuMovements, setShowMenuMovements] = useState(false);
@@ -1041,6 +1243,20 @@ export function InventoryClient({
 
   useEffect(() => {
     setLocalMenuItems(menuItems);
+
+    const selectableIds = new Set(
+      menuItems
+        .filter((item) => !item.isDerivedStock)
+        .map((item) => item.id)
+    );
+
+    setSelectedMenuIds((current) => {
+      const next = new Set(
+        Array.from(current).filter((id) => selectableIds.has(id))
+      );
+
+      return next.size === current.size ? current : next;
+    });
   }, [menuItems]);
 
   useEffect(() => {
@@ -1172,6 +1388,23 @@ export function InventoryClient({
     });
   }
 
+  function handleBulkControlMenuStock(formData: FormData) {
+    const selectedCount = formData.getAll('productId').length;
+
+    runInventoryAction({
+      formData,
+      action: bulkControlMenuStockAction,
+      successText: `${selectedCount} menu item${
+        selectedCount === 1 ? '' : 's'
+      } updated successfully.`,
+      pendingKey: 'bulk-control-menu',
+      onSuccess: () => {
+        setShowBulkMenuControl(false);
+        setSelectedMenuIds(new Set<string>());
+      },
+    });
+  }
+
   function handleControlServiceStock(formData: FormData) {
     const serviceId = String(formData.get('serviceId') || '');
 
@@ -1231,6 +1464,18 @@ export function InventoryClient({
     });
   }
 
+  const menuCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          localMenuItems
+            .map((item) => item.categoryName)
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [localMenuItems]
+  );
+
   const filteredMenuItems = useMemo(() => {
     const searchText = menuSearch.trim().toLowerCase();
 
@@ -1239,6 +1484,7 @@ export function InventoryClient({
         !searchText ||
         item.name.toLowerCase().includes(searchText) ||
         item.hotelName.toLowerCase().includes(searchText) ||
+        item.categoryName.toLowerCase().includes(searchText) ||
         item.bundleComponents.some((component) =>
           component.name.toLowerCase().includes(searchText)
         ) ||
@@ -1256,9 +1502,65 @@ export function InventoryClient({
         (menuFilter === 'MENU_HIDDEN' && status === 'MENU HIDDEN') ||
         (menuFilter === 'BUNDLE' && item.isDerivedStock);
 
-      return matchesSearch && matchesFilter;
+      const matchesCategory =
+        menuCategoryFilter === 'ALL' ||
+        item.categoryName === menuCategoryFilter;
+
+      return matchesSearch && matchesFilter && matchesCategory;
     });
-  }, [localMenuItems, menuSearch, menuFilter]);
+  }, [
+    localMenuItems,
+    menuCategoryFilter,
+    menuFilter,
+    menuSearch,
+  ]);
+
+  const selectableFilteredMenuItems = useMemo(
+    () => filteredMenuItems.filter((item) => !item.isDerivedStock),
+    [filteredMenuItems]
+  );
+
+  const selectedMenuItems = useMemo(
+    () =>
+      localMenuItems.filter(
+        (item) => !item.isDerivedStock && selectedMenuIds.has(item.id)
+      ),
+    [localMenuItems, selectedMenuIds]
+  );
+
+  const allFilteredMenuItemsSelected =
+    selectableFilteredMenuItems.length > 0 &&
+    selectableFilteredMenuItems.every((item) =>
+      selectedMenuIds.has(item.id)
+    );
+
+  function toggleMenuSelection(productId: string) {
+    setSelectedMenuIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleAllFilteredMenuItems() {
+    setSelectedMenuIds((current) => {
+      const next = new Set(current);
+
+      if (allFilteredMenuItemsSelected) {
+        selectableFilteredMenuItems.forEach((item) => next.delete(item.id));
+      } else {
+        selectableFilteredMenuItems.forEach((item) => next.add(item.id));
+      }
+
+      return next;
+    });
+  }
 
   const filteredServiceItems = useMemo(() => {
     const searchText = serviceSearch.trim().toLowerCase();
@@ -1380,6 +1682,23 @@ export function InventoryClient({
 
                   <button
                     type="button"
+                    onClick={() => setShowBulkMenuControl(true)}
+                    disabled={
+                      selectedMenuItems.length === 0 ||
+                      pendingAction === 'bulk-control-menu'
+                    }
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#d4a62a] px-5 text-sm font-black text-black transition hover:bg-[#e3b83d] disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    {pendingAction === 'bulk-control-menu' ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Boxes className="size-4" />
+                    )}
+                    Bulk Control ({selectedMenuItems.length})
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setShowMenuMovements(true)}
                     className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
                   >
@@ -1388,7 +1707,7 @@ export function InventoryClient({
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
+              <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_220px]">
                 <div>
                   <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
                     Search Menu
@@ -1396,8 +1715,28 @@ export function InventoryClient({
                   <Input
                     value={menuSearch}
                     onChange={(event) => setMenuSearch(event.target.value)}
-                    placeholder="Search by menu name, hotel, component, or limiting item"
+                    placeholder="Search name, category, hotel, or component"
                   />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                    Category
+                  </label>
+                  <select
+                    value={menuCategoryFilter}
+                    onChange={(event) =>
+                      setMenuCategoryFilter(event.target.value)
+                    }
+                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+                  >
+                    <option value="ALL">All Categories</option>
+                    {menuCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -1421,11 +1760,81 @@ export function InventoryClient({
                 </div>
               </div>
 
+              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#d4a62a]/30 bg-[#fff8e5] p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleAllFilteredMenuItems}
+                    disabled={selectableFilteredMenuItems.length === 0}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d4a62a]/35 bg-white px-4 text-xs font-black text-neutral-800 transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {allFilteredMenuItemsSelected ? (
+                      <CheckSquare2 className="size-4 text-[#b68510]" />
+                    ) : (
+                      <Square className="size-4 text-[#b68510]" />
+                    )}
+                    {allFilteredMenuItemsSelected
+                      ? 'Unselect filtered items'
+                      : `Select all ${selectableFilteredMenuItems.length} filtered single items`}
+                  </button>
+
+                  <div>
+                    <p className="text-sm font-black text-neutral-900">
+                      {selectedMenuItems.length} selected
+                    </p>
+                    <p className="text-xs font-semibold text-neutral-500">
+                      Bundles are excluded because their stock is derived.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {selectedMenuItems.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMenuIds(new Set<string>())}
+                      className="h-10 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+                    >
+                      Clear Selection
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkMenuControl(true)}
+                    disabled={selectedMenuItems.length === 0}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-black px-4 text-xs font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Boxes className="size-4 text-[#d4a62a]" />
+                    Update Selected
+                  </button>
+                </div>
+              </div>
+
               <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1120px] text-left">
+                  <table className="w-full min-w-[1180px] text-left">
                     <thead className="bg-neutral-50">
                       <tr>
+                        <th className="w-14 px-4 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={toggleAllFilteredMenuItems}
+                            disabled={selectableFilteredMenuItems.length === 0}
+                            className="inline-grid size-8 place-items-center rounded-xl text-[#b68510] transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-35"
+                            aria-label={
+                              allFilteredMenuItemsSelected
+                                ? 'Unselect all filtered single items'
+                                : 'Select all filtered single items'
+                            }
+                          >
+                            {allFilteredMenuItemsSelected ? (
+                              <CheckSquare2 className="size-5" />
+                            ) : (
+                              <Square className="size-5" />
+                            )}
+                          </button>
+                        </th>
                         <th className="px-4 py-3 text-xs font-black uppercase text-neutral-500">
                           Menu Item
                         </th>
@@ -1463,12 +1872,40 @@ export function InventoryClient({
                                 : 'align-top transition hover:bg-neutral-50'
                             }
                           >
+                            <td className="px-4 py-4 text-center">
+                              {item.isDerivedStock ? (
+                                <span
+                                  className="inline-grid size-8 place-items-center rounded-xl bg-amber-100 text-[10px] font-black text-amber-700"
+                                  title="Bundle stock is derived from component items"
+                                >
+                                  —
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleMenuSelection(item.id)}
+                                  className="inline-grid size-8 place-items-center rounded-xl text-[#b68510] transition hover:bg-[#fff2c9]"
+                                  aria-label={
+                                    selectedMenuIds.has(item.id)
+                                      ? `Unselect ${item.name}`
+                                      : `Select ${item.name}`
+                                  }
+                                >
+                                  {selectedMenuIds.has(item.id) ? (
+                                    <CheckSquare2 className="size-5" />
+                                  ) : (
+                                    <Square className="size-5" />
+                                  )}
+                                </button>
+                              )}
+                            </td>
+
                             <td className="px-4 py-4">
                               <p className="font-black text-neutral-950">
                                 {item.name}
                               </p>
                               <p className="mt-1 text-xs font-bold text-neutral-500">
-                                {item.hotelName}
+                                {item.hotelName} · {item.categoryName}
                               </p>
                             </td>
 
@@ -1592,7 +2029,7 @@ export function InventoryClient({
                       {!filteredMenuItems.length ? (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={8}
                             className="px-5 py-12 text-center"
                           >
                             <p className="font-black">No menu items found.</p>
@@ -1938,6 +2375,15 @@ export function InventoryClient({
             </CardContent>
           </Card>
         </>
+      ) : null}
+
+      {showBulkMenuControl && selectedMenuItems.length > 0 ? (
+        <BulkControlMenuStockModal
+          items={selectedMenuItems}
+          onClose={() => setShowBulkMenuControl(false)}
+          action={handleBulkControlMenuStock}
+          pending={pendingAction === 'bulk-control-menu'}
+        />
       ) : null}
 
       {controllingMenuItem ? (
