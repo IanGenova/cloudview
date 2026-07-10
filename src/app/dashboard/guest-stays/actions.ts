@@ -1,5 +1,6 @@
 'use server';
 
+import type { Prisma } from '@prisma/client';
 import {
   DashboardModule,
   GuestStayCheckoutPaymentMethod,
@@ -8,6 +9,7 @@ import {
   GuestStayStatus,
   OrderStatus,
   PaymentStatus,
+  POSPayMongoStatus,
   Role,
   RoomAddOnPaymentStatus,
   ServiceRequestStatus,
@@ -27,6 +29,10 @@ import {
 } from '@/lib/guest-stays';
 import { awardGuestStayCheckInPoints } from '@/lib/guest-point-sync';
 import { sendGuestStayPasscodeSms } from '@/lib/sms';
+import {
+  createPayMongoCheckoutSession,
+  type PayMongoLineItem,
+} from '@/lib/paymongo';
 
 function cleanText(value: FormDataEntryValue | null, maxLength = 200) {
   if (typeof value !== 'string') {
@@ -138,6 +144,15 @@ async function getScopedGuestStay({
         passcodeEncrypted: true,
         passcodeHash: true,
         maxDevices: true,
+        hotel: {
+          select: {
+            settings: {
+              select: {
+                nfcRoomPasscodeEnabled: true,
+              },
+            },
+          },
+        },
       },
   });
 
@@ -151,6 +166,18 @@ export async function createGuestStayAction(formData: FormData) {
   try {
     const { hotelId } = await getActionHotelId(formData);
 
+    const hotelSettings = await db.hotelSettings.findUnique({
+      where: {
+        hotelId,
+      },
+      select: {
+        nfcRoomPasscodeEnabled: true,
+      },
+    });
+
+    const nfcRoomPasscodeEnabled =
+      hotelSettings?.nfcRoomPasscodeEnabled ?? true;
+
     const roomId = cleanText(formData.get('roomId'), 120);
     const guestName = cleanText(formData.get('guestName'), 160);
     const phone = cleanText(formData.get('phone'), 80) || null;
@@ -161,10 +188,13 @@ export async function createGuestStayAction(formData: FormData) {
       formData.get('sendPasscodeSms'),
       20
     ).toLowerCase();
-    const shouldSendPasscodeSms =
+    const requestedPasscodeSms =
       sendPasscodeSmsValue === 'yes' ||
       sendPasscodeSmsValue === 'on' ||
       sendPasscodeSmsValue === 'true';
+
+    const shouldSendPasscodeSms =
+      nfcRoomPasscodeEnabled && requestedPasscodeSms;
 
     if (!roomId) {
       return {
@@ -233,6 +263,7 @@ export async function createGuestStayAction(formData: FormData) {
       roomNumber: result.guestStay.room.number,
       hotelName: result.guestStay.hotel.name,
       maxDevices: result.guestStay.maxDevices,
+      securityCodeEnabled: nfcRoomPasscodeEnabled,
       pointsAwarded: pointResult.pointsAwarded,
       smsRequested: shouldSendPasscodeSms,
       smsSent,
@@ -452,6 +483,232 @@ type CheckoutPaymentInput = {
   reference: string | null;
   note: string | null;
 };
+
+
+type GuestStayPayMongoPayload = {
+  flow: 'GUEST_STAY_CHECKOUT';
+  guestStayId: string;
+  hotelId: string;
+  createdById: string;
+  manualChargeCents: number;
+  manualChargeNote: string | null;
+  discountCents: number;
+  discountNote: string | null;
+  expectedFoodTotalCents: number;
+  expectedServiceTotalCents: number;
+  expectedSubtotalCents: number;
+  createdAt: string;
+  paymongoSourceType?: string;
+  paymongoPaymentId?: string;
+  paymongoCheckoutSessionId?: string;
+  paymongoPaidAmountCents?: number;
+  paymongoNetAmountCents?: number;
+  paymongoFeeCents?: number;
+};
+
+function getAppUrl() {
+  const value = (
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ''
+  ).replace(/\/$/, '');
+
+  if (!value) {
+    throw new Error('APP_URL is not configured.');
+  }
+
+  if (process.env.NODE_ENV === 'production' && !value.startsWith('https://')) {
+    throw new Error('APP_URL must use HTTPS in production.');
+  }
+
+  return value;
+}
+
+function isJsonRecord(value: Prisma.JsonValue): value is Prisma.JsonObject {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function parseGuestStayPayMongoPayload(
+  value: Prisma.JsonValue
+): GuestStayPayMongoPayload {
+  if (!isJsonRecord(value)) {
+    throw new Error('Stored guest checkout payment data is invalid.');
+  }
+
+  const payload = value as unknown as GuestStayPayMongoPayload;
+
+  if (
+    payload.flow !== 'GUEST_STAY_CHECKOUT' ||
+    typeof payload.guestStayId !== 'string' ||
+    typeof payload.hotelId !== 'string' ||
+    typeof payload.createdById !== 'string' ||
+    typeof payload.expectedSubtotalCents !== 'number'
+  ) {
+    throw new Error('Stored guest checkout payment data is incomplete.');
+  }
+
+  return payload;
+}
+
+function mapPayMongoSourceToCheckoutMethod(
+  sourceType?: string
+): GuestStayCheckoutPaymentMethod {
+  const normalized = (sourceType || '').trim().toLowerCase();
+
+  if (normalized === 'gcash') {
+    return GuestStayCheckoutPaymentMethod.GCASH;
+  }
+
+  if (normalized === 'paymaya' || normalized === 'maya') {
+    return GuestStayCheckoutPaymentMethod.MAYA;
+  }
+
+  if (normalized === 'qrph') {
+    return GuestStayCheckoutPaymentMethod.QRPH;
+  }
+
+  return GuestStayCheckoutPaymentMethod.CARD;
+}
+
+async function loadGuestStayPayMongoQuote(guestStayId: string) {
+  const stay = await db.guestStay.findUnique({
+    where: {
+      id: guestStayId,
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      roomId: true,
+      status: true,
+      hotel: {
+        select: {
+          name: true,
+          settings: {
+            select: {
+              currency: true,
+            },
+          },
+        },
+      },
+      guestMember: {
+        select: {
+          name: true,
+        },
+      },
+      room: {
+        select: {
+          number: true,
+          name: true,
+        },
+      },
+      orders: {
+        select: {
+          id: true,
+          status: true,
+          paymentStatus: true,
+          totalCents: true,
+          items: {
+            select: {
+              quantity: true,
+              unitPriceCents: true,
+              cancelledQty: true,
+              status: true,
+            },
+          },
+        },
+      },
+      serviceRequests: {
+        select: {
+          id: true,
+          status: true,
+        },
+      },
+      folio: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!stay) {
+    throw new Error('Guest stay not found.');
+  }
+
+  if (stay.status !== GuestStayStatus.ACTIVE) {
+    throw new Error('Only active guest stays can use PayMongo checkout.');
+  }
+
+  if (stay.folio) {
+    throw new Error('This guest stay already has a checkout folio.');
+  }
+
+  const blockingOrders = stay.orders.filter(
+    (order) =>
+      order.status === OrderStatus.PENDING ||
+      order.status === OrderStatus.ACCEPTED ||
+      order.status === OrderStatus.PREPARING
+  );
+
+  if (blockingOrders.length > 0) {
+    throw new Error(
+      'Checkout is blocked. Please resolve pending or preparing food orders first.'
+    );
+  }
+
+  const blockingServiceRequests = stay.serviceRequests.filter(
+    (request) =>
+      request.status === ServiceRequestStatus.NEW ||
+      request.status === ServiceRequestStatus.IN_PROGRESS
+  );
+
+  if (blockingServiceRequests.length > 0) {
+    throw new Error(
+      'Checkout is blocked. Please complete or cancel active service requests first.'
+    );
+  }
+
+  const billableOrders = stay.orders.filter(
+    (order) => getOrderOutstandingCents(order) > 0
+  );
+  const foodTotalCents = billableOrders.reduce(
+    (sum, order) => sum + getOrderOutstandingCents(order),
+    0
+  );
+
+  const serviceRequestIds = stay.serviceRequests.map((request) => request.id);
+  const addOnCharges = serviceRequestIds.length
+    ? await db.roomAddOnCharge.findMany({
+        where: {
+          serviceRequestId: {
+            in: serviceRequestIds,
+          },
+          paymentStatus: RoomAddOnPaymentStatus.UNPAID,
+        },
+        select: {
+          id: true,
+          totalAmount: true,
+        },
+      })
+    : [];
+
+  const serviceTotalCents = addOnCharges.reduce(
+    (sum, charge) => sum + decimalToCents(charge.totalAmount),
+    0
+  );
+
+  const currency = (stay.hotel.settings?.currency || 'PHP').toUpperCase();
+
+  if (currency !== 'PHP') {
+    throw new Error('PayMongo guest checkout currently requires PHP currency.');
+  }
+
+  return {
+    stay,
+    foodTotalCents,
+    serviceTotalCents,
+  };
+}
 
 function formatCentsForText(cents: number) {
   return `₱${(cents / 100).toFixed(2)}`;
@@ -1194,6 +1451,497 @@ export async function checkoutGuestStayAction(formData: FormData) {
   }
 }
 
+
+export async function createGuestStayPayMongoCheckoutAction(formData: FormData) {
+  let draftId = '';
+
+  try {
+    const guestStayId = cleanText(formData.get('guestStayId'), 120);
+    const manualChargeCents = parseMoneyToCents(
+      formData.get('manualChargeAmount')
+    );
+    const requestedDiscountCents = parseMoneyToCents(
+      formData.get('discountAmount')
+    );
+    const manualChargeNote =
+      cleanText(formData.get('manualChargeNote'), 500) || null;
+    const discountNote = cleanText(formData.get('discountNote'), 500) || null;
+
+    if (!guestStayId) {
+      return {
+        ok: false as const,
+        error: 'Guest stay is required.',
+      };
+    }
+
+    const { user, guestStay } = await getScopedGuestStay({
+      guestStayId,
+      permission: 'canEdit',
+    });
+
+    if (!guestStay) {
+      return {
+        ok: false as const,
+        error: 'Guest stay not found.',
+      };
+    }
+
+    const quote = await loadGuestStayPayMongoQuote(guestStay.id);
+
+    if (quote.stay.hotelId !== guestStay.hotelId) {
+      return {
+        ok: false as const,
+        error: 'Guest stay hotel scope mismatch.',
+      };
+    }
+
+    const subtotalBeforeDiscountCents =
+      quote.foodTotalCents + quote.serviceTotalCents + manualChargeCents;
+    const safeDiscountCents = Math.min(
+      requestedDiscountCents,
+      subtotalBeforeDiscountCents
+    );
+    const subtotalCents = Math.max(
+      subtotalBeforeDiscountCents - safeDiscountCents,
+      0
+    );
+
+    if (subtotalCents <= 0) {
+      return {
+        ok: false as const,
+        error:
+          'There is no payable balance. Complete this checkout using the front desk settlement option.',
+      };
+    }
+
+    const payload: GuestStayPayMongoPayload = {
+      flow: 'GUEST_STAY_CHECKOUT',
+      guestStayId: quote.stay.id,
+      hotelId: quote.stay.hotelId,
+      createdById: user.id,
+      manualChargeCents,
+      manualChargeNote,
+      discountCents: safeDiscountCents,
+      discountNote,
+      expectedFoodTotalCents: quote.foodTotalCents,
+      expectedServiceTotalCents: quote.serviceTotalCents,
+      expectedSubtotalCents: subtotalCents,
+      createdAt: new Date().toISOString(),
+    };
+
+    const draft = await db.posPayMongoSession.create({
+      data: {
+        hotelId: quote.stay.hotelId,
+        createdById: user.id,
+        amountCents: subtotalCents,
+        currency: 'PHP',
+        payload: payload as unknown as Prisma.InputJsonValue,
+        status: POSPayMongoStatus.PENDING,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    draftId = draft.id;
+
+    const appUrl = getAppUrl();
+    const query = new URLSearchParams({
+      paymongo: draft.id,
+    });
+    const successUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&paymongoResult=success`;
+    const cancelUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&paymongoResult=cancelled`;
+
+    const lineItems: PayMongoLineItem[] = [
+      {
+        name: `Room ${quote.stay.room.number} stay settlement`.slice(0, 120),
+        description: [
+          quote.foodTotalCents > 0
+            ? `Food ${formatCentsForText(quote.foodTotalCents)}`
+            : null,
+          quote.serviceTotalCents > 0
+            ? `Services ${formatCentsForText(quote.serviceTotalCents)}`
+            : null,
+          manualChargeCents > 0
+            ? `Adjustments ${formatCentsForText(manualChargeCents)}`
+            : null,
+          safeDiscountCents > 0
+            ? `Discount -${formatCentsForText(safeDiscountCents)}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+          .slice(0, 255),
+        amount: subtotalCents,
+        currency: 'PHP',
+        quantity: 1,
+      },
+    ];
+
+    const checkout = await createPayMongoCheckoutSession({
+      idempotencyKey: `cloudview-guest-stay-${draft.id}`,
+      lineItems,
+      successUrl,
+      cancelUrl,
+      description: `${quote.stay.hotel.name} guest checkout`,
+      referenceNumber: draft.id,
+      metadata: {
+        flow: 'guest_stay_checkout',
+        paymongo_session_id: draft.id,
+        guest_stay_id: quote.stay.id,
+        hotel_id: quote.stay.hotelId,
+        created_by: user.id,
+      },
+    });
+
+    await db.posPayMongoSession.update({
+      where: {
+        id: draft.id,
+      },
+      data: {
+        checkoutSessionId: checkout.id,
+        checkoutUrl: checkout.checkoutUrl,
+      },
+    });
+
+    return {
+      ok: true as const,
+      sessionId: draft.id,
+      checkoutUrl: checkout.checkoutUrl,
+      amountCents: subtotalCents,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Unable to create PayMongo guest checkout.';
+
+    if (draftId) {
+      await db.posPayMongoSession
+        .update({
+          where: {
+            id: draftId,
+          },
+          data: {
+            status: POSPayMongoStatus.FAILED,
+            errorMessage: message,
+          },
+        })
+        .catch(() => undefined);
+    }
+
+    return {
+      ok: false as const,
+      error: message,
+    };
+  }
+}
+
+export async function getGuestStayPayMongoStatusAction(
+  sessionIdInput: string
+) {
+  try {
+    const sessionId = sessionIdInput.trim();
+
+    if (!sessionId) {
+      return {
+        ok: false as const,
+        error: 'PayMongo session is required.',
+      };
+    }
+
+    const user = await requireDashboardPermission(
+      DashboardModule.GUEST_STAYS,
+      'canView'
+    );
+
+    const session = await db.posPayMongoSession.findUnique({
+      where: {
+        id: sessionId,
+      },
+      select: {
+        id: true,
+        hotelId: true,
+        status: true,
+        payload: true,
+        errorMessage: true,
+        checkoutUrl: true,
+      },
+    });
+
+    if (!session) {
+      return {
+        ok: false as const,
+        error: 'PayMongo guest checkout session was not found.',
+      };
+    }
+
+    if (user.role !== Role.SUPER_ADMIN && user.hotelId !== session.hotelId) {
+      return {
+        ok: false as const,
+        error: 'You are not allowed to view this payment session.',
+      };
+    }
+
+    const payload = parseGuestStayPayMongoPayload(session.payload);
+
+    return {
+      ok: true as const,
+      id: session.id,
+      guestStayId: payload.guestStayId,
+      status: session.status,
+      errorMessage: session.errorMessage,
+      checkoutUrl: session.checkoutUrl,
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to read PayMongo payment status.',
+    };
+  }
+}
+
+export async function finalizeGuestStayPayMongoCheckoutAction(
+  sessionIdInput: string
+) {
+  const sessionId = sessionIdInput.trim();
+
+  if (!sessionId) {
+    return {
+      ok: false as const,
+      error: 'PayMongo session is required.',
+    };
+  }
+
+  const user = await requireDashboardPermission(
+    DashboardModule.GUEST_STAYS,
+    'canEdit'
+  );
+
+  const session = await db.posPayMongoSession.findUnique({
+    where: {
+      id: sessionId,
+    },
+  });
+
+  if (!session) {
+    return {
+      ok: false as const,
+      error: 'PayMongo guest checkout session was not found.',
+    };
+  }
+
+  if (user.role !== Role.SUPER_ADMIN && user.hotelId !== session.hotelId) {
+    return {
+      ok: false as const,
+      error: 'You are not allowed to finalize this payment session.',
+    };
+  }
+
+  let payload: GuestStayPayMongoPayload;
+
+  try {
+    payload = parseGuestStayPayMongoPayload(session.payload);
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : 'Invalid payment payload.',
+    };
+  }
+
+  if (session.status === POSPayMongoStatus.COMPLETED) {
+    return {
+      ok: true as const,
+      alreadyFinalized: true,
+      guestStayId: payload.guestStayId,
+      message: 'This PayMongo checkout was already completed.',
+    };
+  }
+
+  if (session.status === POSPayMongoStatus.PROCESSING) {
+    const completedStay = await db.guestStay.findFirst({
+      where: {
+        id: payload.guestStayId,
+        status: GuestStayStatus.CHECKED_OUT,
+        folio: {
+          isNot: null,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (completedStay) {
+      await db.posPayMongoSession.update({
+        where: {
+          id: session.id,
+        },
+        data: {
+          status: POSPayMongoStatus.COMPLETED,
+          completedAt: new Date(),
+          errorMessage: null,
+        },
+      });
+
+      return {
+        ok: true as const,
+        alreadyFinalized: true,
+        guestStayId: payload.guestStayId,
+        message: 'Guest checkout is complete.',
+      };
+    }
+
+    return {
+      ok: false as const,
+      waiting: true as const,
+      error: 'The paid guest checkout is already being finalized.',
+    };
+  }
+
+  if (session.status !== POSPayMongoStatus.PAID) {
+    return {
+      ok: false as const,
+      waiting: session.status === POSPayMongoStatus.PENDING,
+      error:
+        session.errorMessage || 'Waiting for PayMongo payment confirmation.',
+    };
+  }
+
+  const claimed = await db.posPayMongoSession.updateMany({
+    where: {
+      id: session.id,
+      status: POSPayMongoStatus.PAID,
+    },
+    data: {
+      status: POSPayMongoStatus.PROCESSING,
+      processingStartedAt: new Date(),
+      errorMessage: null,
+    },
+  });
+
+  if (claimed.count !== 1) {
+    return {
+      ok: false as const,
+      waiting: true as const,
+      error: 'The payment is already being finalized.',
+    };
+  }
+
+  try {
+    const quote = await loadGuestStayPayMongoQuote(payload.guestStayId);
+    const subtotalBeforeDiscountCents =
+      quote.foodTotalCents +
+      quote.serviceTotalCents +
+      payload.manualChargeCents;
+    const currentDiscountCents = Math.min(
+      payload.discountCents,
+      subtotalBeforeDiscountCents
+    );
+    const currentSubtotalCents = Math.max(
+      subtotalBeforeDiscountCents - currentDiscountCents,
+      0
+    );
+
+    if (
+      quote.foodTotalCents !== payload.expectedFoodTotalCents ||
+      quote.serviceTotalCents !== payload.expectedServiceTotalCents ||
+      currentSubtotalCents !== payload.expectedSubtotalCents ||
+      currentSubtotalCents !== session.amountCents
+    ) {
+      throw new Error(
+        'The guest folio changed after payment started. The payment needs front desk review before checkout.'
+      );
+    }
+
+    const paymentMethod = mapPayMongoSourceToCheckoutMethod(
+      payload.paymongoSourceType
+    );
+    const paymentReference =
+      payload.paymongoPaymentId ||
+      session.paymongoPaymentId ||
+      session.checkoutSessionId ||
+      session.id;
+
+    const checkoutFormData = new FormData();
+    checkoutFormData.set('guestStayId', payload.guestStayId);
+    checkoutFormData.set(
+      'manualChargeAmount',
+      (payload.manualChargeCents / 100).toFixed(2)
+    );
+    checkoutFormData.set('manualChargeNote', payload.manualChargeNote || '');
+    checkoutFormData.set(
+      'discountAmount',
+      (payload.discountCents / 100).toFixed(2)
+    );
+    checkoutFormData.set('discountNote', payload.discountNote || '');
+    checkoutFormData.append('paymentMethod', paymentMethod);
+    checkoutFormData.append(
+      'paymentAmount',
+      (session.amountCents / 100).toFixed(2)
+    );
+    checkoutFormData.append('paymentReference', paymentReference);
+    checkoutFormData.append(
+      'paymentNote',
+      `PayMongo hosted checkout${
+        payload.paymongoSourceType
+          ? ` · ${payload.paymongoSourceType.toUpperCase()}`
+          : ''
+      }`
+    );
+
+    const result = await checkoutGuestStayAction(checkoutFormData);
+
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+
+    await db.posPayMongoSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        status: POSPayMongoStatus.COMPLETED,
+        completedAt: new Date(),
+        errorMessage: null,
+      },
+    });
+
+    revalidateGuestStayPaths();
+
+    return {
+      ok: true as const,
+      alreadyFinalized: false,
+      guestStayId: payload.guestStayId,
+      folioNumber: result.folioNumber,
+      message: result.message,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Payment was received, but guest checkout needs manual review.';
+
+    await db.posPayMongoSession.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        status: POSPayMongoStatus.PAID_REVIEW_REQUIRED,
+        errorMessage: message,
+      },
+    });
+
+    return {
+      ok: false as const,
+      error: `Payment received, but checkout could not be finalized: ${message}`,
+    };
+  }
+}
+
 export async function markGuestStayReceiptPrintedAction(formData: FormData) {
   try {
     const guestStayId = cleanText(formData.get('guestStayId'), 120);
@@ -1285,6 +2033,16 @@ export async function getGuestStayPasscodeAction(formData: FormData) {
       };
     }
 
+    if (
+      guestStay.hotel.settings?.nfcRoomPasscodeEnabled === false
+    ) {
+      return {
+        ok: false as const,
+        error:
+          'NFC room security codes are disabled in Hotel Settings for this property.',
+      };
+    }
+
     const passcode = decryptGuestStayPasscode(guestStay.passcodeEncrypted);
 
     if (!passcode) {
@@ -1330,6 +2088,16 @@ export async function resetGuestStayPasscodeAction(formData: FormData) {
       return {
         ok: false as const,
         error: 'Guest stay not found.',
+      };
+    }
+
+    if (
+      guestStay.hotel.settings?.nfcRoomPasscodeEnabled === false
+    ) {
+      return {
+        ok: false as const,
+        error:
+          'Enable NFC room security codes in Hotel Settings before resetting a passcode.',
       };
     }
 

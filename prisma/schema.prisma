@@ -328,20 +328,22 @@ model Hotel {
   rewardRedemptions            RewardRedemption[]
   guestPointSettings           GuestPointSettings?
 
-  guideImages      HotelGuideImage[]
-  nfcGuestSessions NfcGuestSession[]
-  guestStayFolios  GuestStayFolio[]
-  guestStayFolioLines GuestStayFolioLine[]
+  guideImages            HotelGuideImage[]
+  nfcGuestSessions       NfcGuestSession[]
+  guestStayFolios        GuestStayFolio[]
+  guestStayFolioLines    GuestStayFolioLine[]
   guestStayFolioPayments GuestStayFolioPayment[]
 }
 
 model HotelSettings {
-  id                      String  @id @default(cuid())
-  hotelId                 String  @unique
-  hotel                   Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  currency                String  @default("PHP")
-  taxRate                 Decimal @default(0.00) @db.Decimal(6, 4)
-  serviceChargeRate       Decimal @default(0.00) @db.Decimal(6, 4)
+  id      String @id @default(cuid())
+  hotelId String @unique
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  currency          String  @default("PHP")
+  taxRate           Decimal @default(0.00) @db.Decimal(6, 4)
+  serviceChargeRate Decimal @default(0.00) @db.Decimal(6, 4)
+
   wifiName                String?
   wifiPassword            String?
   checkInTime             String  @default("2:00 PM")
@@ -353,6 +355,8 @@ model HotelSettings {
   contactPhone            String?
   contactEmail            String?
   guestPortalHeroImageUrl String? @db.Text
+
+  nfcRoomPasscodeEnabled Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -601,15 +605,15 @@ model Order {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
 
-  items              OrderItem[]
+  items               OrderItem[]
   guestStayFolioLines GuestStayFolioLine[]
-  statusHistory      OrderStatusHistory[]
-  posLogs            PosSyncLog[]
-  inventoryMovements InventoryMovement[]
-  guestSessionId     String?
-  guestSession       NfcGuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
-  guestMemberId      String?
-  guestMember        GuestMember?         @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
+  statusHistory       OrderStatusHistory[]
+  posLogs             PosSyncLog[]
+  inventoryMovements  InventoryMovement[]
+  guestSessionId      String?
+  guestSession        NfcGuestSession?     @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  guestMemberId       String?
+  guestMember         GuestMember?         @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
   guestStayId String?
   guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
@@ -1391,7 +1395,6 @@ model GuestStay {
   @@index([checkedOutById])
 }
 
-
 model GuestStayFolio {
   id String @id @default(cuid())
 
@@ -1408,19 +1411,19 @@ model GuestStayFolio {
   openedAt DateTime  @default(now())
   closedAt DateTime?
 
-  receiptPrintedAt DateTime?
+  receiptPrintedAt  DateTime?
   receiptPrintCount Int       @default(0)
 
   guestSnapshot    Json?
   checkoutSnapshot Json?
 
-  foodTotalCents         Int @default(0)
-  serviceTotalCents      Int @default(0)
-  manualChargeCents      Int @default(0)
-  discountCents          Int @default(0)
-  subtotalCents          Int @default(0)
-  paidCents              Int @default(0)
-  balanceDueCents        Int @default(0)
+  foodTotalCents    Int @default(0)
+  serviceTotalCents Int @default(0)
+  manualChargeCents Int @default(0)
+  discountCents     Int @default(0)
+  subtotalCents     Int @default(0)
+  paidCents         Int @default(0)
+  balanceDueCents   Int @default(0)
 
   createdById String?
   createdBy   User?   @relation("GuestStayFolioCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1503,7 +1506,7 @@ model GuestStayFolioPayment {
   guestStay   GuestStay @relation(fields: [guestStayId], references: [id], onDelete: Cascade)
 
   paymentMethod GuestStayCheckoutPaymentMethod
-  paymentStatus GuestStayFolioPaymentStatus @default(POSTED)
+  paymentStatus GuestStayFolioPaymentStatus    @default(POSTED)
 
   amountCents Int
 
@@ -1527,7 +1530,6 @@ model GuestStayFolioPayment {
   @@index([receivedById])
   @@index([paidAt])
 }
-
 
 model GuestStayDevice {
   id String @id @default(cuid())
@@ -1715,7 +1717,6 @@ model DashboardNotification {
   @@index([type])
 }
 
-
 enum POSPayMongoStatus {
   PENDING
   PAID
@@ -1727,24 +1728,24 @@ enum POSPayMongoStatus {
 }
 
 model PosPayMongoSession {
-  id                    String              @id @default(cuid())
-  hotelId               String
-  createdById           String
-  checkoutSessionId     String?             @unique
-  checkoutUrl           String?             @db.Text
-  amountCents           Int
-  currency              String              @default("PHP") @db.VarChar(3)
-  payload               Json
-  status                POSPayMongoStatus   @default(PENDING)
-  paymongoPaymentId     String?             @db.VarChar(191)
-  orderCode             String?             @db.VarChar(191)
-  serviceRequestCodes   Json?
-  errorMessage          String?             @db.Text
-  paidAt                DateTime?
-  processingStartedAt   DateTime?
-  completedAt           DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id                  String            @id @default(cuid())
+  hotelId             String
+  createdById         String
+  checkoutSessionId   String?           @unique
+  checkoutUrl         String?           @db.Text
+  amountCents         Int
+  currency            String            @default("PHP") @db.VarChar(3)
+  payload             Json
+  status              POSPayMongoStatus @default(PENDING)
+  paymongoPaymentId   String?           @db.VarChar(191)
+  orderCode           String?           @db.VarChar(191)
+  serviceRequestCodes Json?
+  errorMessage        String?           @db.Text
+  paidAt              DateTime?
+  processingStartedAt DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   @@index([hotelId, status])
   @@index([createdById, createdAt])

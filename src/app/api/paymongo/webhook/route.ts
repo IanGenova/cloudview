@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { POSPayMongoStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 
@@ -14,6 +15,9 @@ type PayMongoPayment = {
     fee?: number;
     currency?: string;
     status?: string;
+    source?: {
+      type?: string;
+    };
   };
 };
 
@@ -198,6 +202,22 @@ function createDeterministicEventId(
   return `pmw_${createHash('sha256').update(rawBody).digest('hex')}`;
 }
 
+
+function mergeSessionPayload(
+  value: Prisma.JsonValue,
+  updates: Record<string, Prisma.JsonValue>
+): Prisma.InputJsonValue {
+  const current =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Prisma.JsonObject)
+      : {};
+
+  return {
+    ...current,
+    ...updates,
+  } as Prisma.InputJsonValue;
+}
+
 export async function POST(request: Request) {
   const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET?.trim();
   const expectedLivemode = process.env.PAYMONGO_LIVEMODE === 'true';
@@ -299,6 +319,8 @@ export async function POST(request: Request) {
       const metadata = attributes?.metadata ?? {};
 
       const internalSessionId =
+        metadata.paymongo_session_id ||
+        metadata.guest_stay_paymongo_session_id ||
         metadata.pos_session_id ||
         metadata.posSessionId ||
         attributes?.reference_number;
@@ -340,6 +362,9 @@ export async function POST(request: Request) {
         } else if (session.status !== POSPayMongoStatus.COMPLETED) {
           const payment = getPaidPayment(attributes);
           const paymentAttributes = payment?.attributes;
+          const paymentSourceType = paymentAttributes?.source?.type
+            ?.trim()
+            .toLowerCase();
 
           const paidAmount =
             paymentAttributes?.amount ??
@@ -361,7 +386,6 @@ export async function POST(request: Request) {
            * Accept either amount when comparing against the local POS total.
            */
           const amountMatches =
-            typeof paidAmount !== 'number' ||
             paidAmount === session.amountCents ||
             netAmount === session.amountCents;
 
@@ -412,6 +436,19 @@ export async function POST(request: Request) {
                 paymongoPaymentId: payment?.id,
                 paidAt: new Date(),
                 errorMessage: null,
+                payload: mergeSessionPayload(session.payload, {
+                  paymongoSourceType: paymentSourceType ?? '',
+                  paymongoPaymentId: payment?.id ?? '',
+                  paymongoCheckoutSessionId: checkoutId,
+                  paymongoPaidAmountCents:
+                    typeof paidAmount === 'number' ? paidAmount : 0,
+                  paymongoNetAmountCents:
+                    typeof netAmount === 'number' ? netAmount : 0,
+                  paymongoFeeCents:
+                    typeof paymentAttributes?.fee === 'number'
+                      ? paymentAttributes.fee
+                      : 0,
+                }),
               },
             });
 

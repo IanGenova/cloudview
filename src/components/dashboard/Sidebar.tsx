@@ -38,7 +38,6 @@ type DashboardNavItem = {
 
 type SidebarGroup = {
   label: string;
-  description: string;
   modules: string[];
 };
 
@@ -63,17 +62,14 @@ const guestStaysNavItem: DashboardNavItem = {
 const navGroups: SidebarGroup[] = [
   {
     label: 'Dashboard',
-    description: 'Overview, reports, and performance',
     modules: ['OVERVIEW', 'ANALYTICS', 'REPORTS'],
   },
   {
     label: 'Hotel Setup',
-    description: 'Property, guide, rooms, and NFC',
     modules: ['HOTELS', 'HOTEL_GUIDE', 'ROOMS_LOCATIONS', 'NFC_TAGS'],
   },
   {
     label: 'Guest Service',
-    description: 'Stays, orders, kitchen, and requests',
     modules: [
       'GUEST_STAYS',
       'ORDERS',
@@ -85,7 +81,6 @@ const navGroups: SidebarGroup[] = [
   },
   {
     label: 'Sales & Stock',
-    description: 'Menu, inventory, and POS',
     modules: ['MENU', 'INVENTORY', 'POS_TERMINAL'],
   },
 ];
@@ -115,12 +110,41 @@ function getModuleIcon(module: string) {
   return moduleIconMap[module] ?? LayoutDashboard;
 }
 
-function isActiveRoute(pathname: string, href: string) {
-  if (href === '/dashboard') {
-    return pathname === '/dashboard';
+function normalizeRoute(value: string) {
+  if (value.length > 1 && value.endsWith('/')) {
+    return value.slice(0, -1);
   }
 
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return value;
+}
+
+function routeMatches(pathname: string, href: string) {
+  const normalizedPathname = normalizeRoute(pathname);
+  const normalizedHref = normalizeRoute(href);
+
+  if (normalizedHref === '/dashboard') {
+    return normalizedPathname === '/dashboard';
+  }
+
+  return (
+    normalizedPathname === normalizedHref ||
+    normalizedPathname.startsWith(`${normalizedHref}/`)
+  );
+}
+
+function getActiveHref(
+  pathname: string,
+  items: DashboardNavItem[]
+): string | null {
+  const matchedItems = items
+    .filter((item) => routeMatches(pathname, item.href))
+    .sort(
+      (first, second) =>
+        normalizeRoute(second.href).length -
+        normalizeRoute(first.href).length
+    );
+
+  return matchedItems[0]?.href ?? null;
 }
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -207,7 +231,6 @@ function buildGroupedNavItems(items: DashboardNavItem[]): BuiltSidebarGroup[] {
   if (otherItems.length > 0) {
     groups.push({
       label: 'More Tools',
-      description: 'Additional assigned modules',
       modules: otherItems.map((item) => item.module),
       items: otherItems,
     });
@@ -218,15 +241,15 @@ function buildGroupedNavItems(items: DashboardNavItem[]): BuiltSidebarGroup[] {
 
 function SidebarLink({
   item,
-  pathname,
+  activeHref,
   isSidebarOpen = true,
 }: {
   item: DashboardNavItem;
-  pathname: string;
+  activeHref: string | null;
   isSidebarOpen?: boolean;
 }) {
   const Icon = getModuleIcon(item.module);
-  const active = isActiveRoute(pathname, item.href);
+  const active = item.href === activeHref;
 
   return (
     <Link
@@ -273,19 +296,19 @@ function SidebarLink({
 
 function SidebarSection({
   group,
-  pathname,
+  activeHref,
   open,
   onToggle,
   isSidebarOpen = true,
 }: {
   group: BuiltSidebarGroup;
-  pathname: string;
+  activeHref: string | null;
   open: boolean;
   onToggle: () => void;
   isSidebarOpen?: boolean;
 }) {
-  const hasActiveItem = group.items.some((item) =>
-    isActiveRoute(pathname, item.href)
+  const hasActiveItem = group.items.some(
+    (item) => item.href === activeHref
   );
 
   if (!isSidebarOpen) {
@@ -295,7 +318,7 @@ function SidebarSection({
           <SidebarLink
             key={`${group.label}-${item.module}`}
             item={item}
-            pathname={pathname}
+            activeHref={activeHref}
             isSidebarOpen={false}
           />
         ))}
@@ -320,9 +343,6 @@ function SidebarSection({
           <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[var(--cv-accent)]">
             {group.label}
           </span>
-          <span className="mt-0.5 block text-[10px] font-bold text-[var(--cv-sidebar-muted)]">
-            {group.description}
-          </span>
         </span>
 
         <ChevronDown
@@ -339,7 +359,7 @@ function SidebarSection({
             <SidebarLink
               key={`${group.label}-${item.module}`}
               item={item}
-              pathname={pathname}
+              activeHref={activeHref}
               isSidebarOpen={isSidebarOpen}
             />
           ))}
@@ -397,21 +417,31 @@ export function Sidebar({
     [navItems]
   );
 
+  const allSidebarItems = useMemo(
+    () => [...mainItems, ...settingsItems],
+    [mainItems, settingsItems]
+  );
+
+  const activeHref = useMemo(
+    () => getActiveHref(pathname, allSidebarItems),
+    [pathname, allSidebarItems]
+  );
+
   const homeHref =
     navItems.find((item) => item.module === 'OVERVIEW')?.href ??
     navItems[0]?.href ??
     '/dashboard';
 
-  const hasActiveSettings = settingsItems.some((item) =>
-    isActiveRoute(pathname, item.href)
+  const hasActiveSettings = settingsItems.some(
+    (item) => item.href === activeHref
   );
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();
 
     for (const group of groupedMainItems) {
-      const hasActiveItem = group.items.some((item) =>
-        isActiveRoute(pathname, item.href)
+      const hasActiveItem = group.items.some(
+        (item) => item.href === activeHref
       );
 
       if (hasActiveItem || group.label === 'Dashboard') {
@@ -432,8 +462,8 @@ export function Sidebar({
       let changed = false;
 
       for (const group of groupedMainItems) {
-        const hasActiveItem = group.items.some((item) =>
-          isActiveRoute(pathname, item.href)
+        const hasActiveItem = group.items.some(
+          (item) => item.href === activeHref
         );
 
         if (hasActiveItem && !next.has(group.label)) {
@@ -449,7 +479,7 @@ export function Sidebar({
 
       return changed ? next : current;
     });
-  }, [pathname, groupedMainItems, hasActiveSettings]);
+  }, [activeHref, groupedMainItems, hasActiveSettings]);
 
   function toggleGroup(key: string) {
     setOpenGroups((current) => {
@@ -576,7 +606,7 @@ export function Sidebar({
                 <SidebarSection
                   key={group.label}
                   group={group}
-                  pathname={pathname}
+                  activeHref={activeHref}
                   open={openGroups.has(group.label)}
                   onToggle={() => toggleGroup(group.label)}
                   isSidebarOpen={isSidebarOpen}
@@ -606,9 +636,6 @@ export function Sidebar({
                           <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[var(--cv-accent)]">
                             Admin Setup
                           </span>
-                          <span className="mt-0.5 block text-[10px] font-bold text-[var(--cv-sidebar-muted)]">
-                            Hotel and user access
-                          </span>
                         </span>
                       </span>
 
@@ -626,7 +653,7 @@ export function Sidebar({
                           <SidebarLink
                             key={item.module}
                             item={item}
-                            pathname={pathname}
+                            activeHref={activeHref}
                             isSidebarOpen={isSidebarOpen}
                           />
                         ))}
@@ -639,7 +666,7 @@ export function Sidebar({
                       <SidebarLink
                         key={item.module}
                         item={item}
-                        pathname={pathname}
+                        activeHref={activeHref}
                         isSidebarOpen={false}
                       />
                     ))}

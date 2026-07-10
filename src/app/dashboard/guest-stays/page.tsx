@@ -185,6 +185,11 @@ export default async function GuestStaysPage() {
     select: {
       id: true,
       name: true,
+      settings: {
+        select: {
+          nfcRoomPasscodeEnabled: true,
+        },
+      },
     },
     orderBy: {
       name: 'asc',
@@ -230,6 +235,11 @@ export default async function GuestStaysPage() {
         hotel: {
           select: {
             name: true,
+            settings: {
+              select: {
+                nfcRoomPasscodeEnabled: true,
+              },
+            },
           },
         },
         room: {
@@ -439,11 +449,16 @@ export default async function GuestStaysPage() {
     <div className="space-y-7">
       <PageHeader
         title="Guest Stays"
-        description="Create check-ins, generate room passcodes, limit authorized devices, and track active room stays."
+        description="Create check-ins, manage optional NFC room security codes, authorize devices, and track active room stays."
       />
 
       <GuestStaysClient
-        hotels={hotels}
+        hotels={hotels.map((hotel) => ({
+          id: hotel.id,
+          name: hotel.name,
+          nfcRoomPasscodeEnabled:
+            hotel.settings?.nfcRoomPasscodeEnabled ?? true,
+        }))}
         rooms={rooms.map((room) => ({
           id: room.id,
           hotelId: room.hotelId,
@@ -571,6 +586,8 @@ export default async function GuestStaysPage() {
             id: stay.id,
             hotelId: stay.hotelId,
             hotelName: stay.hotel.name,
+            nfcRoomPasscodeEnabled:
+              stay.hotel.settings?.nfcRoomPasscodeEnabled ?? true,
             roomId: stay.roomId,
             roomNumber: displayRoomNumber,
             roomName: displayRoomName,
@@ -673,6 +690,10 @@ export default async function GuestStaysPage() {
         })}
         defaultHotelId={defaultHotelId}
         isSuperAdmin={user.role === Role.SUPER_ADMIN}
+        payMongoEnabled={Boolean(
+          process.env.PAYMONGO_SECRET_KEY &&
+            (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL)
+        )}
       />
     </div>
   );

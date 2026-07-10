@@ -33,6 +33,22 @@ function getImageExtension(file: File) {
   return '';
 }
 
+function parseCheckbox(formData: FormData, fieldName: string) {
+  const rawValue = formData.get(fieldName);
+
+  const value =
+    typeof rawValue === 'string'
+      ? rawValue.trim().toLowerCase()
+      : '';
+
+  return (
+    value === 'on' ||
+    value === 'true' ||
+    value === '1' ||
+    value === 'yes'
+  );
+}
+
 async function saveHotelSettingsImageFile(file: File) {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   const maxFileSize = 4 * 1024 * 1024;
@@ -114,6 +130,11 @@ export async function saveHotelSettingsAction(formData: FormData) {
     throw new Error('Hotel required');
   }
 
+  const nfcRoomPasscodeEnabled = parseCheckbox(
+    formData,
+    'nfcRoomPasscodeEnabled'
+  );
+
   const existingSettings = await db.hotelSettings.findUnique({
     where: { hotelId },
     select: {
@@ -161,6 +182,7 @@ export async function saveHotelSettingsAction(formData: FormData) {
         contactPhone: cleanText(formData.get('contactPhone'), 80),
         contactEmail: cleanText(formData.get('contactEmail'), 160),
         guestPortalHeroImageUrl: heroImage.imageUrl,
+        nfcRoomPasscodeEnabled,
       },
       create: {
         hotelId,
@@ -181,6 +203,7 @@ export async function saveHotelSettingsAction(formData: FormData) {
         contactPhone: cleanText(formData.get('contactPhone'), 80),
         contactEmail: cleanText(formData.get('contactEmail'), 160),
         guestPortalHeroImageUrl: heroImage.imageUrl,
+        nfcRoomPasscodeEnabled,
       },
     });
 
@@ -198,6 +221,14 @@ export async function saveHotelSettingsAction(formData: FormData) {
   }
 
   revalidatePath('/dashboard/settings');
+  revalidatePath('/dashboard/guest-stays');
+  revalidatePath('/dashboard/tags');
   revalidatePath('/t/[tagCode]', 'page');
-  redirect('/dashboard/settings?saved=1');
+
+  const redirectParams = new URLSearchParams({
+    saved: '1',
+    hotelId,
+  });
+
+  redirect(`/dashboard/settings?${redirectParams.toString()}`);
 }

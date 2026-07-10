@@ -1,6 +1,13 @@
 'use client';
 
-import { type FormEvent, useMemo, useState, useTransition } from 'react';
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -10,17 +17,23 @@ import {
   CalendarClock,
   CheckCircle2,
   Coins,
+  CreditCard,
   DoorOpen,
   Eye,
   History,
   KeyRound,
   LogOut,
+  Loader2,
   MessageSquare,
   Pencil,
   Plus,
   Printer,
   ReceiptText,
   RefreshCw,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Smartphone,
   Trophy,
   UserCheck,
   WalletCards,
@@ -29,6 +42,9 @@ import {
 import {
   checkoutGuestStayAction,
   createGuestStayAction,
+  createGuestStayPayMongoCheckoutAction,
+  finalizeGuestStayPayMongoCheckoutAction,
+  getGuestStayPayMongoStatusAction,
   getGuestStayPasscodeAction,
   markGuestStayReceiptPrintedAction,
   resetGuestStayPasscodeAction,
@@ -137,6 +153,10 @@ type CheckoutPaymentDraft = {
   note: string;
 };
 
+
+type CheckoutSettlementMode = 'FRONT_DESK' | 'PAYMONGO';
+type GuestStayStatusFilter = 'ALL' | GuestStayStatusValue;
+
 type GuestStayCheckoutSummary = {
   foodTotalCents: number;
   serviceTotalCents: number;
@@ -158,6 +178,7 @@ type GuestStayCheckoutSummary = {
 type HotelOption = {
   id: string;
   name: string;
+  nfcRoomPasscodeEnabled: boolean;
 };
 
 type RoomOption = {
@@ -183,6 +204,7 @@ type GuestStayRecord = {
   id: string;
   hotelId: string;
   hotelName: string;
+  nfcRoomPasscodeEnabled: boolean;
   roomId: string;
   roomNumber: string;
   roomName: string;
@@ -217,6 +239,7 @@ type CreatedStayResult = {
   roomNumber: string;
   hotelName: string;
   maxDevices: number;
+  securityCodeEnabled: boolean;
   smsRequested: boolean;
   smsSent: boolean;
   smsRecipient: string;
@@ -772,9 +795,9 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-      <section className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-6 py-5">
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 px-3 py-4 backdrop-blur-md sm:px-6">
+      <section className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/50 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.38)]">
+        <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-neutral-100 bg-white/95 px-6 py-5 backdrop-blur-xl">
           <div>
             <h2 className="text-xl font-black text-[#11100b]">{title}</h2>
             {description ? (
@@ -794,7 +817,7 @@ function Modal({
           </button>
         </div>
 
-        <div className="max-h-[calc(92vh-88px)] overflow-y-auto p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfaf7] p-4 sm:p-6">
           {children}
         </div>
       </section>
@@ -902,14 +925,17 @@ export function GuestStaysClient({
   guestStays,
   defaultHotelId,
   isSuperAdmin,
+  payMongoEnabled,
 }: {
   hotels: HotelOption[];
   rooms: RoomOption[];
   guestStays: GuestStayRecord[];
   defaultHotelId: string;
   isSuperAdmin: boolean;
+  payMongoEnabled: boolean;
 }) {
   const router = useRouter();
+  const checkoutFormRef = useRef<HTMLFormElement | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewStay, setViewStay] = useState<GuestStayRecord | null>(null);
   const [editStay, setEditStay] = useState<GuestStayRecord | null>(null);
@@ -923,6 +949,16 @@ export function GuestStaysClient({
   const [error, setError] = useState('');
   const [guestStayPage, setGuestStayPage] = useState(1);
   const [guestStayPageSize, setGuestStayPageSize] = useState<number>(5);
+  const [guestStaySearch, setGuestStaySearch] = useState('');
+  const [guestStayStatusFilter, setGuestStayStatusFilter] =
+    useState<GuestStayStatusFilter>('ALL');
+  const [checkoutSettlementMode, setCheckoutSettlementMode] =
+    useState<CheckoutSettlementMode>('FRONT_DESK');
+  const [payMongoStatusText, setPayMongoStatusText] = useState('');
+  const [payMongoReturn, setPayMongoReturn] = useState({
+    sessionId: '',
+    result: '',
+  });
   const [checkoutManualChargeAmount, setCheckoutManualChargeAmount] =
     useState('0.00');
   const [checkoutDiscountAmount, setCheckoutDiscountAmount] =
@@ -936,27 +972,58 @@ export function GuestStaysClient({
     return rooms.filter((room) => room.hotelId === selectedHotelId);
   }, [rooms, selectedHotelId]);
 
+  const selectedHotel = useMemo(
+    () => hotels.find((hotel) => hotel.id === selectedHotelId) ?? hotels[0],
+    [hotels, selectedHotelId]
+  );
+
+  const createSecurityCodeEnabled =
+    selectedHotel?.nfcRoomPasscodeEnabled ?? true;
+
+  const filteredGuestStays = useMemo(() => {
+    const query = guestStaySearch.trim().toLowerCase();
+
+    return guestStays.filter((stay) => {
+      const matchesStatus =
+        guestStayStatusFilter === 'ALL' || stay.status === guestStayStatusFilter;
+      const matchesSearch =
+        !query ||
+        `${stay.guestName} ${stay.guestPhone} ${stay.guestEmail} ${stay.hotelName} ${stay.roomNumber} ${stay.roomName}`
+          .toLowerCase()
+          .includes(query);
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [guestStaySearch, guestStayStatusFilter, guestStays]);
+
+  useEffect(() => {
+    setGuestStayPage(1);
+  }, [guestStaySearch, guestStayStatusFilter]);
+
   const totalGuestStayPages = Math.max(
-  1,
-  Math.ceil(guestStays.length / guestStayPageSize)
-);
+    1,
+    Math.ceil(filteredGuestStays.length / guestStayPageSize)
+  );
 
-const currentGuestStayPage = Math.min(guestStayPage, totalGuestStayPages);
+  const currentGuestStayPage = Math.min(guestStayPage, totalGuestStayPages);
 
-const paginatedGuestStays = useMemo(() => {
-  const startIndex = (currentGuestStayPage - 1) * guestStayPageSize;
+  const paginatedGuestStays = useMemo(() => {
+    const startIndex = (currentGuestStayPage - 1) * guestStayPageSize;
 
-  return guestStays.slice(startIndex, startIndex + guestStayPageSize);
-}, [currentGuestStayPage, guestStayPageSize, guestStays]);
+    return filteredGuestStays.slice(
+      startIndex,
+      startIndex + guestStayPageSize
+    );
+  }, [currentGuestStayPage, filteredGuestStays, guestStayPageSize]);
 
-const guestStayPaginationStart = guestStays.length
-  ? (currentGuestStayPage - 1) * guestStayPageSize + 1
-  : 0;
+  const guestStayPaginationStart = filteredGuestStays.length
+    ? (currentGuestStayPage - 1) * guestStayPageSize + 1
+    : 0;
 
-const guestStayPaginationEnd = Math.min(
-  currentGuestStayPage * guestStayPageSize,
-  guestStays.length
-);
+  const guestStayPaginationEnd = Math.min(
+    currentGuestStayPage * guestStayPageSize,
+    filteredGuestStays.length
+  );
 
 const guestStayPageItems = getGuestStayPageItems(
   currentGuestStayPage,
@@ -1067,6 +1134,7 @@ const checkoutPreviewTotals = useMemo(() => {
           roomNumber: result.roomNumber,
           hotelName: result.hotelName,
           maxDevices: result.maxDevices,
+          securityCodeEnabled: result.securityCodeEnabled,
           smsRequested: result.smsRequested,
           smsSent: result.smsSent,
           smsRecipient: result.smsRecipient,
@@ -1105,6 +1173,8 @@ const checkoutPreviewTotals = useMemo(() => {
 
   function openCheckoutModal(stay: GuestStayRecord) {
     resetFeedback();
+    setCheckoutSettlementMode('FRONT_DESK');
+    setPayMongoStatusText('');
     setViewStay(null);
     setCheckoutManualChargeAmount(
       centsToInputAmount(stay.checkoutSummary.manualChargeCents)
@@ -1140,6 +1210,36 @@ const checkoutPreviewTotals = useMemo(() => {
         setMessage(result.message);
         setCheckoutStay(null);
         router.refresh();
+      })();
+    });
+  }
+
+
+  function handlePayMongoCheckout() {
+    const form = checkoutFormRef.current;
+
+    if (!form || !checkoutStay) {
+      setError('Checkout form is not ready. Please reopen the checkout window.');
+      return;
+    }
+
+    const formData = new FormData(form);
+
+    resetFeedback();
+    setPayMongoStatusText('Creating secure PayMongo checkout...');
+
+    startTransition(() => {
+      void (async () => {
+        const result = await createGuestStayPayMongoCheckoutAction(formData);
+
+        if (!result.ok) {
+          setPayMongoStatusText('');
+          setError(result.error);
+          return;
+        }
+
+        setPayMongoStatusText('Redirecting to PayMongo...');
+        window.location.assign(result.checkoutUrl);
       })();
     });
   }
@@ -1271,6 +1371,135 @@ function handleResetPasscode(guestStayId: string) {
   });
 }
 
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    setPayMongoReturn({
+      sessionId: params.get('paymongo') || '',
+      result: params.get('paymongoResult') || '',
+    });
+  }, []);
+
+  useEffect(() => {
+    const payMongoSessionId = payMongoReturn.sessionId;
+    const payMongoResult = payMongoReturn.result;
+
+    if (!payMongoSessionId) {
+      return;
+    }
+
+    if (payMongoResult === 'cancelled') {
+      setMessage('PayMongo checkout was cancelled. No payment was recorded.');
+      router.replace('/dashboard/guest-stays');
+      return;
+    }
+
+    let disposed = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+
+    async function syncPayment() {
+      if (disposed) {
+        return;
+      }
+
+      attempts += 1;
+      setPayMongoStatusText('Confirming PayMongo payment...');
+
+      const statusResult = await getGuestStayPayMongoStatusAction(
+        payMongoSessionId
+      );
+
+      if (disposed) {
+        return;
+      }
+
+      if (!statusResult.ok) {
+        setPayMongoStatusText('');
+        setError(statusResult.error);
+        router.replace('/dashboard/guest-stays');
+        return;
+      }
+
+      if (statusResult.status === 'PAID') {
+        setPayMongoStatusText('Payment confirmed. Completing guest checkout...');
+
+        const finalizeResult =
+          await finalizeGuestStayPayMongoCheckoutAction(payMongoSessionId);
+
+        if (disposed) {
+          return;
+        }
+
+        if (!finalizeResult.ok) {
+          if (
+            'waiting' in finalizeResult &&
+            finalizeResult.waiting &&
+            attempts < 20
+          ) {
+            timeoutId = setTimeout(syncPayment, 1500);
+            return;
+          }
+
+          setPayMongoStatusText('');
+          setError(finalizeResult.error);
+          router.replace('/dashboard/guest-stays');
+          return;
+        }
+
+        setPayMongoStatusText('');
+        setMessage(finalizeResult.message);
+        setCheckoutStay(null);
+        router.replace('/dashboard/guest-stays');
+        router.refresh();
+        return;
+      }
+
+      if (statusResult.status === 'COMPLETED') {
+        setPayMongoStatusText('');
+        setMessage('PayMongo payment and guest checkout are complete.');
+        router.replace('/dashboard/guest-stays');
+        router.refresh();
+        return;
+      }
+
+      if (
+        statusResult.status === 'FAILED' ||
+        statusResult.status === 'CANCELLED' ||
+        statusResult.status === 'PAID_REVIEW_REQUIRED'
+      ) {
+        setPayMongoStatusText('');
+        setError(
+          statusResult.errorMessage ||
+            'The PayMongo payment requires front desk review.'
+        );
+        router.replace('/dashboard/guest-stays');
+        return;
+      }
+
+      if (attempts >= 20) {
+        setPayMongoStatusText('');
+        setMessage(
+          'Payment confirmation is taking longer than expected. Refresh this page in a moment.'
+        );
+        router.replace('/dashboard/guest-stays');
+        return;
+      }
+
+      timeoutId = setTimeout(syncPayment, 1500);
+    }
+
+    void syncPayment();
+
+    return () => {
+      disposed = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [payMongoReturn, router]);
+
   return (
     <div className="space-y-7">
       {message ? (
@@ -1282,6 +1511,13 @@ function handleResetPasscode(guestStayId: string) {
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
           {error}
+        </div>
+      ) : null}
+
+      {payMongoStatusText ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-[#d8b45f] bg-[#fff8e4] px-5 py-4 text-sm font-black text-[#7a5414] shadow-sm">
+          <Loader2 className="size-5 animate-spin" />
+          {payMongoStatusText}
         </div>
       ) : null}
 
@@ -1344,10 +1580,59 @@ function handleResetPasscode(guestStayId: string) {
 </section>
 
 
-      <section className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <section className="grid gap-3 rounded-[1.75rem] border border-neutral-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px_auto] lg:items-end">
+        <label className="grid gap-2">
+          <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+            <Search className="size-4 text-[#b88938]" />
+            Search stays
+          </span>
+          <input
+            value={guestStaySearch}
+            onChange={(event) => setGuestStaySearch(event.currentTarget.value)}
+            placeholder="Guest, phone, email, hotel, or room..."
+            className={inputClass}
+          />
+        </label>
+
+        <label className="grid gap-2">
+          <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+            <SlidersHorizontal className="size-4 text-[#b88938]" />
+            Stay status
+          </span>
+          <select
+            value={guestStayStatusFilter}
+            onChange={(event) =>
+              setGuestStayStatusFilter(
+                event.currentTarget.value as GuestStayStatusFilter
+              )
+            }
+            className={inputClass}
+          >
+            <option value="ALL">All stay statuses</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {formatStatus(status)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button
+          type="button"
+          onClick={() => {
+            setGuestStaySearch('');
+            setGuestStayStatusFilter('ALL');
+          }}
+          className="h-12 rounded-2xl border border-neutral-200 bg-neutral-50 px-5 text-sm font-black text-neutral-700 transition hover:bg-neutral-100"
+        >
+          Reset Filters
+        </button>
+      </section>
+
+      <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1240px] text-left">
-            <thead className="bg-neutral-50">
+            <thead className="sticky top-0 z-10 bg-neutral-50/95 backdrop-blur">
               <tr>
                 <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Guest
@@ -1384,7 +1669,7 @@ function handleResetPasscode(guestStayId: string) {
              const frontDeskStatus = getStayFrontDeskStatus(stay);
 
           return (
-            <tr key={stay.id} className="border-t border-neutral-100">
+            <tr key={stay.id} className="border-t border-neutral-100 transition hover:bg-[#fffaf0]">
                   <td className="px-5 py-4">
                     <p className="font-black">{stay.guestName}</p>
                     <p className="text-xs font-semibold text-neutral-500">
@@ -1398,10 +1683,23 @@ function handleResetPasscode(guestStayId: string) {
                       Room {stay.roomNumber}
                       {stay.roomName ? ` — ${stay.roomName}` : ''}
                     </p>
+                    <span
+                      className={
+                        stay.nfcRoomPasscodeEnabled
+                          ? 'mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700'
+                          : 'mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700'
+                      }
+                    >
+                      {stay.nfcRoomPasscodeEnabled
+                        ? 'Security code enabled'
+                        : 'Direct NFC access'}
+                    </span>
                   </td>
 
                   <td className="px-5 py-4 font-bold">
-                    {stay.activeDevices} / {stay.maxDevices}
+                    {stay.nfcRoomPasscodeEnabled
+                      ? `${stay.activeDevices} / ${stay.maxDevices}`
+                      : 'No limit'}
                   </td>
 
                   <td className="px-5 py-4 font-bold">
@@ -1484,13 +1782,13 @@ function handleResetPasscode(guestStayId: string) {
               );
             })}
 
-              {!guestStays.length ? (
+              {!filteredGuestStays.length ? (
                 <tr>
                   <td
                     colSpan={9}
                     className="px-5 py-10 text-center font-bold text-neutral-500"
                   >
-                    No guest stays yet.
+                    No guest stays match the current filters.
                   </td>
                 </tr>
               ) : null}
@@ -1498,7 +1796,7 @@ function handleResetPasscode(guestStayId: string) {
                    </table>
         </div>
 
-        {guestStays.length > 0 ? (
+        {filteredGuestStays.length > 0 ? (
           <div className="flex flex-col gap-4 border-t border-neutral-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1560,7 +1858,7 @@ function handleResetPasscode(guestStayId: string) {
                 {' '}to{' '}
                 <b className="text-[#11100b]">{guestStayPaginationEnd}</b>
                 {' '}of{' '}
-                <b className="text-[#11100b]">{guestStays.length}</b>
+                <b className="text-[#11100b]">{filteredGuestStays.length}</b>
               </span>
 
               <label className="flex items-center gap-2">
@@ -1589,7 +1887,11 @@ function handleResetPasscode(guestStayId: string) {
       {isCreateOpen ? (
         <Modal
           title="Create Guest Stay"
-          description="Check in a guest, generate a room passcode, and set device limits."
+          description={
+            createSecurityCodeEnabled
+              ? 'Check in a guest, generate a room passcode, and set device limits.'
+              : 'Check in a guest with direct NFC room access. No guest passcode is required.'
+          }
           onClose={() => setIsCreateOpen(false)}
         >
           {createdStay ? (
@@ -1601,18 +1903,40 @@ function handleResetPasscode(guestStayId: string) {
                 </p>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-white p-4">
-                <p className={labelClass}>Room Passcode</p>
-                <p className="mt-1 font-mono text-4xl font-black tracking-[0.2em] text-[#11100b]">
-                  {createdStay.passcode}
-                </p>
-              </div>
+              {createdStay.securityCodeEnabled ? (
+                <>
+                  <div className="mt-4 rounded-2xl bg-white p-4">
+                    <p className={labelClass}>Room Passcode</p>
+                    <p className="mt-1 font-mono text-4xl font-black tracking-[0.2em] text-[#11100b]">
+                      {createdStay.passcode}
+                    </p>
+                  </div>
 
-              <p className="mt-3 text-sm font-bold leading-6 text-emerald-800">
-                Give this passcode to <b>{createdStay.guestName}</b> for Room{' '}
-                <b>{createdStay.roomNumber}</b>. Allowed devices:{' '}
-                <b>{createdStay.maxDevices}</b>.
-              </p>
+                  <p className="mt-3 text-sm font-bold leading-6 text-emerald-800">
+                    Give this passcode to <b>{createdStay.guestName}</b> for Room{' '}
+                    <b>{createdStay.roomNumber}</b>. Allowed devices:{' '}
+                    <b>{createdStay.maxDevices}</b>.
+                  </p>
+                </>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      <ShieldCheck className="size-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-black text-emerald-800">
+                        Direct NFC access enabled
+                      </p>
+                      <p className="mt-1 text-xs font-bold leading-5 text-neutral-600">
+                        {createdStay.guestName} may scan the Room{' '}
+                        {createdStay.roomNumber} NFC tag and open the guest
+                        portal without entering a room passcode.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {createdStay.smsRequested ? (
                 <div
@@ -1656,10 +1980,12 @@ function handleResetPasscode(guestStayId: string) {
                 </div>
               ) : null}
 
-              <p className="mt-2 text-xs font-bold text-emerald-700/80">
-                This passcode is shown only now. Store or send it to the guest
-                before closing this modal.
-              </p>
+              {createdStay.securityCodeEnabled ? (
+                <p className="mt-2 text-xs font-bold text-emerald-700/80">
+                  This passcode is shown only now. Store or send it to the guest
+                  before closing this modal.
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -1670,7 +1996,10 @@ function handleResetPasscode(guestStayId: string) {
                 <select
                   name="hotelId"
                   value={selectedHotelId}
-                  onChange={(event) => setSelectedHotelId(event.target.value)}
+                  onChange={(event) => {
+                    setSelectedHotelId(event.target.value);
+                    setCreateSendPasscodeSms(false);
+                  }}
                   className={inputClass}
                   required
                 >
@@ -1715,7 +2044,7 @@ function handleResetPasscode(guestStayId: string) {
                   inputMode="tel"
                   placeholder="09XXXXXXXXX"
                   className={inputClass}
-                  required={createSendPasscodeSms}
+                  required={createSecurityCodeEnabled && createSendPasscodeSms}
                 />
               </label>
 
@@ -1730,55 +2059,82 @@ function handleResetPasscode(guestStayId: string) {
               </label>
             </div>
 
-            <label className="flex items-start gap-3 rounded-[1.5rem] border border-[#c99c38]/25 bg-[#fffaf0] p-4">
-              <input
-                type="checkbox"
-                name="sendPasscodeSms"
-                value="yes"
-                checked={createSendPasscodeSms}
-                onChange={(event) =>
-                  setCreateSendPasscodeSms(event.currentTarget.checked)
-                }
-                className="mt-1 size-4 rounded border-neutral-300 accent-[#b88938]"
-              />
+            {createSecurityCodeEnabled ? (
+              <>
+                <label className="flex items-start gap-3 rounded-[1.5rem] border border-[#c99c38]/25 bg-[#fffaf0] p-4">
+                  <input
+                    type="checkbox"
+                    name="sendPasscodeSms"
+                    value="yes"
+                    checked={createSendPasscodeSms}
+                    onChange={(event) =>
+                      setCreateSendPasscodeSms(event.currentTarget.checked)
+                    }
+                    className="mt-1 size-4 rounded border-neutral-300 accent-[#b88938]"
+                  />
 
-              <span>
-                <span className="flex items-center gap-2 text-sm font-black text-[#11100b]">
-                  <MessageSquare className="size-4 text-[#b88938]" />
-                  Send room passcode via SMS
-                </span>
-                <span className="mt-1 block text-xs font-semibold leading-5 text-neutral-500">
-                  Sends only the guest room passcode and NFC instructions. The
-                  internal NFC tag secret is never sent.
-                </span>
-              </span>
-            </label>
+                  <span>
+                    <span className="flex items-center gap-2 text-sm font-black text-[#11100b]">
+                      <MessageSquare className="size-4 text-[#b88938]" />
+                      Send room passcode via SMS
+                    </span>
+                    <span className="mt-1 block text-xs font-semibold leading-5 text-neutral-500">
+                      Sends only the guest room passcode and NFC instructions.
+                      The internal NFC tag secret is never sent.
+                    </span>
+                  </span>
+                </label>
 
-            {createSendPasscodeSms ? (
-              <div className="rounded-[1.25rem] border border-dashed border-emerald-200 bg-emerald-50 p-4">
-                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
-                  SMS Preview
-                </p>
-                <p className="mt-1 text-sm font-bold leading-6 text-emerald-900">
-                  Welcome message will include the selected room number, the
-                  generated passcode, and instructions to scan the room NFC tag.
-                </p>
+                {createSendPasscodeSms ? (
+                  <div className="rounded-[1.25rem] border border-dashed border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                      SMS Preview
+                    </p>
+                    <p className="mt-1 text-sm font-bold leading-6 text-emerald-900">
+                      Welcome message will include the selected room number, the
+                      generated passcode, and instructions to scan the room NFC
+                      tag.
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <ShieldCheck className="size-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-black text-emerald-900">
+                      Room security code is disabled
+                    </p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-emerald-800/75">
+                      Guests with an active stay can open this room&apos;s portal
+                      directly after scanning its NFC tag. Passcode SMS and
+                      device authorization limits are not used.
+                    </p>
+                  </div>
+                </div>
               </div>
-            ) : null}
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-1">
-                <span className={labelClass}>Max Devices</span>
-                <input
-                  name="maxDevices"
-                  type="number"
-                  min="1"
-                  max="10"
-                  defaultValue={2}
-                  className={inputClass}
-                  required
-                />
-              </label>
+              {createSecurityCodeEnabled ? (
+                <label className="grid gap-1">
+                  <span className={labelClass}>Max Authorized Devices</span>
+                  <input
+                    name="maxDevices"
+                    type="number"
+                    min="1"
+                    max="10"
+                    defaultValue={2}
+                    className={inputClass}
+                    required
+                  />
+                </label>
+              ) : (
+                <input type="hidden" name="maxDevices" value="2" />
+              )}
 
               <label className="grid gap-1">
                 <span className={labelClass}>Expected Checkout</span>
@@ -1795,8 +2151,16 @@ function handleResetPasscode(guestStayId: string) {
               disabled={isPending}
               className="mt-2 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
             >
-              <KeyRound className="size-4" />
-              {isPending ? 'Creating Stay...' : 'Create Stay & Generate Passcode'}
+              {createSecurityCodeEnabled ? (
+                <KeyRound className="size-4" />
+              ) : (
+                <ShieldCheck className="size-4" />
+              )}
+              {isPending
+                ? 'Creating Stay...'
+                : createSecurityCodeEnabled
+                  ? 'Create Stay & Generate Passcode'
+                  : 'Create Stay with Direct NFC Access'}
             </button>
           </form>
         </Modal>
@@ -1893,55 +2257,82 @@ function handleResetPasscode(guestStayId: string) {
                   viewStay.roomName ? ` · ${viewStay.roomName}` : ''
                 }`}
               />
-              <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-                <div className="flex items-center gap-2 text-[#b88938]">
+              {viewStay.nfcRoomPasscodeEnabled ? (
+                <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+                  <div className="flex items-center gap-2 text-[#b88938]">
                     <KeyRound className="size-5" />
                     <p className="text-xs font-black uppercase tracking-wide">
-                    Passcode
+                      Room Passcode
                     </p>
-                </div>
+                  </div>
 
-                {revealedPasscodes[viewStay.id] ? (
+                  {revealedPasscodes[viewStay.id] ? (
                     <p className="mt-2 font-mono text-3xl font-black tracking-[0.18em] text-[#11100b]">
-                    {revealedPasscodes[viewStay.id]}
+                      {revealedPasscodes[viewStay.id]}
                     </p>
-                ) : (
+                  ) : (
                     <p className="mt-2 text-sm font-black text-[#11100b]">
-                    Hidden for security
+                      Hidden for security
                     </p>
-                )}
+                  )}
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <button
-                    type="button"
-                    disabled={passcodeLoadingId === viewStay.id}
-                    onClick={() => handleViewPasscode(viewStay.id)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#11100b] px-3 text-xs font-black text-white disabled:opacity-60"
+                      type="button"
+                      disabled={passcodeLoadingId === viewStay.id}
+                      onClick={() => handleViewPasscode(viewStay.id)}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#11100b] px-3 text-xs font-black text-white disabled:opacity-60"
                     >
-                    <Eye className="size-3.5" />
-                    {passcodeLoadingId === viewStay.id ? 'Loading...' : 'View'}
+                      <Eye className="size-3.5" />
+                      {passcodeLoadingId === viewStay.id ? 'Loading...' : 'View'}
                     </button>
 
                     {viewStay.status === 'ACTIVE' ? (
-                    <button
+                      <button
                         type="button"
                         disabled={passcodeLoadingId === viewStay.id}
                         onClick={() => handleResetPasscode(viewStay.id)}
                         className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#fff8e7] px-3 text-xs font-black text-[#9a6b18] disabled:opacity-60"
-                    >
+                      >
                         <RefreshCw className="size-3.5" />
                         Reset
-                    </button>
+                      </button>
                     ) : null}
-                </div>
+                  </div>
 
-                <p className="mt-2 text-[11px] font-semibold leading-4 text-neutral-500">
+                  <p className="mt-2 text-[11px] font-semibold leading-4 text-neutral-500">
                     Resetting changes the passcode for new device authorization.
-                </p>
+                  </p>
                 </div>
+              ) : (
+                <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <ShieldCheck className="size-5" />
+                    <p className="text-xs font-black uppercase tracking-wide">
+                      Direct NFC Access
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm font-black text-emerald-900">
+                    Security code disabled
+                  </p>
+                  <p className="mt-2 text-[11px] font-semibold leading-4 text-emerald-800/75">
+                    Guests can scan the assigned room NFC tag without entering a
+                    room passcode.
+                  </p>
+                </div>
+              )}
+
               <InfoCard
-                label="Devices"
-                value={`${viewStay.activeDevices} / ${viewStay.maxDevices} active`}
+                label={
+                  viewStay.nfcRoomPasscodeEnabled
+                    ? 'Authorized Devices'
+                    : 'NFC Access'
+                }
+                value={
+                  viewStay.nfcRoomPasscodeEnabled
+                    ? `${viewStay.activeDevices} / ${viewStay.maxDevices} active`
+                    : 'No device limit'
+                }
               />
               <InfoCard
                 label="Orders / Requests"
@@ -2005,7 +2396,7 @@ function handleResetPasscode(guestStayId: string) {
           description="Review food orders, service charges, payment option, and final balance before checking out the guest."
           onClose={() => setCheckoutStay(null)}
         >
-          <form onSubmit={handleCheckoutSubmit} className="grid gap-5">
+          <form ref={checkoutFormRef} onSubmit={handleCheckoutSubmit} className="grid gap-5">
             <input type="hidden" name="guestStayId" value={checkoutStay.id} />
 
             <div className="overflow-hidden rounded-[1.75rem] border border-[#c99c38]/25 bg-[#11100b] text-white">
@@ -2051,6 +2442,70 @@ function handleResetPasscode(guestStayId: string) {
                 value={money(checkoutPreviewTotals.subtotalCents)}
               />
             </div>
+
+
+            <section className="rounded-[1.5rem] border border-neutral-200 bg-white p-3 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3 px-2 pt-1">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9a6b18]">
+                    Settlement Path
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-500">
+                    Choose how the final guest balance will be collected.
+                  </p>
+                </div>
+                <ShieldCheck className="size-5 text-[#b88938]" />
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutSettlementMode('FRONT_DESK')}
+                  className={
+                    checkoutSettlementMode === 'FRONT_DESK'
+                      ? 'flex items-center gap-3 rounded-2xl border border-[#11100b] bg-[#11100b] p-4 text-left text-white shadow-lg'
+                      : 'flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100'
+                  }
+                >
+                  <span className={checkoutSettlementMode === 'FRONT_DESK' ? 'grid size-11 place-items-center rounded-2xl bg-white/10 text-[#f1c66a]' : 'grid size-11 place-items-center rounded-2xl bg-white text-[#b88938]'}>
+                    <Banknote className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-black">Front Desk Settlement</span>
+                    <span className={checkoutSettlementMode === 'FRONT_DESK' ? 'mt-1 block text-xs font-semibold text-white/55' : 'mt-1 block text-xs font-semibold text-neutral-500'}>
+                      Cash, card, wallet, split payment, or pay later.
+                    </span>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!payMongoEnabled || checkoutPreviewTotals.subtotalCents <= 0}
+                  onClick={() => setCheckoutSettlementMode('PAYMONGO')}
+                  className={
+                    checkoutSettlementMode === 'PAYMONGO'
+                      ? 'flex items-center gap-3 rounded-2xl border border-[#d6a738] bg-[#fff7dd] p-4 text-left text-[#11100b] shadow-[0_12px_32px_rgba(214,167,56,0.2)]'
+                      : 'flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45'
+                  }
+                >
+                  <span className="grid size-11 place-items-center rounded-2xl bg-[#d6a738] text-black">
+                    <CreditCard className="size-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-black">PayMongo Online</span>
+                    <span className="mt-1 block text-xs font-semibold text-neutral-500">
+                      Secure card, GCash, and QR Ph hosted checkout.
+                    </span>
+                  </span>
+                </button>
+              </div>
+
+              {!payMongoEnabled ? (
+                <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+                  PayMongo is unavailable until PAYMONGO_SECRET_KEY and APP_URL are configured.
+                </p>
+              ) : null}
+            </section>
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="grid gap-4">
@@ -2227,6 +2682,7 @@ function handleResetPasscode(guestStayId: string) {
                   </label>
                 </section>
 
+                {checkoutSettlementMode === 'FRONT_DESK' ? (
                 <section className="rounded-[1.5rem] border border-[#c99c38]/25 bg-[#fffaf0] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -2374,7 +2830,51 @@ function handleResetPasscode(guestStayId: string) {
                     </div>
                   </div>
                 </section>
+                ) : (
+                <section className="overflow-hidden rounded-[1.5rem] border border-[#d6a738]/35 bg-[linear-gradient(145deg,#fff9e8,#fff3c5)] shadow-[0_18px_45px_rgba(214,167,56,0.16)]">
+                  <div className="bg-[#11100b] p-5 text-white">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                          Secure Online Settlement
+                        </p>
+                        <h4 className="mt-2 text-xl font-black">Pay with PayMongo</h4>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-white/55">
+                          The guest completes payment on PayMongo's hosted page. Checkout is finalized only after the signed webhook confirms payment.
+                        </p>
+                      </div>
+                      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d6a738] text-black">
+                        <ShieldCheck className="size-5" />
+                      </span>
+                    </div>
+                  </div>
 
+                  <div className="p-5">
+                    <div className="flex items-end justify-between gap-4 rounded-2xl bg-white p-4 shadow-sm">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-neutral-500">Amount to collect</p>
+                        <p className="mt-1 text-xs font-semibold text-neutral-500">Full adjusted guest balance</p>
+                      </div>
+                      <p className="text-3xl font-black text-[#11100b]">{money(checkoutPreviewTotals.subtotalCents)}</p>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      <div className="rounded-xl bg-white p-3 text-center text-xs font-black text-neutral-700">Card</div>
+                      <div className="rounded-xl bg-white p-3 text-center text-xs font-black text-neutral-700">GCash</div>
+                      <div className="rounded-xl bg-white p-3 text-center text-xs font-black text-neutral-700">QR Ph</div>
+                    </div>
+
+                    <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#d6a738]/25 bg-white/70 p-4">
+                      <Smartphone className="mt-0.5 size-5 shrink-0 text-[#9a6b18]" />
+                      <p className="text-xs font-semibold leading-5 text-neutral-600">
+                        After payment, CloudView verifies the PayMongo webhook, records the folio payment, marks eligible food and service charges paid, revokes guest devices, and completes checkout.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+                )}
+
+                {checkoutSettlementMode === 'FRONT_DESK' ? (
                 <button
                   type="submit"
                   disabled={isPending}
@@ -2383,10 +2883,35 @@ function handleResetPasscode(guestStayId: string) {
                   <Banknote className="size-4" />
                   {isPending ? 'Completing Checkout...' : 'Complete Checkout'}
                 </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={
+                      isPending ||
+                      !payMongoEnabled ||
+                      checkoutPreviewTotals.subtotalCents <= 0
+                    }
+                    onClick={handlePayMongoCheckout}
+                    className="inline-flex h-14 min-h-14 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#d9ad45,#bd8219)] px-5 py-4 text-sm font-black text-black shadow-[0_16px_38px_rgba(214,167,56,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Preparing PayMongo...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="size-4" />
+                        Continue to PayMongo
+                      </>
+                    )}
+                  </button>
+                )}
 
                 <p className="text-xs font-semibold leading-5 text-neutral-500">
-                  Completing checkout revokes authorized stay devices and ends
-                  active NFC guest sessions for this room stay.
+                  {checkoutSettlementMode === 'FRONT_DESK'
+                    ? 'Completing checkout records the settlement, revokes authorized stay devices, and ends active NFC guest sessions.'
+                    : 'The stay remains active until PayMongo confirms payment and CloudView finishes the folio automatically.'}
                 </p>
               </aside>
             </div>
@@ -2463,18 +2988,26 @@ function handleResetPasscode(guestStayId: string) {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-1">
-                <span className={labelClass}>Max Devices</span>
+              {editStay.nfcRoomPasscodeEnabled ? (
+                <label className="grid gap-1">
+                  <span className={labelClass}>Max Authorized Devices</span>
+                  <input
+                    name="maxDevices"
+                    type="number"
+                    min="1"
+                    max="10"
+                    defaultValue={editStay.maxDevices}
+                    className={inputClass}
+                    required
+                  />
+                </label>
+              ) : (
                 <input
+                  type="hidden"
                   name="maxDevices"
-                  type="number"
-                  min="1"
-                  max="10"
-                  defaultValue={editStay.maxDevices}
-                  className={inputClass}
-                  required
+                  value={editStay.maxDevices}
                 />
-              </label>
+              )}
 
               <label className="grid gap-1">
                 <span className={labelClass}>Expected Checkout</span>

@@ -276,6 +276,15 @@ export async function GET(
       status: true,
       scanSecret: true,
       deletedAt: true,
+      hotel: {
+        select: {
+          settings: {
+            select: {
+              nfcRoomPasscodeEnabled: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -295,11 +304,17 @@ export async function GET(
     );
   }
 
+  const nfcRoomPasscodeEnabled =
+    tag.hotel.settings?.nfcRoomPasscodeEnabled ?? true;
+
   const policy = getNfcSessionPolicy({
     tagType: tag.tagType,
     roomId: tag.roomId,
     locationId: tag.locationId,
   });
+
+  const requireStrictBrowserSession =
+    policy.requireStrictBrowserSession && nfcRoomPasscodeEnabled;
 
   const activeGuestStay =
     policy.mode === 'PRIVATE_ROOM' && tag.roomId
@@ -329,24 +344,33 @@ export async function GET(
     }
 
     if (!activeGuestStay) {
+      if (nfcRoomPasscodeEnabled) {
+        return NextResponse.redirect(
+          publicUrl(
+            `/n/${tag.code}/verify?k=${encodeURIComponent(
+              inputSecret
+            )}&error=no_active_stay`
+          )
+        );
+      }
+
       return NextResponse.redirect(
-        publicUrl(
-          `/n/${tag.code}/verify?k=${encodeURIComponent(
-            inputSecret
-          )}&error=no_active_stay`
-        )
+        publicUrl('/nfc-access-denied?reason=no-active-stay')
       );
     }
 
-    const authorizedDevice = await getAuthorizedGuestStayDeviceFromRequest({
-      request,
-      guestStayId: activeGuestStay.id,
-    });
+    if (nfcRoomPasscodeEnabled) {
+      const authorizedDevice =
+        await getAuthorizedGuestStayDeviceFromRequest({
+          request,
+          guestStayId: activeGuestStay.id,
+        });
 
-    if (!authorizedDevice) {
-      return NextResponse.redirect(
-        publicUrl(`/n/${tag.code}/verify?k=${encodeURIComponent(inputSecret)}`)
-      );
+      if (!authorizedDevice) {
+        return NextResponse.redirect(
+          publicUrl(`/n/${tag.code}/verify?k=${encodeURIComponent(inputSecret)}`)
+        );
+      }
     }
   }
 
@@ -386,13 +410,15 @@ export async function GET(
 
     /**
      * Important:
-     * For private ROOM tags, revoke existing access sessions because the room
-     * panel is controlled and anti-sharing is stricter.
+     * For private ROOM tags with the security code enabled, revoke existing
+     * access sessions because the room panel is controlled and anti-sharing
+     * is stricter. When the hotel disables the code, scans do not revoke
+     * another guest device solely because it did not complete passcode auth.
      *
      * For public POOL/LOBBY/RESTAURANT/etc. tags, DO NOT revoke sessions.
      * Otherwise, every new tap would kick out previous guests.
      */
-    if (policy.requireStrictBrowserSession) {
+    if (requireStrictBrowserSession) {
       await tx.nfcAccessSession.updateMany({
         where: {
           tagId: tag.id,
@@ -413,14 +439,14 @@ export async function GET(
     });
 
     /**
-     * Private room tags:
+     * Private room tags with security enabled:
      * Close old no-pending sessions so the room panel stays clean.
      *
      * Public location tags:
      * Do not close other active sessions on every tap.
      * Multiple devices must remain active independently.
      */
-    if (policy.requireStrictBrowserSession) {
+    if (requireStrictBrowserSession) {
       await tx.nfcGuestSession.updateMany({
         where: {
           tagId: tag.id,

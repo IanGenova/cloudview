@@ -1,9 +1,9 @@
 import { type ReactNode } from 'react';
+import { KeyRound, ShieldCheck } from 'lucide-react';
 import { DashboardModule } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
@@ -56,7 +56,15 @@ function SectionTitle({
   );
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    hotelId?: string;
+  }>;
+}) {
+  const params = await searchParams;
+
   const user = await requireDashboardPermission(
     DashboardModule.HOTEL_SETTINGS,
     'canView'
@@ -68,7 +76,11 @@ export default async function SettingsPage() {
     orderBy: { name: 'asc' }
   });
 
-  const hotel = hotels[0];
+  const hotel =
+    user.role === 'SUPER_ADMIN'
+      ? hotels.find((item) => item.id === params?.hotelId) ?? hotels[0]
+      : hotels[0];
+
   const initialSettingsValues = {
   hotelId: hotel?.id ?? '',
   hotelName: hotel?.name ?? '',
@@ -89,15 +101,47 @@ export default async function SettingsPage() {
   poolRules: hotel?.settings?.poolRules ?? '',
   policies: hotel?.settings?.policies ?? '',
   guideText: hotel?.settings?.guideText ?? '',
+  nfcRoomPasscodeEnabled:
+    (hotel?.settings?.nfcRoomPasscodeEnabled ?? true) ? 'on' : '',
 };
 
   return (
     <div>
       <PageHeader
         title="Settings"
-        description="Branding, operating information, taxes, service charge, Wi-Fi, policies, and guide content."
+        description="Branding, NFC access security, operating information, billing, Wi-Fi, policies, and guide content."
       />
 
+      {user.role === 'SUPER_ADMIN' && hotels.length > 1 ? (
+        <form
+          method="get"
+          className="mb-6 flex flex-col gap-3 rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end dark:border-neutral-800 dark:bg-neutral-900"
+        >
+          <label className="grid flex-1 gap-2">
+            <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              Hotel / Property
+            </span>
+            <select
+              name="hotelId"
+              defaultValue={hotel?.id}
+              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
+            >
+              {hotels.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            className="h-12 rounded-2xl bg-black px-5 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black"
+          >
+            Load Hotel Settings
+          </button>
+        </form>
+      ) : null}
 
       <section className="mb-6 rounded-[2rem] border border-[var(--cv-border)] bg-[var(--cv-card)] p-5 shadow-sm">
         <ThemePaletteSelector />
@@ -121,17 +165,7 @@ export default async function SettingsPage() {
               description="Basic hotel branding shown on the guest portal and dashboard."
             />
 
-            {user.role === 'SUPER_ADMIN' ? (
-              <FormField label="Hotel / Property" helper="Select which hotel account you want to update.">
-                <Select name="hotelId" required defaultValue={hotel?.id}>
-                  {hotels.map((h) => (
-                    <option key={h.id} value={h.id}>{h.name}</option>
-                  ))}
-                </Select>
-              </FormField>
-            ) : (
-              <input type="hidden" name="hotelId" value={hotel?.id} />
-            )}
+            <input type="hidden" name="hotelId" value={hotel?.id ?? ''} />
 
             <FormField label="Hotel Display Name" helper="The name guests will see in the mobile guest portal.">
               <Input name="hotelName" defaultValue={hotel?.name} placeholder="Cloud View Demo Hotel" required />
@@ -223,6 +257,75 @@ export default async function SettingsPage() {
               title="Wi-Fi and Guest Access"
               description="Information shown in the hotel guide after guests tap the NFC panel."
             />
+
+            <div className="md:col-span-2 overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-start gap-4">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#fff4d6] text-[#9a6b18] dark:bg-gold/15 dark:text-gold">
+                    <ShieldCheck className="size-5" />
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-black text-neutral-950 dark:text-white">
+                        NFC Room Security Code
+                      </h3>
+
+                      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                        Room tags only
+                      </span>
+                    </div>
+
+                    <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-neutral-500 dark:text-neutral-400">
+                      When enabled, guests must enter the room passcode after
+                      scanning a private room NFC tag. When disabled, an active
+                      room stay can open the guest portal directly after the NFC
+                      scan.
+                    </p>
+
+                    <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                      <KeyRound className="mt-0.5 size-4 shrink-0" />
+                      The NFC tag scan secret remains required. This setting only
+                      controls the additional guest room passcode and device-limit
+                      authorization step.
+                    </div>
+                  </div>
+                </div>
+
+                <label className="relative flex shrink-0 cursor-pointer items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-950">
+                  <input
+                    name="nfcRoomPasscodeEnabled"
+                    type="checkbox"
+                    defaultChecked={
+                      hotel?.settings?.nfcRoomPasscodeEnabled ?? true
+                    }
+                    className="peer sr-only"
+                  />
+
+                  <span className="relative h-7 w-12 rounded-full bg-neutral-300 transition peer-checked:bg-emerald-500 peer-checked:[&>span]:translate-x-5 dark:bg-neutral-700">
+                    <span className="absolute left-1 top-1 size-5 rounded-full bg-white shadow transition-transform" />
+                  </span>
+
+                  <span className="hidden min-w-20 peer-checked:block">
+                    <span className="block text-sm font-black text-emerald-700 dark:text-emerald-300">
+                      Enabled
+                    </span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-neutral-400">
+                      Security code
+                    </span>
+                  </span>
+
+                  <span className="min-w-20 peer-checked:hidden">
+                    <span className="block text-sm font-black text-neutral-600 dark:text-neutral-300">
+                      Disabled
+                    </span>
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-neutral-400">
+                      Security code
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
 
             <FormField label="Wi-Fi Network Name" helper="The Wi-Fi name/SSID guests should connect to.">
               <Input name="wifiName" defaultValue={hotel?.settings?.wifiName ?? ''} placeholder="CloudView-Guest" />

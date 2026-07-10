@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Lock } from 'lucide-react';
-import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
+import { Lock, ShieldCheck, Sparkles } from 'lucide-react';
+import {
+  GuestBottomNav,
+  GuestShell,
+} from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
 import { GuestServiceOrderForm } from './GuestServiceOrderForm';
@@ -45,37 +48,42 @@ export default async function ServicePage({
           backHref={`/t/${tagCode}`}
           variant="dark"
         >
-          <div className="rounded-[2rem] border border-gold/20 bg-white/5 p-6 text-center shadow-2xl">
-            <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-gold/15 text-gold">
-              <Lock className="size-8" />
+          <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_38%),linear-gradient(145deg,#161512,#0b0b0a)] p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.3)]">
+            <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-gold/20 bg-gold/10 text-gold">
+              <Lock className="size-7" />
             </div>
 
-            <h2 className="mt-5 text-2xl font-black text-white">
-              Service requests are disabled
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/55">
+              <ShieldCheck className="size-3.5" />
+              Guest access notice
+            </div>
+
+            <h2 className="mt-5 font-serif text-3xl font-normal tracking-wide text-white">
+              Service requests are unavailable
             </h2>
 
-            <p className="mt-3 text-sm leading-6 text-white/55">
-              This NFC panel is currently inactive. You can still view the guest
-              portal, but service requests and room add-ons cannot be submitted
-              from this NFC tag.
+            <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-6 text-white/50">
+              This NFC panel is currently inactive. You may still browse the
+              hotel guide or contact the front desk for personal assistance.
             </p>
 
-            <div className="mt-5 grid gap-3">
+            <div className="mt-6 grid gap-3">
               <Link
                 href={`/t/${tagCode}/guide`}
-                className="rounded-2xl bg-gold px-5 py-3 text-sm font-black text-black"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-sm font-black text-black"
               >
+                <Sparkles className="size-4" />
                 View Hotel Guide
               </Link>
 
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-black text-white"
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] px-5 text-sm font-black text-white"
               >
                 Contact Front Desk
               </Link>
             </div>
-          </div>
+          </section>
         </GuestShell>
 
         <GuestBottomNav tagCode={tagCode} active="services" dark />
@@ -115,6 +123,7 @@ export default async function ServicePage({
 
   const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
   const defaultGuestName = guestIdentity.guestName || '';
+
   const guestServices = services.map((service) => ({
     id: service.id,
     code: service.code,
@@ -140,18 +149,7 @@ export default async function ServicePage({
         <GuestServiceOrderForm
           tagCode={tagCode}
           roomLabel={roomLabel}
-          services={services.map((service) => ({
-                id: service.id,
-                code: service.code,
-                name: service.name,
-                category: service.category,
-                description: service.description ?? '',
-                iconKey: service.iconKey,
-                billingMode: service.billingMode,
-                unitPrice: Number(service.unitPrice),
-                unitLabel: service.unitLabel ?? '',
-                sortOrder: service.sortOrder,
-              }))}
+          services={guestServices}
           defaultGuestName={defaultGuestName}
           error={error}
           success={success}

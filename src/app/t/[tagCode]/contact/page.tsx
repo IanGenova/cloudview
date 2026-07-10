@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
+  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   ChevronRight,
@@ -12,15 +13,16 @@ import {
   Mail,
   MessageCircle,
   Phone,
-  ReceiptText,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
-  Star,
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
-import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
+import {
+  GuestBottomNav,
+  GuestShell,
+} from '@/components/guest/GuestShell';
 import { db } from '@/lib/db';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { resolveGuestMemberIdForCurrentNfcSession } from '@/lib/nfc-rewards';
@@ -37,18 +39,18 @@ function getGuestGreeting() {
   );
 
   if (manilaHour >= 5 && manilaHour < 12) {
-    return 'Good Morning';
+    return 'Good morning';
   }
 
   if (manilaHour >= 12 && manilaHour < 18) {
-    return 'Good Afternoon';
+    return 'Good afternoon';
   }
 
   if (manilaHour >= 18 && manilaHour < 24) {
-    return 'Good Evening';
+    return 'Good evening';
   }
 
-  return 'Good Night';
+  return 'Good night';
 }
 
 function pointLabel(points: number) {
@@ -109,33 +111,7 @@ function SmartLink({
   );
 }
 
-function LuxuryHotelMark({ hotelName }: { hotelName: string }) {
-  return (
-    <div className="flex flex-col items-center text-center">
-      <div className="relative">
-        <div className="absolute inset-0 rounded-[2rem] bg-gold/30 blur-2xl" />
-
-        <div className="relative grid size-20 place-items-center rounded-[2rem] border border-gold/50 bg-[linear-gradient(145deg,rgba(255,255,255,0.18),rgba(255,255,255,0.04))] text-2xl font-serif font-medium tracking-wide text-gold shadow-[0_22px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-          {getHotelInitials(hotelName)}
-        </div>
-
-        <span className="absolute -right-2 -top-2 grid size-8 place-items-center rounded-full bg-gold text-black shadow-xl">
-          <Crown className="size-4" />
-        </span>
-      </div>
-
-      <p className="mt-5 max-w-[320px] text-center text-sm font-serif uppercase leading-5 tracking-[0.25em] text-white drop-shadow-[0_6px_24px_rgba(0,0,0,0.9)]">
-        {hotelName}
-      </p>
-
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-gold/80">
-        Private Guest Profile
-      </p>
-    </div>
-  );
-}
-
-function LuxuryInfoPill({
+function ProfileMeta({
   icon: Icon,
   label,
   value,
@@ -145,22 +121,18 @@ function LuxuryInfoPill({
   value: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.07] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-      <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
-          <Icon className="size-5" />
-        </span>
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/15 text-gold">
+        <Icon className="size-4.5" />
+      </span>
 
-        <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-            {label}
-          </p>
-
-          {/* Replaced truncate with line-clamp-2 to prevent aggressive clipping */}
-          <p className="mt-1 line-clamp-2 text-sm font-serif font-medium leading-tight tracking-wide text-white">
-            {value}
-          </p>
-        </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
+          {label}
+        </p>
+        <p className="mt-1 line-clamp-2 font-serif text-sm font-medium leading-tight tracking-wide text-white">
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -181,7 +153,8 @@ export default async function ContactPage({
     notFound();
   }
 
-  const guestMemberId = await resolveGuestMemberIdForCurrentNfcSession(tagCode);
+  const guestMemberId =
+    await resolveGuestMemberIdForCurrentNfcSession(tagCode);
 
   const guestMember = guestMemberId
     ? await db.guestMember.findFirst({
@@ -206,7 +179,6 @@ export default async function ContactPage({
     : null;
 
   const greeting = getGuestGreeting();
-
   const phone = tag.hotel.settings?.contactPhone;
   const email = tag.hotel.settings?.contactEmail;
 
@@ -231,48 +203,78 @@ export default async function ContactPage({
         variant="dark"
         showTopBar={false}
       >
-        <div className="-mx-5 -mt-4 min-h-screen overflow-hidden bg-[#030303] px-5 pb-32 pt-8 text-white">
-          <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(214,167,56,0.24),_transparent_32%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.08),transparent_22%),linear-gradient(180deg,#050505,#080806_42%,#030303)]" />
+        <div className="-mx-5 -mt-4 min-h-screen overflow-hidden bg-[#030303] px-5 pb-36 pt-4 text-white">
+          <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.18),transparent_30%),linear-gradient(180deg,#060604,#030303_58%)]" />
 
           <div className="relative z-10">
-            <section className="relative overflow-hidden rounded-[2.6rem] border border-gold/25 bg-[#0b0905] shadow-[0_28px_80px_rgba(0,0,0,0.55)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(214,167,56,0.28),transparent_42%)]" />
-              <div className="absolute -right-20 -top-20 size-64 rounded-full bg-gold/20 blur-3xl" />
-              <div className="absolute -bottom-28 left-6 size-72 rounded-full bg-white/5 blur-3xl" />
+            <header className="mb-5 grid grid-cols-[44px_1fr_44px] items-center">
+              <Link
+                href={`/t/${tagCode}`}
+                className="grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/10 hover:text-white"
+                aria-label="Back to guest portal"
+              >
+                <ArrowLeft className="size-5" />
+              </Link>
 
-              <div className="relative z-10 p-6">
-                <LuxuryHotelMark hotelName={tag.hotel.name} />
+              <div className="min-w-0 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+                  Private guest profile
+                </p>
+                <h1 className="mt-1 truncate font-serif text-xl font-normal tracking-wide text-white">
+                  My Stay
+                </h1>
+              </div>
 
-                <div className="mt-10 rounded-[2.25rem] border border-white/10 bg-black/35 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-                  <p className="inline-flex items-center gap-2 rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-black">
-                    <Sparkles className="size-3.5" />
-                    {greeting}
-                  </p>
+              <div className="grid size-11 place-items-center rounded-full border border-gold/20 bg-gold/10 text-gold">
+                <UserRound className="size-5" />
+              </div>
+            </header>
 
-                  {/* Added break-words, text-balance, and scaled font dynamically. Lowercased to force proper capitalize. */}
-                  <h1 className="mt-4 break-words font-serif text-3xl font-light capitalize leading-[1.1] tracking-wide text-white text-balance drop-shadow-[0_8px_30px_rgba(0,0,0,0.9)] sm:text-4xl">
-                    {guestDisplayName.toLowerCase()}
-                  </h1>
+            <section className="relative overflow-hidden rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.28),transparent_38%),linear-gradient(145deg,#17140d,#080807)] p-5 shadow-[0_28px_80px_rgba(0,0,0,0.48)]">
+              <div className="absolute -right-16 -top-20 size-56 rounded-full bg-gold/15 blur-3xl" />
+              <div className="absolute -bottom-24 -left-16 size-56 rounded-full bg-white/[0.04] blur-3xl" />
 
-                  <p className="mt-4 text-sm font-medium leading-7 text-white/70">
-                    Welcome to your private guest profile. Manage your stay,
-                    rewards, orders, requests, and front desk support in one
-                    elegant space.
-                  </p>
-
-                  <div className="mt-5 grid grid-cols-2 gap-3">
-                    <LuxuryInfoPill
-                      icon={KeyRound}
-                      label="Location"
-                      value={location}
-                    />
-
-                    <LuxuryInfoPill
-                      icon={BadgeCheck}
-                      label="Access"
-                      value="Active Guest"
-                    />
+              <div className="relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="relative shrink-0">
+                    <div className="absolute inset-0 rounded-[1.6rem] bg-gold/30 blur-xl" />
+                    <div className="relative grid size-16 place-items-center rounded-[1.6rem] border border-gold/45 bg-white/[0.08] font-serif text-xl font-medium tracking-wide text-gold backdrop-blur">
+                      {getHotelInitials(tag.hotel.name)}
+                    </div>
+                    <span className="absolute -right-1.5 -top-1.5 grid size-7 place-items-center rounded-full bg-gold text-black shadow-lg">
+                      <Crown className="size-3.5" />
+                    </span>
                   </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-gold">
+                      {tag.hotel.name}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white/45">
+                      {greeting}
+                    </p>
+                    <h2 className="mt-1 line-clamp-2 font-serif text-[1.75rem] font-normal leading-[1.05] tracking-wide text-white">
+                      {guestDisplayName}
+                    </h2>
+                  </div>
+                </div>
+
+                <p className="mt-5 text-sm font-medium leading-6 text-white/55">
+                  Everything for your stay, rewards, requests, and hotel
+                  assistance—organized in one refined space.
+                </p>
+
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <ProfileMeta
+                    icon={KeyRound}
+                    label="Stay location"
+                    value={location}
+                  />
+                  <ProfileMeta
+                    icon={BadgeCheck}
+                    label="Guest access"
+                    value="Active"
+                  />
                 </div>
               </div>
             </section>
@@ -287,138 +289,69 @@ export default async function ContactPage({
             />
 
             <section className="mt-7">
-              <div className="mb-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-                  Personal Concierge
-                </p>
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+                    Personal concierge
+                  </p>
+                  <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
+                    Your stay, simplified
+                  </h2>
+                </div>
 
-                <h2 className="mt-2 font-serif text-3xl font-normal text-white">
-                  Your stay, at a glance
-                </h2>
-
-                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
-                  Fast access to your orders, requests, rewards, and guest
-                  assistance.
-                </p>
+                <Sparkles className="size-5 text-gold" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <ProfileActionCard
+              <div className="space-y-3">
+                <ProfileActionRow
                   href={`/t/${tagCode}/orders`}
                   icon={ShoppingBag}
                   title="My Orders"
-                  description="Food order history"
+                  description="Track food orders and view your order history."
                 />
 
-                <ProfileActionCard
+                <ProfileActionRow
                   href={`/t/${tagCode}/requests`}
                   icon={MessageCircle}
                   title="My Requests"
-                  description="Service request history"
+                  description="Follow service requests and room assistance."
                 />
 
-                <ProfileActionCard
+                <ProfileActionRow
                   href={`/t/${tagCode}/rewards`}
                   icon={Gift}
-                  title="Rewards"
+                  title="CloudView Rewards"
                   description={
                     guestMember
-                      ? `${pointLabel(availablePoints)} available`
-                      : 'Claim guest rewards'
+                      ? `${pointLabel(availablePoints)} ready to use`
+                      : 'Connect your guest profile and start earning'
                   }
-                  gold
+                  accent
                 />
 
-                <ProfileActionCard
+                <ProfileActionRow
                   href={`/t/${tagCode}/support`}
                   icon={HelpCircle}
-                  title="Help"
-                  description="Support and assistance"
+                  title="Help & Support"
+                  description="Find assistance for your stay."
                 />
               </div>
             </section>
 
-            <section className="mt-7 overflow-hidden rounded-[2.25rem] border border-white/10 bg-white/[0.07] shadow-[0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl">
-              <div className="border-b border-white/10 p-5">
-                <div className="flex items-start gap-4">
-                  <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
-                    <Phone className="size-6" />
-                  </span>
+            <FrontDeskCard phone={phone} email={email} />
 
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-gold">
-                      Front Desk
-                    </p>
-
-                    <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-                      Need assistance?
-                    </h2>
-
-                    <p className="mt-1 text-sm font-medium leading-6 text-white/60">
-                      Connect with the hotel team for guest support, requests,
-                      and urgent concerns.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2 p-4">
-                {phone ? (
-                  <ProfileLink
-                    href={`tel:${phone}`}
-                    icon={Phone}
-                    label={`Call ${phone}`}
-                    helper="Speak with the front desk"
-                  />
-                ) : null}
-
-                {email ? (
-                  <ProfileLink
-                    href={`mailto:${email}`}
-                    icon={Mail}
-                    label={`Email ${email}`}
-                    helper="Send a message to hotel staff"
-                  />
-                ) : null}
-
-                {!phone && !email ? (
-                  <div className="rounded-[1.5rem] border border-dashed border-white/10 p-6 text-center">
-                    <Hotel className="mx-auto size-9 text-gold" />
-                    <p className="mt-3 font-serif text-base font-medium tracking-wide text-white">
-                      Contact details are not available yet.
-                    </p>
-                    <p className="mt-1 text-xs font-medium text-white/50">
-                      Please approach the front desk for assistance.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="mt-7 rounded-[2.25rem] border border-gold/40 bg-[linear-gradient(145deg,#f6d77b,#d6a738,#9c6c18)] p-5 text-black shadow-[0_24px_70px_rgba(214,167,56,0.25)]">
-              <div className="flex items-start gap-4">
-                <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-black/10">
-                  <ShieldCheck className="size-7" />
+            <Link
+              href={`/t/${tagCode}`}
+              className="mt-6 flex min-h-14 items-center justify-between rounded-[1.5rem] border border-gold/25 bg-gold/10 px-5 text-sm font-black text-gold transition hover:bg-gold/15 active:scale-[0.99]"
+            >
+              <span className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-gold text-black">
+                  <ShieldCheck className="size-5" />
                 </span>
-
-                <div>
-                  <p className="font-serif text-2xl font-normal">One tap luxury access</p>
-
-                  <p className="mt-2 text-sm font-medium leading-6 text-black/75">
-                    Your orders, requests, rewards, and support options stay
-                    available anytime during your visit.
-                  </p>
-
-                  <Link
-                    href={`/t/${tagCode}`}
-                    className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
-                  >
-                    Back to Home
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </div>
-              </div>
-            </section>
+                Return to Guest Home
+              </span>
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
         </div>
       </GuestShell>
@@ -447,33 +380,26 @@ function RewardsProfileCard({
     return (
       <Link
         href={rewardsHref}
-        className="mt-7 block overflow-hidden rounded-[2.25rem] border border-gold/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.32)]"
+        className="group mt-5 block overflow-hidden rounded-[1.75rem] border border-gold/25 bg-[linear-gradient(145deg,rgba(214,167,56,0.14),rgba(255,255,255,0.035))] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.28)]"
       >
-        <div className="relative p-5">
-          <div className="absolute -right-12 -top-12 size-44 rounded-full bg-gold/20 blur-3xl" />
+        <div className="flex items-center gap-4">
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-black shadow-lg">
+            <Gift className="size-6" />
+          </span>
 
-          <div className="relative z-10 flex items-start gap-4">
-            <div className="grid size-16 shrink-0 place-items-center rounded-2xl bg-gold text-black shadow-xl">
-              <Gift className="size-7" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gold">
-                CloudView Rewards
-              </p>
-
-              <p className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-                Claim your guest rewards
-              </p>
-
-              <p className="mt-2 text-sm font-medium leading-6 text-white/60">
-                Add your name and contact details to start earning points from
-                NFC taps, completed requests, and eligible orders.
-              </p>
-            </div>
-
-            <ChevronRight className="mt-4 size-5 shrink-0 text-gold" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+              CloudView Rewards
+            </p>
+            <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
+              Start earning during your stay
+            </h2>
+            <p className="mt-1 text-xs font-medium leading-5 text-white/50">
+              Link your guest profile to collect points from eligible activity.
+            </p>
           </div>
+
+          <ChevronRight className="size-5 shrink-0 text-gold transition group-hover:translate-x-1" />
         </div>
       </Link>
     );
@@ -482,163 +408,203 @@ function RewardsProfileCard({
   return (
     <Link
       href={rewardsHref}
-      className="mt-7 block overflow-hidden rounded-[2.35rem] border border-gold/30 bg-[#0b0905] text-white shadow-[0_28px_80px_rgba(0,0,0,0.48)]"
+      className="group mt-5 block overflow-hidden rounded-[1.9rem] border border-gold/30 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.32),transparent_42%),#0c0a06] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.38)]"
     >
-      <div className="relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(214,167,56,0.35),transparent_40%)]" />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+            <Sparkles className="size-3.5" />
+            CloudView Rewards
+          </p>
 
-        <div className="relative z-10 p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gold">
-                <Sparkles className="size-4" />
-                CloudView Rewards
-              </p>
+          <p className="mt-3 text-xs font-semibold text-white/45">
+            Available points
+          </p>
 
-              <p className="mt-3 text-sm font-medium tracking-wide text-white/60">
-                Available Points
-              </p>
-
-              {/* Added sm:text-6xl for dynamic sizing on huge point counts */}
-              <p className="mt-1 font-serif text-5xl font-light leading-none text-white sm:text-6xl">
-                {availablePoints}
-              </p>
-            </div>
-
-            <div className="grid size-18 place-items-center rounded-[1.5rem] bg-gold text-black shadow-xl">
-              <Gift className="size-7" />
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-black/35 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-                Pending
-              </p>
-              <p className="mt-1 font-serif text-base font-medium text-white">
-                {pointLabel(pendingPoints)}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-black/35 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-                Earned
-              </p>
-              <p className="mt-1 font-serif text-base font-medium text-white">
-                {pointLabel(lifetimeEarnedPoints)}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-black/35 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-                Redeemed
-              </p>
-              <p className="mt-1 font-serif text-base font-medium text-white">
-                {pointLabel(lifetimeRedeemedPoints)}
-              </p>
-            </div>
+          <div className="mt-1 flex items-end gap-2">
+            <p className="font-serif text-5xl font-light leading-none text-white">
+              {availablePoints}
+            </p>
+            <p className="pb-1 text-xs font-black uppercase tracking-widest text-gold">
+              points
+            </p>
           </div>
         </div>
+
+        <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-black shadow-xl">
+          <Gift className="size-6" />
+        </span>
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-2">
+        <RewardMetric label="Pending" value={pendingPoints} />
+        <RewardMetric label="Earned" value={lifetimeEarnedPoints} />
+        <RewardMetric label="Redeemed" value={lifetimeRedeemedPoints} />
+      </div>
+
+      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-xs font-black text-gold">
+        View rewards
+        <ChevronRight className="size-4 transition group-hover:translate-x-1" />
       </div>
     </Link>
   );
 }
 
-function ProfileActionCard({
+function RewardMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl bg-black/30 p-3">
+      <p className="truncate text-[8px] font-black uppercase tracking-[0.14em] text-white/35">
+        {label}
+      </p>
+      <p className="mt-1 truncate font-serif text-base font-medium text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ProfileActionRow({
   href,
   icon: Icon,
   title,
   description,
-  gold = false,
+  accent = false,
 }: {
   href: string;
   icon: LucideIcon;
   title: string;
   description: string;
-  gold?: boolean;
+  accent?: boolean;
 }) {
   return (
     <SmartLink
       href={href}
       className={
-        gold
-          ? 'group rounded-[1.75rem] bg-[linear-gradient(145deg,#f6d77b,#d6a738,#9c6c18)] p-4 text-black shadow-[0_18px_44px_rgba(214,167,56,0.24)] active:scale-[0.99]'
-          : 'group rounded-[1.75rem] border border-white/10 bg-white/[0.07] p-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]'
+        accent
+          ? 'group grid grid-cols-[48px_1fr_28px] items-center gap-3 rounded-[1.5rem] border border-gold/35 bg-[linear-gradient(135deg,rgba(214,167,56,0.22),rgba(214,167,56,0.08))] p-4 shadow-[0_14px_34px_rgba(214,167,56,0.12)] transition hover:bg-gold/20 active:scale-[0.99]'
+          : 'group grid grid-cols-[48px_1fr_28px] items-center gap-3 rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-4 transition hover:border-gold/30 hover:bg-white/[0.07] active:scale-[0.99]'
       }
     >
-      <div className="flex items-start justify-between gap-3">
-        <span
-          className={
-            gold
-              ? 'grid size-12 place-items-center rounded-2xl bg-black/10 text-black'
-              : 'grid size-12 place-items-center rounded-2xl bg-gold/20 text-gold'
-          }
-        >
-          <Icon className="size-6" />
-        </span>
-
-        <ArrowRight
-          className={
-            gold
-              ? 'size-4 text-black/45 transition group-hover:translate-x-1'
-              : 'size-4 text-gold transition group-hover:translate-x-1'
-          }
-        />
-      </div>
-
-      <p
+      <span
         className={
-          gold
-            ? 'mt-4 font-serif text-[15px] font-medium tracking-wide text-black'
-            : 'mt-4 font-serif text-[15px] font-medium tracking-wide text-white'
+          accent
+            ? 'grid size-12 place-items-center rounded-2xl bg-gold text-black'
+            : 'grid size-12 place-items-center rounded-2xl bg-gold/12 text-gold'
         }
       >
-        {title}
-      </p>
-
-      <p
-        className={
-          gold
-            ? 'mt-1 line-clamp-2 text-xs font-medium leading-5 text-black/70'
-            : 'mt-1 line-clamp-2 text-xs font-medium leading-5 text-white/55'
-        }
-      >
-        {description}
-      </p>
-    </SmartLink>
-  );
-}
-
-function ProfileLink({
-  href,
-  icon: Icon,
-  label,
-  helper,
-}: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-  helper?: string;
-}) {
-  return (
-    <SmartLink
-      href={href}
-      className="grid grid-cols-[44px_1fr_24px] items-center gap-3 rounded-[1.5rem] border border-white/10 bg-black/25 px-3 py-3 text-sm text-white/85 transition hover:border-gold/50 hover:bg-gold/10"
-    >
-      <span className="grid size-11 place-items-center rounded-2xl bg-white/[0.07] text-gold">
         <Icon className="size-5" />
       </span>
 
       <span className="min-w-0">
-        <span className="block truncate font-serif text-[15px] font-medium tracking-wide">{label}</span>
-        {helper ? (
-          <span className="mt-0.5 block truncate text-xs font-medium text-white/50">
-            {helper}
-          </span>
-        ) : null}
+        <span className="block font-serif text-[17px] font-medium tracking-wide text-white">
+          {title}
+        </span>
+        <span className="mt-1 line-clamp-2 block text-xs font-medium leading-5 text-white/45">
+          {description}
+        </span>
       </span>
 
-      <ChevronRight className="size-5 text-white/35" />
+      <ChevronRight className="size-5 text-gold transition group-hover:translate-x-1" />
+    </SmartLink>
+  );
+}
+
+function FrontDeskCard({
+  phone,
+  email,
+}: {
+  phone?: string | null;
+  email?: string | null;
+}) {
+  return (
+    <section className="mt-7 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-[0_22px_60px_rgba(0,0,0,0.24)]">
+      <div className="flex items-start gap-4 border-b border-white/10 p-5">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
+          <Phone className="size-5" />
+        </span>
+
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+            Front desk
+          </p>
+          <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
+            Need personal assistance?
+          </h2>
+          <p className="mt-1 text-xs font-medium leading-5 text-white/45">
+            Contact the hotel team for support during your stay.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2 p-4">
+        {phone ? (
+          <ContactRow
+            href={`tel:${phone}`}
+            icon={Phone}
+            label="Call Front Desk"
+            value={phone}
+          />
+        ) : null}
+
+        {email ? (
+          <ContactRow
+            href={`mailto:${email}`}
+            icon={Mail}
+            label="Email Hotel"
+            value={email}
+          />
+        ) : null}
+
+        {!phone && !email ? (
+          <div className="rounded-[1.4rem] border border-dashed border-white/12 bg-black/20 p-5 text-center">
+            <Hotel className="mx-auto size-7 text-gold" />
+            <p className="mt-3 font-serif text-base font-medium tracking-wide text-white">
+              Contact details are not available yet
+            </p>
+            <p className="mt-1 text-xs font-medium leading-5 text-white/40">
+              Please approach the front desk for assistance.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function ContactRow({
+  href,
+  icon: Icon,
+  label,
+  value,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <SmartLink
+      href={href}
+      className="group grid grid-cols-[44px_1fr_24px] items-center gap-3 rounded-[1.35rem] border border-white/10 bg-black/25 p-3 transition hover:border-gold/30 hover:bg-gold/[0.07]"
+    >
+      <span className="grid size-11 place-items-center rounded-xl bg-white/[0.06] text-gold">
+        <Icon className="size-4.5" />
+      </span>
+
+      <span className="min-w-0">
+        <span className="block text-sm font-black text-white">{label}</span>
+        <span className="mt-0.5 block truncate text-xs font-medium text-white/40">
+          {value}
+        </span>
+      </span>
+
+      <ChevronRight className="size-4 text-white/30 transition group-hover:translate-x-1 group-hover:text-gold" />
     </SmartLink>
   );
 }

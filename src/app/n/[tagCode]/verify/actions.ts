@@ -47,10 +47,6 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
     redirect('/nfc-access-denied?reason=bad-secret');
   }
 
-  if (!passcode) {
-    redirectToVerify(tagCode, scanSecret, 'missing_passcode');
-  }
-
   const tag = await db.nfcTag.findUnique({
     where: {
       code: tagCode,
@@ -65,6 +61,15 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
       status: true,
       scanSecret: true,
       deletedAt: true,
+      hotel: {
+        select: {
+          settings: {
+            select: {
+              nfcRoomPasscodeEnabled: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -86,6 +91,22 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
 
   if (!tag.roomId) {
     redirect('/nfc-access-denied?reason=room-required');
+  }
+
+  const nfcRoomPasscodeEnabled =
+    tag.hotel.settings?.nfcRoomPasscodeEnabled ?? true;
+
+  /**
+   * The hotel may disable only the additional room passcode step.
+   * The NFC scan secret is still validated above. Send the guest back through
+   * the scanner route so it can create the normal NFC access/session cookies.
+   */
+  if (!nfcRoomPasscodeEnabled) {
+    redirect(`/n/${tag.code}?k=${encodeURIComponent(scanSecret)}`);
+  }
+
+  if (!passcode) {
+    redirectToVerify(tagCode, scanSecret, 'missing_passcode');
   }
 
   const activeStay = await getActiveGuestStayForRoom({
@@ -121,16 +142,6 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
     redirectToVerify(tagCode, scanSecret, 'authorization_failed');
   }
 
-  /**
-   * First-scan fix:
-   *
-   * Do not redirect back through /n/[tagCode] after passcode verification.
-   * That extra hop can race the Set-Cookie handoff on phones and make the first
-   * portal load arrive without a valid NFC access/session cookie.
-   *
-   * Instead, create the NFC guest session and NFC access proof right here,
-   * then redirect directly to /t/[tagCode]?nfcSession=1.
-   */
   const reusableGuestSession = await getReusableNfcGuestSessionForTag({
     tagId: tag.id,
     hotelId: tag.hotelId,
@@ -153,10 +164,6 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
       },
     });
 
-    /**
-     * Private room tags are strict. Revoke old NFC access sessions before
-     * creating the fresh access proof below.
-     */
     await tx.nfcAccessSession.updateMany({
       where: {
         tagId: tag.id,
@@ -175,10 +182,6 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
       },
     });
 
-    /**
-     * Close old room sessions without pending work. Keep the reusable pending
-     * session, if one exists, so existing in-progress guest work is preserved.
-     */
     await tx.nfcGuestSession.updateMany({
       where: {
         tagId: tag.id,
@@ -242,10 +245,6 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
     });
   });
 
-  /**
-   * Create the NFC access proof cookie now, after old access sessions were
-   * revoked. This is the cookie checked by requireNfcGuestAccess().
-   */
   await createNfcAccessSession({
     id: tag.id,
     hotelId: tag.hotelId,
@@ -254,9 +253,6 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
 
   const cookieStore = await cookies();
 
-  /**
-   * Create the guest session cookie checked by nfc-guest-session.ts.
-   */
   cookieStore.set(getNfcGuestSessionCookieName(tag.code), guestSessionKey, {
     httpOnly: true,
     sameSite: 'lax',
@@ -265,9 +261,5 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  /**
-   * nfcSession=1 tells NfcBrowserSessionGuard that this navigation came from
-   * a trusted NFC/passcode flow and should activate the in-tab browser session.
-   */
   redirect(`/t/${tag.code}?nfcSession=1`);
 }

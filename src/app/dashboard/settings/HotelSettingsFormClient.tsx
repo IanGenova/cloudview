@@ -148,7 +148,14 @@ export function HotelSettingsFormClient({
         description: 'Your latest property settings have been updated successfully.',
       });
 
-      window.history.replaceState(null, '', window.location.pathname);
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('saved');
+
+      window.history.replaceState(
+        null,
+        '',
+        `${currentUrl.pathname}${currentUrl.search}`
+      );
     }
   }, [searchParams]);
 
@@ -258,7 +265,7 @@ export function HotelSettingsFormClient({
                   Save hotel settings?
                 </p>
                 <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                  These changes will update the guest portal, hotel guide, billing defaults, and property information.
+                  These changes will update the guest portal, NFC room security, hotel guide, billing defaults, and property information.
                 </p>
               </div>
 

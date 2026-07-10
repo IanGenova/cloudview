@@ -57,6 +57,11 @@ export default async function VerifyGuestStayPage({
         select: {
           name: true,
           logoUrl: true,
+          settings: {
+            select: {
+              nfcRoomPasscodeEnabled: true,
+            },
+          },
         },
       },
       room: {
@@ -86,6 +91,13 @@ export default async function VerifyGuestStayPage({
 
   if (!tag.roomId) {
     redirect('/nfc-access-denied?reason=room-required');
+  }
+
+  const nfcRoomPasscodeEnabled =
+    tag.hotel.settings?.nfcRoomPasscodeEnabled ?? true;
+
+  if (!nfcRoomPasscodeEnabled) {
+    redirect(`/n/${tagCode}?k=${encodeURIComponent(scanSecret)}`);
   }
 
   const activeStay = await getActiveGuestStayForRoom({

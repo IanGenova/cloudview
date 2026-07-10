@@ -3,6 +3,18 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+type NfcSessionStatus = {
+  hasSession: boolean;
+  keepSession: boolean;
+  pendingOrders: number;
+  pendingServiceRequests: number;
+  totalPending: number;
+};
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
 async function revokeSession(tagCode: string) {
   try {
     await fetch('/api/nfc/revoke', {
@@ -13,36 +25,41 @@ async function revokeSession(tagCode: string) {
       body: JSON.stringify({ tagCode }),
       keepalive: true,
       cache: 'no-store',
+      credentials: 'same-origin',
     });
   } catch {
-    // Ignore revoke network errors. The server will verify again on next request.
+    // Ignore revoke network errors. The server validates cookies again later.
   }
 }
 
-async function getServerSessionStatus(tagCode: string) {
-  const response = await fetch(
-    `/api/nfc/session-status?tagCode=${encodeURIComponent(tagCode)}`,
-    {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'same-origin',
-    }
-  );
+async function getServerSessionStatus(
+  tagCode: string
+): Promise<NfcSessionStatus | null> {
+  try {
+    const response = await fetch(
+      `/api/nfc/session-status?tagCode=${encodeURIComponent(tagCode)}`,
+      {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin',
+      }
+    );
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as NfcSessionStatus;
+  } catch {
     return null;
   }
-
-  return response.json() as Promise<{
-    hasSession: boolean;
-    keepSession: boolean;
-    pendingOrders: number;
-    pendingServiceRequests: number;
-    totalPending: number;
-  }>;
 }
 
-export function NfcBrowserSessionGuard({ tagCode }: { tagCode: string }) {
+export function NfcBrowserSessionGuard({
+  tagCode,
+}: {
+  tagCode: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -67,30 +84,51 @@ export function NfcBrowserSessionGuard({ tagCode }: { tagCode: string }) {
       return;
     }
 
-    const browserSessionIsActive =
-      sessionStorage.getItem(storageKey) === 'active';
-
-    if (browserSessionIsActive) {
+    if (sessionStorage.getItem(storageKey) === 'active') {
       return;
     }
 
     async function verifyReopenedBrowserSession() {
-      const status = await getServerSessionStatus(tagCode);
+      let status = await getServerSessionStatus(tagCode);
+
+      if (!status) {
+        await wait(700);
+
+        if (cancelled) {
+          return;
+        }
+
+        status = await getServerSessionStatus(tagCode);
+      }
 
       if (cancelled) {
         return;
       }
 
       /**
-       * This is the important fix:
-       * If the browser tab was closed but the guest still has active orders
-       * or service requests, restore the browser session.
+       * A reopened browser may continue only while the server session still has
+       * pending orders or service requests. This behavior is independent from
+       * the hotel's room-passcode toggle.
        */
       if (status?.hasSession && status.keepSession) {
         sessionStorage.setItem(storageKey, 'active');
         return;
       }
 
+      /**
+       * Do not revoke a possibly valid server session when both status checks
+       * failed because of a temporary network/server problem.
+       */
+      if (!status) {
+        router.replace(
+          `/nfc-access-denied?tag=${encodeURIComponent(
+            tagCode
+          )}&reason=session-check-failed`
+        );
+        return;
+      }
+
+      sessionStorage.removeItem(storageKey);
       await revokeSession(tagCode);
 
       if (cancelled) {
@@ -100,7 +138,7 @@ export function NfcBrowserSessionGuard({ tagCode }: { tagCode: string }) {
       router.replace(
         `/nfc-access-denied?tag=${encodeURIComponent(
           tagCode
-        )}&reason=session-complete`
+        )}&reason=browser-reopened`
       );
     }
 
