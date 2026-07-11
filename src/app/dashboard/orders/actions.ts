@@ -36,11 +36,6 @@ import {
   voidSyncedOrderPoints,
 } from '@/lib/guest-point-sync';
 import { requestGuestFoodOrderRefund } from '@/lib/guest-paymongo-refund';
-import {
-  assertFoodOrderStatusTransition,
-  assertPayMongoOrderCanEnterKitchen,
-  isRefundEligiblePaymentStatus,
-} from '@/lib/staff-processing-policy';
 
 type RestoreOrderItem = {
   id: string;
@@ -572,73 +567,6 @@ async function restoreMenuStockForCancelledOrder({
   });
 }
 
-
-async function rollbackMenuStockAfterFailedKitchenRelease({
-  tx,
-  order,
-  userId,
-  rollbackToken,
-}: {
-  tx: Prisma.TransactionClient;
-  userId: string;
-  rollbackToken: string;
-  order: {
-    id: string;
-    hotelId: string;
-    orderCode: string;
-    status: OrderStatus;
-    items: RestoreOrderItem[];
-  };
-}) {
-  const rollbackRequirements = new Map<string, RestoreRequirement>();
-
-  for (const item of order.items) {
-    const remainingQuantity = getRemainingOrderItemQuantity(item);
-
-    if (remainingQuantity <= 0) {
-      continue;
-    }
-
-    const itemRequirements = await buildRestoreRequirementsForOrderItem({
-      tx,
-      order,
-      item,
-      quantityToRestore: remainingQuantity,
-    });
-
-    for (const requirement of itemRequirements.values()) {
-      addRestoreRequirement(rollbackRequirements, {
-        ...requirement,
-        duplicateGuardText: `${order.orderCode}:kitchen-release-rollback:${rollbackToken}:${requirement.productId}:${requirement.restoreType}`,
-        reason: `Automatic rollback after kitchen release failed for order ${order.orderCode}`,
-      });
-    }
-  }
-
-  const restoredProductIds = await applyRestoreRequirements({
-    tx,
-    hotelId: order.hotelId,
-    requirements: rollbackRequirements,
-    userId,
-  });
-
-  await tx.order.update({
-    where: { id: order.id },
-    data: { inventoryDeductedAt: null },
-  });
-
-  await tx.orderStatusHistory.create({
-    data: {
-      orderId: order.id,
-      status: order.status,
-      userId,
-      note: 'Automatic rollback: inventory was restored because kitchen release did not finish.',
-    },
-  });
-
-  return restoredProductIds;
-}
-
 function recalculateOrderTotalsAfterItemCancellation({
   order,
   cancelledItemId,
@@ -880,11 +808,21 @@ if (order.status !== OrderStatus.PENDING) {
     });
 
     statusUpdatedAt = history.createdAt;
+  }, {
+    // Cancellation may restore several normal or bundle-component stock rows.
+    // Prisma's interactive-transaction default is only 5 seconds, which is too
+    // short for a remote/serverless database under normal network latency.
+    maxWait: 10_000,
+    timeout: 30_000,
   });
 
   if (
     order.paymentMethod === PaymentMethod.PAYMONGO &&
-    isRefundEligiblePaymentStatus(order.paymentStatus) &&
+    [
+      PaymentStatus.PAID,
+      PaymentStatus.PARTIALLY_REFUNDED,
+      PaymentStatus.REFUND_FAILED,
+    ].includes(order.paymentStatus) &&
     refundAmountCents > 0
   ) {
     const refundResult = await requestGuestFoodOrderRefund({
@@ -1026,34 +964,8 @@ export async function updateOrderStatusAction(formData: FormData) {
   assertHotelScope(user, order.hotelId);
   await assertOrderStatusUpdateAccess({ user, status });
 
-  if (order.status === status) {
-    revalidateOrderPaths(order);
-    return finishOrderAction(getOrderStatusSuccessCode(status));
-  }
-
-  assertFoodOrderStatusTransition(order.status, status);
-  assertPayMongoOrderCanEnterKitchen({
-    paymentMethod: order.paymentMethod,
-    paymentStatus: order.paymentStatus,
-    nextStatus: status,
-  });
-
-  const activeItemQuantity = order.items.reduce(
-    (sum, item) => sum + getRemainingOrderItemQuantity(item),
-    0
-  );
-
-  if (
-    status !== OrderStatus.CANCELLED &&
-    activeItemQuantity <= 0
-  ) {
-    throw new Error('This order has no active food items left to process.');
-  }
-
   let statusUpdatedAt = new Date();
   let restoredProductIds: string[] = [];
-  let inventoryReleasedThisAttempt = false;
-  const rollbackToken = `${Date.now()}-${user.id}`;
 
   const shouldRestoreStock =
     status === OrderStatus.CANCELLED &&
@@ -1070,7 +982,6 @@ export async function updateOrderStatusAction(formData: FormData) {
 
     if (shouldReleaseToKitchen) {
       await deductInventoryForOrder(order.id, user.id);
-      inventoryReleasedThisAttempt = true;
       await sendOrderToPos(order.id);
     }
 
@@ -1103,41 +1014,16 @@ export async function updateOrderStatusAction(formData: FormData) {
           createdAt: true,
         },
       });
+    }, {
+      // Whole-order cancellation can execute several stock-restore queries.
+      // Allow enough time for production databases without leaving the
+      // transaction unbounded.
+      maxWait: 10_000,
+      timeout: 30_000,
     });
 
     statusUpdatedAt = history.createdAt;
   } catch (error) {
-    if (inventoryReleasedThisAttempt) {
-      try {
-        const rollbackProductIds = await db.$transaction((tx) =>
-          rollbackMenuStockAfterFailedKitchenRelease({
-            tx,
-            order,
-            userId: user.id,
-            rollbackToken,
-          })
-        );
-
-        if (rollbackProductIds.length > 0) {
-          await triggerInventoryUpdated({
-            hotelId: order.hotelId,
-            productIds: rollbackProductIds,
-            source: 'DASHBOARD',
-          });
-        }
-      } catch (rollbackError) {
-        console.error('[Kitchen release rollback] Manual review required.', {
-          orderId: order.id,
-          originalError: error,
-          rollbackError,
-        });
-
-        throw new Error(
-          'Kitchen release failed and the automatic inventory rollback also failed. Manual inventory review is required.'
-        );
-      }
-    }
-
     if (error instanceof InventoryError) {
       throw new Error(error.message);
     }
@@ -1165,7 +1051,11 @@ export async function updateOrderStatusAction(formData: FormData) {
   if (
     status === OrderStatus.CANCELLED &&
     order.paymentMethod === PaymentMethod.PAYMONGO &&
-    isRefundEligiblePaymentStatus(order.paymentStatus) &&
+    [
+      PaymentStatus.PAID,
+      PaymentStatus.PARTIALLY_REFUNDED,
+      PaymentStatus.REFUND_FAILED,
+    ].includes(order.paymentStatus) &&
     order.totalCents > 0
   ) {
     const refundResult = await requestGuestFoodOrderRefund({
@@ -1228,9 +1118,7 @@ export async function markOrderPaidAction(formData: FormData) {
       id: true,
       hotelId: true,
       orderCode: true,
-      status: true,
       paymentMethod: true,
-      paymentStatus: true,
       tag: {
         select: {
           code: true,
@@ -1249,21 +1137,6 @@ export async function markOrderPaidAction(formData: FormData) {
   if (order.paymentMethod === PaymentMethod.PAYMONGO) {
     throw new Error(
       'PayMongo payments can only be marked paid by the verified PayMongo webhook.'
-    );
-  }
-
-  if (order.status === OrderStatus.CANCELLED) {
-    throw new Error('A cancelled order cannot be marked as paid.');
-  }
-
-  if (order.paymentStatus === PaymentStatus.PAID) {
-    revalidateOrderPaths(order);
-    return finishOrderAction('order-paid');
-  }
-
-  if (order.paymentStatus !== PaymentStatus.UNPAID) {
-    throw new Error(
-      `Payment cannot be changed from ${order.paymentStatus.replaceAll('_', ' ')} to PAID.`
     );
   }
 
