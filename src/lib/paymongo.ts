@@ -1,11 +1,25 @@
-import "server-only";
+import 'server-only';
 
-const PAYMONGO_API_BASE = "https://api.paymongo.com";
+const PAYMONGO_API_BASE = 'https://api.paymongo.com';
+const PAYMONGO_REQUEST_TIMEOUT_MS = 25_000;
+
+export type PayMongoPaymentMethod = 'card' | 'gcash' | 'qrph';
+export type PayMongoRefundReason =
+  | 'duplicate'
+  | 'fraudulent'
+  | 'requested_by_customer'
+  | 'others';
+
+const SUPPORTED_PAYMENT_METHODS = new Set<PayMongoPaymentMethod>([
+  'card',
+  'gcash',
+  'qrph',
+]);
 
 export type PayMongoLineItem = {
   name: string;
   amount: number;
-  currency: "PHP";
+  currency: 'PHP';
   quantity: number;
   description?: string;
   images?: string[];
@@ -26,11 +40,23 @@ type CheckoutAttributes = {
   metadata?: Record<string, string>;
 };
 
+type RefundAttributes = {
+  amount: number;
+  currency?: string;
+  payment_id: string;
+  reason?: string;
+  notes?: string | null;
+  status: 'pending' | 'processing' | 'succeeded' | 'failed';
+  metadata?: Record<string, string>;
+};
+
 type PayMongoErrorBody = {
   errors?: Array<{
     code?: string;
     detail?: string;
-    source?: { pointer?: string };
+    source?: {
+      pointer?: string;
+    };
   }>;
 };
 
@@ -38,12 +64,26 @@ function getSecretKey() {
   const key = process.env.PAYMONGO_SECRET_KEY?.trim();
 
   if (!key) {
-    throw new Error("PAYMONGO_SECRET_KEY is not configured.");
+    throw new Error('PAYMONGO_SECRET_KEY is not configured.');
   }
 
-  if (!key.startsWith("sk_test_") && !key.startsWith("sk_live_")) {
+  if (!key.startsWith('sk_test_') && !key.startsWith('sk_live_')) {
     throw new Error(
-      "PAYMONGO_SECRET_KEY must be a PayMongo secret key beginning with sk_test_ or sk_live_.",
+      'PAYMONGO_SECRET_KEY must begin with sk_test_ or sk_live_.'
+    );
+  }
+
+  const expectedLivemode = process.env.PAYMONGO_LIVEMODE === 'true';
+
+  if (expectedLivemode && !key.startsWith('sk_live_')) {
+    throw new Error(
+      'PAYMONGO_LIVEMODE is true, but PAYMONGO_SECRET_KEY is not a live key.'
+    );
+  }
+
+  if (!expectedLivemode && !key.startsWith('sk_test_')) {
+    throw new Error(
+      'PAYMONGO_LIVEMODE is false, but PAYMONGO_SECRET_KEY is not a test key.'
     );
   }
 
@@ -51,13 +91,11 @@ function getSecretKey() {
 }
 
 function getBasicAuthorization() {
-  return `Basic ${Buffer.from(`${getSecretKey()}:`).toString("base64")}`;
+  return `Basic ${Buffer.from(`${getSecretKey()}:`).toString('base64')}`;
 }
 
 function parseJsonSafely(value: string): unknown {
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   try {
     return JSON.parse(value) as unknown;
@@ -74,61 +112,208 @@ function getPayMongoErrorMessage(input: {
   parsedBody: unknown;
 }) {
   const parsed = input.parsedBody as PayMongoErrorBody | null;
-  const firstError = parsed?.errors?.[0];
+  const errors = parsed?.errors ?? [];
 
-  if (firstError?.detail) {
-    const pointer = firstError.source?.pointer
-      ? ` (${firstError.source.pointer})`
-      : "";
+  if (errors.length) {
+    const details = errors
+      .slice(0, 3)
+      .map((error) => {
+        const pointer = error.source?.pointer
+          ? ` (${error.source.pointer})`
+          : '';
 
-    return `PayMongo ${input.status}: ${firstError.detail}${pointer}`;
+        return `${error.detail || error.code || 'Invalid request'}${pointer}`;
+      })
+      .join('; ');
+
+    return `PayMongo ${input.status}: ${details}`;
   }
 
-  const compactBody = input.rawBody.replace(/\s+/g, " ").trim().slice(0, 300);
+  const compactBody = input.rawBody.replace(/\s+/g, ' ').trim().slice(0, 500);
 
   if (compactBody) {
     return `PayMongo ${input.status} from ${input.endpoint}: ${compactBody}`;
   }
 
-  return `PayMongo ${input.status} ${input.statusText || "request failed"} from ${input.endpoint}.`;
+  return `PayMongo ${input.status} ${
+    input.statusText || 'request failed'
+  } from ${input.endpoint}.`;
 }
 
-async function postCheckoutSession(input: {
-  version: "v1" | "v2";
-  idempotencyKey: string;
-  body: unknown;
+async function payMongoFetch(input: {
+  endpoint: string;
+  method: 'POST' | 'GET';
+  body?: unknown;
+  idempotencyKey?: string;
 }) {
-  const endpoint = `${PAYMONGO_API_BASE}/${input.version}/checkout_sessions`;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    PAYMONGO_REQUEST_TIMEOUT_MS
+  );
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      Authorization: getBasicAuthorization(),
-      "Content-Type": "application/json",
-      "Idempotency-Key": input.idempotencyKey,
-    },
-    body: JSON.stringify(input.body),
-    cache: "no-store",
+  try {
+    const response = await fetch(input.endpoint, {
+      method: input.method,
+      headers: {
+        Accept: 'application/json',
+        Authorization: getBasicAuthorization(),
+        ...(input.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(input.idempotencyKey
+          ? { 'Idempotency-Key': input.idempotencyKey }
+          : {}),
+      },
+      ...(input.body ? { body: JSON.stringify(input.body) } : {}),
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    const rawBody = await response.text();
+    const parsedBody = parseJsonSafely(rawBody);
+
+    if (!response.ok) {
+      throw new Error(
+        getPayMongoErrorMessage({
+          endpoint: input.endpoint,
+          status: response.status,
+          statusText: response.statusText,
+          rawBody,
+          parsedBody,
+        })
+      );
+    }
+
+    return { response, rawBody, parsedBody };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(
+        `PayMongo request timed out after ${
+          PAYMONGO_REQUEST_TIMEOUT_MS / 1000
+        } seconds.`
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function requireAbsoluteRedirectUrl(value: string, label: string) {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${label} must be an absolute URL.`);
+  }
+
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(`${label} must use HTTP or HTTPS.`);
+  }
+
+  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+    throw new Error(`${label} must use HTTPS in production.`);
+  }
+
+  return url.toString();
+}
+
+function normalizeImageUrls(images?: string[]) {
+  if (!images?.length) return undefined;
+
+  const validImages = images
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .filter((value) => {
+      try {
+        const url = new URL(value);
+        return url.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 3);
+
+  return validImages.length ? validImages : undefined;
+}
+
+function normalizeLineItems(lineItems: PayMongoLineItem[]) {
+  if (!lineItems.length) {
+    throw new Error('PayMongo checkout requires at least one line item.');
+  }
+
+  return lineItems.map((item, index) => {
+    const name = item.name.trim().slice(0, 120);
+    const description = item.description?.trim().slice(0, 255);
+    const amount = Number(item.amount);
+    const quantity = Number(item.quantity);
+
+    if (!name) {
+      throw new Error(`PayMongo line item ${index + 1} has no name.`);
+    }
+
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new Error(`PayMongo line item ${index + 1} has an invalid amount.`);
+    }
+
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+      throw new Error(`PayMongo line item ${index + 1} has an invalid quantity.`);
+    }
+
+    const images = normalizeImageUrls(item.images);
+
+    return {
+      name,
+      amount,
+      currency: 'PHP' as const,
+      quantity,
+      ...(description ? { description } : {}),
+      ...(images ? { images } : {}),
+    };
   });
+}
 
-  const rawBody = await response.text();
-  const parsedBody = parseJsonSafely(rawBody);
+function normalizePaymentMethods(
+  values: string[] | undefined,
+  envName: string
+): PayMongoPaymentMethod[] {
+  const methods = values?.length
+    ? Array.from(new Set(values.map((item) => item.trim().toLowerCase())))
+    : ['card', 'gcash', 'qrph'];
 
-  return {
-    endpoint,
-    response,
-    rawBody,
-    parsedBody,
-  };
+  const unsupported = methods.filter(
+    (method) => !SUPPORTED_PAYMENT_METHODS.has(method as PayMongoPaymentMethod)
+  );
+
+  if (unsupported.length) {
+    throw new Error(
+      `Unsupported ${envName} value: ${unsupported.join(
+        ', '
+      )}. Allowed values are card, gcash, and qrph.`
+    );
+  }
+
+  return methods as PayMongoPaymentMethod[];
 }
 
 export function getPayMongoPaymentMethods() {
-  const configured = process.env.PAYMONGO_PAYMENT_METHODS?.split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
+  const configured = process.env.PAYMONGO_PAYMENT_METHODS?.split(',').filter(
+    Boolean
+  );
 
-  return configured?.length ? configured : ["card", "gcash", "qrph"];
+  return normalizePaymentMethods(configured, 'PAYMONGO_PAYMENT_METHODS');
+}
+
+export function getPayMongoGuestPaymentMethods() {
+  const configured = process.env.PAYMONGO_GUEST_PAYMENT_METHODS?.split(',').filter(
+    Boolean
+  );
+
+  return normalizePaymentMethods(
+    configured?.length ? configured : ['qrph'],
+    'PAYMONGO_GUEST_PAYMENT_METHODS'
+  );
 }
 
 export async function createPayMongoCheckoutSession(input: {
@@ -139,16 +324,41 @@ export async function createPayMongoCheckoutSession(input: {
   description: string;
   referenceNumber: string;
   metadata: Record<string, string>;
+  paymentMethods?: PayMongoPaymentMethod[];
 }) {
+  const idempotencyKey = input.idempotencyKey.trim();
+  const referenceNumber = input.referenceNumber.trim();
+
+  if (!idempotencyKey) {
+    throw new Error('PayMongo idempotency key is required.');
+  }
+
+  if (!referenceNumber) {
+    throw new Error('PayMongo reference number is required.');
+  }
+
+  const lineItems = normalizeLineItems(input.lineItems);
+  const successUrl = requireAbsoluteRedirectUrl(
+    input.successUrl,
+    'PayMongo success URL'
+  );
+  const cancelUrl = requireAbsoluteRedirectUrl(
+    input.cancelUrl,
+    'PayMongo cancel URL'
+  );
+  const paymentMethods = input.paymentMethods?.length
+    ? normalizePaymentMethods(input.paymentMethods, 'paymentMethods')
+    : getPayMongoPaymentMethods();
+
   const body = {
     data: {
       attributes: {
-        line_items: input.lineItems,
-        payment_method_types: getPayMongoPaymentMethods(),
-        success_url: input.successUrl,
-        cancel_url: input.cancelUrl,
-        description: input.description,
-        reference_number: input.referenceNumber,
+        line_items: lineItems,
+        payment_method_types: paymentMethods,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        description: input.description.trim().slice(0, 255),
+        reference_number: referenceNumber.slice(0, 255),
         send_email_receipt: false,
         show_description: true,
         show_line_items: true,
@@ -157,47 +367,130 @@ export async function createPayMongoCheckoutSession(input: {
     },
   };
 
-  // PayMongo recommends V2 for new integrations. Some accounts or gateways may
-  // still return 404 for V2, so retry V1 only for that exact response.
-  let result = await postCheckoutSession({
-    version: "v2",
-    idempotencyKey: input.idempotencyKey,
-    body,
-  });
+  let endpoint = `${PAYMONGO_API_BASE}/v2/checkout_sessions`;
+  let result: Awaited<ReturnType<typeof payMongoFetch>>;
 
-  if (result.response.status === 404) {
-    console.warn(
-      `[PayMongo] V2 checkout endpoint returned 404. Retrying V1. Endpoint: ${result.endpoint}`,
-    );
+  try {
+    result = await payMongoFetch({
+      endpoint,
+      method: 'POST',
+      idempotencyKey,
+      body,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
 
-    result = await postCheckoutSession({
-      version: "v1",
-      idempotencyKey: input.idempotencyKey,
+    if (!message.startsWith('PayMongo 404')) {
+      throw error;
+    }
+
+    endpoint = `${PAYMONGO_API_BASE}/v1/checkout_sessions`;
+    console.warn('[PayMongo] V2 checkout endpoint returned 404. Retrying V1.');
+    result = await payMongoFetch({
+      endpoint,
+      method: 'POST',
+      idempotencyKey,
       body,
     });
   }
 
-  if (!result.response.ok) {
-    throw new Error(
-      getPayMongoErrorMessage({
-        endpoint: result.endpoint,
-        status: result.response.status,
-        statusText: result.response.statusText,
-        rawBody: result.rawBody,
-        parsedBody: result.parsedBody,
-      }),
-    );
-  }
-
-  const resource =
-    result.parsedBody as PayMongoResource<CheckoutAttributes> | null;
+  const resource = result.parsedBody as PayMongoResource<CheckoutAttributes> | null;
 
   if (!resource?.data?.id || !resource.data.attributes?.checkout_url) {
-    throw new Error("PayMongo did not return a valid checkout session.");
+    throw new Error(
+      'PayMongo did not return a valid checkout session or checkout URL.'
+    );
   }
 
   return {
     id: resource.data.id,
     checkoutUrl: resource.data.attributes.checkout_url,
+  };
+}
+
+export async function expirePayMongoCheckoutSession(
+  checkoutSessionIdInput: string
+) {
+  const checkoutSessionId = checkoutSessionIdInput.trim();
+
+  if (!checkoutSessionId.startsWith('cs_')) {
+    throw new Error('A valid PayMongo checkout session ID is required.');
+  }
+
+  const endpoint = `${PAYMONGO_API_BASE}/v1/checkout_sessions/${encodeURIComponent(
+    checkoutSessionId
+  )}/expire`;
+
+  const result = await payMongoFetch({
+    endpoint,
+    method: 'POST',
+  });
+
+  const resource =
+    result.parsedBody as PayMongoResource<CheckoutAttributes> | null;
+
+  if (!resource?.data?.id) {
+    throw new Error('PayMongo did not return an expired checkout session.');
+  }
+
+  return {
+    id: resource.data.id,
+    status: resource.data.attributes?.status ?? 'expired',
+  };
+}
+
+export async function createPayMongoRefund(input: {
+  idempotencyKey: string;
+  paymentId: string;
+  amount: number;
+  reason?: PayMongoRefundReason;
+  notes?: string;
+  metadata?: Record<string, string>;
+}) {
+  const idempotencyKey = input.idempotencyKey.trim();
+  const paymentId = input.paymentId.trim();
+  const amount = Number(input.amount);
+
+  if (!idempotencyKey) {
+    throw new Error('PayMongo refund idempotency key is required.');
+  }
+
+  if (!paymentId.startsWith('pay_')) {
+    throw new Error('A valid PayMongo payment ID is required for a refund.');
+  }
+
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new Error('PayMongo refund amount must be a positive integer.');
+  }
+
+  const endpoint = `${PAYMONGO_API_BASE}/v1/refunds`;
+  const result = await payMongoFetch({
+    endpoint,
+    method: 'POST',
+    idempotencyKey,
+    body: {
+      data: {
+        attributes: {
+          amount,
+          payment_id: paymentId,
+          reason: input.reason ?? 'others',
+          notes: (input.notes || 'Automatic CloudView refund').slice(0, 255),
+          ...(input.metadata ? { metadata: input.metadata } : {}),
+        },
+      },
+    },
+  });
+
+  const resource = result.parsedBody as PayMongoResource<RefundAttributes> | null;
+
+  if (!resource?.data?.id || !resource.data.attributes?.status) {
+    throw new Error('PayMongo did not return a valid refund resource.');
+  }
+
+  return {
+    id: resource.data.id,
+    status: resource.data.attributes.status,
+    amount: resource.data.attributes.amount,
+    paymentId: resource.data.attributes.payment_id,
   };
 }

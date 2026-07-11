@@ -1,13 +1,23 @@
 import crypto from 'crypto';
-import { GuestStayStatus } from '@prisma/client';
+import { GuestPayMongoStatus, GuestStayStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 
 function getGuestStaySecret() {
-  return (
-    process.env.GUEST_STAY_PASSCODE_SECRET ||
-    process.env.AUTH_SECRET ||
-    'dev-change-this-secret'
-  );
+  const value =
+    process.env.GUEST_STAY_PASSCODE_SECRET?.trim() ||
+    process.env.AUTH_SECRET?.trim();
+
+  if (value) {
+    return value;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'GUEST_STAY_PASSCODE_SECRET or AUTH_SECRET is required in production.'
+    );
+  }
+
+  return 'dev-change-this-secret';
 }
 
 function getPasscodeEncryptionKey() {
@@ -15,7 +25,7 @@ function getPasscodeEncryptionKey() {
 }
 
 export function generateGuestStayPasscode() {
-  return String(crypto.randomInt(100000, 999999));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 export function hashGuestStayPasscode(passcode: string) {
@@ -113,9 +123,14 @@ export async function createGuestStayWithPasscode(params: {
   const phone = params.phone?.trim() || null;
   const email = params.email?.trim().toLowerCase() || null;
   const maxDevices = Math.max(1, Math.min(params.maxDevices || 2, 10));
+  const expectedCheckOutAt = params.expectedCheckOutAt ?? null;
 
   if (!guestName) {
     throw new Error('Guest name is required.');
+  }
+
+  if (expectedCheckOutAt && expectedCheckOutAt <= new Date()) {
+    throw new Error('Expected checkout must be in the future.');
   }
 
   const passcode = generateGuestStayPasscode();
@@ -141,7 +156,7 @@ export async function createGuestStayWithPasscode(params: {
       throw new Error('Room was not found or is inactive.');
     }
 
-    const orFilters = [];
+    const orFilters: Array<{ phone?: string; email?: string }> = [];
 
     if (phone) {
       orFilters.push({ phone });
@@ -190,17 +205,73 @@ export async function createGuestStayWithPasscode(params: {
       });
     }
 
-    await tx.guestStay.updateMany({
+    const previousStays = await tx.guestStay.findMany({
       where: {
         hotelId: params.hotelId,
         roomId: params.roomId,
         status: GuestStayStatus.ACTIVE,
       },
-      data: {
-        status: GuestStayStatus.CHECKED_OUT,
-        checkedOutAt: new Date(),
+      select: {
+        id: true,
       },
     });
+
+    const previousStayIds = previousStays.map((stay) => stay.id);
+    const now = new Date();
+
+    if (previousStayIds.length) {
+      await tx.guestStay.updateMany({
+        where: {
+          id: {
+            in: previousStayIds,
+          },
+          status: GuestStayStatus.ACTIVE,
+        },
+        data: {
+          status: GuestStayStatus.CHECKED_OUT,
+          checkedOutAt: now,
+        },
+      });
+
+      await tx.guestStayDevice.updateMany({
+        where: {
+          guestStayId: {
+            in: previousStayIds,
+          },
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: now,
+        },
+      });
+
+      await tx.nfcGuestSession.updateMany({
+        where: {
+          guestStayId: {
+            in: previousStayIds,
+          },
+          endedAt: null,
+        },
+        data: {
+          endedAt: now,
+        },
+      });
+
+      await tx.guestPayMongoSession.updateMany({
+        where: {
+          guestStayId: {
+            in: previousStayIds,
+          },
+          status: GuestPayMongoStatus.PENDING,
+        },
+        data: {
+          status: GuestPayMongoStatus.EXPIRED,
+          expiresAt: now,
+          errorMessage:
+            'The previous room stay ended before payment was completed.',
+        },
+      });
+    }
 
     const guestStay = await tx.guestStay.create({
       data: {
@@ -210,7 +281,7 @@ export async function createGuestStayWithPasscode(params: {
         passcodeHash,
         passcodeEncrypted,
         maxDevices,
-        expectedCheckOutAt: params.expectedCheckOutAt ?? null,
+        expectedCheckOutAt,
         status: GuestStayStatus.ACTIVE,
       },
       include: {

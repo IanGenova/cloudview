@@ -618,6 +618,12 @@ export function POSClient({
 
         if (cancelled) return;
 
+        if (!status.ok) {
+          showError(status.error);
+          cleanPayMongoQuery();
+          return;
+        }
+
         if (status.status === 'COMPLETED') {
           const parts = [
             status.orderCode ? `Order ${status.orderCode}` : null,
@@ -651,9 +657,17 @@ export function POSClient({
 
             clearCart();
             setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
-            showSuccessAfterRefresh('PayMongo payment confirmed and POS sale completed.');
+            showSuccessAfterRefresh(
+              'PayMongo payment confirmed and POS sale completed.'
+            );
             cleanPayMongoQuery();
             router.refresh();
+            return;
+          }
+
+          if (!result.waiting) {
+            showError(result.error);
+            cleanPayMongoQuery();
             return;
           }
         }
@@ -1082,6 +1096,11 @@ export function POSClient({
             items: foodCart,
             services: serviceCart,
           });
+
+          if (!checkout.ok) {
+            showError(checkout.error);
+            return;
+          }
 
           queuePOSToast({
             type: 'success',

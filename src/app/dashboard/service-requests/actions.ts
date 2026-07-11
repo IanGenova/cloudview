@@ -2,8 +2,11 @@
 
 import {
   DashboardModule,
+  GuestPayMongoRefundKind,
+  PaymentMethod,
   Prisma,
   ServiceAvailabilityMovementType,
+  ServiceBillingMode,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
@@ -17,6 +20,12 @@ import {
   syncServiceRequestPoints,
   voidSyncedServiceRequestPoints,
 } from '@/lib/guest-point-sync';
+import { requestGuestServiceRequestRefund } from '@/lib/guest-paymongo-refund';
+import {
+  assertServiceRequestStatusTransition,
+  isRefundEligiblePaymentStatus,
+  isTerminalServiceRequestStatus,
+} from '@/lib/staff-processing-policy';
 
 function generateChargeCode() {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -229,12 +238,11 @@ export async function updateServiceRequestAction(formData: FormData) {
   const status = formData.get('status') as ServiceRequestStatus;
   const assignedToId = cleanText(formData.get('assignedToId'));
   const note = cleanText(formData.get('note'), 300);
-
   const actionIntent = cleanText(formData.get('intent'));
 
-const shouldPostCharge =
-  actionIntent === 'post-charge' ||
-  (actionIntent !== 'status-only' && formData.get('postCharge') === 'true');
+  const shouldPostCharge =
+    actionIntent === 'post-charge' ||
+    (actionIntent !== 'status-only' && formData.get('postCharge') === 'true');
 
   if (
     (!requestId && !requestCode) ||
@@ -243,22 +251,20 @@ const shouldPostCharge =
     throw new Error('Invalid service request update.');
   }
 
+  if (shouldPostCharge && status === ServiceRequestStatus.CANCELLED) {
+    throw new Error('Cancel the request without posting a new room charge.');
+  }
+
   const requestWhere: Prisma.ServiceRequestWhereInput = requestCode
     ? {
         requestCode,
         ...(hotelIdFromForm
-          ? {
-              hotelId: hotelIdFromForm,
-            }
+          ? { hotelId: hotelIdFromForm }
           : user.role === 'SUPER_ADMIN'
             ? {}
-            : {
-                hotelId: user.hotelId!,
-              }),
+            : { hotelId: user.hotelId! }),
       }
-    : {
-        id: requestId,
-      };
+    : { id: requestId };
 
   const requests = await db.serviceRequest.findMany({
     where: requestWhere,
@@ -269,12 +275,16 @@ const shouldPostCharge =
       requestCode: true,
       type: true,
       status: true,
+      assignedToId: true,
       quantity: true,
       cancelledQty: true,
+      billingModeSnapshot: true,
+      amountCents: true,
+      paymentMethod: true,
+      paymentStatus: true,
+      guestPayMongoSessionId: true,
     },
-    orderBy: {
-      createdAt: 'asc',
-    },
+    orderBy: { createdAt: 'asc' },
   });
 
   const firstRequest = requests[0];
@@ -284,44 +294,71 @@ const shouldPostCharge =
   }
 
   const hotelId = firstRequest.hotelId;
-
   assertHotelScope(user, hotelId);
 
-  const invalidHotelScope = requests.some(
-    (request) => request.hotelId !== hotelId
-  );
-
-  if (invalidHotelScope) {
+  if (requests.some((request) => request.hotelId !== hotelId)) {
     throw new Error('Invalid service request hotel scope.');
   }
 
-  const requestIds = requests.map((request) => request.id);
+  const workflowRequests = requests.filter(
+    (request) => !isTerminalServiceRequestStatus(request.status)
+  );
+
+  for (const request of workflowRequests) {
+    assertServiceRequestStatusTransition(request.status, status);
+  }
+
+  const statusRequests = workflowRequests.filter(
+    (request) =>
+      request.status !== status ||
+      (request.assignedToId ?? '') !== (assignedToId || '')
+  );
+
+  if (!statusRequests.length && !shouldPostCharge) {
+    if (requests.every((request) => request.status === status)) {
+      return finishServiceRequestAction('request-updated');
+    }
+
+    throw new Error(
+      'No active service request item can be moved to the selected status.'
+    );
+  }
 
   const chargeRequestIds = formData
     .getAll('chargeRequestId')
     .map((value) => cleanText(value))
     .filter(Boolean);
 
-  const shouldRestoreInventory =
-    status === ServiceRequestStatus.CANCELLED &&
-    requests.some(
-      (request) =>
-        request.status !== ServiceRequestStatus.CANCELLED &&
-        request.status !== ServiceRequestStatus.COMPLETED
-    );
-
-  if (shouldPostCharge) {
-    const idsToCharge = chargeRequestIds.length
+  const idsToCharge = (
+    chargeRequestIds.length
       ? chargeRequestIds
       : requestId
         ? [requestId]
-        : requestIds;
+        : requests.map((request) => request.id)
+  ).filter((id): id is string => Boolean(id));
 
+  if (shouldPostCharge) {
     for (const id of idsToCharge) {
       const request = requests.find((item) => item.id === id);
 
       if (!request) {
         throw new Error('Invalid charge request.');
+      }
+
+      if (request.status === ServiceRequestStatus.CANCELLED) {
+        throw new Error('A cancelled service item cannot receive a room charge.');
+      }
+
+      if (request.paymentMethod === PaymentMethod.PAYMONGO) {
+        throw new Error(
+          'This service item was already paid through PayMongo and must not be posted as a room charge.'
+        );
+      }
+
+      if (request.billingModeSnapshot === ServiceBillingMode.FREE) {
+        throw new Error(
+          'Complimentary service items cannot be posted as room charges.'
+        );
       }
 
       if (!request.roomId) {
@@ -334,11 +371,9 @@ const shouldPostCharge =
         formData.get(`chargeItemName_${id}`) ?? formData.get('chargeItemName'),
         160
       );
-
       const chargeQuantity = parsePositiveInteger(
         formData.get(`chargeQuantity_${id}`) ?? formData.get('chargeQuantity')
       );
-
       const chargeUnitPrice = parsePositiveMoney(
         formData.get(`chargeUnitPrice_${id}`) ??
           formData.get('chargeUnitPrice')
@@ -347,25 +382,24 @@ const shouldPostCharge =
       if (!chargeItemName) {
         throw new Error('Charge item name is required.');
       }
-
       if (!chargeQuantity) {
         throw new Error('Charge quantity is required.');
       }
-
       if (!chargeUnitPrice) {
         throw new Error('Charge unit price is required.');
       }
     }
   }
 
+  const shouldRestoreInventory =
+    status === ServiceRequestStatus.CANCELLED && statusRequests.length > 0;
+
   let restoredServiceIds: string[] = [];
 
   await db.$transaction(async (tx) => {
-    for (const request of requests) {
+    for (const request of statusRequests) {
       await tx.serviceRequest.update({
-        where: {
-          id: request.id,
-        },
+        where: { id: request.id },
         data: {
           status,
           assignedToId: assignedToId || null,
@@ -379,27 +413,31 @@ const shouldPostCharge =
             : {}),
         },
       });
-    }
 
-    await Promise.all(
-      requestIds.map((id) =>
-        tx.serviceRequestStatusHistory.create({
-          data: {
-            requestId: id,
-            status,
-            userId: user.id,
-            note: note || null,
-          },
-        })
-      )
-    );
+      await tx.serviceRequestStatusHistory.create({
+        data: {
+          requestId: request.id,
+          status,
+          userId: user.id,
+          note: note || null,
+        },
+      });
+    }
 
     if (shouldRestoreInventory) {
       restoredServiceIds = await restoreServiceInventoryForCancelledRequests({
         tx,
-        requests,
+        requests: statusRequests,
         hotelId,
         userId: user.id,
+      });
+
+      await tx.roomAddOnCharge.deleteMany({
+        where: {
+          serviceRequestId: {
+            in: statusRequests.map((request) => request.id),
+          },
+        },
       });
     }
 
@@ -407,20 +445,10 @@ const shouldPostCharge =
       return;
     }
 
-    const idsToCharge = (
-      chargeRequestIds.length
-        ? chargeRequestIds
-        : requestId
-          ? [requestId]
-          : requestIds
-    ).filter((id): id is string => Boolean(id));
-
-    for (const id of idsToCharge) {
-      const serviceRequestId = id;
-
+    for (const serviceRequestId of idsToCharge) {
       const request = requests.find((item) => item.id === serviceRequestId);
 
-      if (!request?.roomId) {
+      if (!request?.roomId || request.status === ServiceRequestStatus.CANCELLED) {
         continue;
       }
 
@@ -429,18 +457,15 @@ const shouldPostCharge =
           formData.get('chargeItemName'),
         160
       );
-
       const chargeDescription = cleanText(
         formData.get(`chargeDescription_${serviceRequestId}`) ??
           formData.get('chargeDescription'),
         300
       );
-
       const chargeQuantity = parsePositiveInteger(
         formData.get(`chargeQuantity_${serviceRequestId}`) ??
           formData.get('chargeQuantity')
       );
-
       const chargeUnitPrice = parsePositiveMoney(
         formData.get(`chargeUnitPrice_${serviceRequestId}`) ??
           formData.get('chargeUnitPrice')
@@ -453,9 +478,7 @@ const shouldPostCharge =
       const totalAmount = chargeQuantity * chargeUnitPrice;
 
       await tx.roomAddOnCharge.upsert({
-        where: {
-          serviceRequestId,
-        },
+        where: { serviceRequestId },
         update: {
           itemName: chargeItemName,
           description: chargeDescription || null,
@@ -480,13 +503,26 @@ const shouldPostCharge =
     }
   });
 
+  const notificationRequests = Array.from(
+    new Map(
+      [
+        ...statusRequests,
+        ...(shouldPostCharge
+          ? requests.filter((request) => idsToCharge.includes(request.id))
+          : []),
+      ].map((request) => [request.id, request])
+    ).values()
+  );
+
   await Promise.allSettled(
-    requests.map((request) =>
+    notificationRequests.map((request) =>
       triggerServiceRequestUpdated({
         hotelId: request.hotelId,
         requestId: request.id,
         requestCode: request.requestCode,
-        status,
+        status: statusRequests.some((item) => item.id === request.id)
+          ? status
+          : request.status,
         billed: shouldPostCharge,
       })
     )
@@ -500,21 +536,49 @@ const shouldPostCharge =
     });
   }
 
-  if (status === ServiceRequestStatus.IN_PROGRESS) {
+  const statusRequestIds = statusRequests.map((request) => request.id);
+
+  if (status === ServiceRequestStatus.IN_PROGRESS && statusRequests.length) {
     return finishServiceRequestAction('request-started');
   }
 
-  if (status === ServiceRequestStatus.COMPLETED) {
+  if (status === ServiceRequestStatus.COMPLETED && statusRequests.length) {
     await Promise.allSettled(
-      requestIds.map((id: string) => safelySyncServiceRequestPoints(id))
+      statusRequestIds.map((id) => safelySyncServiceRequestPoints(id))
     );
 
     return finishServiceRequestAction('request-completed');
   }
 
-  if (status === ServiceRequestStatus.CANCELLED) {
+  if (status === ServiceRequestStatus.CANCELLED && statusRequests.length) {
     await Promise.allSettled(
-      requestIds.map((id: string) => safelyVoidSyncedServiceRequestPoints(id))
+      statusRequestIds.map((id) => safelyVoidSyncedServiceRequestPoints(id))
+    );
+
+    await Promise.allSettled(
+      statusRequests
+        .filter(
+          (request) =>
+            request.paymentMethod === PaymentMethod.PAYMONGO &&
+            request.amountCents > 0 &&
+            isRefundEligiblePaymentStatus(request.paymentStatus)
+        )
+        .map(async (request) => {
+          const result = await requestGuestServiceRequestRefund({
+            serviceRequestId: request.id,
+            amountCents: request.amountCents,
+            reason: note || 'Service request cancelled from dashboard',
+            kind: GuestPayMongoRefundKind.PARTIAL,
+            idempotencySuffix: `dashboard-group-${request.id}`,
+          });
+
+          if (!result.ok && !result.skipped) {
+            console.error('[Service cancellation] PayMongo refund failed.', {
+              serviceRequestId: request.id,
+              result,
+            });
+          }
+        })
     );
 
     return finishServiceRequestAction('request-cancelled');
@@ -552,6 +616,10 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
       type: true,
       status: true,
       quantity: true,
+      amountCents: true,
+      paymentMethod: true,
+      paymentStatus: true,
+      guestPayMongoSessionId: true,
     },
   });
 
@@ -620,6 +688,27 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
       productIds: restoredServiceIds,
       source: 'DASHBOARD',
     });
+  }
+
+  if (
+    request.paymentMethod === PaymentMethod.PAYMONGO &&
+    request.amountCents > 0 &&
+    isRefundEligiblePaymentStatus(request.paymentStatus)
+  ) {
+    const refundResult = await requestGuestServiceRequestRefund({
+      serviceRequestId: request.id,
+      amountCents: request.amountCents,
+      reason: reason || 'Service request item cancelled from dashboard',
+      kind: GuestPayMongoRefundKind.PARTIAL,
+      idempotencySuffix: `dashboard-item-${request.id}`,
+    });
+
+    if (!refundResult.ok && !refundResult.skipped) {
+      console.error('[Service item cancellation] PayMongo refund failed.', {
+        serviceRequestId: request.id,
+        refundResult,
+      });
+    }
   }
 
   return finishServiceRequestAction('request-item-cancelled');

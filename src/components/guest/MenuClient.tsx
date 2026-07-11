@@ -16,6 +16,7 @@ import {
   Minus,
   PackageCheck,
   Plus,
+  QrCode,
   ReceiptText,
   Search,
   ShoppingBag,
@@ -27,6 +28,12 @@ import {
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { createGuestOrder } from '@/app/t/[tagCode]/actions';
+import {
+  cancelGuestFoodPayMongoCheckout,
+  createGuestFoodPayMongoCheckout,
+  finalizeGuestFoodPayMongoCheckout,
+  getGuestFoodPayMongoStatus,
+} from '@/app/t/[tagCode]/food-paymongo-actions';
 
 type MenuProductTypeValue = 'SINGLE' | 'BUNDLE';
 
@@ -64,6 +71,19 @@ type CartItem = {
   productId: string;
   quantity: number;
   notes?: string;
+};
+
+type StoredFoodCheckoutDraft = {
+  cart: CartItem[];
+  guestName: string;
+  notes: string;
+  orderType: OrderType;
+  confirmedClause: boolean;
+  paymentMethod: 'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'PAYMONGO';
+  fulfillmentTiming: FulfillmentTimingValue;
+  scheduledDate: string;
+  scheduledTime: string;
+  scheduledNote: string;
 };
 
 type OrderType = 'ROOM_SERVICE' | 'DINE_IN' | 'TAKE_OUT' | 'PICK_UP';
@@ -355,6 +375,8 @@ export function MenuClient({
   taxRate = 0,
   serviceChargeRate = 0,
   defaultGuestName = '',
+  returnedPayMongoSessionId = null,
+  returnedPayMongoResult = null,
 }: {
   tagCode: string;
   products: Product[];
@@ -362,6 +384,8 @@ export function MenuClient({
   taxRate?: number;
   serviceChargeRate?: number;
   defaultGuestName?: string;
+  returnedPayMongoSessionId?: string | null;
+  returnedPayMongoResult?: 'success' | 'cancelled' | null;
 }) {
   const router = useRouter();
 
@@ -372,7 +396,7 @@ export function MenuClient({
   const [orderType, setOrderType] = useState<OrderType>('ROOM_SERVICE');
   const [confirmedClause, setConfirmedClause] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<
-    'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS'
+    'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'PAYMONGO'
   >('ROOM_CHARGE');
 
   const [fulfillmentTiming, setFulfillmentTiming] =
@@ -387,8 +411,222 @@ const [scheduledNote, setScheduledNote] = useState('');
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-      setGuestName(defaultGuestName);
-    }, [defaultGuestName]);
+    setGuestName(defaultGuestName);
+  }, [defaultGuestName]);
+
+  const checkoutDraftStorageKey = `cloudview-food-checkout-draft:${tagCode}`;
+
+  useEffect(() => {
+    try {
+      const rawDraft = window.sessionStorage.getItem(checkoutDraftStorageKey);
+
+      if (!rawDraft) {
+        return;
+      }
+
+      const draft = JSON.parse(rawDraft) as Partial<StoredFoodCheckoutDraft>;
+      const restoredCart = Array.isArray(draft.cart)
+        ? draft.cart.filter(
+            (item): item is CartItem =>
+              Boolean(item) &&
+              typeof item.productId === 'string' &&
+              Number.isInteger(item.quantity) &&
+              item.quantity > 0
+          )
+        : [];
+
+      if (restoredCart.length) {
+        setCart(restoredCart);
+      }
+
+      if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
+      if (typeof draft.notes === 'string') setNotes(draft.notes);
+      if (draft.orderType && draft.orderType in orderTypeLabels) {
+        setOrderType(draft.orderType as OrderType);
+      }
+      if (typeof draft.confirmedClause === 'boolean') {
+        setConfirmedClause(draft.confirmedClause);
+      }
+      if (draft.paymentMethod === 'PAYMONGO') {
+        setPaymentMethod('PAYMONGO');
+      }
+      if (draft.fulfillmentTiming === 'SCHEDULED') {
+        setFulfillmentTiming('SCHEDULED');
+      }
+      if (typeof draft.scheduledDate === 'string') {
+        setScheduledDate(draft.scheduledDate);
+      }
+      if (typeof draft.scheduledTime === 'string') {
+        setScheduledTime(draft.scheduledTime);
+      }
+      if (typeof draft.scheduledNote === 'string') {
+        setScheduledNote(draft.scheduledNote);
+      }
+    } catch {
+      window.sessionStorage.removeItem(checkoutDraftStorageKey);
+    }
+  }, [checkoutDraftStorageKey]);
+
+  function saveCheckoutDraft() {
+    const draft: StoredFoodCheckoutDraft = {
+      cart,
+      guestName,
+      notes,
+      orderType,
+      confirmedClause,
+      paymentMethod,
+      fulfillmentTiming,
+      scheduledDate,
+      scheduledTime,
+      scheduledNote,
+    };
+
+    try {
+      window.sessionStorage.setItem(
+        checkoutDraftStorageKey,
+        JSON.stringify(draft)
+      );
+    } catch {
+      // The server still stores the authoritative paid checkout payload.
+    }
+  }
+
+  function clearCheckoutDraft() {
+    try {
+      window.sessionStorage.removeItem(checkoutDraftStorageKey);
+    } catch {
+      // Ignore browser storage failures.
+    }
+  }
+
+  useEffect(() => {
+    if (!returnedPayMongoSessionId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timer: number | null = null;
+
+    function cleanPayMongoQuery() {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('paymongo');
+      url.searchParams.delete('paymongoResult');
+      router.replace(`${url.pathname}${url.search}`, { scroll: false });
+    }
+
+    async function handleCancelledCheckout() {
+      const result = await cancelGuestFoodPayMongoCheckout({
+        tagCode,
+        paymentSessionId: returnedPayMongoSessionId!,
+      });
+
+      if (cancelled) return;
+
+      setScreen('cart');
+      setError(
+        result.ok
+          ? 'PayMongo checkout was cancelled. No order was created and no inventory was deducted.'
+          : result.error
+      );
+      cleanPayMongoQuery();
+    }
+
+    if (returnedPayMongoResult === 'cancelled') {
+      void handleCancelledCheckout();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    async function waitForPayment(attempt = 0) {
+      const status = await getGuestFoodPayMongoStatus({
+        tagCode,
+        paymentSessionId: returnedPayMongoSessionId!,
+      });
+
+      if (cancelled) return;
+
+      if (!status.ok) {
+        setScreen('cart');
+        setError(status.error || 'Unable to confirm PayMongo payment.');
+        cleanPayMongoQuery();
+        return;
+      }
+
+      if (status.status === 'COMPLETED' && status.orderCode) {
+        clearCart();
+        cleanPayMongoQuery();
+        router.push(`/t/${tagCode}/confirmed/${status.orderCode}`);
+        return;
+      }
+
+      if (status.status === 'PAID') {
+        const result = await finalizeGuestFoodPayMongoCheckout({
+          tagCode,
+          paymentSessionId: returnedPayMongoSessionId!,
+        });
+
+        if (cancelled) return;
+
+        if (result.ok) {
+          clearCart();
+          cleanPayMongoQuery();
+          router.push(`/t/${tagCode}/confirmed/${result.orderCode}`);
+          return;
+        }
+
+        if (!result.waiting) {
+          setScreen('cart');
+          setError(result.error);
+          cleanPayMongoQuery();
+          return;
+        }
+      }
+
+      if (
+        status.status === 'FAILED' ||
+        status.status === 'EXPIRED' ||
+        status.status === 'CANCELLED' ||
+        status.status === 'PAID_REVIEW_REQUIRED' ||
+        status.status === 'REFUND_PENDING' ||
+        status.status === 'REFUND_FAILED' ||
+        status.status === 'REFUNDED'
+      ) {
+        setScreen('cart');
+        setError(
+          status.errorMessage ||
+            (status.status === 'REFUNDED'
+              ? 'Payment was refunded because the order could not be completed.'
+              : `Payment status: ${status.status.replaceAll('_', ' ')}`)
+        );
+        cleanPayMongoQuery();
+        return;
+      }
+
+      if (attempt >= 39) {
+        setScreen('cart');
+        setError(
+          'Payment is still being confirmed. Open My Orders in a moment or contact the front desk.'
+        );
+        cleanPayMongoQuery();
+        return;
+      }
+
+      timer = window.setTimeout(() => waitForPayment(attempt + 1), 1500);
+    }
+
+    void waitForPayment();
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
+    // Handle one PayMongo return per URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnedPayMongoResult, returnedPayMongoSessionId, tagCode]);
 
   const productMap = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
@@ -594,6 +832,27 @@ const [scheduledNote, setScheduledNote] = useState('');
           notes,
         });
 
+        if (paymentMethod === 'PAYMONGO') {
+          const checkout = await createGuestFoodPayMongoCheckout({
+            tagCode,
+            guestName,
+            notes: finalNotes,
+            fulfillmentTiming,
+            scheduledFor: scheduledForIso || '',
+            scheduledNote,
+            items: cart,
+          });
+
+          if (!checkout.ok) {
+            setError(checkout.error);
+            return;
+          }
+
+          saveCheckoutDraft();
+          window.location.assign(checkout.checkoutUrl);
+          return;
+        }
+
         const result = await createGuestOrder({
           tagCode,
           guestName,
@@ -606,6 +865,7 @@ const [scheduledNote, setScheduledNote] = useState('');
         });
 
         if (result.ok) {
+          clearCheckoutDraft();
           router.push(`/t/${tagCode}/confirmed/${result.orderCode}`);
         }
       } catch (e) {
@@ -622,6 +882,7 @@ const [scheduledNote, setScheduledNote] = useState('');
     setCart([]);
     setError(null);
     setConfirmedClause(false);
+    clearCheckoutDraft();
   }
 
   if (screen === 'cart') {
@@ -939,6 +1200,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                           | 'PAY_AT_COUNTER'
                           | 'CASH'
                           | 'POS'
+                          | 'PAYMONGO'
                       )
                     }
                     className={cn(
@@ -962,7 +1224,26 @@ const [scheduledNote, setScheduledNote] = useState('');
                     <option value="POS" className="bg-[#111] text-white">
                       Card / E-wallet
                     </option>
+                    <option value="PAYMONGO" className="bg-[#111] text-white">
+                      PayMongo QR Ph
+                    </option>
                   </select>
+
+                  {paymentMethod === 'PAYMONGO' ? (
+                    <div className="mt-3 flex items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.08] p-4">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
+                        <QrCode className="size-5" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-black text-white">
+                          Secure QR Ph payment
+                        </p>
+                        <p className="mt-1 text-xs font-medium leading-5 text-white/55">
+                          You will be redirected to PayMongo. The food order and stock deduction happen only after PayMongo confirms the payment.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <textarea
@@ -1063,11 +1344,19 @@ const [scheduledNote, setScheduledNote] = useState('');
                 className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-[15px] font-black text-black shadow-[0_14px_34px_rgba(214,167,56,0.24)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {pending ? (
-                  'Submitting...'
+                  paymentMethod === 'PAYMONGO'
+                    ? 'Opening PayMongo...'
+                    : 'Submitting...'
                 ) : (
                   <>
-                    Place Order
-                    <PackageCheck className="size-4.5" />
+                    {paymentMethod === 'PAYMONGO'
+                      ? 'Generate QR & Pay'
+                      : 'Place Order'}
+                    {paymentMethod === 'PAYMONGO' ? (
+                      <QrCode className="size-4.5" />
+                    ) : (
+                      <PackageCheck className="size-4.5" />
+                    )}
                   </>
                 )}
               </button>

@@ -23,9 +23,9 @@ function getOrdersMessage(success?: string, error?: string) {
   if (success) {
     const messages: Record<string, string> = {
       'item-cancelled':
-        'Food item was cancelled successfully. Stock restoration was processed.',
+        'Food item was cancelled. Stock restoration and any required PayMongo refund were started.',
       'order-cancelled':
-        'Order was cancelled successfully. Stock restoration was processed.',
+        'Order was cancelled. Stock restoration and any required PayMongo refund were started.',
     };
 
     return {
@@ -75,29 +75,28 @@ export default async function OrdersPage({
     where,
     include: {
       hotel: {
-        select: {
-          name: true,
-        },
+        select: { name: true },
       },
       room: {
-        select: {
-          number: true,
-        },
+        select: { number: true },
       },
       location: {
-        select: {
-          name: true,
-        },
+        select: { name: true },
       },
       tag: {
+        select: { code: true },
+      },
+      guestPayMongoSessions: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
         select: {
-          code: true,
+          status: true,
+          refundedAmountCents: true,
+          refundErrorMessage: true,
         },
       },
       items: {
-        orderBy: {
-          createdAt: 'asc',
-        },
+        orderBy: { createdAt: 'asc' },
         select: {
           id: true,
           quantity: true,
@@ -110,9 +109,7 @@ export default async function OrdersPage({
           cancelledAt: true,
           cancelReason: true,
           bundleComponents: {
-            orderBy: {
-              createdAt: 'asc',
-            },
+            orderBy: { createdAt: 'asc' },
             select: {
               id: true,
               componentNameSnapshot: true,
@@ -122,9 +119,7 @@ export default async function OrdersPage({
         },
       },
       statusHistory: {
-        orderBy: {
-          createdAt: 'asc',
-        },
+        orderBy: { createdAt: 'asc' },
         select: {
           id: true,
           status: true,
@@ -139,9 +134,7 @@ export default async function OrdersPage({
         },
       },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: { createdAt: 'desc' },
     take: 150,
   });
 
@@ -158,21 +151,15 @@ export default async function OrdersPage({
             ],
           },
           OR: orderCodes.map((orderCode) => ({
-            reason: {
-              contains: orderCode,
-            },
+            reason: { contains: orderCode },
           })),
         },
         include: {
           product: {
-            select: {
-              name: true,
-            },
+            select: { name: true },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       })
     : [];
 
@@ -181,17 +168,21 @@ export default async function OrdersPage({
   );
 
   const unpaidOrders = orders.filter(
-    (order) => order.paymentStatus !== PaymentStatus.PAID
+    (order) => order.paymentStatus === PaymentStatus.UNPAID
   );
 
   const cancelledOrders = orders.filter(
     (order) => order.status === OrderStatus.CANCELLED
   );
 
-  const totalSalesCents = orders.reduce(
-    (sum, order) => sum + order.totalCents,
-    0
-  );
+  const totalSalesCents = orders.reduce((sum, order) => {
+    const recognized =
+      order.status !== OrderStatus.CANCELLED &&
+      (order.paymentStatus === PaymentStatus.PAID ||
+        order.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED);
+
+    return sum + (recognized ? order.totalCents : 0);
+  }, 0);
 
   const statusCounts = {
     ALL: orders.length,
@@ -213,7 +204,7 @@ export default async function OrdersPage({
 
       <PageHeader
         title="Orders"
-        description="Food orders from NFC/QR guest portals and POS terminal. Realtime-enabled for kitchen and inventory workflows."
+        description="Food orders from NFC/QR guest portals and POS terminal. PayMongo refund state and stock restoration are shown with each order."
       />
 
       <OrdersClient
@@ -225,63 +216,70 @@ export default async function OrdersPage({
           totalSalesCents,
         }}
         statusCounts={statusCounts}
-        orders={orders.map((order) => ({
-          id: order.id,
-          orderCode: order.orderCode,
-          hotelName: order.hotel.name,
-          roomLabel: order.room
-            ? `Room ${order.room.number}`
-            : order.location?.name ?? 'Guest location',
-          guestName: order.guestName ?? '',
-          notes: order.notes ?? '',
-          status: order.status,
-          paymentStatus: order.paymentStatus,
-          paymentMethod: order.paymentMethod,
-          totalCents: order.totalCents,
-          subtotalCents: order.subtotalCents,
-          serviceChargeCents: order.serviceChargeCents,
-          taxCents: order.taxCents,
-          createdAt: order.createdAt.toISOString(),
-          updatedAt: order.updatedAt.toISOString(),
-          tagCode: order.tag?.code ?? '',
-          items: order.items.map((item) => ({
-            id: item.id,
-            quantity: item.quantity,
-            productNameSnapshot: item.productNameSnapshot,
-            unitPriceCents: item.unitPriceCents,
-            notes: item.notes ?? '',
-            isBundleSnapshot: item.isBundleSnapshot,
-            status: item.status,
-            cancelledQty: item.cancelledQty,
-            cancelledAt: item.cancelledAt?.toISOString() ?? '',
-            cancelReason: item.cancelReason ?? '',
-            bundleComponents: item.bundleComponents.map((component) => ({
-              id: component.id,
-              componentNameSnapshot: component.componentNameSnapshot,
-              quantity: component.quantity,
+        orders={orders.map((order) => {
+          const payMongo = order.guestPayMongoSessions[0];
+
+          return {
+            id: order.id,
+            orderCode: order.orderCode,
+            hotelName: order.hotel.name,
+            roomLabel: order.room
+              ? `Room ${order.room.number}`
+              : order.location?.name ?? 'Guest location',
+            guestName: order.guestName ?? '',
+            notes: order.notes ?? '',
+            status: order.status,
+            paymentStatus: order.paymentStatus,
+            paymentMethod: order.paymentMethod,
+            guestPayMongoStatus: payMongo?.status,
+            refundedAmountCents: payMongo?.refundedAmountCents ?? 0,
+            refundErrorMessage: payMongo?.refundErrorMessage ?? '',
+            totalCents: order.totalCents,
+            subtotalCents: order.subtotalCents,
+            serviceChargeCents: order.serviceChargeCents,
+            taxCents: order.taxCents,
+            createdAt: order.createdAt.toISOString(),
+            updatedAt: order.updatedAt.toISOString(),
+            tagCode: order.tag?.code ?? '',
+            items: order.items.map((item) => ({
+              id: item.id,
+              quantity: item.quantity,
+              productNameSnapshot: item.productNameSnapshot,
+              unitPriceCents: item.unitPriceCents,
+              notes: item.notes ?? '',
+              isBundleSnapshot: item.isBundleSnapshot,
+              status: item.status,
+              cancelledQty: item.cancelledQty,
+              cancelledAt: item.cancelledAt?.toISOString() ?? '',
+              cancelReason: item.cancelReason ?? '',
+              bundleComponents: item.bundleComponents.map((component) => ({
+                id: component.id,
+                componentNameSnapshot: component.componentNameSnapshot,
+                quantity: component.quantity,
+              })),
             })),
-          })),
-          statusHistory: order.statusHistory.map((history) => ({
-            id: history.id,
-            status: history.status,
-            note: history.note ?? '',
-            createdAt: history.createdAt.toISOString(),
-            userName: history.user?.name ?? history.user?.email ?? '',
-          })),
-          restoreMovements: restoreMovements
-            .filter((movement) =>
-              Boolean(movement.reason?.includes(order.orderCode))
-            )
-            .map((movement) => ({
-              id: movement.id,
-              productName: movement.product.name,
-              type: movement.type,
-              quantity: movement.quantity,
-              balanceAfter: movement.balanceAfter,
-              reason: movement.reason ?? '',
-              createdAt: movement.createdAt.toISOString(),
+            statusHistory: order.statusHistory.map((history) => ({
+              id: history.id,
+              status: history.status,
+              note: history.note ?? '',
+              createdAt: history.createdAt.toISOString(),
+              userName: history.user?.name ?? history.user?.email ?? '',
             })),
-        }))}
+            restoreMovements: restoreMovements
+              .filter((movement) =>
+                Boolean(movement.reason?.includes(order.orderCode))
+              )
+              .map((movement) => ({
+                id: movement.id,
+                productName: movement.product.name,
+                type: movement.type,
+                quantity: movement.quantity,
+                balanceAfter: movement.balanceAfter,
+                reason: movement.reason ?? '',
+                createdAt: movement.createdAt.toISOString(),
+              })),
+          };
+        })}
       />
     </div>
   );

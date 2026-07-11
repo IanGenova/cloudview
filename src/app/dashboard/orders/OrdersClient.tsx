@@ -32,9 +32,20 @@ type OrderStatus =
   | 'DELIVERED'
   | 'CANCELLED';
 
-type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
+type PaymentStatus =
+  | 'UNPAID'
+  | 'PAID'
+  | 'REFUND_PENDING'
+  | 'PARTIALLY_REFUNDED'
+  | 'REFUNDED'
+  | 'REFUND_FAILED';
 
-type PaymentMethod = 'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS';
+type PaymentMethod =
+  | 'ROOM_CHARGE'
+  | 'PAY_AT_COUNTER'
+  | 'CASH'
+  | 'POS'
+  | 'PAYMONGO';
 
 type OrderItemStatus = 'ACTIVE' | 'PARTIALLY_CANCELLED' | 'CANCELLED';
 
@@ -84,6 +95,9 @@ type DashboardOrder = {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
+  guestPayMongoStatus?: string;
+  refundedAmountCents?: number;
+  refundErrorMessage?: string;
   totalCents: number;
   subtotalCents: number;
   serviceChargeCents: number;
@@ -123,7 +137,7 @@ type Message =
     }
   | null;
   
-  type ClientOrderAction = (formData: FormData) => Promise<void>;
+  type ClientOrderAction = (formData: FormData) => Promise<unknown>;
 
 const statusOptions: StatusFilter[] = [
   'ALL',
@@ -221,11 +235,68 @@ function getPaymentClass(status: PaymentStatus) {
     return 'bg-emerald-100 text-emerald-700';
   }
 
-  if (status === 'REFUNDED') {
+  if (status === 'REFUND_PENDING') {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  if (status === 'PARTIALLY_REFUNDED' || status === 'REFUNDED') {
     return 'bg-blue-100 text-blue-700';
   }
 
   return 'bg-red-100 text-red-700';
+}
+
+function isFinanciallySettled(status: PaymentStatus) {
+  return status !== 'UNPAID';
+}
+
+function canManuallyMarkPaid(order: DashboardOrder) {
+  return order.paymentStatus === 'UNPAID' && order.paymentMethod !== 'PAYMONGO';
+}
+
+function canStartOrderProcessing(order: DashboardOrder) {
+  if (order.paymentMethod !== 'PAYMONGO') {
+    return true;
+  }
+
+  return (
+    order.paymentStatus === 'PAID' ||
+    order.paymentStatus === 'PARTIALLY_REFUNDED'
+  );
+}
+
+function getStaffReviewItems(order: DashboardOrder) {
+  const activeItems = getItemCount(order.items);
+  const paymentReady = canStartOrderProcessing(order);
+
+  return [
+    {
+      label: 'Payment verification',
+      ready: paymentReady,
+      detail:
+        order.paymentMethod === 'PAYMONGO'
+          ? paymentReady
+            ? 'Verified PayMongo payment received.'
+            : 'Wait for the PayMongo webhook before preparing.'
+          : `${label(order.paymentMethod)} follows the hotel collection workflow.`,
+    },
+    {
+      label: 'Active items',
+      ready: activeItems > 0,
+      detail:
+        activeItems > 0
+          ? `${activeItems} active item${activeItems === 1 ? '' : 's'} to fulfill.`
+          : 'No active items remain in this order.',
+    },
+    {
+      label: 'Processing stage',
+      ready: order.status !== 'DELIVERED' && order.status !== 'CANCELLED',
+      detail:
+        order.status === 'PENDING'
+          ? 'Review the order, then accept it for preparation.'
+          : `Current stage: ${label(order.status)}.`,
+    },
+  ];
 }
 
 function getNextActions(status: OrderStatus) {
@@ -941,8 +1012,9 @@ function CancelOrderItemModal({
           ) : null}
 
           <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
-            This will cancel only this food item. Other food items in this
-            order will remain active. Stock will be restored automatically.
+            This cancels only this food item. Stock is restored automatically.
+            For a paid PayMongo order, CloudView also requests the matching
+            partial refund through PayMongo.
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2">
@@ -1055,8 +1127,9 @@ function CancelOrderModal({
           ) : null}
 
           <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
-            Cancelling this order will restore deducted stock when restore
-            movements are available.
+            Cancelling this order restores its deducted stock. When the order
+            was paid through PayMongo, CloudView also requests the remaining
+            refundable balance automatically.
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2">
@@ -1095,6 +1168,8 @@ function OrderDetailsModal({
 }) {
   const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
   const nextActions = getNextActions(order.status);
+  const staffReviewItems = getStaffReviewItems(order);
+  const canProcess = canStartOrderProcessing(order);
 
   return (
     <>
@@ -1188,6 +1263,40 @@ function OrderDetailsModal({
             </div>
 
             <aside className="space-y-3">
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm font-black text-blue-950">
+                  Staff Review Checklist
+                </p>
+                <p className="mt-1 text-xs font-semibold text-blue-700">
+                  Review these requirements before preparing the order.
+                </p>
+
+                <div className="mt-3 space-y-2">
+                  {staffReviewItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-xl bg-white/80 p-3 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <b className="text-neutral-900">{item.label}</b>
+                        <span
+                          className={
+                            item.ready
+                              ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700'
+                              : 'rounded-full bg-red-100 px-2 py-1 text-[10px] font-black text-red-700'
+                          }
+                        >
+                          {item.ready ? 'READY' : 'REVIEW'}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-semibold text-neutral-500">
+                        {item.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="rounded-2xl bg-neutral-50 p-4">
                 <p className="text-sm font-black text-neutral-950">
                   Price Breakdown
@@ -1220,6 +1329,27 @@ function OrderDetailsModal({
                 </div>
               </div>
 
+              {order.paymentMethod === 'PAYMONGO' ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-black text-amber-900">
+                    PayMongo QR Ph
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-amber-700">
+                    Payment: {label(order.paymentStatus)}
+                  </p>
+                  {order.refundedAmountCents ? (
+                    <p className="mt-2 text-xs font-black text-blue-700">
+                      Refunded: {money(order.refundedAmountCents)}
+                    </p>
+                  ) : null}
+                  {order.refundErrorMessage ? (
+                    <p className="mt-2 rounded-xl bg-red-100 p-2 text-xs font-bold text-red-700">
+                      {order.refundErrorMessage}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() => printOrder(order)}
@@ -1229,7 +1359,7 @@ function OrderDetailsModal({
                 Print Receipt
               </button>
 
-              {order.paymentStatus !== 'PAID' ? (
+              {canManuallyMarkPaid(order) ? (
                 <form action={onMarkPaid}>
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="redirectTo" value="orders" />  
@@ -1278,7 +1408,13 @@ function OrderDetailsModal({
 
                         <button
                           type="submit"
-                          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black ${action.className}`}
+                          disabled={!canProcess}
+                          title={
+                            canProcess
+                              ? undefined
+                              : 'Wait for verified PayMongo payment before preparing.'
+                          }
+                          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black disabled:cursor-not-allowed disabled:opacity-45 ${action.className}`}
                         >
                           {action.status === 'ACCEPTED' ? (
                             <CheckCircle2 className="size-4" />
@@ -1364,7 +1500,23 @@ function getOrderFocusLabel(order: DashboardOrder) {
     return 'Ready for delivery';
   }
 
-  if (order.paymentStatus !== 'PAID') {
+  if (order.paymentStatus === 'REFUND_PENDING') {
+    return 'Refund pending';
+  }
+
+  if (order.paymentStatus === 'REFUND_FAILED') {
+    return 'Refund needs review';
+  }
+
+  if (order.paymentStatus === 'PARTIALLY_REFUNDED') {
+    return 'Partially refunded';
+  }
+
+  if (order.paymentStatus === 'REFUNDED') {
+    return 'Refunded';
+  }
+
+  if (order.paymentStatus === 'UNPAID') {
     return 'Payment pending';
   }
 
@@ -1524,12 +1676,14 @@ function OrderActionButton({
   action,
   children,
   className,
+  disabled = false,
 }: {
   order: DashboardOrder;
   status: OrderStatus;
   action: ClientOrderAction;
   children: ReactNode;
   className: string;
+  disabled?: boolean;
 }) {
   return (
     <form action={action}>
@@ -1541,7 +1695,11 @@ function OrderActionButton({
         name="note"
         value={`Dashboard status changed to ${label(status)}`}
       />
-      <button type="submit" className={className}>
+      <button
+        type="submit"
+        disabled={disabled}
+        className={`${className} disabled:cursor-not-allowed disabled:opacity-45`}
+      >
         {children}
       </button>
     </form>
@@ -1557,7 +1715,7 @@ function MarkPaidButton({
   action: ClientOrderAction;
   compact?: boolean;
 }) {
-  if (order.paymentStatus === 'PAID') {
+  if (!canManuallyMarkPaid(order)) {
     return null;
   }
 
@@ -1601,11 +1759,12 @@ function OrderCard({
   const preview = getOrderPreview(order.items);
   const waitingLabel = getOrderAgeLabel(order, now);
   const nextStatus = getPrimaryNextStatus(order.status);
-  const hasAction = Boolean(nextStatus);
+  const canProcess = canStartOrderProcessing(order);
+  const hasAction = Boolean(nextStatus) && canProcess;
   const isAttentionOrder =
     order.status === 'PENDING' ||
     order.status === 'READY' ||
-    order.paymentStatus !== 'PAID';
+    order.paymentStatus === 'UNPAID';
 
   return (
     <article
@@ -1705,6 +1864,12 @@ function OrderCard({
             {preview}
           </p>
         </div>
+
+        {!canProcess && order.paymentMethod === 'PAYMONGO' ? (
+          <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
+            Kitchen processing is locked until PayMongo confirms the payment.
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-2 border-t border-neutral-100 bg-white p-3 sm:grid-cols-2">
@@ -1713,6 +1878,7 @@ function OrderCard({
             order={order}
             status={nextStatus}
             action={onStatusChange}
+            disabled={!canProcess}
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
           >
             {nextStatus === 'ACCEPTED' ? (
@@ -1765,7 +1931,7 @@ function OrderCard({
           Print
         </button>
 
-        {order.paymentStatus !== 'PAID' ? (
+        {canManuallyMarkPaid(order) ? (
           <div className="sm:col-span-2">
             <MarkPaidButton order={order} action={onMarkPaid} />
           </div>
@@ -1789,7 +1955,7 @@ function PriorityQueue({
       (order) =>
         order.status === 'PENDING' ||
         order.status === 'READY' ||
-        order.paymentStatus !== 'PAID'
+        order.paymentStatus === 'UNPAID'
     )
     .slice(0, 6);
 
@@ -1976,8 +2142,8 @@ export function OrdersClient({
 
       const matchesPayment =
         paymentFilter === 'ALL' ||
-        (paymentFilter === 'PAID' && order.paymentStatus === 'PAID') ||
-        (paymentFilter === 'UNPAID' && order.paymentStatus !== 'PAID');
+        (paymentFilter === 'PAID' && isFinanciallySettled(order.paymentStatus)) ||
+        (paymentFilter === 'UNPAID' && order.paymentStatus === 'UNPAID');
 
       return matchesSearch && matchesStatus && matchesPayment;
     });
@@ -2015,7 +2181,7 @@ export function OrdersClient({
     (order) =>
       order.status === 'PENDING' ||
       order.status === 'READY' ||
-      order.paymentStatus !== 'PAID'
+      order.paymentStatus === 'UNPAID'
   ).length;
 
   const kitchenQueueCount = localOrders.filter((order) =>

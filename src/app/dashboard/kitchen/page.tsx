@@ -6,6 +6,9 @@ import {
   FulfillmentTiming,
   OrderItemStatus,
   OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
   ScheduledReleaseStatus,
 } from '@prisma/client';
 import {
@@ -1300,7 +1303,20 @@ const isRushMode = displayMode === 'rush';
   OrderStatus.READY,
 ] as const;
 
-
+const verifiedKitchenPaymentWhere: Prisma.OrderWhereInput = {
+  OR: [
+    {
+      paymentMethod: {
+        not: PaymentMethod.PAYMONGO,
+      },
+    },
+    {
+      paymentStatus: {
+        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+      },
+    },
+  ],
+};
 
 const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   db.order.findMany({
@@ -1309,6 +1325,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       status: {
         in: [...activeKitchenStatuses],
       },
+      AND: [verifiedKitchenPaymentWhere],
       OR: [
         {
           fulfillmentTiming: FulfillmentTiming.ASAP,
@@ -1347,6 +1364,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       status: {
         in: [...activeKitchenStatuses],
       },
+      AND: [verifiedKitchenPaymentWhere],
       fulfillmentTiming: FulfillmentTiming.SCHEDULED,
       releasedAt: null,
       scheduledReleaseStatus: ScheduledReleaseStatus.SCHEDULED,
@@ -1463,7 +1481,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   ) : (
     <PageHeader
       title="Kitchen Display"
-      description="Live kitchen workflow for pending, preparing, ready, and item-level cancellation updates."
+      description="Live kitchen workflow for verified orders only. Review, prepare, mark ready, deliver, or cancel with automatic stock and refund handling."
     />
   )}
 

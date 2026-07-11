@@ -10,8 +10,12 @@ import { revalidatePath } from 'next/cache';
 import { assertHotelScope } from '@/lib/access';
 import { requireRole, requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { createPayMongoCheckoutSession, type PayMongoLineItem } from '@/lib/paymongo';
+import {
+  createPayMongoCheckoutSession,
+  type PayMongoLineItem,
+} from '@/lib/paymongo';
 import { cleanText } from '@/lib/sanitize';
+import { notifyPosPayMongoStatus } from '@/lib/paymongo-dashboard-notifications';
 import { createPOSOrder } from './actions';
 
 type CheckoutInput = {
@@ -43,6 +47,92 @@ type StoredPOSPayload = {
     quantity: number;
   }>;
 };
+
+export type CreatePayMongoPOSCheckoutResult =
+  | {
+      ok: true;
+      sessionId: string;
+      checkoutUrl: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+export type PayMongoPOSStatusResult =
+  | {
+      ok: true;
+      id: string;
+      status: POSPayMongoStatus;
+      orderCode: string | null;
+      serviceRequestCodes: string[];
+      errorMessage: string | null;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+export type FinalizePayMongoPOSCheckoutResult =
+  | {
+      ok: true;
+      alreadyFinalized: boolean;
+      orderCode: string | null;
+      serviceRequestCodes: string[];
+    }
+  | {
+      ok: false;
+      waiting: true;
+      message: string;
+    }
+  | {
+      ok: false;
+      waiting: false;
+      error: string;
+    };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim()
+    ? error.message.trim()
+    : fallback;
+}
+
+function getPublicPayMongoError(error: unknown, fallback: string) {
+  const message = getErrorMessage(error, fallback);
+
+  if (process.env.NODE_ENV !== 'production') {
+    return message;
+  }
+
+  const lowerMessage = message.toLowerCase();
+
+  if (
+    lowerMessage.includes('paymongo') ||
+    lowerMessage.includes('secret key') ||
+    lowerMessage.includes('app_url') ||
+    lowerMessage.includes('checkout session') ||
+    lowerMessage.includes('request failed')
+  ) {
+    return 'Unable to start the secure PayMongo checkout. Please verify the payment configuration or use another payment method.';
+  }
+
+  return message;
+}
+
+function logPayMongoActionError(
+  operation: string,
+  error: unknown,
+  context: Record<string, string | null | undefined> = {}
+) {
+  console.error(`[POS PayMongo] ${operation} failed.`, {
+    ...context,
+    message: getErrorMessage(error, 'Unknown PayMongo error.'),
+    ...(process.env.NODE_ENV !== 'production' && error instanceof Error
+      ? { stack: error.stack }
+      : {}),
+  });
+}
+
 
 function positiveInteger(value: unknown) {
   return typeof value === 'number' && Number.isInteger(value) && value > 0
@@ -109,7 +199,7 @@ function parseStoredPayload(value: Prisma.JsonValue): StoredPOSPayload {
   return payload;
 }
 
-export async function createPayMongoPOSCheckout(input: CheckoutInput) {
+async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
@@ -352,16 +442,16 @@ export async function createPayMongoPOSCheckout(input: CheckoutInput) {
     },
   });
 
-  const appUrl = getAppUrl();
-  const query = new URLSearchParams({
-    hotelId,
-    paymongo: draft.id,
-  });
-
-  const successUrl = `${appUrl}/dashboard/pos?${query.toString()}&paymongoResult=success`;
-  const cancelUrl = `${appUrl}/dashboard/pos?${query.toString()}&paymongoResult=cancelled`;
-
   try {
+    const appUrl = getAppUrl();
+    const query = new URLSearchParams({
+      hotelId,
+      paymongo: draft.id,
+    });
+
+    const successUrl = `${appUrl}/dashboard/pos?${query.toString()}&paymongoResult=success`;
+    const cancelUrl = `${appUrl}/dashboard/pos?${query.toString()}&paymongoResult=cancelled`;
+
     const checkout = await createPayMongoCheckoutSession({
       idempotencyKey: `cloudview-pos-${draft.id}`,
       lineItems,
@@ -381,6 +471,7 @@ export async function createPayMongoPOSCheckout(input: CheckoutInput) {
       data: {
         checkoutSessionId: checkout.id,
         checkoutUrl: checkout.checkoutUrl,
+        errorMessage: null,
       },
     });
 
@@ -390,22 +481,62 @@ export async function createPayMongoPOSCheckout(input: CheckoutInput) {
       checkoutUrl: checkout.checkoutUrl,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unable to create PayMongo checkout.';
+    const message = getErrorMessage(
+      error,
+      'Unable to create PayMongo checkout.'
+    );
 
-    await db.posPayMongoSession.update({
-      where: { id: draft.id },
-      data: {
-        status: POSPayMongoStatus.FAILED,
-        errorMessage: message,
-      },
-    });
+    try {
+      await db.posPayMongoSession.update({
+        where: { id: draft.id },
+        data: {
+          status: POSPayMongoStatus.FAILED,
+          errorMessage: message.slice(0, 2000),
+        },
+      });
 
-    throw new Error(message);
+      await notifyPosPayMongoStatus({ sessionId: draft.id }).catch(
+        (notificationError) =>
+          console.warn(
+            '[POS PayMongo] Unable to create failed-payment notification.',
+            notificationError
+          )
+      );
+    } catch (updateError) {
+      logPayMongoActionError('mark checkout as failed', updateError, {
+        hotelId,
+        sessionId: draft.id,
+      });
+    }
+
+    throw error instanceof Error ? error : new Error(message);
   }
 }
 
-export async function getPayMongoPOSStatus(sessionIdInput: string) {
+export async function createPayMongoPOSCheckout(
+  input: CheckoutInput
+): Promise<CreatePayMongoPOSCheckoutResult> {
+  try {
+    return await createPayMongoPOSCheckoutInternal(input);
+  } catch (error) {
+    logPayMongoActionError('create checkout', error, {
+      hotelId:
+        typeof input?.hotelId === 'string'
+          ? input.hotelId
+          : null,
+    });
+
+    return {
+      ok: false,
+      error: getPublicPayMongoError(
+        error,
+        'Unable to create PayMongo checkout.'
+      ),
+    };
+  }
+}
+
+async function getPayMongoPOSStatusInternal(sessionIdInput: string) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
@@ -434,6 +565,7 @@ export async function getPayMongoPOSStatus(sessionIdInput: string) {
   assertHotelScope(user, session.hotelId);
 
   return {
+    ok: true as const,
     id: session.id,
     status: session.status,
     orderCode: session.orderCode,
@@ -446,7 +578,30 @@ export async function getPayMongoPOSStatus(sessionIdInput: string) {
   };
 }
 
-export async function finalizePayMongoPOSCheckout(sessionIdInput: string) {
+export async function getPayMongoPOSStatus(
+  sessionIdInput: string
+): Promise<PayMongoPOSStatusResult> {
+  try {
+    return await getPayMongoPOSStatusInternal(sessionIdInput);
+  } catch (error) {
+    logPayMongoActionError('read checkout status', error, {
+      sessionId:
+        typeof sessionIdInput === 'string'
+          ? sessionIdInput
+          : null,
+    });
+
+    return {
+      ok: false,
+      error: getPublicPayMongoError(
+        error,
+        'Unable to read the PayMongo payment status.'
+      ),
+    };
+  }
+}
+
+async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
@@ -542,6 +697,14 @@ export async function finalizePayMongoPOSCheckout(sessionIdInput: string) {
       },
     });
 
+    await notifyPosPayMongoStatus({ sessionId: session.id }).catch(
+      (notificationError) =>
+        console.warn(
+          '[POS PayMongo] Unable to create completion notification.',
+          notificationError
+        )
+    );
+
     revalidatePath('/dashboard/pos');
 
     return {
@@ -564,8 +727,41 @@ export async function finalizePayMongoPOSCheckout(sessionIdInput: string) {
       },
     });
 
+    await notifyPosPayMongoStatus({ sessionId: session.id }).catch(
+      (notificationError) =>
+        console.warn(
+          '[POS PayMongo] Unable to create review notification.',
+          notificationError
+        )
+    );
+
     throw new Error(
       `Payment received, but the sale could not be finalized: ${message}`
     );
   }
 }
+
+export async function finalizePayMongoPOSCheckout(
+  sessionIdInput: string
+): Promise<FinalizePayMongoPOSCheckoutResult> {
+  try {
+    return await finalizePayMongoPOSCheckoutInternal(sessionIdInput);
+  } catch (error) {
+    logPayMongoActionError('finalize paid checkout', error, {
+      sessionId:
+        typeof sessionIdInput === 'string'
+          ? sessionIdInput
+          : null,
+    });
+
+    return {
+      ok: false,
+      waiting: false,
+      error: getPublicPayMongoError(
+        error,
+        'The payment could not be finalized.'
+      ),
+    };
+  }
+}
+

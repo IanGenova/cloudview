@@ -11,19 +11,58 @@ export function getNfcAccessCookieName(tagCode: string) {
   return `${NFC_ACCESS_COOKIE}_${safeTagCode}`;
 }
 
+function parsePositiveMinutes(
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number
+) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.max(minimum, Math.min(Math.floor(parsed), maximum));
+}
+
 function getAccessTtlMinutes() {
-  return Number(process.env.NFC_ACCESS_TTL_MINUTES || 60);
+  return parsePositiveMinutes(
+    process.env.NFC_ACCESS_TTL_MINUTES,
+    60,
+    5,
+    60 * 24 * 7
+  );
 }
 
 function getIdleTimeoutMinutes() {
-  return Number(process.env.NFC_IDLE_TIMEOUT_MINUTES || 15);
+  return parsePositiveMinutes(
+    process.env.NFC_IDLE_TIMEOUT_MINUTES,
+    15,
+    1,
+    getAccessTtlMinutes()
+  );
 }
 
 function appSecret() {
-  return process.env.AUTH_SECRET || 'dev-change-this-secret';
+  const value = process.env.AUTH_SECRET?.trim();
+
+  if (value) {
+    return value;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('AUTH_SECRET is required in production.');
+  }
+
+  return 'dev-change-this-secret';
 }
+
 function isPrivateLanHostname(hostname: string) {
   return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
     hostname.startsWith('192.168.') ||
     hostname.startsWith('10.') ||
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
@@ -41,68 +80,82 @@ function shouldForceHttpsForHost(hostname: string) {
     return true;
   }
 
-  /**
-   * Default:
-   * - Production should prefer HTTPS.
-   * - Local LAN development should NOT automatically force HTTPS.
-   */
-  if (process.env.NODE_ENV === 'production') {
-    return !isPrivateLanHostname(hostname);
-  }
-
-  return false;
+  return process.env.NODE_ENV === 'production' && !isPrivateLanHostname(hostname);
 }
 
 export function getPublicAppUrl() {
-  const lanIp = process.env.NEXT_PUBLIC_LAN_IP || 'localhost';
-
+  const lanIp = process.env.NEXT_PUBLIC_LAN_IP?.trim() || 'localhost';
   const rawUrl =
-    process.env.NEXT_PUBLIC_APP_URL || `http://${lanIp}:3000`;
+    process.env.APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    `http://${lanIp}:3000`;
+
+  let url: URL;
 
   try {
-    const url = new URL(rawUrl);
-
-    if (['0.0.0.0', 'localhost', '127.0.0.1'].includes(url.hostname)) {
-      url.hostname = lanIp;
-    }
-
-    /**
-     * Force HTTP for local LAN testing.
-     * This prevents NFC links from becoming https:// again.
-     */
-    url.protocol = 'http:';
-
-    if (!url.port) {
-      url.port = '3000';
-    }
-
-    return url.toString().replace(/\/$/, '');
+    url = new URL(rawUrl);
   } catch {
-    const cleanedUrl = rawUrl.replace(/\/$/, '');
-
-    if (cleanedUrl.startsWith('https://')) {
-      return cleanedUrl.replace(/^https:\/\//i, 'http://');
-    }
-
-    if (cleanedUrl.startsWith('http://')) {
-      return cleanedUrl;
-    }
-
-    return `http://${cleanedUrl}:3000`;
+    throw new Error('APP_URL or NEXT_PUBLIC_APP_URL must be an absolute URL.');
   }
+
+  if (['0.0.0.0', 'localhost', '127.0.0.1'].includes(url.hostname) && lanIp) {
+    url.hostname = lanIp;
+  }
+
+  if (shouldForceHttpsForHost(url.hostname)) {
+    url.protocol = 'https:';
+  }
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !isPrivateLanHostname(url.hostname) &&
+    url.protocol !== 'https:'
+  ) {
+    throw new Error('Public APP_URL must use HTTPS in production.');
+  }
+
+  if (!url.port && url.protocol === 'http:' && process.env.NODE_ENV !== 'production') {
+    url.port = '3000';
+  }
+
+  return url.toString().replace(/\/$/, '');
 }
 
 export function isHttpsPublicAppUrl() {
-  return false;
+  return new URL(getPublicAppUrl()).protocol === 'https:';
 }
 
 export async function shouldUseSecureNfcCookies() {
-  /**
-   * HTTP mode:
-   * Cookies must NOT be secure, otherwise other LAN devices using HTTP
-   * will not save NFC access/session cookies.
-   */
-  return false;
+  const forceHttps = process.env.NEXT_PUBLIC_FORCE_HTTPS;
+
+  if (forceHttps === 'true') {
+    return true;
+  }
+
+  if (forceHttps === 'false') {
+    return false;
+  }
+
+  const requestHeaders = await headers();
+  const forwardedProtocol = requestHeaders
+    .get('x-forwarded-proto')
+    ?.split(',')[0]
+    ?.trim()
+    .toLowerCase();
+
+  if (forwardedProtocol === 'https') {
+    return true;
+  }
+
+  if (forwardedProtocol === 'http') {
+    return false;
+  }
+
+  return isHttpsPublicAppUrl();
+}
+
+function shouldBindNfcSessionToIp() {
+  return process.env.NFC_BIND_IP === 'true';
 }
 
 export function randomSecret() {
@@ -140,11 +193,11 @@ function minDate(a: Date, b: Date) {
 }
 
 async function getRequestFingerprint() {
-  const h = await headers();
+  const requestHeaders = await headers();
 
-  const userAgent = h.get('user-agent') || 'unknown';
-  const forwardedFor = h.get('x-forwarded-for') || '';
-  const realIp = h.get('x-real-ip') || '';
+  const userAgent = requestHeaders.get('user-agent') || 'unknown';
+  const forwardedFor = requestHeaders.get('x-forwarded-for') || '';
+  const realIp = requestHeaders.get('x-real-ip') || '';
   const ip = forwardedFor.split(',')[0]?.trim() || realIp || 'local';
 
   return {
@@ -153,14 +206,28 @@ async function getRequestFingerprint() {
   };
 }
 
+function accessDeniedUrl(tagCode: string, reason: string) {
+  const query = new URLSearchParams();
+
+  if (tagCode) {
+    query.set('tag', tagCode);
+  }
+
+  query.set('reason', reason);
+
+  return `/nfc-access-denied?${query.toString()}`;
+}
+
 async function expireSessionAndRedirect(
   sessionId: string | null,
-  tagCode: string
-) {
+  tagCode: string,
+  reason = 'expired'
+): Promise<never> {
   if (sessionId) {
-    await db.nfcAccessSession.update({
+    await db.nfcAccessSession.updateMany({
       where: {
         id: sessionId,
+        revokedAt: null,
       },
       data: {
         revokedAt: new Date(),
@@ -168,11 +235,7 @@ async function expireSessionAndRedirect(
     });
   }
 
-  redirect(
-    `${getPublicAppUrl()}/nfc-access-denied?tag=${encodeURIComponent(
-      tagCode
-    )}&reason=expired`
-  );
+  redirect(accessDeniedUrl(tagCode, reason));
 }
 
 export async function createNfcAccessSession(tag: {
@@ -184,7 +247,6 @@ export async function createNfcAccessSession(tag: {
   const fingerprint = await getRequestFingerprint();
 
   const now = new Date();
-
   const absoluteExpiresAt = addMinutes(now, getAccessTtlMinutes());
   const idleExpiresAt = minDate(
     addMinutes(now, getIdleTimeoutMinutes()),
@@ -230,7 +292,14 @@ export async function createNfcAccessSession(tag: {
     cookieOptions,
   };
 }
-export async function requireNfcGuestAccess(tagCode: string) {
+
+export async function requireNfcGuestAccess(tagCodeInput: string) {
+  const tagCode = tagCodeInput.trim();
+
+  if (!tagCode) {
+    redirect(accessDeniedUrl('', 'invalid-tag'));
+  }
+
   const tag = await db.nfcTag.findUnique({
     where: {
       code: tagCode,
@@ -246,22 +315,17 @@ export async function requireNfcGuestAccess(tagCode: string) {
     },
   });
 
-  if (!tag || tag.status !== 'ACTIVE' || tag.deletedAt) {
-    redirect(`${getPublicAppUrl()}/nfc-access-denied?reason=inactive-tag`);
+  if (!tag || tag.status !== 'ACTIVE' || tag.deletedAt || !tag.hotel.isActive) {
+    redirect(accessDeniedUrl(tagCode, 'inactive-tag'));
   }
 
   const cookieStore = await cookies();
-
   const rawToken =
     cookieStore.get(getNfcAccessCookieName(tag.code))?.value ||
     cookieStore.get(NFC_ACCESS_COOKIE)?.value;
 
   if (!rawToken) {
-    redirect(
-      `${getPublicAppUrl()}/nfc-access-denied?tag=${encodeURIComponent(
-        tagCode
-      )}&reason=no-session`
-    );
+    redirect(accessDeniedUrl(tagCode, 'no-session'));
   }
 
   const now = new Date();
@@ -271,32 +335,37 @@ export async function requireNfcGuestAccess(tagCode: string) {
   const session = await db.nfcAccessSession.findFirst({
     where: {
       tagId: tag.id,
+      hotelId: tag.hotelId,
       tokenHash,
       revokedAt: null,
     },
   });
 
   if (!session) {
-    redirect(
-      `${getPublicAppUrl()}/nfc-access-denied?tag=${encodeURIComponent(
-        tagCode
-      )}&reason=invalid-session`
-    );
+    redirect(accessDeniedUrl(tagCode, 'invalid-session'));
   }
 
   if (session.expiresAt <= now) {
-    await expireSessionAndRedirect(session.id, tagCode);
+    await expireSessionAndRedirect(session.id, tagCode, 'expired');
   }
 
   if (session.idleExpiresAt && session.idleExpiresAt <= now) {
-    await expireSessionAndRedirect(session.id, tagCode);
+    await expireSessionAndRedirect(session.id, tagCode, 'idle-timeout');
   }
 
   if (
     session.userAgentHash &&
     session.userAgentHash !== fingerprint.userAgentHash
   ) {
-    await expireSessionAndRedirect(session.id, tagCode);
+    await expireSessionAndRedirect(session.id, tagCode, 'device-mismatch');
+  }
+
+  if (
+    shouldBindNfcSessionToIp() &&
+    session.ipHash &&
+    session.ipHash !== fingerprint.ipHash
+  ) {
+    await expireSessionAndRedirect(session.id, tagCode, 'network-mismatch');
   }
 
   const nextIdleExpiresAt = minDate(
@@ -318,17 +387,15 @@ export async function requireNfcGuestAccess(tagCode: string) {
 }
 
 export function secureNfcLaunchUrl(code: string, scanSecret?: string | null) {
-  const baseUrl = getPublicAppUrl();
-
   if (!scanSecret) {
     return '';
   }
 
-  return `${baseUrl}/n/${code}?k=${scanSecret}`;
+  return `${getPublicAppUrl()}/n/${encodeURIComponent(
+    code
+  )}?k=${encodeURIComponent(scanSecret)}`;
 }
 
 export function protectedGuestUrl(code: string) {
-  const baseUrl = getPublicAppUrl();
-
-  return `${baseUrl}/t/${code}`;
+  return `${getPublicAppUrl()}/t/${encodeURIComponent(code)}`;
 }

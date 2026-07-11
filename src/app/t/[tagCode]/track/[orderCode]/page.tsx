@@ -5,6 +5,8 @@ import {
   MenuAvailabilityMovementType,
   OrderItemStatus,
   OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
   Prisma,
 } from '@prisma/client';
 import {
@@ -32,6 +34,7 @@ import { cleanText } from '@/lib/sanitize';
 import { triggerOrderStatusUpdate } from '@/lib/realtime/order-events';
 import { triggerKitchenOrderUpdated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
+import { requestGuestFoodOrderRefund } from '@/lib/guest-paymongo-refund';
 
 export const dynamic = 'force-dynamic';
 
@@ -691,6 +694,9 @@ async function cancelGuestOrderItemAction(formData: FormData) {
       subtotalCents: true,
       serviceChargeCents: true,
       taxCents: true,
+      totalCents: true,
+      paymentMethod: true,
+      paymentStatus: true,
       items: {
         select: {
           id: true,
@@ -756,6 +762,9 @@ async function cancelGuestOrderItemAction(formData: FormData) {
     order,
     cancelledItemId: item.id,
   });
+
+  const nextTotalCents = allItemsCancelled ? 0 : totals.totalCents;
+  const refundAmountCents = Math.max(order.totalCents - nextTotalCents, 0);
 
   await db.$transaction(async (tx) => {
     const restoreRequirements = await buildRestoreRequirementsForOrderItem({
@@ -844,6 +853,37 @@ async function cancelGuestOrderItemAction(formData: FormData) {
 
     statusUpdatedAt = history.createdAt;
   });
+
+  if (
+    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    (order.paymentStatus === PaymentStatus.PAID ||
+      order.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ||
+      order.paymentStatus === PaymentStatus.REFUND_FAILED) &&
+    refundAmountCents > 0
+  ) {
+    const refundResult = await requestGuestFoodOrderRefund({
+      orderId: order.id,
+      amountCents: refundAmountCents,
+      reason:
+        reason ||
+        (allItemsCancelled
+          ? `Guest cancelled order ${order.orderCode}`
+          : `Guest cancelled ${item.productNameSnapshot} from ${order.orderCode}`),
+      orderItemId: allItemsCancelled ? null : item.id,
+      idempotencySuffix: allItemsCancelled
+        ? `guest-whole-order-${order.id}`
+        : `guest-item-${item.id}`,
+    });
+
+    if (!refundResult.ok && !refundResult.skipped) {
+      console.error('[Guest food cancellation] PayMongo refund failed.', {
+        orderId: order.id,
+        orderCode: order.orderCode,
+        refundAmountCents,
+        refundResult,
+      });
+    }
+  }
 
   revalidatePath('/dashboard/orders');
   revalidatePath('/dashboard/kitchen');
@@ -1223,8 +1263,7 @@ function OrderItemLine({
             </button>
 
             <p className="text-[12px] leading-5 text-red-200/60">
-              This will cancel only this item and restore its stock. Other items
-              in this order will remain active.
+              This will cancel only this item and restore its stock. For a paid PayMongo order, the matching amount will also be refunded automatically. Other items in this order will remain active.
             </p>
           </form>
         </details>
@@ -1284,6 +1323,27 @@ export default async function OrderTrackingPage({
         },
         orderBy: {
           createdAt: 'asc',
+        },
+      },
+      guestPayMongoSessions: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          refundStatus: true,
+          refundedAmountCents: true,
+          refundErrorMessage: true,
+          refunds: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              amountCents: true,
+              status: true,
+              reason: true,
+              createdAt: true,
+            },
+          },
         },
       },
       statusHistory: {
@@ -1398,6 +1458,37 @@ export default async function OrderTrackingPage({
           timerStart={timerStart}
           timerEnd={timerEnd}
         />
+
+        {order.paymentMethod === PaymentMethod.PAYMONGO ? (
+          <section className="mt-6 rounded-[2rem] border border-gold/20 bg-gold/[0.07] p-5 backdrop-blur-md">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                  PayMongo Payment
+                </p>
+                <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
+                  {paymentLabel(order.paymentStatus)}
+                </h2>
+                <p className="mt-2 text-xs font-medium leading-5 text-white/55">
+                  Cancellation refunds are returned through PayMongo to the original payment method.
+                </p>
+              </div>
+              <CreditCard className="size-6 text-gold" />
+            </div>
+
+            {order.guestPayMongoSessions[0]?.refundedAmountCents ? (
+              <p className="mt-4 rounded-xl bg-blue-500/10 p-3 text-sm font-semibold text-blue-200">
+                Refunded amount: {money(order.guestPayMongoSessions[0].refundedAmountCents)}
+              </p>
+            ) : null}
+
+            {order.guestPayMongoSessions[0]?.refundErrorMessage ? (
+              <p className="mt-3 rounded-xl bg-red-500/10 p-3 text-xs font-semibold leading-5 text-red-200">
+                {order.guestPayMongoSessions[0].refundErrorMessage}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
           <div className="mb-5 flex items-center gap-3">

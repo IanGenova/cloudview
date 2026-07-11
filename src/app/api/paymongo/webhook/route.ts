@@ -1,69 +1,41 @@
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
-import { POSPayMongoStatus } from '@prisma/client';
+import {
+  GuestPayMongoFlow,
+  GuestPayMongoStatus,
+  POSPayMongoStatus,
+} from '@prisma/client';
 import { db } from '@/lib/db';
+import {
+  applyGuestRefundWebhookUpdateTx,
+  requestAutomaticGuestRefund,
+} from '@/lib/guest-paymongo-refund';
+import {
+  cleanupStagedGuestServiceAttachments,
+  type StagedServiceAttachment,
+} from '@/lib/guest-service-order';
+import {
+  notifyGuestPayMongoRefundStatus,
+  notifyGuestPayMongoStatus,
+  notifyPosPayMongoStatus,
+} from '@/lib/paymongo-dashboard-notifications';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type PayMongoPayment = {
-  id?: string;
-  attributes?: {
-    amount?: number;
-    net_amount?: number;
-    fee?: number;
-    currency?: string;
-    status?: string;
-    source?: {
-      type?: string;
-    };
-  };
-};
+type JsonRecord = Record<string, unknown>;
 
-type CheckoutAttributes = {
-  metadata?: Record<string, string>;
-  reference_number?: string;
-  payments?: PayMongoPayment[];
-  payment_intent?: {
-    id?: string;
-    attributes?: {
-      amount?: number;
-      currency?: string;
-      status?: string;
-      payments?: PayMongoPayment[];
-    };
-  };
-};
-
-type CheckoutResource = {
-  id?: string;
-  type?: string;
-  attributes?: CheckoutAttributes;
-};
-
-/**
- * Supports both the current PayMongo webhook envelope and the older
- * data.attributes envelope so existing test/live integrations remain safe.
- */
 type PayMongoEvent = {
-  event_type?: string;
   data?: {
-    // Current envelope
-    type?: string;
-    resource?: string;
-    livemode?: boolean;
-    organization_id?: string;
-    created_at?: string;
-    updated_at?: string;
-    data?: CheckoutResource;
-
-    // Older envelope compatibility
     id?: string;
+    type?: string;
+    livemode?: boolean;
+    data?: JsonRecord;
     attributes?: {
       type?: string;
       livemode?: boolean;
-      data?: CheckoutResource;
+      data?: JsonRecord;
     };
   };
 };
@@ -73,6 +45,37 @@ type ParsedSignatureHeader = {
   testSignature?: string;
   liveSignature?: string;
 };
+
+function asRecord(value: unknown): JsonRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : null;
+}
+
+function asString(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function asNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function getAttributes(resource: JsonRecord | null) {
+  return asRecord(resource?.attributes);
+}
+
+function getMetadata(attributes: JsonRecord | null) {
+  const metadata = asRecord(attributes?.metadata);
+  const result: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(metadata ?? {})) {
+    if (typeof value === 'string') {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
 
 function safeHexEqual(left: string, right: string) {
   const normalizedLeft = left.trim().toLowerCase();
@@ -100,14 +103,12 @@ function parseSignatureHeader(header: string): ParsedSignatureHeader {
   for (const part of header.split(',')) {
     const separatorIndex = part.indexOf('=');
 
-    if (separatorIndex <= 0) {
-      continue;
-    }
+    if (separatorIndex <= 0) continue;
 
-    const key = part.slice(0, separatorIndex).trim();
-    const value = part.slice(separatorIndex + 1).trim();
-
-    values.set(key, value);
+    values.set(
+      part.slice(0, separatorIndex).trim(),
+      part.slice(separatorIndex + 1).trim()
+    );
   }
 
   return {
@@ -117,91 +118,78 @@ function parseSignatureHeader(header: string): ParsedSignatureHeader {
   };
 }
 
-function verifySignature({
-  rawBody,
-  signatureHeader,
-  secret,
-  expectedLivemode,
-}: {
+function verifySignature(input: {
   rawBody: string;
   signatureHeader: string;
   secret: string;
   expectedLivemode: boolean;
 }) {
-  const parsed = parseSignatureHeader(signatureHeader);
+  const parsed = parseSignatureHeader(input.signatureHeader);
 
-  /**
-   * Current PayMongo format:
-   * t=<timestamp>,te=<test signature>,li=<live signature>
-   *
-   * Signed payload:
-   * <timestamp>.<raw request body>
-   */
   if (parsed.timestamp) {
-    const suppliedSignature = expectedLivemode
+    const suppliedSignature = input.expectedLivemode
       ? parsed.liveSignature
       : parsed.testSignature;
 
-    if (!suppliedSignature) {
-      return false;
-    }
+    if (!suppliedSignature) return false;
 
-    const signedPayload = `${parsed.timestamp}.${rawBody}`;
-    const expectedSignature = createHmac('sha256', secret)
-      .update(signedPayload)
+    const expectedSignature = createHmac('sha256', input.secret)
+      .update(`${parsed.timestamp}.${input.rawBody}`)
       .digest('hex');
 
     return safeHexEqual(expectedSignature, suppliedSignature);
   }
 
-  /**
-   * Compatibility fallback for older/plain signature headers.
-   */
-  const expectedSignature = createHmac('sha256', secret)
-    .update(rawBody)
+  const expectedSignature = createHmac('sha256', input.secret)
+    .update(input.rawBody)
     .digest('hex');
 
-  return safeHexEqual(expectedSignature, signatureHeader);
+  return safeHexEqual(expectedSignature, input.signatureHeader);
 }
 
 function getEventDetails(event: PayMongoEvent) {
-  const currentEnvelope = event.data;
-  const legacyEnvelope = event.data?.attributes;
+  const current = event.data;
+  const legacy = event.data?.attributes;
 
   return {
-    eventType: currentEnvelope?.type ?? legacyEnvelope?.type,
+    eventId: current?.id,
+    eventType: current?.type ?? legacy?.type,
     livemode:
-      typeof currentEnvelope?.livemode === 'boolean'
-        ? currentEnvelope.livemode
-        : Boolean(legacyEnvelope?.livemode),
-    checkout: currentEnvelope?.data ?? legacyEnvelope?.data,
-    suppliedEventId: currentEnvelope?.id,
+      typeof current?.livemode === 'boolean'
+        ? current.livemode
+        : Boolean(legacy?.livemode),
+    resource: asRecord(current?.data ?? legacy?.data),
   };
 }
 
-function getPaidPayment(attributes?: CheckoutAttributes) {
-  const payments = [
-    ...(attributes?.payments ?? []),
-    ...(attributes?.payment_intent?.attributes?.payments ?? []),
-  ];
+function getPaidPayment(checkoutAttributes: JsonRecord | null) {
+  const paymentIntent = asRecord(checkoutAttributes?.payment_intent);
+  const paymentIntentAttributes = getAttributes(paymentIntent);
+  const directPayments = Array.isArray(checkoutAttributes?.payments)
+    ? checkoutAttributes.payments
+    : [];
+  const intentPayments = Array.isArray(paymentIntentAttributes?.payments)
+    ? paymentIntentAttributes.payments
+    : [];
+  const payments = [...directPayments, ...intentPayments]
+    .map(asRecord)
+    .filter((value): value is JsonRecord => Boolean(value));
 
   return (
-    payments.find((payment) => payment.attributes?.status === 'paid') ??
-    payments[0]
+    payments.find(
+      (payment) => asString(getAttributes(payment)?.status) === 'paid'
+    ) ??
+    payments[0] ??
+    null
   );
 }
 
-function createDeterministicEventId(
-  rawBody: string,
-  suppliedEventId?: string
-) {
-  if (suppliedEventId) {
-    return suppliedEventId;
-  }
-
-  return `pmw_${createHash('sha256').update(rawBody).digest('hex')}`;
+function createDeterministicEventId(rawBody: string, suppliedEventId?: string) {
+  return (
+    suppliedEventId ||
+    `pmw_${createHash('sha256').update(rawBody).digest('hex')}`
+  );
 }
-
 
 function mergeSessionPayload(
   value: Prisma.JsonValue,
@@ -212,10 +200,38 @@ function mergeSessionPayload(
       ? (value as Prisma.JsonObject)
       : {};
 
+  return { ...current, ...updates } as Prisma.InputJsonValue;
+}
+
+function getRefundEventDetails(eventType: string, resource: JsonRecord | null) {
+  const attributes = getAttributes(resource);
+  const resourceType = asString(resource?.type);
+
+  if (resourceType === 'refund' || asString(attributes?.payment_id)) {
+    return {
+      refundId: asString(resource?.id),
+      paymentId: asString(attributes?.payment_id),
+      amount: asNumber(attributes?.amount),
+      status:
+        asString(attributes?.status) ||
+        (eventType === 'payment.refunded' ? 'succeeded' : null),
+    };
+  }
+
+  const refunds = Array.isArray(attributes?.refunds)
+    ? attributes.refunds.map(asRecord).filter(Boolean)
+    : [];
+  const latestRefund = (refunds[refunds.length - 1] ?? null) as JsonRecord | null;
+  const latestAttributes = getAttributes(latestRefund);
+
   return {
-    ...current,
-    ...updates,
-  } as Prisma.InputJsonValue;
+    refundId: asString(latestRefund?.id),
+    paymentId: asString(resource?.id),
+    amount: asNumber(latestAttributes?.amount),
+    status:
+      asString(latestAttributes?.status) ||
+      (eventType === 'payment.refunded' ? 'succeeded' : null),
+  };
 }
 
 export async function POST(request: Request) {
@@ -245,8 +261,6 @@ export async function POST(request: Request) {
       expectedLivemode,
     })
   ) {
-    console.warn('[PayMongo webhook] Signature verification failed.');
-
     return NextResponse.json(
       { ok: false, error: 'Invalid signature.' },
       { status: 401 }
@@ -258,224 +272,342 @@ export async function POST(request: Request) {
   try {
     event = JSON.parse(rawBody) as PayMongoEvent;
   } catch {
-    console.warn('[PayMongo webhook] Invalid JSON payload.');
-
     return NextResponse.json(
       { ok: false, error: 'Invalid JSON.' },
       { status: 400 }
     );
   }
 
-  const {
-    eventType,
-    livemode,
-    checkout,
-    suppliedEventId,
-  } = getEventDetails(event);
+  const details = getEventDetails(event);
+  const eventId = createDeterministicEventId(rawBody, details.eventId);
 
-  const eventId = createDeterministicEventId(rawBody, suppliedEventId);
-
-  if (!eventType) {
-    console.info('[PayMongo webhook] Ignored event with no type.', {
-      eventId,
-    });
-
+  if (!details.eventType) {
     return NextResponse.json({ ok: true, ignored: 'missing-event-type' });
   }
 
-  if (livemode !== expectedLivemode) {
-    console.info('[PayMongo webhook] Ignored mode mismatch.', {
-      eventId,
-      eventType,
-      receivedLivemode: livemode,
-      expectedLivemode,
-    });
-
+  if (details.livemode !== expectedLivemode) {
     return NextResponse.json({ ok: true, ignored: 'mode-mismatch' });
   }
 
+  let automaticRefundSessionId: string | null = null;
+  let automaticRefundReason = '';
+  let guestNotificationSessionId: string | null = null;
+  let posNotificationSessionId: string | null = null;
+  let refundNotificationId: string | null = null;
+  const cleanupGuestSessionIds = new Set<string>();
+
   await db.$transaction(async (tx) => {
     const duplicate = await tx.payMongoWebhookEvent.findUnique({
-      where: {
-        id: eventId,
-      },
-      select: {
-        id: true,
-      },
+      where: { id: eventId },
+      select: { id: true },
     });
 
-    if (duplicate) {
-      console.info('[PayMongo webhook] Duplicate event ignored.', {
-        eventId,
-        eventType,
-      });
+    if (duplicate) return;
 
-      return;
-    }
+    if (details.eventType === 'checkout_session.payment.paid') {
+      const checkout = details.resource;
+      const checkoutId = asString(checkout?.id);
+      const attributes = getAttributes(checkout);
+      const metadata = getMetadata(attributes);
+      const referenceNumber = asString(attributes?.reference_number);
+      const flowType = (metadata.flow_type || '').toUpperCase();
+      const guestPaymentSessionId =
+        metadata.guest_payment_session_id ||
+        metadata.guest_paymongo_session_id ||
+        metadata.guest_stay_paymongo_session_id;
+      const isGuestFlow =
+        Boolean(guestPaymentSessionId) ||
+        flowType === 'GUEST_FOOD_ORDER' ||
+        flowType === 'GUEST_SERVICE_REQUEST' ||
+        flowType === 'FOOD_ORDER' ||
+        flowType === 'SERVICE_REQUEST';
 
-    if (eventType === 'checkout_session.payment.paid') {
-      const checkoutId = checkout?.id;
-      const attributes = checkout?.attributes;
-      const metadata = attributes?.metadata ?? {};
+      const payment = getPaidPayment(attributes);
+      const paymentAttributes = getAttributes(payment);
+      const paymentIntent = asRecord(attributes?.payment_intent);
+      const paymentIntentAttributes = getAttributes(paymentIntent);
+      const paymentId = asString(payment?.id);
+      const source = asRecord(paymentAttributes?.source);
+      const sourceType = asString(source?.type)?.toLowerCase() ?? null;
+      const paidAmount =
+        asNumber(paymentAttributes?.amount) ??
+        asNumber(paymentIntentAttributes?.amount);
+      const netAmount = asNumber(paymentAttributes?.net_amount);
+      const paidCurrency = (
+        asString(paymentAttributes?.currency) ??
+        asString(paymentIntentAttributes?.currency) ??
+        'PHP'
+      ).toUpperCase();
 
-      const internalSessionId =
-        metadata.paymongo_session_id ||
-        metadata.guest_stay_paymongo_session_id ||
-        metadata.pos_session_id ||
-        metadata.posSessionId ||
-        attributes?.reference_number;
+      if (isGuestFlow) {
+        const internalId = guestPaymentSessionId || referenceNumber;
+        const session = internalId
+          ? await tx.guestPayMongoSession.findUnique({
+              where: { id: internalId },
+            })
+          : null;
 
-      if (!internalSessionId || !checkoutId) {
-        console.warn(
-          '[PayMongo webhook] Paid checkout is missing the internal or checkout session ID.',
-          {
+        if (!session || !checkoutId) {
+          console.warn('[PayMongo webhook] Guest payment session was not found.', {
             eventId,
-            checkoutId: checkoutId ?? null,
-          }
-        );
-      } else {
-        const session = await tx.posPayMongoSession.findUnique({
-          where: {
-            id: internalSessionId,
-          },
-        });
-
-        if (!session) {
-          console.warn(
-            '[PayMongo webhook] No local POS PayMongo session found.',
-            {
-              eventId,
-              internalSessionId,
-              checkoutId,
-            }
-          );
+            internalId,
+            checkoutId,
+          });
         } else if (session.checkoutSessionId !== checkoutId) {
-          console.warn(
-            '[PayMongo webhook] Checkout session ID does not match.',
-            {
-              eventId,
-              internalSessionId,
-              expectedCheckoutId: session.checkoutSessionId,
-              receivedCheckoutId: checkoutId,
-            }
-          );
-        } else if (session.status !== POSPayMongoStatus.COMPLETED) {
-          const payment = getPaidPayment(attributes);
-          const paymentAttributes = payment?.attributes;
-          const paymentSourceType = paymentAttributes?.source?.type
-            ?.trim()
-            .toLowerCase();
-
-          const paidAmount =
-            paymentAttributes?.amount ??
-            attributes?.payment_intent?.attributes?.amount;
-
-          const netAmount = paymentAttributes?.net_amount;
-
-          const paidCurrency = (
-            paymentAttributes?.currency ??
-            attributes?.payment_intent?.attributes?.currency ??
-            'PHP'
-          ).toUpperCase();
-
-          const expectedCurrency = (session.currency || 'PHP').toUpperCase();
-
-          /**
-           * When pass_on_fees is enabled, payment.amount may include the fee
-           * while payment.net_amount matches the merchant's original total.
-           * Accept either amount when comparing against the local POS total.
-           */
+          console.warn('[PayMongo webhook] Guest checkout ID mismatch.', {
+            eventId,
+            internalId,
+            expected: session.checkoutSessionId,
+            received: checkoutId,
+          });
+        } else if (
+          session.status !== GuestPayMongoStatus.COMPLETED &&
+          session.status !== GuestPayMongoStatus.REFUNDED
+        ) {
           const amountMatches =
             paidAmount === session.amountCents ||
             netAmount === session.amountCents;
+          const currencyMatches =
+            paidCurrency === (session.currency || 'PHP').toUpperCase();
+          const wasClosedBeforePayment =
+            session.status === GuestPayMongoStatus.CANCELLED ||
+            session.status === GuestPayMongoStatus.EXPIRED;
 
-          const currencyMatches = paidCurrency === expectedCurrency;
+          if (!amountMatches || !currencyMatches || wasClosedBeforePayment) {
+            const message = wasClosedBeforePayment
+              ? `PayMongo reported a payment after the checkout was ${session.status.toLowerCase()}. An automatic refund is required.`
+              : `PayMongo amount mismatch. Expected ${session.amountCents} ${session.currency}; received ${paidAmount ?? 'unknown'} ${paidCurrency}${
+                  typeof netAmount === 'number' ? ` with net ${netAmount}.` : '.'
+                }`;
 
-          if (!amountMatches || !currencyMatches) {
-            await tx.posPayMongoSession.update({
-              where: {
-                id: session.id,
-              },
+            await tx.guestPayMongoSession.update({
+              where: { id: session.id },
               data: {
-                status: POSPayMongoStatus.PAID_REVIEW_REQUIRED,
-                paymongoPaymentId: payment?.id,
+                status: GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+                paymongoPaymentId: paymentId,
+                paymentSourceType: sourceType,
+                paidAmountCents: paidAmount,
+                netAmountCents: netAmount,
+                feeCents: asNumber(paymentAttributes?.fee),
                 paidAt: new Date(),
-                errorMessage:
-                  `PayMongo amount mismatch. Expected ` +
-                  `${session.amountCents} ${expectedCurrency}; received ` +
-                  `${paidAmount ?? 'unknown'} ${paidCurrency}` +
-                  (typeof netAmount === 'number'
-                    ? ` with net amount ${netAmount}.`
-                    : '.'),
+                errorMessage: message,
+                payload: mergeSessionPayload(session.payload, {
+                  paymongoPaymentId: paymentId ?? '',
+                  paymongoCheckoutSessionId: checkoutId,
+                  paymongoSourceType: sourceType ?? '',
+                  paymongoPaidAmountCents: paidAmount ?? 0,
+                  paymongoNetAmountCents: netAmount ?? 0,
+                  paymongoFeeCents: asNumber(paymentAttributes?.fee) ?? 0,
+                }),
               },
             });
 
-            console.warn(
-              '[PayMongo webhook] Payment requires manual review.',
-              {
-                eventId,
-                internalSessionId,
-                checkoutId,
-                expectedAmount: session.amountCents,
-                receivedAmount: paidAmount ?? null,
-                receivedNetAmount: netAmount ?? null,
-                expectedCurrency,
-                receivedCurrency: paidCurrency,
-              }
-            );
+            guestNotificationSessionId = session.id;
+
+            if (paymentId) {
+              automaticRefundSessionId = session.id;
+              automaticRefundReason = message;
+              cleanupGuestSessionIds.add(session.id);
+            }
+          } else if (
+            session.status === GuestPayMongoStatus.PENDING ||
+            session.status === GuestPayMongoStatus.FAILED
+          ) {
+            await tx.guestPayMongoSession.update({
+              where: { id: session.id },
+              data: {
+                status: GuestPayMongoStatus.PAID,
+                paymongoPaymentId: paymentId,
+                paymentSourceType: sourceType,
+                paidAmountCents: paidAmount,
+                netAmountCents: netAmount,
+                feeCents: asNumber(paymentAttributes?.fee),
+                paidAt: new Date(),
+                errorMessage: null,
+                payload: mergeSessionPayload(session.payload, {
+                  paymongoPaymentId: paymentId ?? '',
+                  paymongoCheckoutSessionId: checkoutId,
+                  paymongoSourceType: sourceType ?? '',
+                  paymongoPaidAmountCents: paidAmount ?? 0,
+                  paymongoNetAmountCents: netAmount ?? 0,
+                  paymongoFeeCents: asNumber(paymentAttributes?.fee) ?? 0,
+                }),
+              },
+            });
+
+            guestNotificationSessionId = session.id;
+          }
+        }
+      } else {
+        const internalSessionId =
+          metadata.pos_session_id ||
+          metadata.posSessionId ||
+          metadata.paymongo_session_id ||
+          referenceNumber;
+        const session = internalSessionId
+          ? await tx.posPayMongoSession.findUnique({
+              where: { id: internalSessionId },
+            })
+          : null;
+
+        if (!session || !checkoutId) {
+          console.warn('[PayMongo webhook] POS payment session was not found.', {
+            eventId,
+            internalSessionId,
+            checkoutId,
+          });
+        } else if (session.checkoutSessionId !== checkoutId) {
+          console.warn('[PayMongo webhook] POS checkout ID mismatch.', {
+            eventId,
+            internalSessionId,
+          });
+        } else if (session.status !== POSPayMongoStatus.COMPLETED) {
+          const amountMatches =
+            paidAmount === session.amountCents ||
+            netAmount === session.amountCents;
+          const currencyMatches =
+            paidCurrency === (session.currency || 'PHP').toUpperCase();
+
+          if (!amountMatches || !currencyMatches) {
+            await tx.posPayMongoSession.update({
+              where: { id: session.id },
+              data: {
+                status: POSPayMongoStatus.PAID_REVIEW_REQUIRED,
+                paymongoPaymentId: paymentId,
+                paidAt: new Date(),
+                errorMessage: 'PayMongo amount or currency mismatch.',
+              },
+            });
+
+            posNotificationSessionId = session.id;
           } else if (
             session.status === POSPayMongoStatus.PENDING ||
             session.status === POSPayMongoStatus.FAILED
           ) {
             await tx.posPayMongoSession.update({
-              where: {
-                id: session.id,
-              },
+              where: { id: session.id },
               data: {
                 status: POSPayMongoStatus.PAID,
-                paymongoPaymentId: payment?.id,
+                paymongoPaymentId: paymentId,
                 paidAt: new Date(),
                 errorMessage: null,
                 payload: mergeSessionPayload(session.payload, {
-                  paymongoSourceType: paymentSourceType ?? '',
-                  paymongoPaymentId: payment?.id ?? '',
+                  paymongoSourceType: sourceType ?? '',
+                  paymongoPaymentId: paymentId ?? '',
                   paymongoCheckoutSessionId: checkoutId,
-                  paymongoPaidAmountCents:
-                    typeof paidAmount === 'number' ? paidAmount : 0,
-                  paymongoNetAmountCents:
-                    typeof netAmount === 'number' ? netAmount : 0,
-                  paymongoFeeCents:
-                    typeof paymentAttributes?.fee === 'number'
-                      ? paymentAttributes.fee
-                      : 0,
+                  paymongoPaidAmountCents: paidAmount ?? 0,
+                  paymongoNetAmountCents: netAmount ?? 0,
+                  paymongoFeeCents: asNumber(paymentAttributes?.fee) ?? 0,
                 }),
               },
             });
 
-            console.info('[PayMongo webhook] POS payment marked as paid.', {
-              eventId,
-              internalSessionId,
-              checkoutId,
-              paymentId: payment?.id ?? null,
-            });
+            posNotificationSessionId = session.id;
           }
         }
       }
-    } else {
-      console.info('[PayMongo webhook] Event acknowledged but not handled.', {
-        eventId,
-        eventType,
+    } else if (
+      details.eventType === 'payment.refunded' ||
+      details.eventType === 'payment.refund.updated'
+    ) {
+      const refund = getRefundEventDetails(details.eventType, details.resource);
+
+      const updatedRefund = await applyGuestRefundWebhookUpdateTx(tx, {
+        refundId: refund.refundId,
+        paymentId: refund.paymentId,
+        amountCents: refund.amount,
+        status: refund.status,
       });
+
+      refundNotificationId = updatedRefund?.id ?? null;
+    } else if (details.eventType === 'payment.failed') {
+      const attributes = getAttributes(details.resource);
+      const metadata = getMetadata(attributes);
+      const guestPaymentSessionId =
+        metadata.guest_payment_session_id ||
+        metadata.guest_paymongo_session_id;
+
+      if (guestPaymentSessionId) {
+        cleanupGuestSessionIds.add(guestPaymentSessionId);
+
+        const failedUpdate = await tx.guestPayMongoSession.updateMany({
+          where: {
+            id: guestPaymentSessionId,
+            status: GuestPayMongoStatus.PENDING,
+          },
+          data: {
+            status: GuestPayMongoStatus.FAILED,
+            errorMessage:
+              'PayMongo reported that the payment attempt failed. The guest may create a new checkout.',
+          },
+        });
+
+        if (failedUpdate.count > 0) {
+          guestNotificationSessionId = guestPaymentSessionId;
+        }
+      }
     }
 
     await tx.payMongoWebhookEvent.create({
       data: {
         id: eventId,
-        type: eventType,
-        livemode,
+        type: details.eventType,
+        livemode: details.livemode,
       },
     });
   });
+
+  await Promise.allSettled([
+    guestNotificationSessionId
+      ? notifyGuestPayMongoStatus({
+          sessionId: guestNotificationSessionId,
+          eventId,
+        })
+      : Promise.resolve(null),
+    posNotificationSessionId
+      ? notifyPosPayMongoStatus({
+          sessionId: posNotificationSessionId,
+          eventId,
+        })
+      : Promise.resolve(null),
+    refundNotificationId
+      ? notifyGuestPayMongoRefundStatus({
+          refundId: refundNotificationId,
+          eventId,
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (automaticRefundSessionId) {
+    await requestAutomaticGuestRefund({
+      sessionId: automaticRefundSessionId,
+      reason: automaticRefundReason || 'Payment validation failed.',
+    });
+  }
+
+  for (const sessionId of cleanupGuestSessionIds) {
+    const session = await db.guestPayMongoSession.findUnique({
+      where: { id: sessionId },
+      select: { flowType: true, payload: true },
+    });
+
+    if (
+      session?.flowType === GuestPayMongoFlow.SERVICE_REQUEST &&
+      session.payload &&
+      typeof session.payload === 'object' &&
+      !Array.isArray(session.payload)
+    ) {
+      const payload = session.payload as {
+        stagedAttachments?: StagedServiceAttachment[];
+      };
+
+      if (Array.isArray(payload.stagedAttachments)) {
+        await cleanupStagedGuestServiceAttachments(
+          payload.stagedAttachments
+        ).catch(() => undefined);
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

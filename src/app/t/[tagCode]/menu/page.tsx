@@ -109,12 +109,23 @@ function getBundleDerivedStock(product: {
 
 export default async function GuestMenuPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     tagCode: string;
   }>;
+  searchParams?: Promise<{
+    paymongo?: string;
+    paymongoResult?: string;
+  }>;
 }) {
   const { tagCode } = await params;
+  const query = await searchParams;
+  const returnedPayMongoSessionId = query?.paymongo?.trim() || null;
+  const returnedPayMongoResult =
+    query?.paymongoResult === 'success' || query?.paymongoResult === 'cancelled'
+      ? query.paymongoResult
+      : null;
 
   const tag = await requireNfcGuestAccess(tagCode);
 
@@ -377,6 +388,8 @@ export default async function GuestMenuPage({
           taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
           serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
           defaultGuestName={defaultGuestName}
+          returnedPayMongoSessionId={returnedPayMongoSessionId}
+          returnedPayMongoResult={returnedPayMongoResult}
         />
       </GuestShell>
 

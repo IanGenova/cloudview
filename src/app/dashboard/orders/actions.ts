@@ -5,6 +5,7 @@ import {
   MenuAvailabilityMovementType,
   OrderItemStatus,
   OrderStatus,
+  PaymentMethod,
   PaymentStatus,
   Prisma,
   Role,
@@ -34,6 +35,12 @@ import {
   syncOrderPoints,
   voidSyncedOrderPoints,
 } from '@/lib/guest-point-sync';
+import { requestGuestFoodOrderRefund } from '@/lib/guest-paymongo-refund';
+import {
+  assertFoodOrderStatusTransition,
+  assertPayMongoOrderCanEnterKitchen,
+  isRefundEligiblePaymentStatus,
+} from '@/lib/staff-processing-policy';
 
 type RestoreOrderItem = {
   id: string;
@@ -565,6 +572,73 @@ async function restoreMenuStockForCancelledOrder({
   });
 }
 
+
+async function rollbackMenuStockAfterFailedKitchenRelease({
+  tx,
+  order,
+  userId,
+  rollbackToken,
+}: {
+  tx: Prisma.TransactionClient;
+  userId: string;
+  rollbackToken: string;
+  order: {
+    id: string;
+    hotelId: string;
+    orderCode: string;
+    status: OrderStatus;
+    items: RestoreOrderItem[];
+  };
+}) {
+  const rollbackRequirements = new Map<string, RestoreRequirement>();
+
+  for (const item of order.items) {
+    const remainingQuantity = getRemainingOrderItemQuantity(item);
+
+    if (remainingQuantity <= 0) {
+      continue;
+    }
+
+    const itemRequirements = await buildRestoreRequirementsForOrderItem({
+      tx,
+      order,
+      item,
+      quantityToRestore: remainingQuantity,
+    });
+
+    for (const requirement of itemRequirements.values()) {
+      addRestoreRequirement(rollbackRequirements, {
+        ...requirement,
+        duplicateGuardText: `${order.orderCode}:kitchen-release-rollback:${rollbackToken}:${requirement.productId}:${requirement.restoreType}`,
+        reason: `Automatic rollback after kitchen release failed for order ${order.orderCode}`,
+      });
+    }
+  }
+
+  const restoredProductIds = await applyRestoreRequirements({
+    tx,
+    hotelId: order.hotelId,
+    requirements: rollbackRequirements,
+    userId,
+  });
+
+  await tx.order.update({
+    where: { id: order.id },
+    data: { inventoryDeductedAt: null },
+  });
+
+  await tx.orderStatusHistory.create({
+    data: {
+      orderId: order.id,
+      status: order.status,
+      userId,
+      note: 'Automatic rollback: inventory was restored because kitchen release did not finish.',
+    },
+  });
+
+  return restoredProductIds;
+}
+
 function recalculateOrderTotalsAfterItemCancellation({
   order,
   cancelledItemId,
@@ -635,6 +709,9 @@ if (!orderId || !orderItemId) {
       subtotalCents: true,
       serviceChargeCents: true,
       taxCents: true,
+      totalCents: true,
+      paymentMethod: true,
+      paymentStatus: true,
       tag: {
         select: {
           code: true,
@@ -687,11 +764,10 @@ if (order.status !== OrderStatus.PENDING) {
    * Do not throw a 500 error if the user double-clicks, refreshes a stale modal,
    * or submits an already-cancelled item. Redirect with a safe message instead.
    */
-    if (remainingQuantity <= 0 || item.status === OrderItemStatus.CANCELLED) {
-      revalidateOrderPaths(order);
-
-      throw new Error('This food item is already cancelled.');
-    }
+  if (remainingQuantity <= 0 || item.status === OrderItemStatus.CANCELLED) {
+    revalidateOrderPaths(order);
+    throw new Error('This food item is already cancelled.');
+  }
 
   let restoredProductIds: string[] = [];
   let finalOrderStatus: OrderStatus = order.status;
@@ -712,6 +788,9 @@ if (order.status !== OrderStatus.PENDING) {
       getRemainingOrderItemQuantity(orderItem) <= 0
     );
   });
+
+  const nextTotalCents = allItemsCancelled ? 0 : totals.totalCents;
+  const refundAmountCents = Math.max(order.totalCents - nextTotalCents, 0);
 
   await db.$transaction(async (tx) => {
     const restoreRequirements = await buildRestoreRequirementsForOrderItem({
@@ -803,6 +882,34 @@ if (order.status !== OrderStatus.PENDING) {
     statusUpdatedAt = history.createdAt;
   });
 
+  if (
+    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    isRefundEligiblePaymentStatus(order.paymentStatus) &&
+    refundAmountCents > 0
+  ) {
+    const refundResult = await requestGuestFoodOrderRefund({
+      orderId: order.id,
+      amountCents: refundAmountCents,
+      reason:
+        reason ||
+        (allItemsCancelled
+          ? `Dashboard cancelled order ${order.orderCode}`
+          : `Dashboard cancelled ${item.productNameSnapshot} from ${order.orderCode}`),
+      orderItemId: allItemsCancelled ? null : item.id,
+      idempotencySuffix: allItemsCancelled
+        ? `dashboard-whole-order-${order.id}`
+        : `dashboard-item-${item.id}`,
+    });
+
+    if (!refundResult.ok && !refundResult.skipped) {
+      console.error('[Dashboard order cancellation] PayMongo refund failed.', {
+        orderId: order.id,
+        refundAmountCents,
+        refundResult,
+      });
+    }
+  }
+
   revalidateOrderPaths(order);
 
   await triggerOrderStatusUpdate({
@@ -882,6 +989,9 @@ export async function updateOrderStatusAction(formData: FormData) {
       status: true,
       orderCode: true,
       inventoryDeductedAt: true,
+      totalCents: true,
+      paymentMethod: true,
+      paymentStatus: true,
       items: {
         select: {
           id: true,
@@ -916,8 +1026,34 @@ export async function updateOrderStatusAction(formData: FormData) {
   assertHotelScope(user, order.hotelId);
   await assertOrderStatusUpdateAccess({ user, status });
 
+  if (order.status === status) {
+    revalidateOrderPaths(order);
+    return finishOrderAction(getOrderStatusSuccessCode(status));
+  }
+
+  assertFoodOrderStatusTransition(order.status, status);
+  assertPayMongoOrderCanEnterKitchen({
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    nextStatus: status,
+  });
+
+  const activeItemQuantity = order.items.reduce(
+    (sum, item) => sum + getRemainingOrderItemQuantity(item),
+    0
+  );
+
+  if (
+    status !== OrderStatus.CANCELLED &&
+    activeItemQuantity <= 0
+  ) {
+    throw new Error('This order has no active food items left to process.');
+  }
+
   let statusUpdatedAt = new Date();
   let restoredProductIds: string[] = [];
+  let inventoryReleasedThisAttempt = false;
+  const rollbackToken = `${Date.now()}-${user.id}`;
 
   const shouldRestoreStock =
     status === OrderStatus.CANCELLED &&
@@ -934,6 +1070,7 @@ export async function updateOrderStatusAction(formData: FormData) {
 
     if (shouldReleaseToKitchen) {
       await deductInventoryForOrder(order.id, user.id);
+      inventoryReleasedThisAttempt = true;
       await sendOrderToPos(order.id);
     }
 
@@ -970,6 +1107,37 @@ export async function updateOrderStatusAction(formData: FormData) {
 
     statusUpdatedAt = history.createdAt;
   } catch (error) {
+    if (inventoryReleasedThisAttempt) {
+      try {
+        const rollbackProductIds = await db.$transaction((tx) =>
+          rollbackMenuStockAfterFailedKitchenRelease({
+            tx,
+            order,
+            userId: user.id,
+            rollbackToken,
+          })
+        );
+
+        if (rollbackProductIds.length > 0) {
+          await triggerInventoryUpdated({
+            hotelId: order.hotelId,
+            productIds: rollbackProductIds,
+            source: 'DASHBOARD',
+          });
+        }
+      } catch (rollbackError) {
+        console.error('[Kitchen release rollback] Manual review required.', {
+          orderId: order.id,
+          originalError: error,
+          rollbackError,
+        });
+
+        throw new Error(
+          'Kitchen release failed and the automatic inventory rollback also failed. Manual inventory review is required.'
+        );
+      }
+    }
+
     if (error instanceof InventoryError) {
       throw new Error(error.message);
     }
@@ -992,6 +1160,27 @@ export async function updateOrderStatusAction(formData: FormData) {
         wholeOrderCancelled: true,
       });
     }
+
+
+  if (
+    status === OrderStatus.CANCELLED &&
+    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    isRefundEligiblePaymentStatus(order.paymentStatus) &&
+    order.totalCents > 0
+  ) {
+    const refundResult = await requestGuestFoodOrderRefund({
+      orderId: order.id,
+      reason: note || `Dashboard cancelled order ${order.orderCode}`,
+      idempotencySuffix: `dashboard-status-cancel-${order.id}`,
+    });
+
+    if (!refundResult.ok && !refundResult.skipped) {
+      console.error('[Dashboard order cancellation] Full PayMongo refund failed.', {
+        orderId: order.id,
+        refundResult,
+      });
+    }
+  }
 
 
   revalidateOrderPaths(order);
@@ -1039,6 +1228,9 @@ export async function markOrderPaidAction(formData: FormData) {
       id: true,
       hotelId: true,
       orderCode: true,
+      status: true,
+      paymentMethod: true,
+      paymentStatus: true,
       tag: {
         select: {
           code: true,
@@ -1053,6 +1245,27 @@ export async function markOrderPaidAction(formData: FormData) {
 
   assertHotelScope(user, order.hotelId);
   await assertOrderManagementEditAccess(user);
+
+  if (order.paymentMethod === PaymentMethod.PAYMONGO) {
+    throw new Error(
+      'PayMongo payments can only be marked paid by the verified PayMongo webhook.'
+    );
+  }
+
+  if (order.status === OrderStatus.CANCELLED) {
+    throw new Error('A cancelled order cannot be marked as paid.');
+  }
+
+  if (order.paymentStatus === PaymentStatus.PAID) {
+    revalidateOrderPaths(order);
+    return finishOrderAction('order-paid');
+  }
+
+  if (order.paymentStatus !== PaymentStatus.UNPAID) {
+    throw new Error(
+      `Payment cannot be changed from ${order.paymentStatus.replaceAll('_', ' ')} to PAID.`
+    );
+  }
 
   await db.order.update({
     where: {

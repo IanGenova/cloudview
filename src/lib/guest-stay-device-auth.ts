@@ -12,7 +12,8 @@ export class GuestStayDeviceAuthError extends Error {
     public code:
       | 'STAY_NOT_FOUND'
       | 'INVALID_PASSCODE'
-      | 'DEVICE_LIMIT_REACHED',
+      | 'DEVICE_LIMIT_REACHED'
+      | 'DEVICE_NOT_AUTHORIZED',
     message: string
   ) {
     super(message);
@@ -21,7 +22,9 @@ export class GuestStayDeviceAuthError extends Error {
 }
 
 export function getGuestStayDeviceCookieName(guestStayId: string) {
-  return `${GUEST_STAY_DEVICE_COOKIE_PREFIX}_${guestStayId}`;
+  const safeGuestStayId = guestStayId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  return `${GUEST_STAY_DEVICE_COOKIE_PREFIX}_${safeGuestStayId}`;
 }
 
 function getRequestCookie(request: Request, cookieName: string) {
@@ -54,8 +57,8 @@ function getUserAgentHashFromRequest(request: Request) {
 }
 
 async function getUserAgentHashFromServerHeaders() {
-  const h = await headers();
-  const userAgent = h.get('user-agent') || 'unknown';
+  const requestHeaders = await headers();
+  const userAgent = requestHeaders.get('user-agent') || 'unknown';
 
   return hashValue(userAgent);
 }
@@ -68,6 +71,22 @@ export function hashGuestStayDeviceToken(token: string) {
   return hashValue(token);
 }
 
+function activeStayWhere(now = new Date()) {
+  return {
+    status: GuestStayStatus.ACTIVE,
+    OR: [
+      {
+        expectedCheckOutAt: null,
+      },
+      {
+        expectedCheckOutAt: {
+          gte: now,
+        },
+      },
+    ],
+  };
+}
+
 export async function getActiveGuestStayForRoom({
   hotelId,
   roomId,
@@ -75,23 +94,11 @@ export async function getActiveGuestStayForRoom({
   hotelId: string;
   roomId: string;
 }) {
-  const now = new Date();
-
   return db.guestStay.findFirst({
     where: {
       hotelId,
       roomId,
-      status: GuestStayStatus.ACTIVE,
-      OR: [
-        {
-          expectedCheckOutAt: null,
-        },
-        {
-          expectedCheckOutAt: {
-            gte: now,
-          },
-        },
-      ],
+      ...activeStayWhere(),
     },
     select: {
       id: true,
@@ -100,6 +107,7 @@ export async function getActiveGuestStayForRoom({
       guestMemberId: true,
       passcodeHash: true,
       maxDevices: true,
+      expectedCheckOutAt: true,
       guestMember: {
         select: {
           id: true,
@@ -111,6 +119,50 @@ export async function getActiveGuestStayForRoom({
       checkInAt: 'desc',
     },
   });
+}
+
+async function findAuthorizedDevice(input: {
+  guestStayId: string;
+  deviceToken: string;
+  userAgentHash: string;
+}) {
+  const deviceTokenHash = hashGuestStayDeviceToken(input.deviceToken);
+
+  const device = await db.guestStayDevice.findFirst({
+    where: {
+      guestStayId: input.guestStayId,
+      deviceTokenHash,
+      revokedAt: null,
+      guestStay: {
+        ...activeStayWhere(),
+      },
+    },
+    select: {
+      id: true,
+      guestStayId: true,
+      revokedAt: true,
+      userAgentHash: true,
+    },
+  });
+
+  if (!device) {
+    return null;
+  }
+
+  if (device.userAgentHash && device.userAgentHash !== input.userAgentHash) {
+    return null;
+  }
+
+  await db.guestStayDevice.update({
+    where: {
+      id: device.id,
+    },
+    data: {
+      lastSeenAt: new Date(),
+    },
+  });
+
+  return device;
 }
 
 export async function getAuthorizedGuestStayDeviceFromRequest({
@@ -125,40 +177,44 @@ export async function getAuthorizedGuestStayDeviceFromRequest({
 
   if (!deviceToken) return null;
 
-  const deviceTokenHash = hashGuestStayDeviceToken(deviceToken);
-  const userAgentHash = getUserAgentHashFromRequest(request);
-
-  const device = await db.guestStayDevice.findUnique({
-    where: {
-      guestStayId_deviceTokenHash: {
-        guestStayId,
-        deviceTokenHash,
-      },
-    },
-    select: {
-      id: true,
-      guestStayId: true,
-      revokedAt: true,
-      userAgentHash: true,
-    },
+  return findAuthorizedDevice({
+    guestStayId,
+    deviceToken,
+    userAgentHash: getUserAgentHashFromRequest(request),
   });
+}
 
-  if (!device || device.revokedAt) {
+/**
+ * Server Action / Server Component equivalent of the Request-based helper.
+ * Guest PayMongo actions use this to prove that the current browser is one of
+ * the authorized devices for the active room stay.
+ */
+export async function getAuthorizedGuestStayDevice(guestStayId: string) {
+  const cookieStore = await cookies();
+  const deviceToken = cookieStore.get(
+    getGuestStayDeviceCookieName(guestStayId)
+  )?.value;
+
+  if (!deviceToken) {
     return null;
   }
 
-  if (device.userAgentHash && device.userAgentHash !== userAgentHash) {
-    return null;
-  }
-
-  await db.guestStayDevice.update({
-    where: {
-      id: device.id,
-    },
-    data: {
-      lastSeenAt: new Date(),
-    },
+  return findAuthorizedDevice({
+    guestStayId,
+    deviceToken,
+    userAgentHash: await getUserAgentHashFromServerHeaders(),
   });
+}
+
+export async function requireAuthorizedGuestStayDevice(guestStayId: string) {
+  const device = await getAuthorizedGuestStayDevice(guestStayId);
+
+  if (!device) {
+    throw new GuestStayDeviceAuthError(
+      'DEVICE_NOT_AUTHORIZED',
+      'This device is not authorized for the active room stay.'
+    );
+  }
 
   return device;
 }
@@ -175,12 +231,13 @@ export async function authorizeGuestStayDeviceWithPasscode({
   const stay = await db.guestStay.findFirst({
     where: {
       id: guestStayId,
-      status: GuestStayStatus.ACTIVE,
+      ...activeStayWhere(),
     },
     select: {
       id: true,
       passcodeHash: true,
       maxDevices: true,
+      expectedCheckOutAt: true,
     },
   });
 
@@ -198,44 +255,90 @@ export async function authorizeGuestStayDeviceWithPasscode({
     );
   }
 
-  const activeDeviceCount = await db.guestStayDevice.count({
-    where: {
-      guestStayId: stay.id,
-      revokedAt: null,
-    },
-  });
+  const cookieStore = await cookies();
+  const cookieName = getGuestStayDeviceCookieName(stay.id);
+  const existingToken = cookieStore.get(cookieName)?.value;
+  const userAgentHash = await getUserAgentHashFromServerHeaders();
 
-  if (activeDeviceCount >= stay.maxDevices) {
-    throw new GuestStayDeviceAuthError(
-      'DEVICE_LIMIT_REACHED',
-      'Device limit reached for this stay.'
-    );
+  if (existingToken) {
+    const existingDevice = await findAuthorizedDevice({
+      guestStayId: stay.id,
+      deviceToken: existingToken,
+      userAgentHash,
+    });
+
+    if (existingDevice) {
+      return {
+        guestStayId: stay.id,
+        deviceId: existingDevice.id,
+        alreadyAuthorized: true,
+      };
+    }
   }
 
   const deviceToken = generateGuestStayDeviceToken();
   const deviceTokenHash = hashGuestStayDeviceToken(deviceToken);
-  const userAgentHash = await getUserAgentHashFromServerHeaders();
+  const safeDeviceLabel = deviceLabel?.trim().slice(0, 120) || null;
 
-  await db.guestStayDevice.create({
-    data: {
-      guestStayId: stay.id,
-      deviceTokenHash,
-      userAgentHash,
-      deviceLabel: deviceLabel || null,
-    },
+  const device = await db.$transaction(async (tx) => {
+    const activeDeviceCount = await tx.guestStayDevice.count({
+      where: {
+        guestStayId: stay.id,
+        revokedAt: null,
+      },
+    });
+
+    if (activeDeviceCount >= stay.maxDevices) {
+      throw new GuestStayDeviceAuthError(
+        'DEVICE_LIMIT_REACHED',
+        'Device limit reached for this stay.'
+      );
+    }
+
+    return tx.guestStayDevice.create({
+      data: {
+        guestStayId: stay.id,
+        deviceTokenHash,
+        userAgentHash,
+        deviceLabel: safeDeviceLabel,
+      },
+      select: {
+        id: true,
+      },
+    });
   });
 
-  const cookieStore = await cookies();
+  const thirtyDaysSeconds = 60 * 60 * 24 * 30;
+  const untilCheckoutSeconds = stay.expectedCheckOutAt
+    ? Math.max(
+        60,
+        Math.floor((stay.expectedCheckOutAt.getTime() - Date.now()) / 1000)
+      )
+    : thirtyDaysSeconds;
 
-  cookieStore.set(getGuestStayDeviceCookieName(stay.id), deviceToken, {
+  cookieStore.set(cookieName, deviceToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: await shouldUseSecureNfcCookies(),
     path: '/',
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: Math.min(thirtyDaysSeconds, untilCheckoutSeconds),
   });
 
   return {
     guestStayId: stay.id,
+    deviceId: device.id,
+    alreadyAuthorized: false,
   };
+}
+
+export async function revokeGuestStayDevices(guestStayId: string) {
+  return db.guestStayDevice.updateMany({
+    where: {
+      guestStayId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
 }

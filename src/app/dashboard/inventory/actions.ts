@@ -563,26 +563,29 @@ export async function initializeMenuStocksAction() {
     },
   });
 
-  await Promise.all(
-    products.map((product) =>
-      db.menuAvailabilityStock.upsert({
-        where: {
-          hotelId_productId: {
+  await db.$transaction(
+    async (tx) => {
+      for (const product of products) {
+        await tx.menuAvailabilityStock.upsert({
+          where: {
+            hotelId_productId: {
+              hotelId: product.hotelId,
+              productId: product.id,
+            },
+          },
+          update: {},
+          create: {
             hotelId: product.hotelId,
             productId: product.id,
+            availableQty: 0,
+            soldQty: 0,
+            isSoldOut: true,
+            notes: 'Initialized menu stock',
           },
-        },
-        update: {},
-        create: {
-          hotelId: product.hotelId,
-          productId: product.id,
-          availableQty: 0,
-          soldQty: 0,
-          isSoldOut: true,
-          notes: 'Initialized menu stock',
-        },
-      })
-    )
+        });
+      }
+    },
+    { maxWait: 10_000, timeout: 30_000 }
   );
 
   return finishInventoryAction({
@@ -723,26 +726,29 @@ export async function initializeServiceStocksAction() {
     },
   });
 
-  await Promise.all(
-    services.map((service) =>
-      db.serviceAvailabilityStock.upsert({
-        where: {
-          hotelId_serviceId: {
+  await db.$transaction(
+    async (tx) => {
+      for (const service of services) {
+        await tx.serviceAvailabilityStock.upsert({
+          where: {
+            hotelId_serviceId: {
+              hotelId: service.hotelId,
+              serviceId: service.id,
+            },
+          },
+          update: {},
+          create: {
             hotelId: service.hotelId,
             serviceId: service.id,
+            availableQty: 0,
+            usedQty: 0,
+            isSoldOut: true,
+            notes: 'Initialized service inventory',
           },
-        },
-        update: {},
-        create: {
-          hotelId: service.hotelId,
-          serviceId: service.id,
-          availableQty: 0,
-          usedQty: 0,
-          isSoldOut: true,
-          notes: 'Initialized service inventory',
-        },
-      })
-    )
+        });
+      }
+    },
+    { maxWait: 10_000, timeout: 30_000 }
   );
 
   return finishInventoryAction({

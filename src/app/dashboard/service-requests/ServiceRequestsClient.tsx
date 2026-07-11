@@ -76,6 +76,16 @@ type ServiceRequestOrderItem = {
   assignedToId: string;
   assignedToName: string;
   createdAt: string;
+  billingMode: string;
+  quantity: number;
+  unitPriceCents: number;
+  amountCents: number;
+  paymentMethod: string | null;
+  paymentStatus: string;
+  payMongoStatus: string | null;
+  refundStatus: string | null;
+  refundedAmountCents: number;
+  refundErrorMessage: string;
   charge: RequestCharge | null;
   statusHistory: RequestStatusHistory[];
   attachments: ServiceRequestAttachment[];
@@ -95,6 +105,10 @@ type RequestGroup = {
   updatedAt: string;
   itemCount: number;
   billedCount: number;
+  payMongoPaidCount: number;
+  refundPendingCount: number;
+  refundedCount: number;
+  totalPayMongoAmountCents: number;
   totalChargeAmount: number;
   items: ServiceRequestOrderItem[];
   attachments: ServiceRequestAttachment[];
@@ -292,6 +306,25 @@ function BillingPill({
   );
 }
 
+function PaymentStatusPill({ status }: { status: string }) {
+  const className =
+    status === 'PAID'
+      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+      : status === 'REFUNDED'
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200'
+        : status === 'REFUND_PENDING' || status === 'PARTIALLY_REFUNDED'
+          ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200'
+          : status === 'REFUND_FAILED'
+            ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200'
+            : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-[10px] font-black ${className}`}>
+      {statusLabel(status)}
+    </span>
+  );
+}
+
 function SummaryCard({
   label,
   value,
@@ -364,6 +397,55 @@ function nextActionsForStatus(status: string, statuses: string[]) {
   }
 
   return actions;
+}
+
+
+function getAllowedServiceStatuses(currentStatus: string, statuses: string[]) {
+  const allowed =
+    currentStatus === 'NEW'
+      ? new Set(['NEW', 'IN_PROGRESS', 'CANCELLED'])
+      : currentStatus === 'IN_PROGRESS'
+        ? new Set(['IN_PROGRESS', 'COMPLETED', 'CANCELLED'])
+        : new Set([currentStatus]);
+
+  return statuses.filter((status) => allowed.has(status));
+}
+
+function getServiceReviewItems(request: RequestGroup) {
+  const activeItems = request.items.filter(
+    (item) => item.status !== 'CANCELLED' && item.status !== 'COMPLETED'
+  );
+  const unpaidPayMongoItems = request.items.filter(
+    (item) =>
+      item.paymentMethod === 'PAYMONGO' &&
+      item.paymentStatus !== 'PAID' &&
+      item.paymentStatus !== 'PARTIALLY_REFUNDED' &&
+      item.paymentStatus !== 'REFUNDED'
+  );
+
+  return [
+    {
+      label: 'Request details reviewed',
+      ready: request.items.length > 0,
+      detail: `${request.itemCount} service item${request.itemCount === 1 ? '' : 's'} in this request order.`,
+    },
+    {
+      label: 'PayMongo verification',
+      ready: unpaidPayMongoItems.length === 0,
+      detail:
+        unpaidPayMongoItems.length === 0
+          ? 'All PayMongo-paid items are verified.'
+          : `${unpaidPayMongoItems.length} PayMongo item${unpaidPayMongoItems.length === 1 ? '' : 's'} need payment review.`,
+    },
+    {
+      label: 'Fulfillment workload',
+      ready: activeItems.length > 0 || request.status === 'COMPLETED',
+      detail:
+        activeItems.length > 0
+          ? `${activeItems.length} active item${activeItems.length === 1 ? '' : 's'} remain.`
+          : 'No active items remain.',
+    },
+  ];
 }
 
 function QuickStatusAction({
@@ -652,13 +734,20 @@ function RequestItemCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
-          {item.charge ? (
+          {item.paymentMethod === 'PAYMONGO' ? (
+            <div className="flex flex-col items-end gap-1">
+              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
+                PAYMONGO {money(item.amountCents / 100)}
+              </span>
+              <PaymentStatusPill status={item.paymentStatus} />
+            </div>
+          ) : item.charge ? (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
               {money(item.charge.totalAmount)}
             </span>
           ) : (
             <span className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
-              NOT BILLED
+              {item.billingMode === 'FREE' ? 'COMPLIMENTARY' : 'NOT BILLED'}
             </span>
           )}
 
@@ -682,6 +771,19 @@ function RequestItemCard({
             {item.charge.quantity} × {money(item.charge.unitPrice)} ={' '}
             {money(item.charge.totalAmount)}
           </p>
+        </div>
+      ) : null}
+
+      {item.paymentMethod === 'PAYMONGO' ? (
+        <div className="mt-3 rounded-xl bg-gold/10 p-3 text-xs font-bold text-gold">
+          <p>Secure PayMongo payment: {money(item.amountCents / 100)}</p>
+          <p className="mt-1">Payment status: {statusLabel(item.paymentStatus)}</p>
+          {item.refundedAmountCents > 0 ? (
+            <p className="mt-1">Refunded: {money(item.refundedAmountCents / 100)}</p>
+          ) : null}
+          {item.refundErrorMessage ? (
+            <p className="mt-1 text-red-300">{item.refundErrorMessage}</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -800,8 +902,9 @@ function CancelServiceItemModal({
           ) : null}
 
           <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700 dark:bg-red-500/10 dark:text-red-200">
-            This will cancel only this service item. Other service items under
-            the same request order will remain active.
+            This cancels only this service item. Tracked inventory is restored,
+            its room charge is removed, and a PayMongo-paid item starts the
+            matching refund workflow. Other service items remain active.
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2">
@@ -850,9 +953,14 @@ function DetailsModal({
   const [cancelItem, setCancelItem] = useState<ServiceRequestOrderItem | null>(
     null
   );
+  const allowedStatuses = getAllowedServiceStatuses(request.status, statuses);
+  const reviewItems = getServiceReviewItems(request);
 
   const chargeableItems = request.items.filter(
-    (item) => item.status !== 'CANCELLED'
+    (item) =>
+      item.status !== 'CANCELLED' &&
+      item.paymentMethod !== 'PAYMONGO' &&
+      item.billingMode !== 'FREE'
   );
 
   async function handleSaveRequest(formData: FormData) {
@@ -919,6 +1027,40 @@ function DetailsModal({
             </div>
 
             <aside className="space-y-4">
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+                <p className="text-sm font-black text-blue-950 dark:text-blue-100">
+                  Staff Review Checklist
+                </p>
+                <p className="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-200/70">
+                  Review payment, request details, stock impact, and assignment before starting.
+                </p>
+
+                <div className="mt-3 space-y-2">
+                  {reviewItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-xl bg-white/80 p-3 text-xs dark:bg-black/20"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <b>{item.label}</b>
+                        <span
+                          className={
+                            item.ready
+                              ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                              : 'rounded-full bg-red-100 px-2 py-1 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200'
+                          }
+                        >
+                          {item.ready ? 'READY' : 'REVIEW'}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-semibold text-neutral-500 dark:text-neutral-400">
+                        {item.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950">
                 <p className="text-sm font-black text-neutral-950 dark:text-white">
                   Request Order Details
@@ -941,8 +1083,13 @@ function DetailsModal({
                   </div>
 
                   <div className="flex justify-between gap-3">
-                    <span className="text-neutral-500">Total Charge</span>
+                    <span className="text-neutral-500">Room Charges</span>
                     <b>{money(request.totalChargeAmount)}</b>
+                  </div>
+
+                  <div className="flex justify-between gap-3">
+                    <span className="text-neutral-500">PayMongo Paid</span>
+                    <b>{money(request.totalPayMongoAmountCents / 100)}</b>
                   </div>
                 </div>
               </div>
@@ -976,7 +1123,7 @@ function DetailsModal({
                         setSelectedStatus(event.target.value)
                       }
                     >
-                      {statuses.map((status) => (
+                      {allowedStatuses.map((status) => (
                         <option key={status} value={status}>
                           {statusLabel(status)}
                         </option>
@@ -1029,7 +1176,7 @@ function DetailsModal({
                     />
 
                     <span>
-                      Post or update room add-on charges for selected items.
+                      Post or update room add-on charges for non-PayMongo items only.
                     </span>
                   </label>
 
@@ -1286,9 +1433,26 @@ export function ServiceRequestsClient({
       assignedToId,
       assignedToName,
       updatedAt: new Date().toISOString(),
+      refundPendingCount:
+        nextStatus === 'CANCELLED'
+          ? request.items.filter(
+              (item) =>
+                item.paymentMethod === 'PAYMONGO' &&
+                item.amountCents > 0 &&
+                (item.paymentStatus === 'PAID' ||
+                  item.paymentStatus === 'PARTIALLY_REFUNDED' ||
+                  item.paymentStatus === 'REFUND_FAILED')
+            ).length
+          : request.refundPendingCount,
       items: request.items.map((item) => ({
         ...item,
         status: nextStatus,
+        paymentStatus:
+          nextStatus === 'CANCELLED' &&
+          item.paymentMethod === 'PAYMONGO' &&
+          item.amountCents > 0
+            ? 'REFUND_PENDING'
+            : item.paymentStatus,
         assignedToId,
         assignedToName,
       })),
@@ -1311,6 +1475,10 @@ export function ServiceRequestsClient({
             ...item,
             status: 'CANCELLED',
             charge: null,
+            paymentStatus:
+              item.paymentMethod === 'PAYMONGO' && item.amountCents > 0
+                ? 'REFUND_PENDING'
+                : item.paymentStatus,
           }
         : item
     );
@@ -1327,6 +1495,12 @@ export function ServiceRequestsClient({
         ? 'CANCELLED'
         : request.status,
       billedCount,
+      refundPendingCount: nextItems.filter(
+        (item) => item.paymentStatus === 'REFUND_PENDING'
+      ).length,
+      refundedCount: nextItems.filter(
+        (item) => item.paymentStatus === 'REFUNDED'
+      ).length,
       totalChargeAmount,
       updatedAt: new Date().toISOString(),
       items: nextItems,

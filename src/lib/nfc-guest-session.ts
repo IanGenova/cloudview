@@ -1,8 +1,10 @@
 import { cookies } from 'next/headers';
 import {
+  GuestPayMongoStatus,
   GuestStayStatus,
   OrderStatus,
   ServiceRequestStatus,
+  TagStatus,
   TagType,
 } from '@prisma/client';
 import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
@@ -18,6 +20,19 @@ export const ACTIVE_ORDER_STATUSES = [
 export const ACTIVE_SERVICE_REQUEST_STATUSES = [
   ServiceRequestStatus.NEW,
   ServiceRequestStatus.IN_PROGRESS,
+] as const;
+
+/**
+ * These payment states still represent money or checkout work that must not be
+ * detached from the NFC browser session.
+ */
+export const ACTIVE_GUEST_PAYMENT_STATUSES = [
+  GuestPayMongoStatus.PENDING,
+  GuestPayMongoStatus.PAID,
+  GuestPayMongoStatus.PROCESSING,
+  GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+  GuestPayMongoStatus.REFUND_PENDING,
+  GuestPayMongoStatus.REFUND_FAILED,
 ] as const;
 
 const nfcGuestSessionSelect = {
@@ -69,36 +84,49 @@ export function getNfcGuestSessionCookieName(tagCode: string) {
 }
 
 export async function getNfcGuestSessionPendingCounts(sessionId: string) {
-  const [pendingOrders, pendingServiceRequests] = await Promise.all([
-    db.order.count({
-      where: {
-        guestSessionId: sessionId,
-        status: {
-          in: [...ACTIVE_ORDER_STATUSES],
+  const [pendingOrders, pendingServiceRequests, pendingPayments] =
+    await Promise.all([
+      db.order.count({
+        where: {
+          guestSessionId: sessionId,
+          status: {
+            in: [...ACTIVE_ORDER_STATUSES],
+          },
         },
-      },
-    }),
+      }),
 
-    db.serviceRequest.count({
-      where: {
-        guestSessionId: sessionId,
-        status: {
-          in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+      db.serviceRequest.count({
+        where: {
+          guestSessionId: sessionId,
+          status: {
+            in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+          },
         },
-      },
-    }),
-  ]);
+      }),
+
+      db.guestPayMongoSession.count({
+        where: {
+          guestSessionId: sessionId,
+          status: {
+            in: [...ACTIVE_GUEST_PAYMENT_STATUSES],
+          },
+        },
+      }),
+    ]);
 
   return {
     pendingOrders,
     pendingServiceRequests,
-    totalPending: pendingOrders + pendingServiceRequests,
+    pendingPayments,
+    totalPending: pendingOrders + pendingServiceRequests + pendingPayments,
   };
 }
 
 /**
- * If a session is linked to a GuestStay, the stay must still be ACTIVE.
- * This prevents an old guest's room session from surviving after checkout.
+ * If a session is linked to a GuestStay, the stay must still be active.
+ * An unpaid checkout is expired when the stay has ended. Paid records remain
+ * available for webhook/refund recovery but are no longer accessible as the
+ * old room guest.
  */
 async function normalizeSessionGuestStay(
   session: BasicNfcGuestSession
@@ -121,15 +149,31 @@ async function normalizeSessionGuestStay(
   });
 
   if (!activeStay) {
-    await db.nfcGuestSession.updateMany({
-      where: {
-        id: session.id,
-        endedAt: null,
-      },
-      data: {
-        endedAt: new Date(),
-      },
-    });
+    const now = new Date();
+
+    await db.$transaction([
+      db.nfcGuestSession.updateMany({
+        where: {
+          id: session.id,
+          endedAt: null,
+        },
+        data: {
+          endedAt: now,
+        },
+      }),
+      db.guestPayMongoSession.updateMany({
+        where: {
+          guestSessionId: session.id,
+          status: GuestPayMongoStatus.PENDING,
+        },
+        data: {
+          status: GuestPayMongoStatus.EXPIRED,
+          expiresAt: now,
+          errorMessage:
+            'The guest stay ended before the PayMongo checkout was completed.',
+        },
+      }),
+    ]);
 
     return null;
   }
@@ -175,25 +219,10 @@ export async function getReusableNfcGuestSessionForTag({
     locationId,
   });
 
-  /**
-   * Public location tags such as POOL, LOBBY, RESTAURANT, BAR, GYM, SPA,
-   * AMENITY, PARKING, and OTHER must NOT reuse another guest's pending session.
-   *
-   * Each device/browser gets its own session.
-   */
   if (!policy.reusePendingSession) {
     return null;
   }
 
-  /**
-   * Important for private ROOM tags:
-   * If GuestStay is enabled, only reuse a session from the SAME active stay.
-   *
-   * This prevents:
-   * Old Guest A in Room 305
-   * New Guest B in Room 305
-   * → Guest B accidentally reusing Guest A's pending room session.
-   */
   if (policy.mode === 'PRIVATE_ROOM' && !guestStayId) {
     return null;
   }
@@ -202,11 +231,7 @@ export async function getReusableNfcGuestSessionForTag({
     where: {
       tagId,
       hotelId,
-      ...(guestStayId
-        ? {
-            guestStayId,
-          }
-        : {}),
+      ...(guestStayId ? { guestStayId } : {}),
       OR: [
         {
           orders: {
@@ -222,6 +247,15 @@ export async function getReusableNfcGuestSessionForTag({
             some: {
               status: {
                 in: [...ACTIVE_SERVICE_REQUEST_STATUSES],
+              },
+            },
+          },
+        },
+        {
+          payMongoSessions: {
+            some: {
+              status: {
+                in: [...ACTIVE_GUEST_PAYMENT_STATUSES],
               },
             },
           },
@@ -263,7 +297,13 @@ export async function getReusableNfcGuestSessionForTag({
   });
 }
 
-export async function getCurrentNfcGuestSession(tagCode: string) {
+export async function getCurrentNfcGuestSession(tagCodeInput: string) {
+  const tagCode = tagCodeInput.trim();
+
+  if (!tagCode) {
+    return null;
+  }
+
   const cookieStore = await cookies();
   const cookieName = getNfcGuestSessionCookieName(tagCode);
   const sessionKey = cookieStore.get(cookieName)?.value;
@@ -272,9 +312,14 @@ export async function getCurrentNfcGuestSession(tagCode: string) {
     return null;
   }
 
-  const session = await db.nfcGuestSession.findUnique({
+  const session = await db.nfcGuestSession.findFirst({
     where: {
       sessionKey,
+      tag: {
+        code: tagCode,
+        status: TagStatus.ACTIVE,
+        deletedAt: null,
+      },
     },
     select: nfcGuestSessionSelect,
   });
@@ -330,6 +375,7 @@ export async function getCurrentNfcGuestSessionStatus(tagCode: string) {
       keepSession: false,
       pendingOrders: 0,
       pendingServiceRequests: 0,
+      pendingPayments: 0,
       totalPending: 0,
       session: null,
     };
@@ -340,9 +386,7 @@ export async function getCurrentNfcGuestSessionStatus(tagCode: string) {
   return {
     hasSession: true,
     keepSession: pendingCounts.totalPending > 0,
-    pendingOrders: pendingCounts.pendingOrders,
-    pendingServiceRequests: pendingCounts.pendingServiceRequests,
-    totalPending: pendingCounts.totalPending,
+    ...pendingCounts,
     session,
   };
 }
@@ -359,6 +403,7 @@ export async function closeCurrentNfcGuestSessionIfNoPendingWork(
       keepSession: false,
       pendingOrders: 0,
       pendingServiceRequests: 0,
+      pendingPayments: 0,
       totalPending: 0,
     };
   }
@@ -370,6 +415,7 @@ export async function closeCurrentNfcGuestSessionIfNoPendingWork(
       keepSession: true,
       pendingOrders: status.pendingOrders,
       pendingServiceRequests: status.pendingServiceRequests,
+      pendingPayments: status.pendingPayments,
       totalPending: status.totalPending,
     };
   }
@@ -389,6 +435,7 @@ export async function closeCurrentNfcGuestSessionIfNoPendingWork(
     keepSession: false,
     pendingOrders: 0,
     pendingServiceRequests: 0,
+    pendingPayments: 0,
     totalPending: 0,
   };
 }
@@ -403,15 +450,6 @@ export async function requireCurrentNfcGuestSession(tagCode: string) {
   return session;
 }
 
-/**
- * Use this in guest portal actions.
- *
- * This gives the order/service action a clean way to know:
- * - current NFC session
- * - guestStayId
- * - guestMemberId
- * - guest display name
- */
 export async function getCurrentNfcGuestIdentity(tagCode: string) {
   const session = await getCurrentNfcGuestSession(tagCode);
 
@@ -439,6 +477,7 @@ export async function getCurrentNfcGuestIdentity(tagCode: string) {
         roomId: true,
         guestMemberId: true,
         status: true,
+        expectedCheckOutAt: true,
         guestMember: {
           select: {
             id: true,

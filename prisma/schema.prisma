@@ -43,12 +43,16 @@ enum PaymentMethod {
   PAY_AT_COUNTER
   CASH
   POS
+  PAYMONGO
 }
 
 enum PaymentStatus {
   UNPAID
   PAID
+  REFUND_PENDING
+  PARTIALLY_REFUNDED
   REFUNDED
+  REFUND_FAILED
 }
 
 enum OrderStatus {
@@ -327,6 +331,7 @@ model Hotel {
   rewards                      Reward[]
   rewardRedemptions            RewardRedemption[]
   guestPointSettings           GuestPointSettings?
+  guestPayMongoSessions        GuestPayMongoSession[]
 
   guideImages            HotelGuideImage[]
   nfcGuestSessions       NfcGuestSession[]
@@ -424,9 +429,10 @@ model NfcTag {
 
   accessSessions NfcAccessSession[]
 
-  orders          Order[]
-  serviceRequests ServiceRequest[]
-  guestSessions   NfcGuestSession[]
+  orders                Order[]
+  serviceRequests       ServiceRequest[]
+  guestSessions         NfcGuestSession[]
+  guestPayMongoSessions GuestPayMongoSession[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -618,6 +624,8 @@ model Order {
   guestStayId String?
   guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
 
+  guestPayMongoSessions GuestPayMongoSession[]
+
   fulfillmentTiming FulfillmentTiming @default(ASAP)
 
   scheduledFor         DateTime?
@@ -734,6 +742,16 @@ model ServiceRequest {
   cancelReason  String?
   cancelledById String?
 
+  serviceCodeSnapshot String?            @db.VarChar(80)
+  billingModeSnapshot ServiceBillingMode @default(FREE)
+  unitPriceCents      Int                @default(0)
+  amountCents         Int                @default(0)
+  paymentMethod       PaymentMethod?
+  paymentStatus       PaymentStatus      @default(UNPAID)
+
+  guestPayMongoSessionId String?
+  guestPayMongoSession   GuestPayMongoSession? @relation(fields: [guestPayMongoSessionId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -767,6 +785,8 @@ model ServiceRequest {
   @@index([requestCode])
   @@index([hotelId, requestCode])
   @@index([guestStayId])
+  @@index([guestPayMongoSessionId])
+  @@index([paymentMethod, paymentStatus])
   @@index([fulfillmentTiming])
   @@index([scheduledFor])
   @@index([releaseAt])
@@ -945,8 +965,9 @@ model NfcGuestSession {
   location    Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
   guestMember GuestMember? @relation(fields: [guestMemberId], references: [id], onDelete: SetNull)
 
-  orders          Order[]
-  serviceRequests ServiceRequest[]
+  orders           Order[]
+  serviceRequests  ServiceRequest[]
+  payMongoSessions GuestPayMongoSession[]
 
   guestStayId String?
   guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
@@ -1384,6 +1405,7 @@ model GuestStay {
   folio            GuestStayFolio?
   folioLines       GuestStayFolioLine[]
   folioPayments    GuestStayFolioPayment[]
+  payMongoSessions GuestPayMongoSession[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -1715,6 +1737,139 @@ model DashboardNotification {
   @@index([hotelId, isRead, createdAt])
   @@index([userId, isRead, createdAt])
   @@index([type])
+}
+
+enum GuestPayMongoFlow {
+  FOOD_ORDER
+  SERVICE_REQUEST
+}
+
+enum GuestPayMongoStatus {
+  PENDING
+  PAID
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  FAILED
+  PAID_REVIEW_REQUIRED
+  REFUND_PENDING
+  REFUNDED
+  REFUND_FAILED
+}
+
+enum GuestPayMongoRefundStatus {
+  NOT_REQUESTED
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum GuestPayMongoRefundKind {
+  FULL
+  PARTIAL
+}
+
+model GuestPayMongoSession {
+  id       String            @id @default(cuid())
+  flowType GuestPayMongoFlow
+
+  hotelId        String
+  tagId          String?
+  guestSessionId String
+  guestStayId    String?
+
+  amountCents Int
+  currency    String @default("PHP") @db.VarChar(3)
+  payload     Json
+
+  status GuestPayMongoStatus @default(PENDING)
+
+  checkoutSessionId   String? @unique @db.VarChar(191)
+  checkoutUrl         String? @db.Text
+  paymongoPaymentId   String? @db.VarChar(191)
+  paymentSourceType   String? @db.VarChar(40)
+  paidAmountCents     Int?
+  netAmountCents      Int?
+  feeCents            Int?
+  refundedAmountCents Int     @default(0)
+
+  orderId   String?
+  orderCode String? @db.VarChar(191)
+
+  serviceRequestIds   Json?
+  serviceRequestCodes Json?
+
+  automaticRefundEnabled Boolean                   @default(true)
+  refundStatus           GuestPayMongoRefundStatus @default(NOT_REQUESTED)
+  paymongoRefundId       String?                   @unique @db.VarChar(191)
+  refundAmountCents      Int?
+  refundReason           String?                   @db.VarChar(191)
+  refundNotes            String?                   @db.Text
+  refundErrorMessage     String?                   @db.Text
+  refundRequestedAt      DateTime?
+  refundedAt             DateTime?
+  cancelledAt            DateTime?
+  cancelReason           String?                   @db.Text
+  checkoutExpiredAt      DateTime?
+
+  errorMessage        String?   @db.Text
+  paidAt              DateTime?
+  processingStartedAt DateTime?
+  completedAt         DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  hotel           Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  tag             NfcTag?               @relation(fields: [tagId], references: [id], onDelete: SetNull)
+  guestSession    NfcGuestSession       @relation(fields: [guestSessionId], references: [id], onDelete: Restrict)
+  guestStay       GuestStay?            @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
+  order           Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  serviceRequests ServiceRequest[]
+  refunds         GuestPayMongoRefund[]
+
+  @@index([hotelId, status])
+  @@index([guestSessionId, createdAt])
+  @@index([guestStayId, createdAt])
+  @@index([flowType, status])
+  @@index([paymongoPaymentId])
+  @@index([refundStatus])
+  @@index([expiresAt])
+}
+
+model GuestPayMongoRefund {
+  id String @id @default(cuid())
+
+  guestPaymentSessionId String
+  guestPaymentSession   GuestPayMongoSession @relation(fields: [guestPaymentSessionId], references: [id], onDelete: Cascade)
+
+  orderId          String?
+  orderItemId      String?
+  serviceRequestId String?
+
+  kind        GuestPayMongoRefundKind
+  status      GuestPayMongoRefundStatus @default(PENDING)
+  amountCents Int
+  currency    String                    @default("PHP") @db.VarChar(3)
+
+  idempotencyKey   String  @unique @db.VarChar(191)
+  paymongoRefundId String? @unique @db.VarChar(191)
+  reason           String  @db.VarChar(191)
+  notes            String? @db.Text
+  errorMessage     String? @db.Text
+
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([guestPaymentSessionId, status])
+  @@index([orderId])
+  @@index([orderItemId])
+  @@index([serviceRequestId])
+  @@index([paymongoRefundId])
 }
 
 enum POSPayMongoStatus {

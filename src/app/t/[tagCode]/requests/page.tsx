@@ -7,11 +7,19 @@ import {
   CreditCard,
   MessageCircle,
   ReceiptText,
+  RotateCcw,
+  XCircle,
 } from 'lucide-react';
+import {
+  PaymentMethod,
+  PaymentStatus,
+  ServiceRequestStatus,
+} from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { cancelGuestServiceRequestItemAction } from '../service-paymongo-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +32,10 @@ function money(value: number) {
   return pesoFormatter.format(value);
 }
 
+function moneyCents(value: number) {
+  return pesoFormatter.format(value / 100);
+}
+
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat('en-PH', {
     month: 'short',
@@ -34,42 +46,63 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-function statusBadgeClass(status: string) {
-  switch (status) {
-    case 'COMPLETED':
-      return 'bg-emerald-100 text-emerald-700';
-    case 'CANCELLED':
-      return 'bg-red-100 text-red-700';
-    case 'IN_PROGRESS':
-      return 'bg-gold/20 text-gold';
-    case 'ACKNOWLEDGED':
-      return 'bg-blue-100 text-blue-700';
-    default:
-      return 'bg-white/10 text-white/70';
-  }
+function label(value: string) {
+  return value.replaceAll('_', ' ');
 }
 
-function statusLabel(status: string) {
-  return status.replaceAll('_', ' ');
+function statusBadgeClass(status: ServiceRequestStatus) {
+  if (status === ServiceRequestStatus.COMPLETED) {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  if (status === ServiceRequestStatus.CANCELLED) {
+    return 'bg-red-100 text-red-700';
+  }
+
+  if (status === ServiceRequestStatus.IN_PROGRESS) {
+    return 'bg-gold/20 text-gold';
+  }
+
+  return 'bg-white/10 text-white/70';
+}
+
+function paymentBadgeClass(status: PaymentStatus) {
+  if (status === PaymentStatus.PAID) {
+    return 'bg-emerald-100 text-emerald-700';
+  }
+
+  if (status === PaymentStatus.REFUNDED) {
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  if (
+    status === PaymentStatus.REFUND_PENDING ||
+    status === PaymentStatus.PARTIALLY_REFUNDED
+  ) {
+    return 'bg-amber-100 text-amber-800';
+  }
+
+  if (status === PaymentStatus.REFUND_FAILED) {
+    return 'bg-red-100 text-red-700';
+  }
+
+  return 'bg-white/10 text-white/60';
 }
 
 export default async function MyRequestsPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{
-    tagCode: string;
-  }>;
+  params: Promise<{ tagCode: string }>;
+  searchParams?: Promise<{ success?: string }>;
 }) {
   const { tagCode } = await params;
-
+  const query = await searchParams;
   const tag = await requireNfcGuestAccess(tagCode);
 
-  if (!tag) {
-    notFound();
-  }
+  if (!tag) notFound();
 
   const guestSession = await getCurrentNfcGuestSession(tagCode);
-
   const location = tag.room
     ? `Room ${tag.room.number}`
     : tag.location?.name ?? tag.label;
@@ -81,34 +114,35 @@ export default async function MyRequestsPage({
           hotelId: tag.hotelId,
           guestSessionId: guestSession.id,
         },
-        orderBy: {
-          createdAt: 'desc',
+        include: {
+          guestPayMongoSession: {
+            select: {
+              id: true,
+              status: true,
+              refundStatus: true,
+              refundedAmountCents: true,
+              refundErrorMessage: true,
+            },
+          },
         },
+        orderBy: { createdAt: 'desc' },
         take: 50,
       })
     : [];
 
   const requestIds = requests.map((request) => request.id);
-
   const charges = requestIds.length
     ? await db.roomAddOnCharge.findMany({
-        where: {
-          serviceRequestId: {
-            in: requestIds,
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        where: { serviceRequestId: { in: requestIds } },
+        orderBy: { createdAt: 'desc' },
       })
     : [];
 
   const chargesByRequestId = new Map(
     charges.map((charge) => [charge.serviceRequestId, charge])
   );
-
-  const billedCount = requests.filter((request) =>
-    chargesByRequestId.has(request.id)
+  const payMongoCount = requests.filter(
+    (request) => request.paymentMethod === PaymentMethod.PAYMONGO
   ).length;
 
   return (
@@ -116,107 +150,103 @@ export default async function MyRequestsPage({
       <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-5">
         <div className="mb-7 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
-            href={`/t/${tagCode}/contact`}
+            href={`/t/${tagCode}`}
             className="grid size-11 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back"
           >
             <ChevronLeft className="size-6" />
           </Link>
-
           <div className="text-center">
-            <h1 className="font-serif text-xl font-normal tracking-wide">My Requests</h1>
-            <p className="mt-0.5 text-xs font-medium text-white/50">{location}</p>
+            <h1 className="font-serif text-xl font-normal tracking-wide">
+              My Requests
+            </h1>
+            <p className="mt-0.5 text-xs font-medium text-white/50">
+              {location}
+            </p>
           </div>
-
           <div />
         </div>
 
-        <section className="mb-5 grid grid-cols-2 gap-3">
-          <div className="rounded-[2rem] border border-gold/20 bg-gold/10 p-5 backdrop-blur-md">
-            <div className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
-              <MessageCircle className="size-5" />
-            </div>
-
-            <p className="mt-4 text-[10px] font-semibold uppercase tracking-widest text-gold/80">
-              Current Session
-            </p>
-
-            <h2 className="mt-1 font-serif text-3xl font-light text-white">
-              {requests.length}
-            </h2>
-
-            <p className="mt-1 text-xs font-medium text-white/50">
-              Request{requests.length === 1 ? '' : 's'}
-            </p>
+        {query?.success === 'paymongo-completed' ? (
+          <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
+            PayMongo payment confirmed. Your service request is now available to
+            the hotel team.
           </div>
+        ) : null}
 
-          <div className="rounded-[2rem] border border-emerald-500/20 bg-emerald-500/10 p-5 backdrop-blur-md">
-            <div className="grid size-11 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300">
-              <CreditCard className="size-5" />
-            </div>
+        {query?.success === 'request-cancelled' ? (
+          <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
+            Service request cancelled. Inventory was restored and any eligible
+            PayMongo refund was submitted.
+          </div>
+        ) : null}
 
-            <p className="mt-4 text-[10px] font-semibold uppercase tracking-widest text-emerald-300/80">
-              Billed
+        <section className="mb-5 grid grid-cols-3 gap-3">
+          <div className="rounded-[1.5rem] border border-gold/20 bg-gold/10 p-4">
+            <MessageCircle className="size-5 text-gold" />
+            <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-gold/80">
+              Requests
             </p>
-
-            <h2 className="mt-1 font-serif text-3xl font-light text-white">
-              {billedCount}
-            </h2>
-
-            <p className="mt-1 text-xs font-medium text-white/50">
-              Add-on charge{billedCount === 1 ? '' : 's'}
+            <p className="mt-1 font-serif text-2xl">{requests.length}</p>
+          </div>
+          <div className="rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 p-4">
+            <CreditCard className="size-5 text-emerald-300" />
+            <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-emerald-300/80">
+              PayMongo
             </p>
+            <p className="mt-1 font-serif text-2xl">{payMongoCount}</p>
+          </div>
+          <div className="rounded-[1.5rem] border border-blue-500/20 bg-blue-500/10 p-4">
+            <ReceiptText className="size-5 text-blue-300" />
+            <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-blue-300/80">
+              Room Bill
+            </p>
+            <p className="mt-1 font-serif text-2xl">{charges.length}</p>
           </div>
         </section>
 
         <div className="space-y-4">
           {requests.map((request) => {
             const charge = chargesByRequestId.get(request.id);
-            const isBilled = Boolean(charge);
+            const isPayMongo = request.paymentMethod === PaymentMethod.PAYMONGO;
+            const canCancel = request.status === ServiceRequestStatus.NEW;
 
             return (
-              <div
+              <article
                 key={request.id}
                 className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 shadow-sm backdrop-blur-md"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-serif text-[17px] font-medium tracking-wide text-white">
+                      <h2 className="font-serif text-[17px] font-medium tracking-wide">
                         {request.requestCode}
-                      </h3>
-
+                      </h2>
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusBadgeClass(
                           request.status
                         )}`}
                       >
-                        {statusLabel(request.status)}
+                        {label(request.status)}
                       </span>
-
-                      {isBilled ? (
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
-                          BILLED
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-amber-700">
-                          NOT BILLED
-                        </span>
-                      )}
                     </div>
-
                     <p className="mt-1 text-xs font-medium text-white/50">
                       {formatDateTime(request.createdAt)}
                     </p>
                   </div>
+
+                  {request.amountCents > 0 ? (
+                    <p className="shrink-0 font-serif text-lg text-gold">
+                      {moneyCents(request.amountCents)}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="mt-4 rounded-[1.25rem] bg-white/5 p-4">
                   <p className="flex items-center gap-2 font-serif text-[15px] font-medium tracking-wide">
                     <ConciergeBell className="size-4 text-gold" />
-                    {request.type}
+                    {request.quantity}× {request.type}
                   </p>
-
                   {request.notes ? (
                     <p className="mt-2 whitespace-pre-line text-[13px] font-medium leading-relaxed text-white/60">
                       {request.notes}
@@ -224,53 +254,105 @@ export default async function MyRequestsPage({
                   ) : null}
                 </div>
 
-                {charge ? (
+                {isPayMongo ? (
+                  <div className="mt-3 rounded-[1.25rem] border border-gold/20 bg-gold/10 p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <QrPaymentIcon />
+                      <p className="font-serif text-[15px] font-medium text-gold">
+                        PayMongo QR Ph
+                      </p>
+                      <span
+                        className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
+                          request.paymentStatus
+                        )}`}
+                      >
+                        {label(request.paymentStatus)}
+                      </span>
+                    </div>
+
+                    {request.paymentStatus === PaymentStatus.REFUNDED ? (
+                      <p className="mt-2 text-xs font-semibold text-white/60">
+                        Refunded: {moneyCents(request.amountCents)}
+                      </p>
+                    ) : request.paymentStatus ===
+                      PaymentStatus.PARTIALLY_REFUNDED ? (
+                      <p className="mt-2 text-xs font-semibold text-white/60">
+                        A partial refund was completed for this service item.
+                      </p>
+                    ) : null}
+
+                    {request.guestPayMongoSession?.refundErrorMessage ? (
+                      <p className="mt-2 text-xs font-semibold text-red-200">
+                        {request.guestPayMongoSession.refundErrorMessage}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : charge ? (
                   <div className="mt-3 rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/10 p-4">
-                    <p className="flex items-center gap-2 font-serif text-[15px] font-medium tracking-wide text-emerald-200">
-                      <ReceiptText className="size-4" />
+                    <p className="font-serif text-[15px] font-medium text-emerald-200">
                       Room Add-on Charge
                     </p>
-
-                    <div className="mt-3 space-y-1.5 text-[13px] font-medium text-emerald-100/80">
-                      <p>Item: {charge.itemName}</p>
-                      <p>
-                        Qty {charge.quantity} ×{' '}
-                        {money(Number(charge.unitPrice))}
-                      </p>
-                      <p className="font-serif text-[15px] font-medium tracking-wide text-emerald-100">
-                        Total: {money(Number(charge.totalAmount))}
-                      </p>
-                      <p className="pt-1 text-[11px] font-semibold uppercase tracking-widest text-emerald-200/60">Payment: POSTED</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
-                    <p className="text-[13px] font-medium text-white/50">
-                      This request has no room add-on charge.
+                    <p className="mt-2 text-[13px] text-emerald-100/80">
+                      {charge.quantity} × {money(Number(charge.unitPrice))} ={' '}
+                      {money(Number(charge.totalAmount))}
                     </p>
                   </div>
+                ) : (
+                  <div className="mt-3 rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-[13px] font-medium text-white/50">
+                    {request.billingModeSnapshot === 'FREE'
+                      ? 'Complimentary service — no payment required.'
+                      : request.billingModeSnapshot === 'PRICE_ON_CONFIRMATION'
+                        ? 'Staff will confirm the final price before billing.'
+                        : 'No room charge was posted.'}
+                  </div>
                 )}
-              </div>
+
+                {canCancel ? (
+                  <form
+                    action={cancelGuestServiceRequestItemAction}
+                    className="mt-4"
+                  >
+                    <input type="hidden" name="tagCode" value={tagCode} />
+                    <input type="hidden" name="requestId" value={request.id} />
+                    <input
+                      type="hidden"
+                      name="reason"
+                      value="Guest cancelled this service request"
+                    />
+                    <button
+                      type="submit"
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-400/20 bg-red-500/10 text-sm font-black text-red-200 transition hover:bg-red-500/20"
+                    >
+                      <XCircle className="size-4" />
+                      Cancel Request
+                    </button>
+                  </form>
+                ) : request.paymentStatus === PaymentStatus.REFUND_PENDING ? (
+                  <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-500/10 p-3 text-xs font-semibold text-amber-200">
+                    <RotateCcw className="size-4" />
+                    PayMongo refund is being processed.
+                  </div>
+                ) : null}
+              </article>
             );
           })}
 
           {!requests.length ? (
-            <div className="grid min-h-[50vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-md">
+            <div className="grid min-h-[50vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 text-center">
               <div>
-                <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-white/5 text-gold shadow-sm">
+                <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-white/5 text-gold">
                   <Clock className="size-8" strokeWidth={1.5} />
                 </div>
-
-                <h2 className="mt-6 font-serif text-2xl font-normal tracking-wide text-white">No requests for this guest</h2>
-
+                <h2 className="mt-6 font-serif text-2xl font-normal tracking-wide">
+                  No requests for this guest
+                </h2>
                 <p className="mt-3 text-[15px] font-medium leading-relaxed text-white/50">
-                  Requests from previous guests are hidden. Tap the NFC card again
-                  to start a new guest session.
+                  Your service requests will appear here after submission or
+                  PayMongo payment confirmation.
                 </p>
-
                 <Link
                   href={`/t/${tagCode}/service`}
-                  className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] bg-gold px-6 py-3 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                  className="mt-8 inline-flex min-h-12 items-center justify-center rounded-[1.25rem] bg-gold px-6 py-3 text-[15px] font-semibold text-black"
                 >
                   Request Service
                 </Link>
@@ -283,4 +365,8 @@ export default async function MyRequestsPage({
       <GuestBottomNav tagCode={tagCode} active="profile" dark />
     </main>
   );
+}
+
+function QrPaymentIcon() {
+  return <CreditCard className="size-4 text-gold" />;
 }

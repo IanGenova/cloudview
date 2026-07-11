@@ -6,8 +6,10 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
 } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Baby,
@@ -19,6 +21,9 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  CreditCard,
+  QrCode,
+  RefreshCw,
   ConciergeBell,
   Droplets,
   FileImage,
@@ -41,6 +46,12 @@ import {
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { createServiceRequestAction } from '../actions';
+import {
+  cancelGuestServicePayMongoCheckout,
+  createGuestServicePayMongoCheckout,
+  finalizeGuestServicePayMongoCheckout,
+  getGuestServicePayMongoStatus,
+} from '../service-paymongo-actions';
 
 type GuestServiceBillingMode =
   | 'FREE'
@@ -58,6 +69,9 @@ type GuestServiceItem = {
   unitPrice: number;
   unitLabel: string;
   sortOrder: number;
+  inventoryTracked: boolean;
+  availableQty: number | null;
+  isSoldOut: boolean;
 };
 
 type ServiceCartItem = {
@@ -72,6 +86,7 @@ type AttachmentPreview = {
 };
 
 type FulfillmentTimingValue = 'ASAP' | 'SCHEDULED';
+type ServicePaymentMethod = 'ROOM_CHARGE' | 'PAYMONGO';
 
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
@@ -176,6 +191,12 @@ function getErrorMessage(error?: string) {
       'Please upload JPG, PNG, or WEBP images only. Maximum 5 images, 5MB each.',
     invalid_schedule:
       'Please select a valid future date and time for the scheduled request.',
+    service_stock_unavailable:
+      'One or more selected services are no longer available in that quantity.',
+    paymongo_checkout_required:
+      'Please use the secure PayMongo checkout button for this payment.',
+    paymongo_cancelled:
+      'PayMongo checkout was cancelled. Your selected services were restored; attached photos must be selected again.',
   };
 
   return messages[error] ?? 'Unable to submit the request. Please try again.';
@@ -237,8 +258,26 @@ function getCartItemTotal(service: GuestServiceItem, quantity: number) {
   return service.unitPrice * quantity;
 }
 
-function SubmitButton({ disabled }: { disabled: boolean }) {
-  const { pending } = useFormStatus();
+function getServiceQuantityLimit(service: GuestServiceItem) {
+  if (!service.inventoryTracked) return 20;
+  return Math.max(Math.min(service.availableQty ?? 0, 20), 0);
+}
+
+function isServiceUnavailable(service: GuestServiceItem) {
+  return service.isSoldOut || getServiceQuantityLimit(service) <= 0;
+}
+
+function SubmitButton({
+  disabled,
+  clientPending,
+  paymentMethod,
+}: {
+  disabled: boolean;
+  clientPending: boolean;
+  paymentMethod: ServicePaymentMethod;
+}) {
+  const { pending: formPending } = useFormStatus();
+  const pending = formPending || clientPending;
 
   return (
     <Button
@@ -247,7 +286,13 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
       size="lg"
       className="mt-5 h-14 w-full rounded-2xl bg-gold text-[15px] font-black tracking-wide text-black shadow-[0_16px_36px_rgba(214,167,56,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
     >
-      {pending ? 'Sending requests...' : 'Send Requests'}
+      {pending
+        ? paymentMethod === 'PAYMONGO'
+          ? 'Opening secure checkout...'
+          : 'Sending requests...'
+        : paymentMethod === 'PAYMONGO'
+          ? 'Generate QR & Pay'
+          : 'Send Requests'}
     </Button>
   );
 }
@@ -307,11 +352,16 @@ export function GuestServiceOrderForm({
   success?: string;
   count?: string;
 }) {
+  const router = useRouter();
+  const [paymentPending, startPaymentTransition] = useTransition();
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   const [screen, setScreen] = useState<'services' | 'cart'>('services');
   const [cart, setCart] = useState<ServiceCartItem[]>([]);
   const [guestName, setGuestName] = useState(defaultGuestName);
   const [notes, setNotes] = useState('');
   const [chargeConsent, setChargeConsent] = useState(false);
+  const [paymentMethod, setPaymentMethod] =
+    useState<ServicePaymentMethod>('ROOM_CHARGE');
   const [fulfillmentTiming, setFulfillmentTiming] =
     useState<FulfillmentTimingValue>('ASAP');
   const [scheduledDate, setScheduledDate] = useState('');
@@ -324,6 +374,53 @@ export function GuestServiceOrderForm({
   const objectUrlsRef = useRef<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
 
+  function restoreCheckoutDraft() {
+    const stored = sessionStorage.getItem(`cv-service-checkout-${tagCode}`);
+
+    if (!stored) {
+      return false;
+    }
+
+    try {
+      const draft = JSON.parse(stored) as {
+        cart?: ServiceCartItem[];
+        guestName?: string;
+        notes?: string;
+        fulfillmentTiming?: FulfillmentTimingValue;
+        scheduledDate?: string;
+        scheduledTime?: string;
+        scheduledNote?: string;
+        paymentMethod?: ServicePaymentMethod;
+      };
+
+      if (Array.isArray(draft.cart) && draft.cart.length) {
+        setCart(draft.cart);
+        setScreen('cart');
+      }
+
+      if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
+      if (typeof draft.notes === 'string') setNotes(draft.notes);
+      if (draft.fulfillmentTiming) {
+        setFulfillmentTiming(draft.fulfillmentTiming);
+      }
+      if (typeof draft.scheduledDate === 'string') {
+        setScheduledDate(draft.scheduledDate);
+      }
+      if (typeof draft.scheduledTime === 'string') {
+        setScheduledTime(draft.scheduledTime);
+      }
+      if (typeof draft.scheduledNote === 'string') {
+        setScheduledNote(draft.scheduledNote);
+      }
+      if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod);
+
+      return true;
+    } catch {
+      sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
+      return false;
+    }
+  }
+
   useEffect(() => {
     return () => {
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -334,6 +431,150 @@ export function GuestServiceOrderForm({
   useEffect(() => {
     setGuestName(defaultGuestName);
   }, [defaultGuestName]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const paymentSessionId = url.searchParams.get('paymongo');
+    const paymongoResult = url.searchParams.get('paymongoResult');
+
+    if (!paymentSessionId || !paymongoResult) {
+      return;
+    }
+
+    let stopped = false;
+    let timer: number | null = null;
+
+    const clearPaymentQuery = () => {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('paymongo');
+      cleanUrl.searchParams.delete('paymongoResult');
+      window.history.replaceState(
+        null,
+        '',
+        `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`
+      );
+    };
+
+    const run = async () => {
+      if (paymongoResult === 'cancelled') {
+        const cancelled = await cancelGuestServicePayMongoCheckout({
+          tagCode,
+          paymentSessionId,
+        });
+
+        if (!stopped) {
+          restoreCheckoutDraft();
+          setLocalError(
+            cancelled.ok
+              ? 'PayMongo checkout was cancelled. Your selected services were restored, but photos must be attached again. No service inventory was deducted.'
+              : cancelled.error || 'Unable to cancel the payment checkout.'
+          );
+          setPaymentMessage(null);
+          clearPaymentQuery();
+          router.replace(`/t/${tagCode}/service?error=paymongo_cancelled`);
+          router.refresh();
+        }
+        return;
+      }
+
+      setPaymentMessage('Confirming your PayMongo payment...');
+      const status = await getGuestServicePayMongoStatus({
+        tagCode,
+        paymentSessionId,
+      });
+
+      if (stopped) return;
+
+      if (!status.ok) {
+        setLocalError(status.error || 'Unable to confirm the payment.');
+        clearPaymentQuery();
+        return;
+      }
+
+      if (status.status === 'PAID' || status.status === 'PROCESSING') {
+        const finalized = await finalizeGuestServicePayMongoCheckout({
+          tagCode,
+          paymentSessionId,
+        });
+
+        if (stopped) return;
+
+        if (finalized.ok) {
+          sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
+          clearCart();
+          router.replace(
+            `/t/${tagCode}/requests?success=paymongo-completed`
+          );
+          router.refresh();
+          return;
+        }
+
+        if (!finalized.waiting) {
+          setLocalError(
+            finalized.error ||
+              'The payment was received, but the request requires staff review.'
+          );
+          setPaymentMessage(null);
+          clearPaymentQuery();
+          return;
+        }
+      }
+
+      if (status.status === 'COMPLETED') {
+        sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
+        clearCart();
+        router.replace(`/t/${tagCode}/requests?success=paymongo-completed`);
+        router.refresh();
+        return;
+      }
+
+      if (
+        status.status === 'FAILED' ||
+        status.status === 'EXPIRED' ||
+        status.status === 'CANCELLED' ||
+        status.status === 'PAID_REVIEW_REQUIRED' ||
+        status.status === 'REFUND_FAILED' ||
+        status.status === 'REFUNDED'
+      ) {
+        if (
+          status.status === 'FAILED' ||
+          status.status === 'EXPIRED' ||
+          status.status === 'CANCELLED'
+        ) {
+          restoreCheckoutDraft();
+        }
+
+        setLocalError(
+          status.errorMessage ||
+            (status.status === 'REFUNDED'
+              ? 'The payment was refunded because the service request could not be completed.'
+              : `Payment status: ${status.status.replaceAll('_', ' ')}`)
+        );
+        setPaymentMessage(null);
+        clearPaymentQuery();
+        return;
+      }
+
+      timer = window.setTimeout(run, 1600);
+    };
+
+    void run();
+
+    return () => {
+      stopped = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [router, tagCode]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.has('paymongo')) {
+      return;
+    }
+
+    restoreCheckoutDraft();
+  }, [tagCode]);
 
   const serviceMap = useMemo(
     () => new Map(services.map((service) => [service.code, service])),
@@ -432,6 +673,13 @@ export function GuestServiceOrderForm({
       return;
     }
 
+    if (isServiceUnavailable(service)) {
+      setLocalError(`${service.name} is currently unavailable.`);
+      return;
+    }
+
+    const limit = getServiceQuantityLimit(service);
+
     setCart((current) => {
       const existing = current.find((item) => item.serviceCode === serviceCode);
 
@@ -440,7 +688,7 @@ export function GuestServiceOrderForm({
           item.serviceCode === serviceCode
             ? {
                 ...item,
-                quantity: Math.min(item.quantity + 1, 20),
+                quantity: Math.min(item.quantity + 1, limit),
               }
             : item
         );
@@ -453,13 +701,28 @@ export function GuestServiceOrderForm({
   function updateQuantity(serviceCode: string, quantity: number) {
     setLocalError(null);
 
+    const service = serviceMap.get(serviceCode);
+
+    if (!service) {
+      setCart((current) =>
+        current.filter((item) => item.serviceCode !== serviceCode)
+      );
+      return;
+    }
+
+    const limit = getServiceQuantityLimit(service);
+
+    if (quantity > limit) {
+      setLocalError(`${service.name} only has ${limit} available.`);
+    }
+
     setCart((current) =>
       current
         .map((item) =>
           item.serviceCode === serviceCode
             ? {
                 ...item,
-                quantity: Math.min(Math.max(quantity, 0), 20),
+                quantity: Math.min(Math.max(quantity, 0), limit),
               }
             : item
         )
@@ -471,6 +734,8 @@ export function GuestServiceOrderForm({
     setCart([]);
     setNotes('');
     setChargeConsent(false);
+    setPaymentMethod('ROOM_CHARGE');
+    setPaymentMessage(null);
     setLocalError(null);
     clearAttachments();
   }
@@ -586,10 +851,24 @@ export function GuestServiceOrderForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     setLocalError(null);
+    setPaymentMessage(null);
 
     if (!cart.length) {
       event.preventDefault();
       setLocalError('Please add at least one service request.');
+      return;
+    }
+
+    const unavailableItem = selectedServices.find(({ service, quantity }) =>
+      isServiceUnavailable(service) ||
+      quantity > getServiceQuantityLimit(service)
+    );
+
+    if (unavailableItem) {
+      event.preventDefault();
+      setLocalError(
+        `${unavailableItem.service.name} is no longer available in the selected quantity.`
+      );
       return;
     }
 
@@ -611,8 +890,49 @@ export function GuestServiceOrderForm({
 
     if (hasFixedPriceItem && !chargeConsent) {
       event.preventDefault();
-      setLocalError('Please confirm the room add-on charge before submitting.');
+      setLocalError(
+        paymentMethod === 'PAYMONGO'
+          ? 'Please confirm the PayMongo payment before continuing.'
+          : 'Please confirm the room add-on charge before submitting.'
+      );
+      return;
     }
+
+    if (paymentMethod !== 'PAYMONGO') {
+      return;
+    }
+
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    sessionStorage.setItem(
+      `cv-service-checkout-${tagCode}`,
+      JSON.stringify({
+        cart,
+        guestName,
+        notes,
+        fulfillmentTiming,
+        scheduledDate,
+        scheduledTime,
+        scheduledNote,
+        paymentMethod,
+      })
+    );
+
+    startPaymentTransition(() => {
+      void (async () => {
+        setPaymentMessage('Preparing your secure QR Ph checkout...');
+        const result = await createGuestServicePayMongoCheckout(formData);
+
+        if (!result.ok) {
+          setPaymentMessage(null);
+          setLocalError(result.error);
+          return;
+        }
+
+        window.location.assign(result.checkoutUrl);
+      })();
+    });
   }
 
   if (screen === 'cart') {
@@ -680,6 +1000,7 @@ export function GuestServiceOrderForm({
         ) : (
           <form action={createServiceRequestAction} onSubmit={handleSubmit}>
             <input type="hidden" name="tagCode" value={tagCode} />
+            <input type="hidden" name="paymentMethod" value={paymentMethod} />
             <input
               type="hidden"
               name="fulfillmentTiming"
@@ -996,6 +1317,68 @@ export function GuestServiceOrderForm({
                 </div>
 
                 {hasFixedPriceItem ? (
+                  <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+                      Payment method
+                    </p>
+
+                    <div className="mt-3 grid gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod('ROOM_CHARGE');
+                          setChargeConsent(false);
+                        }}
+                        className={cn(
+                          'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                          paymentMethod === 'ROOM_CHARGE'
+                            ? 'border-gold/45 bg-gold/10'
+                            : 'border-white/10 bg-white/[0.03]'
+                        )}
+                      >
+                        <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-gold">
+                          <CreditCard className="size-5" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-black text-white">
+                            Charge to room
+                          </span>
+                          <span className="mt-1 block text-xs font-medium text-white/45">
+                            Add the fixed-price services to the room folio.
+                          </span>
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod('PAYMONGO');
+                          setChargeConsent(false);
+                        }}
+                        className={cn(
+                          'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                          paymentMethod === 'PAYMONGO'
+                            ? 'border-gold/45 bg-gold/10'
+                            : 'border-white/10 bg-white/[0.03]'
+                        )}
+                      >
+                        <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-gold">
+                          <QrCode className="size-5" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-black text-white">
+                            PayMongo QR Ph
+                          </span>
+                          <span className="mt-1 block text-xs font-medium text-white/45">
+                            Pay securely before the service request is released to staff.
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {hasFixedPriceItem ? (
                   <label className="flex cursor-pointer items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90">
                     <input
                       name="chargeConsent"
@@ -1008,7 +1391,9 @@ export function GuestServiceOrderForm({
                       className="mt-1 size-5 rounded border-gold/40 bg-black accent-gold"
                     />
                     <span>
-                      I approve room charges totaling{' '}
+                      {paymentMethod === 'PAYMONGO'
+                        ? 'I confirm the secure PayMongo payment of '
+                        : 'I approve room charges totaling '}
                       <b className="text-white">{money(fixedPriceTotal)}</b>.
                     </span>
                   </label>
@@ -1041,6 +1426,13 @@ export function GuestServiceOrderForm({
                 </div>
               </div>
 
+              {paymentMessage ? (
+                <p className="mt-4 flex items-center gap-2 rounded-2xl border border-gold/20 bg-gold/10 p-3 text-sm font-bold text-gold">
+                  <RefreshCw className="size-4 animate-spin" />
+                  {paymentMessage}
+                </p>
+              ) : null}
+
               {visibleError ? (
                 <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
                   {visibleError}
@@ -1052,6 +1444,8 @@ export function GuestServiceOrderForm({
                   cart.length === 0 ||
                   (hasFixedPriceItem && !chargeConsent)
                 }
+                clientPending={paymentPending}
+                paymentMethod={paymentMethod}
               />
             </section>
           </form>
@@ -1241,15 +1635,18 @@ export function GuestServiceOrderForm({
                     const Icon = getServiceIcon(service);
                     const badge = getBillingBadge(service);
                     const quantity = getCartQuantity(service.code);
+                    const unavailable = isServiceUnavailable(service);
 
                     return (
                       <article
                         key={service.code}
                         className={cn(
                           'flex min-h-[220px] flex-col overflow-hidden rounded-[1.6rem] border bg-white/[0.04] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
-                          quantity > 0
-                            ? 'border-gold/35 bg-gold/[0.06]'
-                            : 'border-white/10 hover:border-white/20 hover:bg-white/[0.06]'
+                          unavailable
+                            ? 'border-red-400/15 bg-red-500/[0.04] opacity-70'
+                            : quantity > 0
+                              ? 'border-gold/35 bg-gold/[0.06]'
+                              : 'border-white/10 hover:border-white/20 hover:bg-white/[0.06]'
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -1282,10 +1679,22 @@ export function GuestServiceOrderForm({
 
                         <div className="mt-auto pt-4">
                           <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-white/35">
-                            {getServicePriceText(service)}
+                            {unavailable
+                              ? 'Currently unavailable'
+                              : service.inventoryTracked
+                                ? `${getServicePriceText(service)} · ${service.availableQty ?? 0} available`
+                                : getServicePriceText(service)}
                           </p>
 
-                          {quantity > 0 ? (
+                          {unavailable ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-red-500/10 text-xs font-black text-red-200"
+                            >
+                              Sold out
+                            </button>
+                          ) : quantity > 0 ? (
                             <QuantityControl
                               name={service.name}
                               quantity={quantity}

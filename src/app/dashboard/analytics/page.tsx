@@ -115,6 +115,10 @@ function getManilaDateKey(date: Date) {
   return manilaDateKeyFormatter.format(date);
 }
 
+function getManilaStartOfDay(date: Date) {
+  return new Date(`${getManilaDateKey(date)}T00:00:00+08:00`);
+}
+
 function getLastNDays(days: number) {
   const result: {
     key: string;
@@ -122,8 +126,9 @@ function getLastNDays(days: number) {
     date: Date;
   }[] = [];
 
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
+  const todayKey = getManilaDateKey(new Date());
+  const [year, month, day] = todayKey.split('-').map(Number);
+  const todayCursor = new Date(Date.UTC(year, month - 1, day));
 
   const labelFormatter = new Intl.DateTimeFormat('en-PH', {
     month: 'short',
@@ -132,24 +137,20 @@ function getLastNDays(days: number) {
   });
 
   for (let index = days - 1; index >= 0; index -= 1) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - index);
-    date.setHours(12, 0, 0, 0);
+    const cursor = new Date(todayCursor);
+    cursor.setUTCDate(todayCursor.getUTCDate() - index);
+
+    const key = cursor.toISOString().slice(0, 10);
+    const date = new Date(`${key}T00:00:00+08:00`);
 
     result.push({
-      key: getManilaDateKey(date),
+      key,
       label: labelFormatter.format(date),
       date,
     });
   }
 
   return result;
-}
-
-function getStartOfDay(date: Date) {
-  const nextDate = new Date(date);
-  nextDate.setHours(0, 0, 0, 0);
-  return nextDate;
 }
 
 function getMaxValue(values: number[]) {
@@ -302,12 +303,14 @@ function getStockOrderBy(
 }
 
 function AnalyticsCard({
+  id,
   title,
   description,
   children,
   className = '',
   right,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: ReactNode;
@@ -316,7 +319,8 @@ function AnalyticsCard({
 }) {
   return (
     <section
-      className={`overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft ${className}`}
+      id={id}
+      className={`scroll-mt-24 overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft ${className}`}
     >
       <div className="flex items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/70 px-5 py-4">
         <div>
@@ -757,6 +761,7 @@ function Pagination({
                 ? { stockPage: currentPage - 1 }
                 : { movementPage: currentPage - 1 }
             )}
+            scroll={false}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100"
           >
             <ChevronLeft className="size-4" />
@@ -781,6 +786,7 @@ function Pagination({
                 ? { stockPage: currentPage + 1 }
                 : { movementPage: currentPage + 1 }
             )}
+            scroll={false}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100"
           >
             Next
@@ -823,6 +829,7 @@ function SortHeader({
         stockDir: nextDirection,
         stockPage: 1,
       })}
+      scroll={false}
       className={`inline-flex w-full items-center gap-1.5 font-black hover:text-neutral-950 ${
         align === 'right' ? 'justify-end text-right' : 'justify-start'
       } ${active ? 'text-neutral-950' : 'text-neutral-500'}`}
@@ -910,7 +917,7 @@ export default async function AnalyticsPage({
 
   const days = getLastNDays(rangeDays);
   const now = new Date();
-  const startDate = getStartOfDay(days[0]?.date ?? now);
+  const startDate = getManilaStartOfDay(days[0]?.date ?? now);
   const previousStartDate = new Date(startDate);
   previousStartDate.setDate(previousStartDate.getDate() - rangeDays);
   const previousEndDate = new Date(startDate.getTime() - 1);
@@ -959,6 +966,20 @@ export default async function AnalyticsPage({
     },
   };
 
+  const financialOrderWhere: Prisma.OrderWhereInput = {
+    ...periodOrderWhere,
+    status: {
+      not: OrderStatus.CANCELLED,
+    },
+  };
+
+  const previousFinancialOrderWhere: Prisma.OrderWhereInput = {
+    ...previousOrderWhere,
+    status: {
+      not: OrderStatus.CANCELLED,
+    },
+  };
+
   const periodServiceWhere: Prisma.ServiceRequestWhereInput = {
     ...serviceScope,
     createdAt: {
@@ -1004,6 +1025,7 @@ export default async function AnalyticsPage({
     previousSales,
     currentOrderCount,
     previousOrderCount,
+    previousFinancialOrderCount,
     requestCount,
     roomOrders,
     poolOrders,
@@ -1024,14 +1046,14 @@ export default async function AnalyticsPage({
     movementCount,
   ] = await Promise.all([
     db.order.aggregate({
-      where: periodOrderWhere,
+      where: financialOrderWhere,
       _sum: {
         totalCents: true,
       },
     }),
 
     db.order.aggregate({
-      where: previousOrderWhere,
+      where: previousFinancialOrderWhere,
       _sum: {
         totalCents: true,
       },
@@ -1043,6 +1065,10 @@ export default async function AnalyticsPage({
 
     db.order.count({
       where: previousOrderWhere,
+    }),
+
+    db.order.count({
+      where: previousFinancialOrderWhere,
     }),
 
     db.serviceRequest.count({
@@ -1061,6 +1087,7 @@ export default async function AnalyticsPage({
     db.order.count({
       where: {
         ...periodOrderWhere,
+        roomId: null,
         location: {
           type: 'POOL',
         },
@@ -1071,6 +1098,7 @@ export default async function AnalyticsPage({
       where: periodOrderWhere,
       select: {
         id: true,
+        status: true,
         totalCents: true,
         createdAt: true,
       },
@@ -1089,7 +1117,7 @@ export default async function AnalyticsPage({
 
     db.order.groupBy({
       by: ['paymentStatus'],
-      where: periodOrderWhere,
+      where: financialOrderWhere,
       _count: {
         _all: true,
       },
@@ -1097,7 +1125,7 @@ export default async function AnalyticsPage({
 
     db.order.groupBy({
       by: ['paymentStatus'],
-      where: periodOrderWhere,
+      where: financialOrderWhere,
       _sum: {
         totalCents: true,
       },
@@ -1109,7 +1137,7 @@ export default async function AnalyticsPage({
     db.orderItem.groupBy({
       by: ['productNameSnapshot'],
       where: {
-        order: periodOrderWhere,
+        order: financialOrderWhere,
       },
       _sum: {
         quantity: true,
@@ -1150,9 +1178,6 @@ export default async function AnalyticsPage({
         availableQty: true,
         soldQty: true,
       },
-      _count: {
-        _all: true,
-      },
     }),
 
     db.menuAvailabilityStock.count({
@@ -1171,6 +1196,9 @@ export default async function AnalyticsPage({
     db.menuAvailabilityStock.count({
       where: {
         ...stockScope,
+        product: {
+          isAvailable: true,
+        },
         OR: [
           {
             isSoldOut: true,
@@ -1253,6 +1281,17 @@ export default async function AnalyticsPage({
     movementTotalPages
   );
 
+  const navigationParams: AnalyticsSearchParams = {
+    hotelId: selectedHotelId || undefined,
+    days: String(rangeDays),
+    stockPage: String(stockPage),
+    stockPageSize: String(stockPageSize),
+    stockQuery: stockQuery || undefined,
+    stockSort,
+    stockDir: stockDirection,
+    movementPage: String(movementPage),
+  };
+
   const movementProductIds = stockMovementUsage
     .map((item) => item.productId)
     .filter(Boolean) as string[];
@@ -1322,12 +1361,16 @@ export default async function AnalyticsPage({
   const totalSalesCents = currentSales._sum.totalCents ?? 0;
   const previousSalesCents = previousSales._sum.totalCents ?? 0;
 
-  const averageOrderValueCents = currentOrderCount
-    ? Math.round(totalSalesCents / currentOrderCount)
+  const financialOrderCount = recentOrders.filter(
+    (order) => order.status !== OrderStatus.CANCELLED
+  ).length;
+
+  const averageOrderValueCents = financialOrderCount
+    ? Math.round(totalSalesCents / financialOrderCount)
     : 0;
 
-  const previousAverageOrderValueCents = previousOrderCount
-    ? Math.round(previousSalesCents / previousOrderCount)
+  const previousAverageOrderValueCents = previousFinancialOrderCount
+    ? Math.round(previousSalesCents / previousFinancialOrderCount)
     : 0;
 
   const revenueDelta = getDeltaPercentage(
@@ -1368,7 +1411,7 @@ export default async function AnalyticsPage({
       (item) => item.paymentStatus === PaymentStatus.PAID
     )?._count._all ?? 0;
 
-  const paidRate = getPercentage(paidOrders, currentOrderCount);
+  const paidRate = getPercentage(paidOrders, financialOrderCount);
 
   const completedServiceRequests =
     serviceStatusGroups.find(
@@ -1390,7 +1433,9 @@ export default async function AnalyticsPage({
 
   const salesTrend = days.map((day) => {
     const dayOrders = recentOrders.filter(
-      (order) => getManilaDateKey(order.createdAt) === day.key
+      (order) =>
+        order.status !== OrderStatus.CANCELLED &&
+        getManilaDateKey(order.createdAt) === day.key
     );
 
     return {
@@ -1425,20 +1470,9 @@ export default async function AnalyticsPage({
   )[0];
 
   const peakHour = peakHourEntry
-    ? new Intl.DateTimeFormat('en-PH', {
-        hour: 'numeric',
-        hour12: true,
-        timeZone: 'Asia/Manila',
-      }).format(
-        new Date(
-          Date.UTC(
-            2026,
-            0,
-            1,
-            Math.max(0, peakHourEntry[0] - 8)
-          )
-        )
-      )
+    ? `${peakHourEntry[0] % 12 || 12}:00 ${
+        peakHourEntry[0] >= 12 ? 'PM' : 'AM'
+      }`
     : 'No data';
 
   const orderStatusSegments = Object.values(OrderStatus).map((status) => ({
@@ -1508,13 +1542,15 @@ export default async function AnalyticsPage({
     paymentRevenueItems.map((item) => item.value)
   );
 
-  const totalStockRecords = stockTotals._count._all;
   const totalAvailableQty = Number(stockTotals._sum.availableQty ?? 0);
   const totalSoldQty = Number(stockTotals._sum.soldQty ?? 0);
 
+  const activeStockRecords =
+    availableStockItems + soldOutStockItems;
+
   const stockHealthRate = getPercentage(
     availableStockItems,
-    totalStockRecords
+    activeStockRecords
   );
 
   const sellThroughRate = getPercentage(
@@ -1595,6 +1631,9 @@ export default async function AnalyticsPage({
             </select>
           </label>
 
+          <input type="hidden" name="stockPage" value="1" />
+          <input type="hidden" name="movementPage" value="1" />
+
           <button className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white transition hover:bg-neutral-800">
             <Filter className="size-4" />
             Apply Analytics
@@ -1662,7 +1701,7 @@ export default async function AnalyticsPage({
         <InsightMetric
           label="Paid Order Rate"
           value={`${paidRate}%`}
-          helper={`${paidOrders} paid of ${currentOrderCount} orders`}
+          helper={`${paidOrders} paid of ${financialOrderCount} billable orders`}
           tone="green"
           icon={<CreditCard className="size-4" />}
         />
@@ -1784,9 +1823,9 @@ export default async function AnalyticsPage({
         >
           <DonutChart
             segments={paymentStatusSegments}
-            total={currentOrderCount}
+            total={financialOrderCount}
             centerLabel="Payments"
-            centerValue={formatNumber(currentOrderCount)}
+            centerValue={formatNumber(financialOrderCount)}
           />
         </AnalyticsCard>
 
@@ -1993,6 +2032,7 @@ export default async function AnalyticsPage({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <AnalyticsCard
+          id="menu-stock-availability"
           title="Menu Stock Availability"
           description="Search, sort, and review live menu inventory."
           right={
@@ -2003,7 +2043,7 @@ export default async function AnalyticsPage({
         >
           <form
             method="get"
-            action="/dashboard/analytics"
+            action="/dashboard/analytics#menu-stock-availability"
             className="mb-4 grid gap-3 md:grid-cols-[1fr_140px_auto]"
           >
             {selectedHotelId ? (
@@ -2012,6 +2052,7 @@ export default async function AnalyticsPage({
             <input type="hidden" name="days" value={String(rangeDays)} />
             <input type="hidden" name="stockSort" value={stockSort} />
             <input type="hidden" name="stockDir" value={stockDirection} />
+            <input type="hidden" name="stockPage" value="1" />
 
             <label className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
@@ -2051,7 +2092,7 @@ export default async function AnalyticsPage({
                         sortKey="name"
                         currentSort={stockSort}
                         currentDirection={stockDirection}
-                        searchParams={params}
+                        searchParams={navigationParams}
                       />
                     </th>
                     <th className="px-4 py-3 text-left">
@@ -2060,7 +2101,7 @@ export default async function AnalyticsPage({
                         sortKey="hotel"
                         currentSort={stockSort}
                         currentDirection={stockDirection}
-                        searchParams={params}
+                        searchParams={navigationParams}
                       />
                     </th>
                     <th className="px-4 py-3 text-right">
@@ -2069,7 +2110,7 @@ export default async function AnalyticsPage({
                         sortKey="available"
                         currentSort={stockSort}
                         currentDirection={stockDirection}
-                        searchParams={params}
+                        searchParams={navigationParams}
                         align="right"
                       />
                     </th>
@@ -2079,7 +2120,7 @@ export default async function AnalyticsPage({
                         sortKey="sold"
                         currentSort={stockSort}
                         currentDirection={stockDirection}
-                        searchParams={params}
+                        searchParams={navigationParams}
                         align="right"
                       />
                     </th>
@@ -2089,7 +2130,7 @@ export default async function AnalyticsPage({
                         sortKey="status"
                         currentSort={stockSort}
                         currentDirection={stockDirection}
-                        searchParams={params}
+                        searchParams={navigationParams}
                         align="right"
                       />
                     </th>
@@ -2099,7 +2140,7 @@ export default async function AnalyticsPage({
                         sortKey="updated"
                         currentSort={stockSort}
                         currentDirection={stockDirection}
-                        searchParams={params}
+                        searchParams={navigationParams}
                         align="right"
                       />
                     </th>
@@ -2186,12 +2227,13 @@ export default async function AnalyticsPage({
               totalItems={stockTableCount}
               pageSize={stockPageSize}
               pageParam="stockPage"
-              searchParams={params}
+              searchParams={navigationParams}
             />
           </div>
         </AnalyticsCard>
 
         <AnalyticsCard
+          id="recent-stock-movements"
           title="Recent Stock Movements"
           description={`Latest inventory activity in the selected ${rangeDays}-day period.`}
           right={
@@ -2250,7 +2292,7 @@ export default async function AnalyticsPage({
               totalItems={movementCount}
               pageSize={MOVEMENT_PAGE_SIZE}
               pageParam="movementPage"
-              searchParams={params}
+              searchParams={navigationParams}
             />
           </div>
         </AnalyticsCard>

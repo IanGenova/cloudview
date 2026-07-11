@@ -5,6 +5,7 @@ import {
   BedDouble,
   Clock,
   ConciergeBell,
+  CreditCard,
   History,
   ReceiptText,
   Repeat2,
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getGuestPortalActivity } from '@/lib/guest-portal-activity';
+import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,19 +43,32 @@ function formatStatus(status: string) {
 }
 
 function statusClass(status: string) {
-  if (['PENDING', 'NEW'].includes(status)) {
+  if (['PENDING', 'NEW', 'REFUND_PENDING'].includes(status)) {
     return 'bg-amber-100 text-amber-800';
   }
 
-  if (['ACCEPTED', 'PREPARING', 'IN_PROGRESS', 'READY'].includes(status)) {
+  if (
+    ['ACCEPTED', 'PREPARING', 'IN_PROGRESS', 'READY', 'PROCESSING'].includes(
+      status
+    )
+  ) {
     return 'bg-blue-100 text-blue-800';
   }
 
-  if (['DELIVERED', 'COMPLETED', 'PAID'].includes(status)) {
+  if (['DELIVERED', 'COMPLETED', 'PAID', 'REFUNDED'].includes(status)) {
     return 'bg-emerald-100 text-emerald-800';
   }
 
-  if (['CANCELLED', 'REFUNDED', 'REJECTED'].includes(status)) {
+  if (
+    [
+      'CANCELLED',
+      'REJECTED',
+      'EXPIRED',
+      'FAILED',
+      'PAID_REVIEW_REQUIRED',
+      'REFUND_FAILED',
+    ].includes(status)
+  ) {
     return 'bg-red-100 text-red-800';
   }
 
@@ -92,10 +108,31 @@ export default async function GuestActivityPage({
   }
 
   const activity = await getGuestPortalActivity(tagCode);
+  const identity = await getCurrentNfcGuestIdentity(tagCode);
 
   if (!activity.hasSession) {
     redirect(`/t/${tagCode}?error=session_expired`);
   }
+
+  const recentPayMongoPayments = identity.session
+    ? await db.guestPayMongoSession.findMany({
+        where: {
+          guestSessionId: identity.session.id,
+          hotelId: tag.hotelId,
+        },
+        select: {
+          id: true,
+          flowType: true,
+          status: true,
+          amountCents: true,
+          refundedAmountCents: true,
+          orderCode: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      })
+    : [];
 
   const roomLabel = activity.guestStay?.room
     ? `Room ${activity.guestStay.room.number}${
@@ -186,6 +223,59 @@ export default async function GuestActivityPage({
             </div>
           ) : null}
         </section>
+
+        {recentPayMongoPayments.length ? (
+          <section className="rounded-[2rem] border border-[#c99c38]/20 bg-white/[0.035] p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <CreditCard className="size-5 text-[#c99c38]" />
+              <h2 className="text-2xl font-serif font-normal tracking-wide">
+                PayMongo Payments
+              </h2>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {recentPayMongoPayments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="rounded-[1.5rem] border border-white/10 bg-black/25 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-serif text-lg font-medium tracking-wide text-[#c99c38]">
+                        {formatCurrency(payment.amountCents)}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-white/50">
+                        {formatDateTime(payment.createdAt)}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(payment.status)}`}>
+                      {formatStatus(payment.status)}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-white/40">
+                    {formatStatus(payment.flowType)}
+                  </p>
+
+                  {payment.orderCode ? (
+                    <Link
+                      href={`/t/${tagCode}/track/${payment.orderCode}`}
+                      className="mt-3 inline-flex text-xs font-black text-[#c99c38]"
+                    >
+                      Track {payment.orderCode}
+                    </Link>
+                  ) : null}
+
+                  {payment.refundedAmountCents > 0 ? (
+                    <p className="mt-2 text-xs font-bold text-blue-200">
+                      Refunded {formatCurrency(payment.refundedAmountCents)}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">

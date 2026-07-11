@@ -7,10 +7,17 @@ import {
   CreditCard,
   PackageCheck,
   ReceiptText,
+  RotateCcw,
   ShoppingBag,
   Utensils,
+  QrCode,
 } from 'lucide-react';
-import { OrderItemStatus, OrderStatus, PaymentStatus } from '@prisma/client';
+import {
+  GuestPayMongoFlow,
+  OrderItemStatus,
+  OrderStatus,
+  PaymentStatus,
+} from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
@@ -77,8 +84,15 @@ function paymentBadgeClass(status: PaymentStatus) {
     return 'bg-emerald-100 text-emerald-700';
   }
 
-  if (status === PaymentStatus.REFUNDED) {
+  if (
+    status === PaymentStatus.REFUNDED ||
+    status === PaymentStatus.PARTIALLY_REFUNDED
+  ) {
     return 'bg-blue-100 text-blue-700';
+  }
+
+  if (status === PaymentStatus.REFUND_PENDING) {
+    return 'bg-amber-100 text-amber-800';
   }
 
   return 'bg-red-100 text-red-700';
@@ -314,6 +328,31 @@ export default async function MyOrdersPage({
       })
     : [];
 
+  const payMongoSessions = guestSession
+    ? await db.guestPayMongoSession.findMany({
+        where: {
+          guestSessionId: guestSession.id,
+          hotelId: tag.hotelId,
+          tagId: tag.id,
+          flowType: GuestPayMongoFlow.FOOD_ORDER,
+        },
+        select: {
+          id: true,
+          status: true,
+          amountCents: true,
+          refundedAmountCents: true,
+          checkoutUrl: true,
+          orderCode: true,
+          errorMessage: true,
+          refundErrorMessage: true,
+          createdAt: true,
+          expiresAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      })
+    : [];
+
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-5">
@@ -406,6 +445,87 @@ export default async function MyOrdersPage({
             </div>
           </section>
         )}
+
+        {payMongoSessions.length ? (
+          <section className="mb-5 rounded-[2rem] border border-gold/20 bg-white/[0.035] p-5 backdrop-blur-md">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
+                <QrCode className="size-5" />
+              </span>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
+                  PayMongo Activity
+                </p>
+                <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
+                  QR payment status
+                </h2>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {payMongoSessions.map((payment) => {
+                const canResume =
+                  payment.status === 'PENDING' &&
+                  Boolean(payment.checkoutUrl) &&
+                  (!payment.expiresAt || payment.expiresAt > new Date());
+
+                return (
+                  <div
+                    key={payment.id}
+                    className="rounded-[1.25rem] border border-white/10 bg-black/25 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black text-white">
+                          {money(payment.amountCents)}
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-white/45">
+                          {formatDateTime(payment.createdAt)}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
+                        {statusLabel(payment.status)}
+                      </span>
+                    </div>
+
+                    {payment.refundedAmountCents > 0 ? (
+                      <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-blue-200">
+                        <RotateCcw className="size-3.5" />
+                        Refunded: {money(payment.refundedAmountCents)}
+                      </p>
+                    ) : null}
+
+                    {payment.errorMessage || payment.refundErrorMessage ? (
+                      <p className="mt-3 rounded-xl bg-red-500/10 p-3 text-xs font-medium leading-5 text-red-200">
+                        {payment.refundErrorMessage || payment.errorMessage}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {canResume && payment.checkoutUrl ? (
+                        <a
+                          href={payment.checkoutUrl}
+                          className="rounded-xl bg-gold px-4 py-2 text-xs font-black text-black"
+                        >
+                          Continue payment
+                        </a>
+                      ) : null}
+
+                      {payment.orderCode ? (
+                        <Link
+                          href={`/t/${tagCode}/track/${payment.orderCode}`}
+                          className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-black text-white"
+                        >
+                          Track order
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {orders.length ? (
           <div className="space-y-4">

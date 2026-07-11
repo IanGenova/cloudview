@@ -6,6 +6,7 @@ import {
   BellRing,
   CheckCheck,
   ChefHat,
+  CreditCard,
   ConciergeBell,
   PackageMinus,
   ShoppingBag,
@@ -30,7 +31,7 @@ const SOUND_MUTED_STORAGE_KEY = 'cloudview-dashboard-sound-muted';
 const MAX_STORED_NOTIFICATIONS = 50;
 const MAX_CENTER_NOTIFICATIONS = 25;
 const TOAST_VISIBLE_MS = 15_000;
-const PERSISTED_POLL_MS = 30_000;
+const PERSISTED_POLL_MS = 10_000;
 const EVENT_DEDUPE_TTL_MS = 30_000;
 
 
@@ -38,8 +39,16 @@ type KitchenPayload = {
   event?: string;
   hotelId?: string;
   orderCode?: string;
+  requestCode?: string;
+  sessionId?: string;
+  flowType?: string;
   status?: string;
   paymentStatus?: string;
+  payMongoStatus?: string;
+  refundStatus?: string;
+  amountCents?: number;
+  refundedAmountCents?: number;
+  errorMessage?: string;
   source?: string;
   updatedAt?: string;
 };
@@ -49,7 +58,16 @@ type ServiceRequestPayload = {
   hotelId?: string;
   requestId?: string;
   requestCode?: string;
+  orderCode?: string;
+  sessionId?: string;
+  flowType?: string;
   status?: string;
+  paymentStatus?: string;
+  payMongoStatus?: string;
+  refundStatus?: string;
+  amountCents?: number;
+  refundedAmountCents?: number;
+  errorMessage?: string;
   source?: string;
   updatedAt?: string;
 };
@@ -78,7 +96,28 @@ type CancelledItemPayload = {
   updatedAt?: string;
 };
 
-type OperationsPayload = LowStockPayload | CancelledItemPayload;
+type PayMongoPayload = {
+  event?: string;
+  hotelId?: string;
+  sessionId?: string;
+  flowType?: string;
+  status?: string;
+  paymentStatus?: string;
+  payMongoStatus?: string;
+  refundStatus?: string;
+  orderCode?: string;
+  requestCode?: string;
+  amountCents?: number;
+  refundedAmountCents?: number;
+  errorMessage?: string;
+  source?: string;
+  updatedAt?: string;
+};
+
+type OperationsPayload =
+  | LowStockPayload
+  | CancelledItemPayload
+  | PayMongoPayload;
 
 type DashboardNotification = {
   id: string;
@@ -88,6 +127,7 @@ type DashboardNotification = {
     | 'SERVICE_REQUEST'
     | 'LOW_STOCK'
     | 'CANCELLED_ITEM'
+    | 'PAYMONGO'
     | 'SYSTEM';
   title: string;
   message: string;
@@ -353,6 +393,23 @@ function isCancelledItemEvent(data: unknown): data is CancelledItemPayload {
   );
 }
 
+function isPayMongoEvent(data: unknown): data is PayMongoPayload {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  const payload = data as PayMongoPayload;
+  const event = normalizeEventName(payload.event);
+  const source = normalizeValue(payload.source);
+
+  return (
+    event.includes('paymongo') ||
+    source.includes('PAYMONGO') ||
+    Boolean(payload.payMongoStatus) ||
+    Boolean(payload.refundStatus)
+  );
+}
+
 function getAudioContextConstructor(): BrowserAudioContextConstructor | null {
   if (typeof window === 'undefined') {
     return null;
@@ -447,6 +504,10 @@ function getNotificationIcon(type: DashboardNotification['type']) {
     return Ban;
   }
 
+  if (type === 'PAYMONGO') {
+    return CreditCard;
+  }
+
   return BellRing;
 }
 
@@ -469,6 +530,14 @@ function getNotificationStyle(type: DashboardNotification['type']) {
     return {
       iconWrap: 'bg-red-100 text-red-700',
       border: 'border-red-200',
+    };
+  }
+
+  if (type === 'PAYMONGO') {
+    return {
+      iconWrap:
+        'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200',
+      border: 'border-indigo-200 dark:border-indigo-500/30',
     };
   }
 
@@ -497,6 +566,10 @@ function toDashboardNotificationType(
   value: string
 ): DashboardNotification['type'] {
   const normalizedType = normalizeValue(value);
+
+  if (normalizedType.includes('PAYMONGO')) {
+    return 'PAYMONGO';
+  }
 
   if (normalizedType.includes('KITCHEN')) {
     return 'KITCHEN_ORDER';
@@ -597,6 +670,9 @@ const alertsEnabledRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const recentEventKeysRef = useRef<Set<string>>(new Set());
   const notificationTimeoutsRef = useRef<number[]>([]);
+  const knownPersistedIdsRef = useRef<Set<string>>(new Set());
+  const persistedInitialLoadRef = useRef(false);
+  const refreshPersistedNotificationsRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     const savedValue = window.localStorage.getItem(
@@ -651,14 +727,49 @@ const alertsEnabledRef = useRef(false);
           return;
         }
 
-        setPersistedUnreadCount(data.unreadCount);
-        setPersistedNotifications(
-          data.notifications.map(mapPersistedDashboardNotification)
+        const mappedNotifications = data.notifications.map(
+          mapPersistedDashboardNotification
         );
+        const incomingUnread = mappedNotifications.filter(
+          (notification) =>
+            !notification.readAt &&
+            !knownPersistedIdsRef.current.has(notification.id)
+        );
+
+        if (persistedInitialLoadRef.current) {
+          for (const notification of incomingUnread.slice(0, 6)) {
+            addNotificationToCenter({
+              notification,
+              playSoundCue: true,
+              showBrowser: true,
+              showToast: true,
+            });
+          }
+
+          if (
+            incomingUnread.some(
+              (notification) => notification.type === 'PAYMONGO'
+            )
+          ) {
+            router.refresh();
+          }
+        } else {
+          persistedInitialLoadRef.current = true;
+        }
+
+        knownPersistedIdsRef.current = new Set(
+          mappedNotifications.map((notification) => notification.id)
+        );
+        setPersistedUnreadCount(data.unreadCount);
+        setPersistedNotifications(mappedNotifications);
       } catch {
-        // Realtime/local notifications can still work.
+        // Local/realtime notifications continue even when persistence is offline.
       }
     }
+
+    refreshPersistedNotificationsRef.current = () => {
+      void fetchUnreadNotifications();
+    };
 
     void fetchUnreadNotifications();
 
@@ -666,9 +777,21 @@ const alertsEnabledRef = useRef(false);
       void fetchUnreadNotifications();
     }, PERSISTED_POLL_MS);
 
+    function handleWindowActive() {
+      if (document.visibilityState !== 'hidden') {
+        void fetchUnreadNotifications();
+      }
+    }
+
+    window.addEventListener('focus', handleWindowActive);
+    document.addEventListener('visibilitychange', handleWindowActive);
+
     return () => {
       disposed = true;
+      refreshPersistedNotificationsRef.current = () => undefined;
       window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleWindowActive);
+      document.removeEventListener('visibilitychange', handleWindowActive);
     };
   }, []);
 
@@ -1280,6 +1403,11 @@ function pushTestNotification() {
 
             console.info('Kitchen realtime publication:', data);
 
+            if (isPayMongoEvent(data)) {
+              refreshPersistedNotificationsRef.current();
+              router.refresh();
+            }
+
             if (!isKitchenOrderCreatedEvent(data)) {
               return;
             }
@@ -1317,6 +1445,8 @@ function pushTestNotification() {
               createdAt,
               dedupeKey: `kitchen-ticket:${orderCode}:${data.updatedAt ?? ''}`,
             });
+
+            refreshPersistedNotificationsRef.current();
           });
 
           subscription.on('subscribed', () => {
@@ -1404,6 +1534,11 @@ function pushTestNotification() {
 
             console.info('Service request realtime publication:', data);
 
+            if (isPayMongoEvent(data)) {
+              refreshPersistedNotificationsRef.current();
+              router.refresh();
+            }
+
             if (!isServiceRequestCreatedEvent(data)) {
               return;
             }
@@ -1427,6 +1562,8 @@ function pushTestNotification() {
               href: '/dashboard/service-requests',
               createdAt: Date.now(),
             });
+
+            refreshPersistedNotificationsRef.current();
           });
 
           subscription.on('subscribed', () => {
@@ -1517,6 +1654,23 @@ function pushTestNotification() {
             const data = ctx.data as OperationsPayload;
 
             console.info('Operations realtime publication:', data);
+
+            if (isPayMongoEvent(data)) {
+              const eventKey = `paymongo:${data.sessionId ?? 'session'}:${
+                data.refundStatus ??
+                data.paymentStatus ??
+                data.payMongoStatus ??
+                data.status ??
+                'update'
+              }:${data.updatedAt ?? ''}`;
+
+              if (!hasRecentlyHandled(eventKey)) {
+                refreshPersistedNotificationsRef.current();
+                router.refresh();
+              }
+
+              return;
+            }
 
             if (isLowStockEvent(data)) {
               const eventKey = `low-stock:${data.inventoryItemId}:${
@@ -1982,7 +2136,7 @@ function pushTestNotification() {
                     No notifications yet
                   </p>
                   <p className="mt-1 text-xs font-semibold text-neutral-400 dark:text-neutral-500">
-                    New orders, service requests, low stock, and cancellations will
+                    New orders, service requests, PayMongo payments, refunds, low stock, and cancellations will
                     appear here.
                   </p>
                 </div>

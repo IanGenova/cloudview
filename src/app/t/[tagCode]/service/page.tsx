@@ -1,10 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Lock, ShieldCheck, Sparkles } from 'lucide-react';
-import {
-  GuestBottomNav,
-  GuestShell,
-} from '@/components/guest/GuestShell';
+import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
 import { GuestServiceOrderForm } from './GuestServiceOrderForm';
@@ -16,23 +13,20 @@ export default async function ServicePage({
   params,
   searchParams,
 }: {
-  params: Promise<{
-    tagCode: string;
-  }>;
+  params: Promise<{ tagCode: string }>;
   searchParams: Promise<{
     error?: string;
     success?: string;
     count?: string;
+    paymongo?: string;
+    paymongoResult?: string;
   }>;
 }) {
   const { tagCode } = await params;
-  const { error, success, count } = await searchParams;
-
+  const query = await searchParams;
   const tag = await requireNfcGuestAccess(tagCode);
 
-  if (!tag) {
-    notFound();
-  }
+  if (!tag) notFound();
 
   const roomLabel = tag.room
     ? `Room ${tag.room.number}`
@@ -52,21 +46,17 @@ export default async function ServicePage({
             <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-gold/20 bg-gold/10 text-gold">
               <Lock className="size-7" />
             </div>
-
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/55">
               <ShieldCheck className="size-3.5" />
               Guest access notice
             </div>
-
             <h2 className="mt-5 font-serif text-3xl font-normal tracking-wide text-white">
               Service requests are unavailable
             </h2>
-
             <p className="mx-auto mt-3 max-w-sm text-sm font-medium leading-6 text-white/50">
-              This NFC panel is currently inactive. You may still browse the
-              hotel guide or contact the front desk for personal assistance.
+              This NFC panel is currently inactive. Contact the front desk for
+              assistance.
             </p>
-
             <div className="mt-6 grid gap-3">
               <Link
                 href={`/t/${tagCode}/guide`}
@@ -75,7 +65,6 @@ export default async function ServicePage({
                 <Sparkles className="size-4" />
                 View Hotel Guide
               </Link>
-
               <Link
                 href={`/t/${tagCode}/contact`}
                 className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] px-5 text-sm font-black text-white"
@@ -85,17 +74,13 @@ export default async function ServicePage({
             </div>
           </section>
         </GuestShell>
-
         <GuestBottomNav tagCode={tagCode} active="services" dark />
       </>
     );
   }
 
   const services = await db.serviceCatalogItem.findMany({
-    where: {
-      hotelId: tag.hotelId,
-      isActive: true,
-    },
+    where: { hotelId: tag.hotelId, isActive: true },
     select: {
       id: true,
       code: true,
@@ -107,18 +92,16 @@ export default async function ServicePage({
       unitPrice: true,
       unitLabel: true,
       sortOrder: true,
+      inventoryTracked: true,
+      availabilityStock: {
+        select: {
+          availableQty: true,
+          usedQty: true,
+          isSoldOut: true,
+        },
+      },
     },
-    orderBy: [
-      {
-        sortOrder: 'asc',
-      },
-      {
-        category: 'asc',
-      },
-      {
-        name: 'asc',
-      },
-    ],
+    orderBy: [{ sortOrder: 'asc' }, { category: 'asc' }, { name: 'asc' }],
   });
 
   const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
@@ -135,6 +118,15 @@ export default async function ServicePage({
     unitPrice: Number(service.unitPrice),
     unitLabel: service.unitLabel ?? '',
     sortOrder: service.sortOrder,
+    inventoryTracked: service.inventoryTracked,
+    availableQty: service.inventoryTracked
+      ? service.availabilityStock?.availableQty ?? 0
+      : null,
+    isSoldOut: service.inventoryTracked
+      ? !service.availabilityStock ||
+        service.availabilityStock.isSoldOut ||
+        service.availabilityStock.availableQty <= 0
+      : false,
   }));
 
   return (
@@ -151,12 +143,11 @@ export default async function ServicePage({
           roomLabel={roomLabel}
           services={guestServices}
           defaultGuestName={defaultGuestName}
-          error={error}
-          success={success}
-          count={count}
+          error={query.error}
+          success={query.success}
+          count={query.count}
         />
       </GuestShell>
-
       <GuestBottomNav tagCode={tagCode} active="services" dark />
     </>
   );

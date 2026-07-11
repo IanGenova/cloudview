@@ -24,9 +24,9 @@ function getServiceRequestsMessage(success?: string, error?: string) {
       'request-started': 'Service request order moved to In Progress.',
       'request-completed': 'Service request order was marked as completed.',
       'request-cancelled':
-        'Service request order was cancelled successfully.',
+        'Service request order was cancelled. Inventory was restored and eligible PayMongo refunds were submitted.',
       'request-item-cancelled':
-        'Service request item was cancelled successfully. Inventory and charges were updated.',
+        'Service request item was cancelled. Inventory, charges, and eligible PayMongo refunds were updated.',
       'charge-updated': 'Room add-on charge was added or updated successfully.',
       'request-created': 'Service request was added successfully.',
     };
@@ -268,6 +268,15 @@ export default async function ServiceRequestsPage({
             email: true,
           },
         },
+        guestPayMongoSession: {
+          select: {
+            id: true,
+            status: true,
+            refundStatus: true,
+            refundedAmountCents: true,
+            refundErrorMessage: true,
+          },
+        },
         statusHistory: {
           orderBy: {
             createdAt: 'asc',
@@ -483,6 +492,22 @@ function buildGroupedRequests(sourceRequests: typeof requests) {
         .toISOString(),
       itemCount: sortedGroup.length,
       billedCount: groupCharges.length,
+      payMongoPaidCount: sortedGroup.filter(
+        (request) =>
+          request.paymentMethod === 'PAYMONGO' &&
+          request.paymentStatus === 'PAID'
+      ).length,
+      refundPendingCount: sortedGroup.filter(
+        (request) => request.paymentStatus === 'REFUND_PENDING'
+      ).length,
+      refundedCount: sortedGroup.filter(
+        (request) => request.paymentStatus === 'REFUNDED'
+      ).length,
+      totalPayMongoAmountCents: sortedGroup.reduce(
+        (sum, request) =>
+          sum + (request.paymentMethod === 'PAYMONGO' ? request.amountCents : 0),
+        0
+      ),
       totalChargeAmount,
       attachments: groupAttachments,
       items: sortedGroup.map((request) => {
@@ -498,6 +523,18 @@ function buildGroupedRequests(sourceRequests: typeof requests) {
           assignedToName:
             request.assignedTo?.name ?? request.assignedTo?.email ?? '',
           createdAt: request.createdAt.toISOString(),
+          billingMode: request.billingModeSnapshot,
+          quantity: request.quantity,
+          unitPriceCents: request.unitPriceCents,
+          amountCents: request.amountCents,
+          paymentMethod: request.paymentMethod,
+          paymentStatus: request.paymentStatus,
+          payMongoStatus: request.guestPayMongoSession?.status ?? null,
+          refundStatus: request.guestPayMongoSession?.refundStatus ?? null,
+          refundedAmountCents:
+            request.guestPayMongoSession?.refundedAmountCents ?? 0,
+          refundErrorMessage:
+            request.guestPayMongoSession?.refundErrorMessage ?? '',
           charge: charge
             ? {
                 id: charge.id,

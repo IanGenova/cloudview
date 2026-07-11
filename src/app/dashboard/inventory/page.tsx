@@ -247,9 +247,8 @@ export default async function InventoryPage({
 
   const productIds = products.map((product) => product.id);
 
-  const soldGroups = productIds.length
-    ? await db.orderItem.groupBy({
-        by: ['productId'],
+  const soldOrderItems = productIds.length
+    ? await db.orderItem.findMany({
         where: {
           productId: {
             in: productIds,
@@ -260,18 +259,27 @@ export default async function InventoryPage({
             },
           },
         },
-        _sum: {
+        select: {
+          productId: true,
           quantity: true,
+          cancelledQty: true,
         },
       })
     : [];
 
   const soldQtyByProductId = new Map<string, number>();
 
-  for (const group of soldGroups) {
-    if (group.productId) {
-      soldQtyByProductId.set(group.productId, group._sum.quantity ?? 0);
+  for (const item of soldOrderItems) {
+    if (!item.productId) {
+      continue;
     }
+
+    const activeQuantity = Math.max(item.quantity - item.cancelledQty, 0);
+
+    soldQtyByProductId.set(
+      item.productId,
+      (soldQtyByProductId.get(item.productId) ?? 0) + activeQuantity
+    );
   }
 
   const stockByProductId = new Map(
@@ -472,7 +480,7 @@ export default async function InventoryPage({
 
       <PageHeader
         title="Inventory Management"
-        description="Manage food menu stock and service request inventory shown to guests."
+        description="Manage manual stock changes and review automatic order deductions, cancellation restores, and rollback movements."
       />
 
       <InventoryClient

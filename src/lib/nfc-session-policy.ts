@@ -16,7 +16,11 @@ export function getNfcSessionPolicy(tag: {
       allowMultipleDevices: false,
       reusePendingSession: true,
       requireStrictBrowserSession: true,
-      description: 'Private room session. Pending guest work may be reused.',
+      keepUnresolvedPaymentsAlive: true,
+      paymentRequiresActiveStay: true,
+      paymentRequiresAuthorizedDevice: true,
+      description:
+        'Private room session. The active stay and authorized room device are required for online payment.',
     };
   }
 
@@ -25,7 +29,10 @@ export function getNfcSessionPolicy(tag: {
     allowMultipleDevices: true,
     reusePendingSession: false,
     requireStrictBrowserSession: false,
+    keepUnresolvedPaymentsAlive: true,
+    paymentRequiresActiveStay: false,
+    paymentRequiresAuthorizedDevice: false,
     description:
-      'Public location session. Unlimited devices may tap and each device gets its own session.',
+      'Public location session. Each browser receives its own session and may pay without a room stay.',
   };
 }

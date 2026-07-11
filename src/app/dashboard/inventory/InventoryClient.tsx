@@ -857,7 +857,7 @@ function ControlMenuStockModal({
   return (
     <Modal
       title="Control Menu Stock"
-      description="Set, add, remove, sell out, or reopen this menu item."
+      description="Set, add, remove, sell out, or reopen this menu item. The database transaction rolls back automatically when saving fails."
       onClose={onClose}
     >
       <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
@@ -1165,7 +1165,7 @@ function ControlServiceStockModal({
   return (
     <Modal
       title="Control Service Inventory"
-      description="Set, add, remove, sell out, or reopen inventory for this service request item."
+      description="Set, add, remove, sell out, or reopen this service item. Failed saves are rolled back automatically."
       onClose={onClose}
     >
       <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
@@ -1330,7 +1330,7 @@ function MenuMovementsModal({
   return (
     <Modal
       title="Recent Menu Stock Movements"
-      description="Audit trail of menu stock changes."
+      description="Audit trail of manual changes, order deductions, cancellation restores, and automatic rollback movements."
       onClose={onClose}
       maxWidth="max-w-3xl"
     >
@@ -1363,7 +1363,7 @@ function ServiceMovementsModal({
   return (
     <Modal
       title="Recent Service Inventory Movements"
-      description="Audit trail of service request inventory changes."
+      description="Audit trail of manual changes, request deductions, and cancellation restores."
       onClose={onClose}
       maxWidth="max-w-3xl"
     >
