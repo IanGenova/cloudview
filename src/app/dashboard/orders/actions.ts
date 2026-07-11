@@ -71,6 +71,16 @@ const KITCHEN_STATUS_ACTIONS = new Set<OrderStatus>([
   OrderStatus.CANCELLED,
 ]);
 
+const REFUND_ELIGIBLE_PAYMENT_STATUSES: readonly PaymentStatus[] = [
+  PaymentStatus.PAID,
+  PaymentStatus.PARTIALLY_REFUNDED,
+  PaymentStatus.REFUND_FAILED,
+];
+
+function isRefundEligiblePaymentStatus(status: PaymentStatus) {
+  return REFUND_ELIGIBLE_PAYMENT_STATUSES.includes(status);
+}
+
 async function getDashboardPermissionsForUser(user: {
   id: string;
   role: Role;
@@ -818,11 +828,7 @@ if (order.status !== OrderStatus.PENDING) {
 
   if (
     order.paymentMethod === PaymentMethod.PAYMONGO &&
-    [
-      PaymentStatus.PAID,
-      PaymentStatus.PARTIALLY_REFUNDED,
-      PaymentStatus.REFUND_FAILED,
-    ].includes(order.paymentStatus) &&
+    isRefundEligiblePaymentStatus(order.paymentStatus) &&
     refundAmountCents > 0
   ) {
     const refundResult = await requestGuestFoodOrderRefund({
@@ -1051,11 +1057,7 @@ export async function updateOrderStatusAction(formData: FormData) {
   if (
     status === OrderStatus.CANCELLED &&
     order.paymentMethod === PaymentMethod.PAYMONGO &&
-    [
-      PaymentStatus.PAID,
-      PaymentStatus.PARTIALLY_REFUNDED,
-      PaymentStatus.REFUND_FAILED,
-    ].includes(order.paymentStatus) &&
+    isRefundEligiblePaymentStatus(order.paymentStatus) &&
     order.totalCents > 0
   ) {
     const refundResult = await requestGuestFoodOrderRefund({
