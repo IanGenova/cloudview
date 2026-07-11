@@ -27,9 +27,15 @@ export const dynamic = 'force-dynamic';
 type JsonRecord = Record<string, unknown>;
 
 type PayMongoEvent = {
+  /**
+   * PayMongo Hosted Checkout V2 currently includes `event_type` at the
+   * top level. Older JSON:API webhook envelopes do not.
+   */
+  event_type?: string;
   data?: {
     id?: string;
     type?: string;
+    resource?: string;
     livemode?: boolean;
     data?: JsonRecord;
     attributes?: {
@@ -148,17 +154,48 @@ function verifySignature(input: {
 }
 
 function getEventDetails(event: PayMongoEvent) {
-  const current = event.data;
-  const legacy = event.data?.attributes;
+  const envelope = event.data;
+  const legacyAttributes = envelope?.attributes;
+
+  const envelopeType = asString(envelope?.type);
+  const legacyEventType = asString(legacyAttributes?.type);
+
+  /**
+   * PayMongo has two webhook envelope formats in circulation:
+   *
+   * Hosted Checkout V2:
+   *   data.type = "checkout_session.payment.paid"
+   *   data.data = checkout session resource
+   *
+   * JSON:API event envelope:
+   *   data.type = "event"
+   *   data.attributes.type = "checkout_session.payment.paid"
+   *   data.attributes.data = checkout session resource
+   *
+   * The previous parser preferred `data.type`, so JSON:API events were
+   * incorrectly stored as the literal type "event" and never processed.
+   */
+  const eventType =
+    legacyEventType ??
+    (envelopeType && envelopeType.toLowerCase() !== 'event'
+      ? envelopeType
+      : null);
+
+  const livemode =
+    typeof legacyAttributes?.livemode === 'boolean'
+      ? legacyAttributes.livemode
+      : typeof envelope?.livemode === 'boolean'
+        ? envelope.livemode
+        : false;
+
+  const resource = asRecord(legacyAttributes?.data ?? envelope?.data);
 
   return {
-    eventId: current?.id,
-    eventType: current?.type ?? legacy?.type,
-    livemode:
-      typeof current?.livemode === 'boolean'
-        ? current.livemode
-        : Boolean(legacy?.livemode),
-    resource: asRecord(current?.data ?? legacy?.data),
+    eventId: asString(envelope?.id) ?? undefined,
+    eventType,
+    livemode,
+    resource,
+    envelopeFormat: legacyEventType ? 'json-api-event' : 'hosted-checkout-v2',
   };
 }
 
@@ -291,8 +328,25 @@ export async function POST(request: Request) {
   const eventType: string = details.eventType;
 
   if (details.livemode !== expectedLivemode) {
+    console.warn('[PayMongo webhook] Ignoring event with mode mismatch.', {
+      eventId,
+      eventType,
+      receivedLivemode: details.livemode,
+      expectedLivemode,
+      envelopeFormat: details.envelopeFormat,
+    });
+
     return NextResponse.json({ ok: true, ignored: 'mode-mismatch' });
   }
+
+  console.info('[PayMongo webhook] Verified event.', {
+    eventId,
+    eventType,
+    livemode: details.livemode,
+    envelopeFormat: details.envelopeFormat,
+    resourceType: asString(details.resource?.type),
+    resourceId: asString(details.resource?.id),
+  });
 
   let automaticRefundSessionId: string | null = null;
   let automaticRefundReason = '';
@@ -302,12 +356,25 @@ export async function POST(request: Request) {
   const cleanupGuestSessionIds = new Set<string>();
 
   await db.$transaction(async (tx) => {
-    const duplicate = await tx.payMongoWebhookEvent.findUnique({
+    const existingWebhookEvent = await tx.payMongoWebhookEvent.findUnique({
       where: { id: eventId },
-      select: { id: true },
+      select: { id: true, type: true },
     });
 
-    if (duplicate) return;
+    /**
+     * Recovery path for events processed by the previous parser bug.
+     * Those events were stored with type = "event" even though the real
+     * event type lived in data.attributes.type. A manual PayMongo resend
+     * must be allowed to process that same event ID once with the corrected
+     * type. All correctly processed duplicate events remain idempotent.
+     */
+    const recoverPreviouslyMisparsedEvent = Boolean(
+      existingWebhookEvent &&
+        existingWebhookEvent.type === 'event' &&
+        eventType !== 'event'
+    );
+
+    if (existingWebhookEvent && !recoverPreviouslyMisparsedEvent) return;
 
     if (eventType === 'checkout_session.payment.paid') {
       const checkout = details.resource;
@@ -553,13 +620,24 @@ export async function POST(request: Request) {
       }
     }
 
-    await tx.payMongoWebhookEvent.create({
-      data: {
-        id: eventId,
-        type: eventType,
-        livemode: details.livemode,
-      },
-    });
+    if (existingWebhookEvent) {
+      await tx.payMongoWebhookEvent.update({
+        where: { id: eventId },
+        data: {
+          type: eventType,
+          livemode: details.livemode,
+          processedAt: new Date(),
+        },
+      });
+    } else {
+      await tx.payMongoWebhookEvent.create({
+        data: {
+          id: eventId,
+          type: eventType,
+          livemode: details.livemode,
+        },
+      });
+    }
   });
 
   await Promise.allSettled([
@@ -614,5 +692,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, eventId, eventType });
 }
