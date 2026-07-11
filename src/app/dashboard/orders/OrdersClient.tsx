@@ -137,7 +137,7 @@ type Message =
     }
   | null;
   
-  type ClientOrderAction = (formData: FormData) => Promise<unknown>;
+type ClientOrderAction = (formData: FormData) => void | Promise<void>;
 
 const statusOptions: StatusFilter[] = [
   'ALL',

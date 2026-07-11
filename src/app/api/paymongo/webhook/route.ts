@@ -285,6 +285,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignored: 'missing-event-type' });
   }
 
+  // Preserve the validated non-null event type across async transaction callbacks.
+  // TypeScript does not reliably retain property narrowing for details.eventType
+  // once it is captured inside the Prisma transaction closure.
+  const eventType: string = details.eventType;
+
   if (details.livemode !== expectedLivemode) {
     return NextResponse.json({ ok: true, ignored: 'mode-mismatch' });
   }
@@ -304,7 +309,7 @@ export async function POST(request: Request) {
 
     if (duplicate) return;
 
-    if (details.eventType === 'checkout_session.payment.paid') {
+    if (eventType === 'checkout_session.payment.paid') {
       const checkout = details.resource;
       const checkoutId = asString(checkout?.id);
       const attributes = getAttributes(checkout);
@@ -507,10 +512,10 @@ export async function POST(request: Request) {
         }
       }
     } else if (
-      details.eventType === 'payment.refunded' ||
-      details.eventType === 'payment.refund.updated'
+      eventType === 'payment.refunded' ||
+      eventType === 'payment.refund.updated'
     ) {
-      const refund = getRefundEventDetails(details.eventType, details.resource);
+      const refund = getRefundEventDetails(eventType, details.resource);
 
       const updatedRefund = await applyGuestRefundWebhookUpdateTx(tx, {
         refundId: refund.refundId,
@@ -520,7 +525,7 @@ export async function POST(request: Request) {
       });
 
       refundNotificationId = updatedRefund?.id ?? null;
-    } else if (details.eventType === 'payment.failed') {
+    } else if (eventType === 'payment.failed') {
       const attributes = getAttributes(details.resource);
       const metadata = getMetadata(attributes);
       const guestPaymentSessionId =
@@ -551,7 +556,7 @@ export async function POST(request: Request) {
     await tx.payMongoWebhookEvent.create({
       data: {
         id: eventId,
-        type: details.eventType,
+        type: eventType,
         livemode: details.livemode,
       },
     });
