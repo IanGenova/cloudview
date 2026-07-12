@@ -81,6 +81,39 @@ function isRefundEligiblePaymentStatus(status: PaymentStatus) {
   return REFUND_ELIGIBLE_PAYMENT_STATUSES.includes(status);
 }
 
+const PROCESSABLE_PAYMONGO_PAYMENT_STATUSES: readonly PaymentStatus[] = [
+  PaymentStatus.PAID,
+  PaymentStatus.PARTIALLY_REFUNDED,
+];
+
+const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+  [OrderStatus.ACCEPTED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+  [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
+  [OrderStatus.READY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+  [OrderStatus.DELIVERED]: [],
+  [OrderStatus.CANCELLED]: [],
+};
+
+function isProcessablePayMongoPaymentStatus(status: PaymentStatus) {
+  return PROCESSABLE_PAYMONGO_PAYMENT_STATUSES.includes(status);
+}
+
+function assertValidOrderStatusTransition(
+  currentStatus: OrderStatus,
+  nextStatus: OrderStatus
+) {
+  if (currentStatus === nextStatus) {
+    return;
+  }
+
+  if (!ORDER_STATUS_TRANSITIONS[currentStatus].includes(nextStatus)) {
+    throw new Error(
+      `Order cannot move from ${currentStatus.replaceAll('_', ' ')} to ${nextStatus.replaceAll('_', ' ')}.`
+    );
+  }
+}
+
 async function getDashboardPermissionsForUser(user: {
   id: string;
   role: Role;
@@ -970,6 +1003,25 @@ export async function updateOrderStatusAction(formData: FormData) {
   assertHotelScope(user, order.hotelId);
   await assertOrderStatusUpdateAccess({ user, status });
 
+  assertValidOrderStatusTransition(order.status, status);
+
+  if (
+    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    (status === OrderStatus.PREPARING ||
+      status === OrderStatus.READY ||
+      status === OrderStatus.DELIVERED) &&
+    !isProcessablePayMongoPaymentStatus(order.paymentStatus)
+  ) {
+    throw new Error(
+      'Wait for the verified PayMongo payment before preparing this order.'
+    );
+  }
+
+  if (order.status === status) {
+    revalidateOrderPaths(order);
+    return finishOrderAction('order-updated');
+  }
+
   let statusUpdatedAt = new Date();
   let restoredProductIds: string[] = [];
 
@@ -981,7 +1033,8 @@ export async function updateOrderStatusAction(formData: FormData) {
   try {
     const shouldReleaseToKitchen =
       !order.inventoryDeductedAt &&
-      order.status === OrderStatus.PENDING &&
+      (order.status === OrderStatus.PENDING ||
+        order.status === OrderStatus.ACCEPTED) &&
       (status === OrderStatus.PREPARING ||
         status === OrderStatus.READY ||
         status === OrderStatus.DELIVERED);

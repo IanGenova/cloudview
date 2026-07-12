@@ -1,6 +1,7 @@
 import {
   DashboardModule,
   MenuAvailabilityMovementType,
+  OrderItemStatus,
   OrderStatus,
   PaymentStatus,
 } from '@prisma/client';
@@ -11,6 +12,7 @@ import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { OrdersClient } from './OrdersClient';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const activeStatuses: OrderStatus[] = [
   OrderStatus.PENDING,
@@ -26,6 +28,12 @@ function getOrdersMessage(success?: string, error?: string) {
         'Food item was cancelled. Stock restoration and any required PayMongo refund were started.',
       'order-cancelled':
         'Order was cancelled. Stock restoration and any required PayMongo refund were started.',
+      'order-accepted': 'Order was accepted.',
+      'order-started': 'Order moved to Preparing.',
+      'order-ready': 'Order is ready for delivery.',
+      'order-delivered': 'Order was marked as delivered.',
+      'order-paid': 'Order payment was marked as paid.',
+      'order-updated': 'Order was refreshed successfully.',
     };
 
     return {
@@ -134,13 +142,29 @@ export default async function OrdersPage({
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [
+      {
+        createdAt: 'desc',
+      },
+      {
+        id: 'desc',
+      },
+    ],
     take: 150,
   });
 
-  const orderCodes = orders.map((order) => order.orderCode);
+  const restoreCandidateOrderCodes = orders
+    .filter(
+      (order) =>
+        order.status === OrderStatus.CANCELLED ||
+        order.items.some(
+          (item) =>
+            item.status !== OrderItemStatus.ACTIVE || item.cancelledQty > 0
+        )
+    )
+    .map((order) => order.orderCode);
 
-  const restoreMovements = orderCodes.length
+  const restoreMovements = restoreCandidateOrderCodes.length
     ? await db.menuAvailabilityMovement.findMany({
         where: {
           ...(user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! }),
@@ -150,7 +174,7 @@ export default async function OrdersPage({
               MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
             ],
           },
-          OR: orderCodes.map((orderCode) => ({
+          OR: restoreCandidateOrderCodes.map((orderCode) => ({
             reason: { contains: orderCode },
           })),
         },
@@ -160,8 +184,23 @@ export default async function OrdersPage({
           },
         },
         orderBy: { createdAt: 'desc' },
+        take: 1000,
       })
     : [];
+
+  const restoreMovementsByOrderCode = new Map<
+    string,
+    typeof restoreMovements
+  >();
+
+  for (const orderCode of restoreCandidateOrderCodes) {
+    restoreMovementsByOrderCode.set(
+      orderCode,
+      restoreMovements.filter((movement) =>
+        Boolean(movement.reason?.includes(orderCode))
+      )
+    );
+  }
 
   const activeOrders = orders.filter((order) =>
     activeStatuses.includes(order.status)
@@ -204,7 +243,7 @@ export default async function OrdersPage({
 
       <PageHeader
         title="Orders"
-        description="Food orders from NFC/QR guest portals and POS terminal. PayMongo refund state and stock restoration are shown with each order."
+        description="Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with PayMongo refund and stock-restoration details."
       />
 
       <OrdersClient
@@ -265,19 +304,17 @@ export default async function OrdersPage({
               createdAt: history.createdAt.toISOString(),
               userName: history.user?.name ?? history.user?.email ?? '',
             })),
-            restoreMovements: restoreMovements
-              .filter((movement) =>
-                Boolean(movement.reason?.includes(order.orderCode))
-              )
-              .map((movement) => ({
-                id: movement.id,
-                productName: movement.product.name,
-                type: movement.type,
-                quantity: movement.quantity,
-                balanceAfter: movement.balanceAfter,
-                reason: movement.reason ?? '',
-                createdAt: movement.createdAt.toISOString(),
-              })),
+            restoreMovements: (
+              restoreMovementsByOrderCode.get(order.orderCode) ?? []
+            ).map((movement) => ({
+              id: movement.id,
+              productName: movement.product.name,
+              type: movement.type,
+              quantity: movement.quantity,
+              balanceAfter: movement.balanceAfter,
+              reason: movement.reason ?? '',
+              createdAt: movement.createdAt.toISOString(),
+            })),
           };
         })}
       />

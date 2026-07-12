@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ConciergeBell,
   CreditCard,
+  DatabaseBackup,
   FileBarChart2,
   Gift,
   Home,
@@ -59,6 +60,13 @@ const guestStaysNavItem: DashboardNavItem = {
   href: '/dashboard/guest-stays',
 };
 
+const dataBackupNavItem: DashboardNavItem = {
+  module: 'DATA_BACKUP',
+  label: 'Data Backup & Recovery',
+  href: '/dashboard/settings/backups',
+  group: 'settings',
+};
+
 const navGroups: SidebarGroup[] = [
   {
     label: 'Dashboard',
@@ -104,6 +112,7 @@ const moduleIconMap: Record<string, LucideIcon> = {
   REPORTS: FileBarChart2,
   HOTEL_SETTINGS: Settings,
   USER_ACCOUNT_SETTINGS: Settings,
+  DATA_BACKUP: DatabaseBackup,
 };
 
 function getModuleIcon(module: string) {
@@ -194,6 +203,48 @@ function insertGuestStaysItem(items: DashboardNavItem[]) {
   }
 
   return [...items, guestStaysNavItem];
+}
+
+function insertDataBackupItem(
+  settingsItems: DashboardNavItem[],
+  allPermissionFilteredItems: DashboardNavItem[]
+) {
+  const hasBackupItem = settingsItems.some(
+    (item) =>
+      item.module === 'DATA_BACKUP' ||
+      item.href === dataBackupNavItem.href
+  );
+
+  if (hasBackupItem) {
+    return settingsItems;
+  }
+
+  /**
+   * Permission safety:
+   * navItems already comes from the permission-filtered dashboard layout.
+   * Only expose Backup & Recovery when HOTEL_SETTINGS is present.
+   */
+  const canAccessHotelSettings = allPermissionFilteredItems.some(
+    (item) => item.module === 'HOTEL_SETTINGS'
+  );
+
+  if (!canAccessHotelSettings) {
+    return settingsItems;
+  }
+
+  const hotelSettingsIndex = settingsItems.findIndex(
+    (item) => item.module === 'HOTEL_SETTINGS'
+  );
+
+  if (hotelSettingsIndex >= 0) {
+    return [
+      ...settingsItems.slice(0, hotelSettingsIndex + 1),
+      dataBackupNavItem,
+      ...settingsItems.slice(hotelSettingsIndex + 1),
+    ];
+  }
+
+  return [...settingsItems, dataBackupNavItem];
 }
 
 function sortItemsByGroupOrder(items: DashboardNavItem[], modules: string[]) {
@@ -413,7 +464,11 @@ export function Sidebar({
   );
 
   const settingsItems = useMemo(
-    () => navItems.filter((item) => item.group === 'settings'),
+    () =>
+      insertDataBackupItem(
+        navItems.filter((item) => item.group === 'settings'),
+        navItems
+      ),
     [navItems]
   );
 
@@ -651,7 +706,7 @@ export function Sidebar({
                       <div className="space-y-1.5 pb-3">
                         {settingsItems.map((item) => (
                           <SidebarLink
-                            key={item.module}
+                            key={`${item.module}-${item.href}`}
                             item={item}
                             activeHref={activeHref}
                             isSidebarOpen={isSidebarOpen}
@@ -664,7 +719,7 @@ export function Sidebar({
                   <section className="space-y-1.5 pt-1 pb-3">
                     {settingsItems.map((item) => (
                       <SidebarLink
-                        key={item.module}
+                        key={`${item.module}-${item.href}`}
                         item={item}
                         activeHref={activeHref}
                         isSidebarOpen={false}

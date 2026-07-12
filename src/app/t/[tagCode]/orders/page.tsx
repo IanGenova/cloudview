@@ -353,6 +353,16 @@ export default async function MyOrdersPage({
       })
     : [];
 
+  /**
+   * A completed PayMongo session with an order code is already represented by
+   * the order card below. Hide the duplicate payment activity card, while
+   * keeping pending, processing, review, and refund states visible.
+   */
+  const visiblePayMongoSessions = payMongoSessions.filter(
+    (payment) =>
+      payment.status !== 'COMPLETED' || !payment.orderCode
+  );
+
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-5">
@@ -446,7 +456,7 @@ export default async function MyOrdersPage({
           </section>
         )}
 
-        {payMongoSessions.length ? (
+        {visiblePayMongoSessions.length ? (
           <section className="mb-5 rounded-[2rem] border border-gold/20 bg-white/[0.035] p-5 backdrop-blur-md">
             <div className="mb-4 flex items-center gap-3">
               <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
@@ -457,13 +467,13 @@ export default async function MyOrdersPage({
                   PayMongo Activity
                 </p>
                 <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
-                  QR payment status
+                  Payment activity
                 </h2>
               </div>
             </div>
 
             <div className="space-y-3">
-              {payMongoSessions.map((payment) => {
+              {visiblePayMongoSessions.map((payment) => {
                 const canResume =
                   payment.status === 'PENDING' &&
                   Boolean(payment.checkoutUrl) &&

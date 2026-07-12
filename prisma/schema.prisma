@@ -224,6 +224,42 @@ enum SeriesCodeType {
   SERVICE
 }
 
+enum DataBackupType {
+  FULL_HOTEL
+  CONFIGURATION
+  PRE_RESTORE
+}
+
+enum DataBackupStatus {
+  QUEUED
+  CREATING
+  READY
+  VERIFYING
+  VALID
+  CORRUPTED
+  FAILED
+  RESTORING
+  RESTORED
+  DELETED
+}
+
+enum DataRestoreMode {
+  PREVIEW
+  FULL_RESTORE
+}
+
+enum DataBackupAuditAction {
+  BACKUP_CREATED
+  BACKUP_UPLOADED
+  BACKUP_DOWNLOADED
+  BACKUP_VERIFIED
+  BACKUP_DELETED
+  RESTORE_PREVIEWED
+  RESTORE_STARTED
+  RESTORE_COMPLETED
+  RESTORE_FAILED
+}
+
 model SeriesCodeCounter {
   id String @id @default(cuid())
 
@@ -283,6 +319,9 @@ model User {
   closedGuestStayFolios             GuestStayFolio[]              @relation("GuestStayFolioClosedBy")
   postedGuestStayFolioLines         GuestStayFolioLine[]          @relation("GuestStayFolioLinePostedBy")
   receivedGuestStayFolioPayments    GuestStayFolioPayment[]       @relation("GuestStayFolioPaymentReceivedBy")
+  createdDataBackups                DataBackup[]                  @relation("DataBackupCreatedBy")
+  startedDataRestores               DataRestore[]                 @relation("DataRestoreStartedBy")
+  dataBackupAudits                  DataBackupAudit[]             @relation("DataBackupAuditUser")
 
   @@index([hotelId])
 }
@@ -338,6 +377,8 @@ model Hotel {
   guestStayFolios        GuestStayFolio[]
   guestStayFolioLines    GuestStayFolioLine[]
   guestStayFolioPayments GuestStayFolioPayment[]
+  dataBackups            DataBackup[]
+  dataRestores           DataRestore[]
 }
 
 model HotelSettings {
@@ -1911,4 +1952,94 @@ model PayMongoWebhookEvent {
   type        String   @db.VarChar(191)
   livemode    Boolean
   processedAt DateTime @default(now())
+}
+
+model DataBackup {
+  id          String           @id @default(cuid())
+  hotelId     String
+  createdById String?
+  type        DataBackupType
+  status      DataBackupStatus @default(QUEUED)
+
+  filename      String? @db.VarChar(255)
+  storagePath   String? @db.Text
+  fileSizeBytes BigInt?
+  checksum      String? @db.VarChar(64)
+
+  backupVersion Int    @default(1)
+  schemaVersion String @db.VarChar(64)
+
+  selectedModules Json?
+  recordCounts    Json?
+  manifest        Json?
+  errorMessage    String? @db.Text
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  hotel     Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("DataBackupCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  sourceRestores    DataRestore[]     @relation("DataRestoreSource")
+  safetyForRestores DataRestore[]     @relation("DataRestoreSafety")
+  audits            DataBackupAudit[]
+
+  @@index([hotelId, createdAt])
+  @@index([status])
+  @@index([type])
+}
+
+model DataRestore {
+  id            String           @id @default(cuid())
+  backupId      String
+  targetHotelId String
+  startedById   String?
+  mode          DataRestoreMode
+  status        DataBackupStatus @default(QUEUED)
+
+  selectedModules Json?
+  previewSummary  Json?
+  restoredCounts  Json?
+
+  currentPhase String? @db.VarChar(120)
+  errorMessage String? @db.Text
+
+  safetyBackupId String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  backup       DataBackup        @relation("DataRestoreSource", fields: [backupId], references: [id], onDelete: Cascade)
+  safetyBackup DataBackup?       @relation("DataRestoreSafety", fields: [safetyBackupId], references: [id], onDelete: SetNull)
+  targetHotel  Hotel             @relation(fields: [targetHotelId], references: [id], onDelete: Cascade)
+  startedBy    User?             @relation("DataRestoreStartedBy", fields: [startedById], references: [id], onDelete: SetNull)
+  audits       DataBackupAudit[]
+
+  @@index([backupId])
+  @@index([targetHotelId, createdAt])
+  @@index([status])
+}
+
+model DataBackupAudit {
+  id        String                @id @default(cuid())
+  backupId  String?
+  restoreId String?
+  userId    String?
+  action    DataBackupAuditAction
+  details   Json?
+  createdAt DateTime              @default(now())
+
+  backup  DataBackup?  @relation(fields: [backupId], references: [id], onDelete: SetNull)
+  restore DataRestore? @relation(fields: [restoreId], references: [id], onDelete: SetNull)
+  user    User?        @relation("DataBackupAuditUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([backupId])
+  @@index([restoreId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }

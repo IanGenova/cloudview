@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 
 type DashboardNavItem = {
@@ -8,6 +9,13 @@ type DashboardNavItem = {
   label: string;
   href: string;
   group?: 'main' | 'settings';
+};
+
+const dataBackupNavItem: DashboardNavItem = {
+  module: 'DATA_BACKUP',
+  label: 'Data Backup & Recovery',
+  href: '/dashboard/settings/backups',
+  group: 'settings',
 };
 
 const mobileLabelMap: Record<string, string> = {
@@ -29,18 +37,83 @@ const mobileLabelMap: Record<string, string> = {
   HOTEL_SETTINGS: 'Hotel Settings',
   USER_ACCOUNT_SETTINGS: 'Users',
   REWARDS: 'Rewards',
+  DATA_BACKUP: 'Backup',
 };
 
 function getMobileLabel(item: DashboardNavItem) {
   return mobileLabelMap[item.module] ?? item.label;
 }
 
-function isActiveRoute(pathname: string, href: string) {
-  if (href === '/dashboard') {
-    return pathname === '/dashboard';
+function normalizeRoute(value: string) {
+  if (value.length > 1 && value.endsWith('/')) {
+    return value.slice(0, -1);
   }
 
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return value;
+}
+
+function routeMatches(pathname: string, href: string) {
+  const normalizedPathname = normalizeRoute(pathname);
+  const normalizedHref = normalizeRoute(href);
+
+  if (normalizedHref === '/dashboard') {
+    return normalizedPathname === '/dashboard';
+  }
+
+  return (
+    normalizedPathname === normalizedHref ||
+    normalizedPathname.startsWith(`${normalizedHref}/`)
+  );
+}
+
+function getActiveHref(pathname: string, items: DashboardNavItem[]) {
+  return (
+    items
+      .filter((item) => routeMatches(pathname, item.href))
+      .sort(
+        (first, second) =>
+          normalizeRoute(second.href).length -
+          normalizeRoute(first.href).length
+      )[0]?.href ?? null
+  );
+}
+
+function insertDataBackupItem(items: DashboardNavItem[]) {
+  const hasBackupItem = items.some(
+    (item) =>
+      item.module === 'DATA_BACKUP' ||
+      item.href === dataBackupNavItem.href
+  );
+
+  if (hasBackupItem) {
+    return items;
+  }
+
+  /**
+   * navItems is permission-filtered by the dashboard layout.
+   * Do not expose the backup route unless HOTEL_SETTINGS is available.
+   */
+  const canAccessHotelSettings = items.some(
+    (item) => item.module === 'HOTEL_SETTINGS'
+  );
+
+  if (!canAccessHotelSettings) {
+    return items;
+  }
+
+  const hotelSettingsIndex = items.findIndex(
+    (item) => item.module === 'HOTEL_SETTINGS'
+  );
+
+  if (hotelSettingsIndex >= 0) {
+    return [
+      ...items.slice(0, hotelSettingsIndex + 1),
+      dataBackupNavItem,
+      ...items.slice(hotelSettingsIndex + 1),
+    ];
+  }
+
+  return [...items, dataBackupNavItem];
 }
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -56,11 +129,21 @@ export function MobileNav({
 
   /**
    * Important:
-   * Do not manually add hidden modules here.
-   * The layout already passes permission-filtered navItems, so MobileNav must
-   * render only those items to avoid exposing direct links on mobile.
+   * Do not manually expose permission-restricted modules.
+   * Backup is inserted only when the already-filtered HOTEL_SETTINGS item exists.
    */
-  const mobileNavItems = navItems.filter((item) => item.href && item.label);
+  const mobileNavItems = useMemo(
+    () =>
+      insertDataBackupItem(
+        navItems.filter((item) => item.href && item.label)
+      ),
+    [navItems]
+  );
+
+  const activeHref = useMemo(
+    () => getActiveHref(pathname, mobileNavItems),
+    [pathname, mobileNavItems]
+  );
 
   if (!mobileNavItems.length) {
     return null;
@@ -73,7 +156,7 @@ export function MobileNav({
     >
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
         {mobileNavItems.map((item) => {
-          const active = isActiveRoute(pathname, item.href);
+          const active = item.href === activeHref;
 
           return (
             <Link

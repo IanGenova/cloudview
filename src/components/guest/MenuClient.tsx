@@ -84,6 +84,7 @@ type StoredFoodCheckoutDraft = {
   scheduledDate: string;
   scheduledTime: string;
   scheduledNote: string;
+  payMongoSessionId?: string;
 };
 
 type OrderType = 'ROOM_SERVICE' | 'DINE_IN' | 'TAKE_OUT' | 'PICK_UP';
@@ -417,57 +418,121 @@ const [scheduledNote, setScheduledNote] = useState('');
   const checkoutDraftStorageKey = `cloudview-food-checkout-draft:${tagCode}`;
 
   useEffect(() => {
-    try {
-      const rawDraft = window.sessionStorage.getItem(checkoutDraftStorageKey);
+    let disposed = false;
 
-      if (!rawDraft) {
-        return;
-      }
+    async function restoreCheckoutDraft() {
+      try {
+        const rawDraft = window.sessionStorage.getItem(checkoutDraftStorageKey);
 
-      const draft = JSON.parse(rawDraft) as Partial<StoredFoodCheckoutDraft>;
-      const restoredCart = Array.isArray(draft.cart)
-        ? draft.cart.filter(
-            (item): item is CartItem =>
-              Boolean(item) &&
-              typeof item.productId === 'string' &&
-              Number.isInteger(item.quantity) &&
-              item.quantity > 0
-          )
-        : [];
+        if (!rawDraft) {
+          return;
+        }
 
-      if (restoredCart.length) {
+        const draft = JSON.parse(rawDraft) as Partial<StoredFoodCheckoutDraft>;
+
+        /**
+         * A paid checkout is authoritative. Do not restore its old cart after
+         * the guest returns from PayMongo or revisits the menu.
+         */
+        if (
+          draft.paymentMethod === 'PAYMONGO' &&
+          typeof draft.payMongoSessionId === 'string' &&
+          draft.payMongoSessionId.trim()
+        ) {
+          const paymentStatus = await getGuestFoodPayMongoStatus({
+            tagCode,
+            paymentSessionId: draft.payMongoSessionId,
+          });
+
+          if (disposed) {
+            return;
+          }
+
+          if (paymentStatus.ok && paymentStatus.shouldClearCart) {
+            window.sessionStorage.removeItem(checkoutDraftStorageKey);
+            setCart([]);
+            setConfirmedClause(false);
+            return;
+          }
+        }
+
+        const restoredCart = Array.isArray(draft.cart)
+          ? draft.cart.filter(
+              (item): item is CartItem =>
+                Boolean(item) &&
+                typeof item.productId === 'string' &&
+                Number.isInteger(item.quantity) &&
+                item.quantity > 0
+            )
+          : [];
+
+        if (disposed) {
+          return;
+        }
+
         setCart(restoredCart);
-      }
 
-      if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
-      if (typeof draft.notes === 'string') setNotes(draft.notes);
-      if (draft.orderType && draft.orderType in orderTypeLabels) {
-        setOrderType(draft.orderType as OrderType);
+        if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
+        if (typeof draft.notes === 'string') setNotes(draft.notes);
+        if (draft.orderType && draft.orderType in orderTypeLabels) {
+          setOrderType(draft.orderType as OrderType);
+        }
+        if (typeof draft.confirmedClause === 'boolean') {
+          setConfirmedClause(draft.confirmedClause);
+        }
+        if (draft.paymentMethod === 'PAYMONGO') {
+          setPaymentMethod('PAYMONGO');
+        }
+        if (draft.fulfillmentTiming === 'SCHEDULED') {
+          setFulfillmentTiming('SCHEDULED');
+        }
+        if (typeof draft.scheduledDate === 'string') {
+          setScheduledDate(draft.scheduledDate);
+        }
+        if (typeof draft.scheduledTime === 'string') {
+          setScheduledTime(draft.scheduledTime);
+        }
+        if (typeof draft.scheduledNote === 'string') {
+          setScheduledNote(draft.scheduledNote);
+        }
+      } catch {
+        window.sessionStorage.removeItem(checkoutDraftStorageKey);
       }
-      if (typeof draft.confirmedClause === 'boolean') {
-        setConfirmedClause(draft.confirmedClause);
-      }
-      if (draft.paymentMethod === 'PAYMONGO') {
-        setPaymentMethod('PAYMONGO');
-      }
-      if (draft.fulfillmentTiming === 'SCHEDULED') {
-        setFulfillmentTiming('SCHEDULED');
-      }
-      if (typeof draft.scheduledDate === 'string') {
-        setScheduledDate(draft.scheduledDate);
-      }
-      if (typeof draft.scheduledTime === 'string') {
-        setScheduledTime(draft.scheduledTime);
-      }
-      if (typeof draft.scheduledNote === 'string') {
-        setScheduledNote(draft.scheduledNote);
-      }
-    } catch {
-      window.sessionStorage.removeItem(checkoutDraftStorageKey);
     }
-  }, [checkoutDraftStorageKey]);
 
-  function saveCheckoutDraft() {
+    void restoreCheckoutDraft();
+
+    return () => {
+      disposed = true;
+    };
+  }, [checkoutDraftStorageKey, tagCode]);
+
+  useEffect(() => {
+    if (screen !== 'cart') {
+      return;
+    }
+
+    /**
+     * The menu and cart are rendered by the same client component, so changing
+     * the screen does not trigger Next.js route-scroll restoration.
+     * Reset the document scroll after the cart layout has rendered.
+     */
+    const timer = window.setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'auto',
+      });
+
+      // Compatibility for older mobile Safari/WebView implementations.
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [screen]);
+
+  function saveCheckoutDraft(payMongoSessionId?: string) {
     const draft: StoredFoodCheckoutDraft = {
       cart,
       guestName,
@@ -479,6 +544,7 @@ const [scheduledNote, setScheduledNote] = useState('');
       scheduledDate,
       scheduledTime,
       scheduledNote,
+      payMongoSessionId,
     };
 
     try {
@@ -577,7 +643,8 @@ const [scheduledNote, setScheduledNote] = useState('');
         }
 
         if (!result.waiting) {
-          setScreen('cart');
+          clearCart();
+          setScreen('menu');
           setError(result.error);
           cleanPayMongoQuery();
           return;
@@ -593,7 +660,13 @@ const [scheduledNote, setScheduledNote] = useState('');
         status.status === 'REFUND_FAILED' ||
         status.status === 'REFUNDED'
       ) {
-        setScreen('cart');
+        if (status.shouldClearCart) {
+          clearCart();
+          setScreen('menu');
+        } else {
+          setScreen('cart');
+        }
+
         setError(
           status.errorMessage ||
             (status.status === 'REFUNDED'
@@ -848,7 +921,7 @@ const [scheduledNote, setScheduledNote] = useState('');
             return;
           }
 
-          saveCheckoutDraft();
+          saveCheckoutDraft(checkout.sessionId);
           window.location.assign(checkout.checkoutUrl);
           return;
         }
@@ -877,6 +950,11 @@ const [scheduledNote, setScheduledNote] = useState('');
   const remainingProducts = featured
     ? filteredProducts.filter((product) => product.id !== featured.id)
     : filteredProducts;
+
+  function openCart() {
+    setError(null);
+    setScreen('cart');
+  }
 
   function clearCart() {
     setCart([]);
@@ -1390,7 +1468,7 @@ const [scheduledNote, setScheduledNote] = useState('');
 
         <button
           type="button"
-          onClick={() => setScreen('cart')}
+          onClick={openCart}
           className="relative grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/10"
           aria-label="Open cart"
         >
@@ -1480,6 +1558,23 @@ const [scheduledNote, setScheduledNote] = useState('');
             );
           })}
         </div>
+
+        {itemCount > 0 ? (
+          <button
+            type="button"
+            onClick={openCart}
+            className="mt-2 flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-gold px-4 text-black shadow-[0_10px_28px_rgba(214,167,56,0.2)] transition hover:brightness-105 active:scale-[0.99]"
+          >
+            <span className="flex items-center gap-2 text-sm font-black">
+              <ShoppingBag className="size-4" />
+              Review order
+            </span>
+            <span className="flex items-center gap-2 text-sm font-black">
+              {itemCount} item{itemCount === 1 ? '' : 's'} · {money(total, currency)}
+              <ChevronRight className="size-4" />
+            </span>
+          </button>
+        ) : null}
       </div>
 
       {featured ? (
@@ -1768,7 +1863,7 @@ const [scheduledNote, setScheduledNote] = useState('');
       {itemCount > 0 ? (
         <button
           type="button"
-          onClick={() => setScreen('cart')}
+          onClick={openCart}
           className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 rounded-[1.35rem] border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black shadow-[0_18px_45px_rgba(214,167,56,0.28)] transition hover:brightness-105 active:scale-[0.99]"
         >
           <span className="flex items-center gap-3">

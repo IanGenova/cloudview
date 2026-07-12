@@ -57,6 +57,7 @@ export type GuestFoodPayMongoStatusResult = {
   errorMessage?: string | null;
   refundStatus?: string | null;
   refundedAmountCents?: number;
+  shouldClearCart?: boolean;
   error?: string;
 };
 
@@ -80,6 +81,21 @@ function getPublicError(error: unknown, fallback: string) {
   }
 
   return message;
+}
+
+function shouldClearCartForPaymentStatus(status: GuestPayMongoStatus) {
+  switch (status) {
+    case GuestPayMongoStatus.PAID:
+    case GuestPayMongoStatus.PROCESSING:
+    case GuestPayMongoStatus.COMPLETED:
+    case GuestPayMongoStatus.PAID_REVIEW_REQUIRED:
+    case GuestPayMongoStatus.REFUND_PENDING:
+    case GuestPayMongoStatus.REFUNDED:
+    case GuestPayMongoStatus.REFUND_FAILED:
+      return true;
+    default:
+      return false;
+  }
 }
 
 function getAppUrl() {
@@ -484,9 +500,10 @@ export async function getGuestFoodPayMongoStatus(input: {
         ok: true,
         status: GuestPayMongoStatus.EXPIRED,
         orderCode: payment.orderCode,
-        errorMessage: 'The QR payment request expired. Please create a new one.',
+        errorMessage: 'The PayMongo checkout expired. Please create a new one.',
         refundStatus: payment.refundStatus,
         refundedAmountCents: payment.refundedAmountCents,
+        shouldClearCart: false,
       };
     }
 
@@ -498,6 +515,7 @@ export async function getGuestFoodPayMongoStatus(input: {
       errorMessage: payment.errorMessage || payment.refundErrorMessage,
       refundStatus: payment.refundStatus,
       refundedAmountCents: payment.refundedAmountCents,
+      shouldClearCart: shouldClearCartForPaymentStatus(payment.status),
     };
   } catch (error) {
     return {

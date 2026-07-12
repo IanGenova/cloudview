@@ -12,6 +12,7 @@ import {
   PackageCheck,
   Printer,
   ReceiptText,
+  RefreshCw,
   RotateCcw,
   Search,
   Truck,
@@ -439,6 +440,32 @@ function getOrderAgeClass(order: DashboardOrder, now: number) {
   }
 
   return 'bg-blue-100 text-blue-700';
+}
+
+function getOrderTimestamp(value: string) {
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function compareOrdersNewestFirst(
+  left: DashboardOrder,
+  right: DashboardOrder
+) {
+  const createdDifference =
+    getOrderTimestamp(right.createdAt) - getOrderTimestamp(left.createdAt);
+
+  if (createdDifference !== 0) {
+    return createdDifference;
+  }
+
+  const updatedDifference =
+    getOrderTimestamp(right.updatedAt) - getOrderTimestamp(left.updatedAt);
+
+  if (updatedDifference !== 0) {
+    return updatedDifference;
+  }
+
+  return right.orderCode.localeCompare(left.orderCode);
 }
 
 function buildPrintableReceiptHtml(order: DashboardOrder) {
@@ -1957,6 +1984,7 @@ function PriorityQueue({
         order.status === 'READY' ||
         order.paymentStatus === 'UNPAID'
     )
+    .sort(compareOrdersNewestFirst)
     .slice(0, 6);
 
   return (
@@ -2109,8 +2137,47 @@ export function OrdersClient({
   }, []);
 
   useEffect(() => {
-    setLocalOrders(orders);
+    const newestOrders = [...orders].sort(compareOrdersNewestFirst);
+
+    setLocalOrders(newestOrders);
+    setSelectedOrder((current) =>
+      current
+        ? newestOrders.find((order) => order.id === current.id) ?? null
+        : null
+    );
+    setCancelOrder((current) =>
+      current
+        ? newestOrders.find((order) => order.id === current.id) ?? null
+        : null
+    );
   }, [orders]);
+
+  useEffect(() => {
+    function refreshLatestOrders() {
+      if (document.visibilityState !== 'visible' || isMutating) {
+        return;
+      }
+
+      router.refresh();
+    }
+
+    const interval = window.setInterval(refreshLatestOrders, 15_000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        refreshLatestOrders();
+      }
+    }
+
+    window.addEventListener('focus', refreshLatestOrders);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshLatestOrders);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isMutating, router]);
 
   const filteredOrders = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -2149,33 +2216,10 @@ export function OrdersClient({
     });
   }, [localOrders, paymentFilter, search, statusFilter]);
 
-  const sortedOrders = useMemo(() => {
-    const priority: Record<OrderStatus, number> = {
-      PENDING: 0,
-      READY: 1,
-      PREPARING: 2,
-      ACCEPTED: 3,
-      DELIVERED: 4,
-      CANCELLED: 5,
-    };
-
-    return [...filteredOrders].sort((left, right) => {
-      const priorityDiff = priority[left.status] - priority[right.status];
-
-      if (priorityDiff !== 0) {
-        return priorityDiff;
-      }
-
-      const leftTime = new Date(left.createdAt).getTime();
-      const rightTime = new Date(right.createdAt).getTime();
-
-      if (activeOrderStatuses.includes(left.status)) {
-        return leftTime - rightTime;
-      }
-
-      return rightTime - leftTime;
-    });
-  }, [filteredOrders]);
+  const sortedOrders = useMemo(
+    () => [...filteredOrders].sort(compareOrdersNewestFirst),
+    [filteredOrders]
+  );
 
   const attentionCount = localOrders.filter(
     (order) =>
@@ -2225,9 +2269,9 @@ export function OrdersClient({
     action: (formData: FormData) => Promise<unknown>;
     successText: string;
     optimisticUpdate?: () => void;
-  }) {
+  }): Promise<boolean> {
     if (isMutating) {
-      return;
+      return false;
     }
 
     const previousOrders = localOrders;
@@ -2248,6 +2292,7 @@ export function OrdersClient({
       });
 
       router.refresh();
+      return true;
     } catch (error) {
       setLocalOrders(previousOrders);
       setSelectedOrder(previousSelectedOrder);
@@ -2258,7 +2303,7 @@ export function OrdersClient({
         text: getClientActionError(error),
       });
 
-      throw error;
+      return false;
     } finally {
       setIsMutating(false);
     }
@@ -2495,19 +2540,34 @@ export function OrdersClient({
               <h3 className="mt-1 text-lg font-black">Orders</h3>
             </div>
 
-            {(search || statusFilter !== 'ALL' || paymentFilter !== 'ALL') ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-neutral-100 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+                Newest first
+              </span>
+
               <button
                 type="button"
-                onClick={() => {
-                  setSearch('');
-                  setStatusFilter('ALL');
-                  setPaymentFilter('ALL');
-                }}
-                className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+                onClick={() => router.refresh()}
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50"
               >
-                Clear filters
+                <RefreshCw className="size-3.5" />
+                Refresh latest
               </button>
-            ) : null}
+
+              {(search || statusFilter !== 'ALL' || paymentFilter !== 'ALL') ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setStatusFilter('ALL');
+                    setPaymentFilter('ALL');
+                  }}
+                  className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-2">
