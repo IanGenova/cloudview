@@ -125,6 +125,82 @@ type POSToast =
   | null;
 
 const POS_TOAST_STORAGE_KEY = 'cloudview-pos-toast';
+const POS_PAYMONGO_PENDING_STORAGE_KEY = 'cloudview-pos-paymongo-pending';
+const POS_PAYMONGO_PENDING_TTL_MS = 2 * 60 * 60 * 1000;
+
+type StoredPendingPOSPayMongo = {
+  sessionId: string;
+  hotelId: string;
+  result?: 'success' | 'cancelled';
+  createdAt: number;
+};
+
+function savePendingPOSPayMongo(input: StoredPendingPOSPayMongo) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      POS_PAYMONGO_PENDING_STORAGE_KEY,
+      JSON.stringify(input)
+    );
+  } catch {
+    // The URL query remains the primary recovery mechanism.
+  }
+}
+
+function readPendingPOSPayMongo(
+  selectedHotelId: string
+): StoredPendingPOSPayMongo | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(
+      POS_PAYMONGO_PENDING_STORAGE_KEY
+    );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<StoredPendingPOSPayMongo>;
+    const valid =
+      typeof parsed.sessionId === 'string' &&
+      parsed.sessionId.trim().length > 0 &&
+      parsed.hotelId === selectedHotelId &&
+      (typeof parsed.result === 'undefined' ||
+        parsed.result === 'success' ||
+        parsed.result === 'cancelled') &&
+      typeof parsed.createdAt === 'number' &&
+      Date.now() - parsed.createdAt <= POS_PAYMONGO_PENDING_TTL_MS;
+
+    if (!valid) {
+      window.sessionStorage.removeItem(
+        POS_PAYMONGO_PENDING_STORAGE_KEY
+      );
+      return null;
+    }
+
+    return parsed as StoredPendingPOSPayMongo;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingPOSPayMongo() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(POS_PAYMONGO_PENDING_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
 
 function readQueuedPOSToast() {
   if (typeof window === 'undefined') {
@@ -538,6 +614,8 @@ export function POSClient({
   returnedPayMongoResult?: 'success' | 'cancelled' | null;
 }) {
   const router = useRouter();
+  const [recoveredPayMongo, setRecoveredPayMongo] =
+    useState<StoredPendingPOSPayMongo | null>(null);
 
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
   const [activeMode, setActiveMode] = useState<POSMode>('food');
@@ -590,9 +668,25 @@ export function POSClient({
   }, [toast]);
 
   useEffect(() => {
-    if (!returnedPayMongoSessionId) {
+    if (returnedPayMongoSessionId) {
+      setRecoveredPayMongo(null);
       return;
     }
+
+    setRecoveredPayMongo(readPendingPOSPayMongo(selectedHotelId));
+  }, [returnedPayMongoSessionId, selectedHotelId]);
+
+  const activePayMongoSessionId =
+    returnedPayMongoSessionId || recoveredPayMongo?.sessionId || null;
+  const activePayMongoResult =
+    returnedPayMongoResult || recoveredPayMongo?.result || null;
+
+  useEffect(() => {
+    if (!activePayMongoSessionId) {
+      return;
+    }
+
+    const paymentSessionId = activePayMongoSessionId;
 
     let cancelled = false;
     let timer: number | null = null;
@@ -604,7 +698,9 @@ export function POSClient({
       router.replace(`${url.pathname}${url.search}`, { scroll: false });
     }
 
-    if (returnedPayMongoResult === 'cancelled') {
+    if (activePayMongoResult === 'cancelled') {
+      clearPendingPOSPayMongo();
+      setRecoveredPayMongo(null);
       showError('PayMongo checkout was cancelled. No sale was created.');
       cleanPayMongoQuery();
       return;
@@ -612,9 +708,7 @@ export function POSClient({
 
     async function waitForPaymentConfirmation(attempt = 0) {
       try {
-        const status = await getPayMongoPOSStatus(
-          returnedPayMongoSessionId!
-        );
+        const status = await getPayMongoPOSStatus(paymentSessionId);
 
         if (cancelled) return;
 
@@ -632,6 +726,8 @@ export function POSClient({
               : null,
           ].filter(Boolean);
 
+          clearPendingPOSPayMongo();
+          setRecoveredPayMongo(null);
           clearCart();
           setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
           showSuccessAfterRefresh('PayMongo payment confirmed and POS sale completed.');
@@ -641,9 +737,7 @@ export function POSClient({
         }
 
         if (status.status === 'PAID') {
-          const result = await finalizePayMongoPOSCheckout(
-            returnedPayMongoSessionId!
-          );
+          const result = await finalizePayMongoPOSCheckout(paymentSessionId);
 
           if (cancelled) return;
 
@@ -655,6 +749,8 @@ export function POSClient({
                 : null,
             ].filter(Boolean);
 
+            clearPendingPOSPayMongo();
+            setRecoveredPayMongo(null);
             clearCart();
             setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
             showSuccessAfterRefresh(
@@ -676,6 +772,8 @@ export function POSClient({
           status.status === 'FAILED' ||
           status.status === 'PAID_REVIEW_REQUIRED'
         ) {
+          clearPendingPOSPayMongo();
+          setRecoveredPayMongo(null);
           showError(
             status.errorMessage ||
               'The PayMongo payment needs manual review.'
@@ -718,7 +816,11 @@ export function POSClient({
     };
     // The return identifiers should be handled only once per page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [returnedPayMongoResult, returnedPayMongoSessionId]);
+  }, [
+    activePayMongoSessionId,
+    activePayMongoResult,
+    router,
+  ]);
 
   function showToast(nextToast: Exclude<POSToast, null>) {
     clearQueuedPOSToast();
@@ -1101,6 +1203,12 @@ export function POSClient({
             showError(checkout.error);
             return;
           }
+
+          savePendingPOSPayMongo({
+            sessionId: checkout.sessionId,
+            hotelId: selectedHotelId,
+            createdAt: Date.now(),
+          });
 
           queuePOSToast({
             type: 'success',

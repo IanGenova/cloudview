@@ -198,11 +198,43 @@ async function payMongoFetch(input: {
   }
 }
 
+function isPrivateRedirectHostname(hostname: string) {
+  const host = hostname.trim().toLowerCase();
+
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host.endsWith('.localhost')
+  ) {
+    return true;
+  }
+
+  if (/^10\.(?:\d{1,3}\.){2}\d{1,3}$/.test(host)) {
+    return true;
+  }
+
+  if (/^192\.168\.(?:\d{1,3}\.)\d{1,3}$/.test(host)) {
+    return true;
+  }
+
+  const private172 = host.match(
+    /^172\.(\d{1,3})\.(?:\d{1,3})\.(?:\d{1,3})$/
+  );
+
+  if (private172) {
+    const secondOctet = Number(private172[1]);
+    return secondOctet >= 16 && secondOctet <= 31;
+  }
+
+  return false;
+}
+
 function requireAbsoluteRedirectUrl(value: string, label: string) {
   let url: URL;
 
   try {
-    url = new URL(value);
+    url = new URL(value.trim());
   } catch {
     throw new Error(`${label} must be an absolute URL.`);
   }
@@ -211,8 +243,19 @@ function requireAbsoluteRedirectUrl(value: string, label: string) {
     throw new Error(`${label} must use HTTP or HTTPS.`);
   }
 
-  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
-    throw new Error(`${label} must use HTTPS in production.`);
+  /**
+   * Public production redirects must use HTTPS.
+   * Private LAN and localhost HTTP URLs remain allowed for local development
+   * and for testing a production build on the hotel network.
+   */
+  if (
+    process.env.NODE_ENV === 'production' &&
+    url.protocol !== 'https:' &&
+    !isPrivateRedirectHostname(url.hostname)
+  ) {
+    throw new Error(
+      `${label} must use HTTPS unless it points to localhost or a private LAN address.`
+    );
   }
 
   return url.toString();

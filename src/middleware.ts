@@ -126,6 +126,7 @@ function createLoginRedirect(request: NextRequest) {
   const url = request.nextUrl.clone();
 
   url.pathname = '/dashboard/login';
+  url.search = '';
   url.searchParams.set(
     'next',
     `${request.nextUrl.pathname}${request.nextUrl.search}`
@@ -141,23 +142,58 @@ function getSafeNextPath(request: NextRequest, role: DashboardRole) {
     return dashboardHomeForRole(role);
   }
 
-  if (!next.startsWith('/dashboard')) {
+  /**
+   * Only permit an internal dashboard path.
+   *
+   * `/dashboard-example` must not pass this check. It must be exactly
+   * `/dashboard` or start with `/dashboard/`.
+   */
+  if (next !== '/dashboard' && !next.startsWith('/dashboard/')) {
     return dashboardHomeForRole(role);
   }
 
-  if (next.startsWith('//')) {
+  if (next.startsWith('//') || next.includes('://')) {
     return dashboardHomeForRole(role);
   }
 
-  if (next.includes('://')) {
-    return dashboardHomeForRole(role);
-  }
-
-  if (next === '/dashboard/login') {
+  if (
+    next === '/dashboard/login' ||
+    next.startsWith('/dashboard/login?') ||
+    next.startsWith('/dashboard/login/')
+  ) {
     return dashboardHomeForRole(role);
   }
 
   return next;
+}
+
+/**
+ * Build a redirect from a safe path that may contain its own query string.
+ *
+ * Do not assign the complete value to `redirectUrl.pathname`.
+ * Doing that turns:
+ *
+ *   /dashboard/pos?hotelId=123
+ *
+ * into:
+ *
+ *   /dashboard/pos%3FhotelId=123
+ *
+ * which is a different route and produces a 404.
+ */
+function createSafeNextRedirect(
+  request: NextRequest,
+  role: DashboardRole
+) {
+  const safeNext = getSafeNextPath(request, role);
+  const parsedNext = new URL(safeNext, request.nextUrl.origin);
+  const redirectUrl = request.nextUrl.clone();
+
+  redirectUrl.pathname = parsedNext.pathname;
+  redirectUrl.search = parsedNext.search;
+  redirectUrl.hash = '';
+
+  return redirectUrl;
 }
 
 function shouldForceHttps(request: NextRequest) {
@@ -167,7 +203,22 @@ function shouldForceHttps(request: NextRequest) {
 
   const host = request.nextUrl.hostname;
 
-  if (host === 'localhost' || host === '127.0.0.1') {
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host.startsWith('10.') ||
+    host.startsWith('192.168.')
+  ) {
+    return false;
+  }
+
+  const private172Match = host.match(/^172\.(\d{1,3})\./);
+
+  if (
+    private172Match &&
+    Number(private172Match[1]) >= 16 &&
+    Number(private172Match[1]) <= 31
+  ) {
     return false;
   }
 
@@ -231,14 +282,12 @@ export async function middleware(request: NextRequest) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = 'https:';
 
-    return NextResponse.redirect(httpsUrl, 308);
+    return applySecurityHeaders(NextResponse.redirect(httpsUrl, 308));
   }
 
   /*
-    Important:
     Do not redirect or return JSON for Server Action POST requests here.
-    Let the Server Action run and let your server actions protect themselves
-    with requireUser() / requireRole().
+    Let each Server Action enforce requireUser() / requireRole().
   */
   if (isServerActionRequest(request)) {
     return applySecurityHeaders(NextResponse.next());
@@ -249,18 +298,18 @@ export async function middleware(request: NextRequest) {
 
   if (isLoginPage) {
     if (session) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = getSafeNextPath(request, session.role);
-      redirectUrl.search = '';
-
-      return NextResponse.redirect(redirectUrl);
+      return applySecurityHeaders(
+        NextResponse.redirect(createSafeNextRedirect(request, session.role))
+      );
     }
 
     return applySecurityHeaders(NextResponse.next());
   }
 
   if (!session) {
-    return NextResponse.redirect(createLoginRedirect(request));
+    return applySecurityHeaders(
+      NextResponse.redirect(createLoginRedirect(request))
+    );
   }
 
   if (!canAccessPath(pathname, session.role)) {
@@ -268,7 +317,7 @@ export async function middleware(request: NextRequest) {
     redirectUrl.pathname = dashboardHomeForRole(session.role);
     redirectUrl.search = '';
 
-    return NextResponse.redirect(redirectUrl);
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
   return applySecurityHeaders(NextResponse.next());

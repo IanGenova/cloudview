@@ -7,6 +7,7 @@ import {
   ServiceBillingMode,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { assertHotelScope } from '@/lib/access';
 import { requireRole, requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -16,6 +17,7 @@ import {
 } from '@/lib/paymongo';
 import { cleanText } from '@/lib/sanitize';
 import { notifyPosPayMongoStatus } from '@/lib/paymongo-dashboard-notifications';
+import { createPOSPayMongoReturnState } from '@/lib/pos-paymongo-return';
 import { createPOSOrder } from './actions';
 
 type CheckoutInput = {
@@ -163,22 +165,147 @@ function normalizeQuantities<T extends 'productId' | 'serviceId'>(
   })) as Array<Record<T, string> & { quantity: number }>;
 }
 
-function getAppUrl() {
-  const value = (
-    process.env.APP_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    ''
-  ).replace(/\/$/, '');
+function isPrivateReturnHostname(hostname: string) {
+  const host = hostname.trim().toLowerCase();
 
-  if (!value) {
-    throw new Error('APP_URL is not configured.');
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host.endsWith('.localhost')
+  ) {
+    return true;
   }
 
-  if (process.env.NODE_ENV === 'production' && !value.startsWith('https://')) {
-    throw new Error('APP_URL must use HTTPS in production.');
+  if (/^10\.(?:\d{1,3}\.){2}\d{1,3}$/.test(host)) {
+    return true;
   }
 
-  return value;
+  if (/^192\.168\.(?:\d{1,3}\.)\d{1,3}$/.test(host)) {
+    return true;
+  }
+
+  const private172 = host.match(
+    /^172\.(\d{1,3})\.(?:\d{1,3})\.(?:\d{1,3})$/
+  );
+
+  if (private172) {
+    const secondOctet = Number(private172[1]);
+    return secondOctet >= 16 && secondOctet <= 31;
+  }
+
+  return false;
+}
+
+function normalizePOSReturnBaseUrl(value: string, source: string) {
+  let url: URL;
+
+  try {
+    url = new URL(value.trim());
+  } catch {
+    throw new Error(`${source} must be an absolute HTTP or HTTPS URL.`);
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error(`${source} must use HTTP or HTTPS.`);
+  }
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    url.protocol !== 'https:' &&
+    !isPrivateReturnHostname(url.hostname)
+  ) {
+    throw new Error(
+      `${source} must use HTTPS unless it points to localhost or a private LAN address.`
+    );
+  }
+
+  /**
+   * Return only the origin. The POS route is appended explicitly below, so a
+   * value containing an old path cannot accidentally send the cashier to the
+   * landing page.
+   */
+  return url.origin;
+}
+
+async function getPOSPayMongoReturnBaseUrl() {
+  const requestHeaders = await headers();
+
+  /**
+   * The live browser request must win over every environment fallback.
+   * Dashboard auth cookies are host-specific. Returning to a different host
+   * can make an authenticated cashier appear logged out.
+   */
+  const requestOrigin = requestHeaders.get('origin')?.trim();
+
+  if (requestOrigin) {
+    return normalizePOSReturnBaseUrl(requestOrigin, 'POS request origin');
+  }
+
+  const forwardedHost = requestHeaders
+    .get('x-forwarded-host')
+    ?.split(',')[0]
+    ?.trim();
+  const host = forwardedHost || requestHeaders.get('host')?.trim();
+
+  if (host) {
+    const forwardedProtocol = requestHeaders
+      .get('x-forwarded-proto')
+      ?.split(',')[0]
+      ?.trim();
+    const hostWithoutPort = host.replace(/^\[/, '').split(']')[0].split(':')[0];
+    const protocol =
+      forwardedProtocol ||
+      (isPrivateReturnHostname(hostWithoutPort) ? 'http' : 'https');
+
+    return normalizePOSReturnBaseUrl(
+      `${protocol}://${host}`,
+      'POS request host'
+    );
+  }
+
+  /**
+   * Environment values are fallbacks only. They must never override the host
+   * on which the cashier actually opened the dashboard.
+   */
+  const fallback =
+    process.env.POS_PAYMONGO_RETURN_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.APP_URL?.trim() ||
+    '';
+
+  if (!fallback) {
+    throw new Error(
+      'Unable to determine the POS PayMongo return URL. Configure NEXT_PUBLIC_APP_URL or APP_URL.'
+    );
+  }
+
+  return normalizePOSReturnBaseUrl(fallback, 'POS PayMongo fallback URL');
+}
+
+function createPOSPayMongoReturnUrls(input: {
+  baseUrl: string;
+  hotelId: string;
+  sessionId: string;
+}) {
+  const createReturnUrl = (result: 'success' | 'cancelled') => {
+    const returnUrl = new URL('/paymongo/pos-return', `${input.baseUrl}/`);
+    returnUrl.searchParams.set(
+      'state',
+      createPOSPayMongoReturnState({
+        sessionId: input.sessionId,
+        hotelId: input.hotelId,
+        result,
+      })
+    );
+
+    return returnUrl.toString();
+  };
+
+  return {
+    successUrl: createReturnUrl('success'),
+    cancelUrl: createReturnUrl('cancelled'),
+  };
 }
 
 function parseStoredPayload(value: Prisma.JsonValue): StoredPOSPayload {
@@ -443,14 +570,20 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
   });
 
   try {
-    const appUrl = getAppUrl();
-    const query = new URLSearchParams({
+    const returnBaseUrl = await getPOSPayMongoReturnBaseUrl();
+    const { successUrl, cancelUrl } = createPOSPayMongoReturnUrls({
+      baseUrl: returnBaseUrl,
       hotelId,
-      paymongo: draft.id,
+      sessionId: draft.id,
     });
 
-    const successUrl = `${appUrl}/dashboard/pos?${query.toString()}&paymongoResult=success`;
-    const cancelUrl = `${appUrl}/dashboard/pos?${query.toString()}&paymongoResult=cancelled`;
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[POS PayMongo] Checkout return URLs prepared.', {
+        sessionId: draft.id,
+        successUrl,
+        cancelUrl,
+      });
+    }
 
     const checkout = await createPayMongoCheckoutSession({
       idempotencyKey: `cloudview-pos-${draft.id}`,
@@ -463,6 +596,7 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
         pos_session_id: draft.id,
         hotel_id: hotelId,
         created_by: user.id,
+        return_origin: returnBaseUrl,
       },
     });
 
