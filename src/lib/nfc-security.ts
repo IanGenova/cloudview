@@ -85,9 +85,12 @@ function shouldForceHttpsForHost(hostname: string) {
 
 export function getPublicAppUrl() {
   const lanIp = process.env.NEXT_PUBLIC_LAN_IP?.trim() || 'localhost';
+  // NFC links should use the guest-facing URL first.
+  // APP_URL stays reserved for server-to-server/public integrations such as
+  // PayMongo webhook and checkout return URLs.
   const rawUrl =
-    process.env.APP_URL?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.APP_URL?.trim() ||
     `http://${lanIp}:3000`;
 
   let url: URL;
@@ -95,7 +98,7 @@ export function getPublicAppUrl() {
   try {
     url = new URL(rawUrl);
   } catch {
-    throw new Error('APP_URL or NEXT_PUBLIC_APP_URL must be an absolute URL.');
+    throw new Error('NEXT_PUBLIC_APP_URL or APP_URL must be an absolute URL.');
   }
 
   if (['0.0.0.0', 'localhost', '127.0.0.1'].includes(url.hostname) && lanIp) {
@@ -111,7 +114,7 @@ export function getPublicAppUrl() {
     !isPrivateLanHostname(url.hostname) &&
     url.protocol !== 'https:'
   ) {
-    throw new Error('Public APP_URL must use HTTPS in production.');
+    throw new Error('Public NFC URL must use HTTPS outside private LAN development.');
   }
 
   if (!url.port && url.protocol === 'http:' && process.env.NODE_ENV !== 'production') {

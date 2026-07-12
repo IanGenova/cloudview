@@ -7,7 +7,6 @@ export type PayMongoPaymentMethod = 'card' | 'gcash' | 'qrph';
 export type PayMongoRefundReason =
   | 'duplicate'
   | 'fraudulent'
-  | 'requested_by_customer'
   | 'others';
 
 const SUPPORTED_PAYMENT_METHODS = new Set<PayMongoPaymentMethod>([
@@ -445,6 +444,11 @@ export async function createPayMongoRefund(input: {
   amount: number;
   reason?: PayMongoRefundReason;
   notes?: string;
+  /**
+   * Kept for source compatibility with existing callers. PayMongo's current
+   * Refund API does not document metadata as a supported request attribute,
+   * so it is intentionally not sent in the API payload.
+   */
   metadata?: Record<string, string>;
 }) {
   const idempotencyKey = input.idempotencyKey.trim();
@@ -473,9 +477,10 @@ export async function createPayMongoRefund(input: {
         attributes: {
           amount,
           payment_id: paymentId,
+          // PayMongo's Refund API currently accepts only:
+          // duplicate, fraudulent, or others.
           reason: input.reason ?? 'others',
           notes: (input.notes || 'Automatic CloudView refund').slice(0, 255),
-          ...(input.metadata ? { metadata: input.metadata } : {}),
         },
       },
     },

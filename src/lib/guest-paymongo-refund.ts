@@ -73,6 +73,40 @@ function safeIdempotencyKey(input: string) {
   return `${compact.slice(0, 150)}-${digest}`;
 }
 
+const MANUAL_REFUND_REQUIRED_PREFIX = 'MANUAL REFUND REQUIRED:';
+
+const NON_REFUNDABLE_PAYMONGO_SOURCES = new Set([
+  'qrph',
+  'qr_ph',
+  'qr-ph',
+  'qr',
+  'ubp',
+  'ubp_online_banking',
+  'ubp-online-banking',
+]);
+
+function normalizePaymentSourceType(value?: string | null) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function getManualRefundRequiredMessage(paymentSourceType?: string | null) {
+  const normalizedSource = normalizePaymentSourceType(paymentSourceType);
+
+  if (!NON_REFUNDABLE_PAYMONGO_SOURCES.has(normalizedSource)) {
+    return null;
+  }
+
+  const methodLabel = normalizedSource.startsWith('qr')
+    ? 'QR Ph'
+    : 'UBP Online Banking';
+
+  return `${MANUAL_REFUND_REQUIRED_PREFIX} ${methodLabel} payments cannot be refunded through the PayMongo Refund API. The order is cancelled, but staff must settle the amount manually with the guest or contact PayMongo Support.`;
+}
+
+function isManualRefundRequiredError(value?: string | null) {
+  return String(value ?? '').startsWith(MANUAL_REFUND_REQUIRED_PREFIX);
+}
+
 export function isAutomaticGuestRefundEnabled() {
   return process.env.PAYMONGO_AUTO_REFUND_ON_FULFILLMENT_FAILURE !== 'false';
 }
@@ -102,6 +136,7 @@ async function recalculateGuestRefundStateTx(
           status: true,
           paymongoRefundId: true,
           processedAt: true,
+          errorMessage: true,
           serviceRequestId: true,
         },
       },
@@ -131,6 +166,13 @@ async function recalculateGuestRefundStateTx(
   const partiallyRefunded = succeededAmount > 0 && !fullyRefunded;
   const hasPending = pendingRefunds.length > 0;
   const hasFailed = failedRefunds.length > 0 && !hasPending;
+  const manualReviewRefund = failedRefunds
+    .filter((refund) => isManualRefundRequiredError(refund.errorMessage))
+    .sort(
+      (left, right) =>
+        (right.processedAt?.getTime() ?? 0) -
+        (left.processedAt?.getTime() ?? 0)
+    )[0];
 
   let sessionStatus: GuestPayMongoStatus = session.status;
   let aggregateRefundStatus: GuestPayMongoRefundStatus =
@@ -146,6 +188,9 @@ async function recalculateGuestRefundStateTx(
     )
       ? GuestPayMongoRefundStatus.PROCESSING
       : GuestPayMongoRefundStatus.PENDING;
+  } else if (manualReviewRefund) {
+    sessionStatus = GuestPayMongoStatus.PAID_REVIEW_REQUIRED;
+    aggregateRefundStatus = GuestPayMongoRefundStatus.FAILED;
   } else if (hasFailed) {
     sessionStatus = GuestPayMongoStatus.REFUND_FAILED;
     aggregateRefundStatus = GuestPayMongoRefundStatus.FAILED;
@@ -176,9 +221,18 @@ async function recalculateGuestRefundStateTx(
       paymongoRefundId:
         latestRefund?.paymongoRefundId ?? undefined,
       refundedAt: fullyRefunded ? new Date() : null,
-      refundErrorMessage: hasFailed
-        ? 'One or more PayMongo refunds failed and require retry.'
-        : null,
+      refundErrorMessage: manualReviewRefund?.errorMessage
+        ? manualReviewRefund.errorMessage
+        : hasFailed
+          ? failedRefunds
+              .filter((refund) => Boolean(refund.errorMessage))
+              .sort(
+                (left, right) =>
+                  (right.processedAt?.getTime() ?? 0) -
+                  (left.processedAt?.getTime() ?? 0)
+              )[0]?.errorMessage ||
+            'One or more PayMongo refunds failed and require retry.'
+          : null,
     },
   });
 
@@ -253,6 +307,63 @@ async function recalculateGuestRefundStateTx(
 
 export async function refreshGuestRefundState(sessionId: string) {
   return db.$transaction((tx) => recalculateGuestRefundStateTx(tx, sessionId));
+}
+
+
+async function recordManualRefundRequired(input: {
+  sessionId: string;
+  orderId?: string | null;
+  orderItemId?: string | null;
+  serviceRequestId?: string | null;
+  kind: GuestPayMongoRefundKind;
+  amountCents: number;
+  currency: string;
+  idempotencyKey: string;
+  reason: string;
+  message: string;
+}) {
+  const refund = await db.$transaction(
+    async (tx) => {
+      const refundRecord = await tx.guestPayMongoRefund.upsert({
+        where: { idempotencyKey: input.idempotencyKey },
+        update: {
+          status: GuestPayMongoRefundStatus.FAILED,
+          amountCents: input.amountCents,
+          reason: input.reason.slice(0, 191),
+          notes: input.message.slice(0, 2000),
+          errorMessage: input.message.slice(0, 2000),
+          processedAt: new Date(),
+        },
+        create: {
+          guestPaymentSessionId: input.sessionId,
+          orderId: input.orderId ?? null,
+          orderItemId: input.orderItemId ?? null,
+          serviceRequestId: input.serviceRequestId ?? null,
+          kind: input.kind,
+          status: GuestPayMongoRefundStatus.FAILED,
+          amountCents: input.amountCents,
+          currency: input.currency,
+          idempotencyKey: input.idempotencyKey,
+          reason: input.reason.slice(0, 191),
+          notes: input.message.slice(0, 2000),
+          errorMessage: input.message.slice(0, 2000),
+          processedAt: new Date(),
+        },
+      });
+
+      await recalculateGuestRefundStateTx(tx, input.sessionId);
+
+      return refundRecord;
+    },
+    {
+      maxWait: 10_000,
+      timeout: 30_000,
+    }
+  );
+
+  await safelyNotifyGuestRefund(refund.id);
+
+  return refund;
 }
 
 export async function requestGuestPayMongoRefund(input: {
@@ -348,6 +459,34 @@ export async function requestGuestPayMongoRefund(input: {
     `cloudview-guest-refund-${session.id}-${suffix}`
   );
 
+  const manualRefundMessage = getManualRefundRequiredMessage(
+    session.paymentSourceType
+  );
+
+  if (manualRefundMessage) {
+    const refundRecord = await recordManualRefundRequired({
+      sessionId: session.id,
+      orderId: input.orderId ?? session.orderId,
+      orderItemId: input.orderItemId ?? null,
+      serviceRequestId: input.serviceRequestId ?? null,
+      kind: input.kind ?? GuestPayMongoRefundKind.FULL,
+      amountCents,
+      currency: session.currency,
+      idempotencyKey,
+      reason: input.reason,
+      message: manualRefundMessage,
+    });
+
+    return {
+      ok: false as const,
+      skipped: true as const,
+      manualRefundRequired: true as const,
+      refundRecordId: refundRecord.id,
+      message: manualRefundMessage,
+      amountCents,
+    };
+  }
+
   const existing = await db.guestPayMongoRefund.findUnique({
     where: { idempotencyKey },
   });
@@ -419,7 +558,7 @@ export async function requestGuestPayMongoRefund(input: {
       idempotencyKey,
       paymentId: session.paymongoPaymentId,
       amount: amountCents,
-      reason: 'requested_by_customer',
+      reason: 'others',
       notes: `CloudView ${input.kind ?? GuestPayMongoRefundKind.FULL} refund: ${input.reason}`,
       metadata: {
         guest_payment_session_id: session.id,
@@ -797,6 +936,40 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
     };
   }
 
+  const manualRefundMessage = getManualRefundRequiredMessage(
+    session.paymentSourceType
+  );
+
+  if (manualRefundMessage) {
+    await db.$transaction(
+      async (tx) => {
+        await tx.guestPayMongoRefund.update({
+          where: { id: refundRecord.id },
+          data: {
+            status: GuestPayMongoRefundStatus.FAILED,
+            errorMessage: manualRefundMessage.slice(0, 2000),
+            processedAt: new Date(),
+          },
+        });
+
+        await recalculateGuestRefundStateTx(tx, session.id);
+      },
+      {
+        maxWait: 10_000,
+        timeout: 30_000,
+      }
+    );
+
+    await safelyNotifyGuestRefund(refundRecord.id);
+
+    return {
+      ok: false as const,
+      skipped: true as const,
+      manualRefundRequired: true as const,
+      message: manualRefundMessage,
+    };
+  }
+
   await db.guestPayMongoRefund.update({
     where: { id: refundRecord.id },
     data: {
@@ -813,7 +986,7 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
       idempotencyKey: refundRecord.idempotencyKey,
       paymentId: session.paymongoPaymentId,
       amount: refundRecord.amountCents,
-      reason: 'requested_by_customer',
+      reason: 'others',
       notes: refundRecord.notes || refundRecord.reason,
       metadata: {
         guest_payment_session_id: session.id,

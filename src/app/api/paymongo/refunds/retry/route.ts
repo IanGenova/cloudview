@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server';
-import { GuestPayMongoFlow, GuestPayMongoRefundStatus, GuestPayMongoStatus } from '@prisma/client';
+import {
+  GuestPayMongoFlow,
+  GuestPayMongoRefundStatus,
+  GuestPayMongoStatus,
+} from '@prisma/client';
 import { db } from '@/lib/db';
 import { expirePayMongoCheckoutSession } from '@/lib/paymongo';
 import {
   requestAutomaticGuestRefund,
   retryGuestPayMongoRefund,
 } from '@/lib/guest-paymongo-refund';
-import { cleanupStagedGuestServiceAttachments, type StagedServiceAttachment } from '@/lib/guest-service-order';
+import {
+  cleanupStagedGuestServiceAttachments,
+  type StagedServiceAttachment,
+} from '@/lib/guest-service-order';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const MANUAL_REFUND_REQUIRED_PREFIX = 'MANUAL REFUND REQUIRED:';
 
 function isAuthorized(request: Request) {
   const secret =
@@ -62,9 +71,7 @@ async function run(request: Request) {
       },
     });
 
-    if (expired.count !== 1) {
-      continue;
-    }
+    if (expired.count !== 1) continue;
 
     let remoteExpired = false;
     let remoteError: string | null = null;
@@ -74,7 +81,9 @@ async function run(request: Request) {
         session.payload &&
         typeof session.payload === 'object' &&
         !Array.isArray(session.payload)
-          ? (session.payload as { stagedAttachments?: StagedServiceAttachment[] })
+          ? (session.payload as {
+              stagedAttachments?: StagedServiceAttachment[];
+            })
           : null;
 
       if (Array.isArray(payload?.stagedAttachments)) {
@@ -94,11 +103,14 @@ async function run(request: Request) {
             ? error.message
             : 'Unable to expire the PayMongo checkout session.';
 
-        console.warn('[Guest PayMongo maintenance] Checkout expiration failed.', {
-          sessionId: session.id,
-          checkoutSessionId: session.checkoutSessionId,
-          error: remoteError,
-        });
+        console.warn(
+          '[Guest PayMongo maintenance] Checkout expiration failed.',
+          {
+            sessionId: session.id,
+            checkoutSessionId: session.checkoutSessionId,
+            error: remoteError,
+          }
+        );
       }
     }
 
@@ -111,18 +123,48 @@ async function run(request: Request) {
 
   const failedRefunds = await db.guestPayMongoRefund.findMany({
     where: { status: GuestPayMongoRefundStatus.FAILED },
-    select: { id: true },
+    select: {
+      id: true,
+      errorMessage: true,
+    },
     orderBy: { updatedAt: 'asc' },
-    take: 20,
+    take: 50,
   });
+
+  const manualReviewRefunds = failedRefunds.filter((refund) =>
+    String(refund.errorMessage ?? '').startsWith(
+      MANUAL_REFUND_REQUIRED_PREFIX
+    )
+  );
+
+  const retryableRefunds = failedRefunds
+    .filter(
+      (refund) =>
+        !String(refund.errorMessage ?? '').startsWith(
+          MANUAL_REFUND_REQUIRED_PREFIX
+        )
+    )
+    .slice(0, 20);
 
   const refundResults = [];
 
-  for (const refund of failedRefunds) {
-    refundResults.push({
-      refundRecordId: refund.id,
-      ...(await retryGuestPayMongoRefund(refund.id)),
-    });
+  for (const refund of retryableRefunds) {
+    try {
+      refundResults.push({
+        refundRecordId: refund.id,
+        ...(await retryGuestPayMongoRefund(refund.id)),
+      });
+    } catch (error) {
+      refundResults.push({
+        refundRecordId: refund.id,
+        ok: false,
+        skipped: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unexpected refund retry error.',
+      });
+    }
   }
 
   const unrecordedSessions = await db.guestPayMongoSession.findMany({
@@ -144,16 +186,28 @@ async function run(request: Request) {
   const sessionResults = [];
 
   for (const session of unrecordedSessions) {
-    sessionResults.push({
-      sessionId: session.id,
-      ...(await requestAutomaticGuestRefund({
+    try {
+      sessionResults.push({
         sessionId: session.id,
-        reason:
-          session.refundReason ||
-          session.errorMessage ||
-          'Retrying automatic refund after guest transaction failure.',
-      })),
-    });
+        ...(await requestAutomaticGuestRefund({
+          sessionId: session.id,
+          reason:
+            session.refundReason ||
+            session.errorMessage ||
+            'Retrying automatic refund after guest transaction failure.',
+        })),
+      });
+    } catch (error) {
+      sessionResults.push({
+        sessionId: session.id,
+        ok: false,
+        skipped: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unexpected automatic refund error.',
+      });
+    }
   }
 
   return NextResponse.json({
@@ -161,6 +215,9 @@ async function run(request: Request) {
     expiredCheckoutsScanned: expiredCheckoutCandidates.length,
     expiredCheckoutResults,
     failedRefundsScanned: failedRefunds.length,
+    retryableRefundsScanned: retryableRefunds.length,
+    manualReviewRefundsSkipped: manualReviewRefunds.length,
+    manualReviewRefundIds: manualReviewRefunds.map((refund) => refund.id),
     unrecordedSessionsScanned: unrecordedSessions.length,
     refundResults,
     sessionResults,
