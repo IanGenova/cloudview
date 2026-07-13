@@ -16,6 +16,7 @@ import {
   getXenditGuestPaymentMethods,
   type XenditLineItem,
 } from '@/lib/xendit';
+import { buildGuestXenditReturnUrl } from '@/lib/xendit-guest-return';
 import {
   requireGuestXenditSecurityContext,
   requireOwnedGuestXenditSession,
@@ -102,26 +103,6 @@ function shouldClearCartForPaymentStatus(status: GuestXenditStatus) {
     default:
       return false;
   }
-}
-
-function getAppUrl() {
-  const value = (
-    process.env.APP_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    ''
-  ).replace(/\/$/, '');
-
-  if (!value) {
-    throw new Error('APP_URL is not configured.');
-  }
-
-  const url = new URL(value);
-
-  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
-    throw new Error('APP_URL must use HTTPS in production.');
-  }
-
-  return url.toString().replace(/\/$/, '');
 }
 
 function normalizeItems(items: GuestFoodCheckoutItem[]) {
@@ -403,20 +384,18 @@ export async function createGuestFoodXenditCheckout(
     });
 
     try {
-      const appUrl = getAppUrl();
-      const basePath = `/t/${encodeURIComponent(input.tagCode)}/payment`;
-      const successQuery = new URLSearchParams({
-        session: draft.id,
+      const successUrl = buildGuestXenditReturnUrl({
+        tagCode: input.tagCode,
+        sessionId: draft.id,
         flow: 'food',
         result: 'success',
       });
-      const cancelQuery = new URLSearchParams({
-        session: draft.id,
+      const cancelUrl = buildGuestXenditReturnUrl({
+        tagCode: input.tagCode,
+        sessionId: draft.id,
         flow: 'food',
         result: 'cancelled',
       });
-      const successUrl = `${appUrl}${basePath}?${successQuery.toString()}`;
-      const cancelUrl = `${appUrl}${basePath}?${cancelQuery.toString()}`;
 
       const checkout = await createXenditCheckoutSession({
         idempotencyKey: `cloudview-guest-food-${draft.id}`,
