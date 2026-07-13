@@ -94,7 +94,7 @@ export default async function MyRequestsPage({
   searchParams,
 }: {
   params: Promise<{ tagCode: string }>;
-  searchParams?: Promise<{ success?: string }>;
+  searchParams?: Promise<{ success?: string; error?: string }>;
 }) {
   const { tagCode } = await params;
   const query = await searchParams;
@@ -178,6 +178,27 @@ export default async function MyRequestsPage({
           <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
             Service request cancelled. Inventory was restored and any eligible
             Xendit refund was submitted.
+          </div>
+        ) : null}
+
+
+        {query?.success === 'request-already-cancelled' ? (
+          <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
+            This service request is already cancelled. No duplicate inventory
+            restoration or refund was created.
+          </div>
+        ) : null}
+
+        {query?.error === 'request-not-cancellable' ? (
+          <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold text-amber-200">
+            This request can no longer be cancelled because the hotel has
+            already started or completed processing it.
+          </div>
+        ) : null}
+
+        {query?.error === 'request-not-found' ? (
+          <div className="mb-5 rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm font-semibold text-red-200">
+            The service request could not be found. Please refresh the page.
           </div>
         ) : null}
 

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { verifyPOSXenditReturnState } from '@/lib/pos-xendit-return';
-import { POSXenditReturnClient } from './POSXenditReturnClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +28,53 @@ function ReturnError({ message }: { message: string }) {
       </section>
     </main>
   );
+}
+
+function isPrivateLanHostname(hostname: string) {
+  const host = hostname.trim().toLowerCase();
+
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    host.startsWith('192.168.') ||
+    host.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+  );
+}
+
+function getPOSDashboardBaseUrl() {
+  const value = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (!value) {
+    throw new Error(
+      'NEXT_PUBLIC_APP_URL is required to return to the local POS dashboard.'
+    );
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('NEXT_PUBLIC_APP_URL must be an absolute HTTP or HTTPS URL.');
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('NEXT_PUBLIC_APP_URL must use HTTP or HTTPS.');
+  }
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    url.protocol !== 'https:' &&
+    !isPrivateLanHostname(url.hostname)
+  ) {
+    throw new Error(
+      'NEXT_PUBLIC_APP_URL must use HTTPS outside a private LAN environment.'
+    );
+  }
+
+  return url.origin;
 }
 
 export default async function POSXenditReturnPage({
@@ -64,19 +111,26 @@ export default async function POSXenditReturnPage({
     );
   }
 
-  const query = new URLSearchParams({
-    hotelId: session.hotelId,
-    xendit: session.id,
-    xenditResult: returnState.result,
-  });
-  const dashboardTarget = `/dashboard/pos?${query.toString()}`;
+  let dashboardBaseUrl: string;
 
-  return (
-    <POSXenditReturnClient
-      sessionId={session.id}
-      hotelId={session.hotelId}
-      result={returnState.result}
-      dashboardTarget={dashboardTarget}
-    />
-  );
+  try {
+    dashboardBaseUrl = getPOSDashboardBaseUrl();
+  } catch (error) {
+    return (
+      <ReturnError
+        message={
+          error instanceof Error
+            ? error.message
+            : 'The local POS dashboard URL is not configured.'
+        }
+      />
+    );
+  }
+
+  const destination = new URL('/dashboard/pos', `${dashboardBaseUrl}/`);
+  destination.searchParams.set('hotelId', session.hotelId);
+  destination.searchParams.set('xendit', session.id);
+  destination.searchParams.set('xenditResult', returnState.result);
+
+  redirect(destination.toString());
 }

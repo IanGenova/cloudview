@@ -22,7 +22,6 @@ import {
   getXenditGuestPaymentMethods,
   type XenditLineItem,
 } from '@/lib/xendit';
-import { buildGuestXenditReturnUrl } from '@/lib/xendit-guest-return';
 import {
   requireOwnedGuestXenditSession,
   requireGuestXenditSecurityContext,
@@ -86,6 +85,24 @@ function getPublicError(error: unknown, fallback: string) {
   }
 
   return message;
+}
+
+function getAppUrl() {
+  const value = (
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ''
+  ).replace(/\/$/, '');
+
+  if (!value) throw new Error('APP_URL is not configured.');
+
+  const url = new URL(value);
+
+  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+    throw new Error('APP_URL must use HTTPS in production.');
+  }
+
+  return url.toString().replace(/\/$/, '');
 }
 
 function parseSelections(formData: FormData) {
@@ -391,18 +408,20 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
       },
     });
 
-    const successUrl = buildGuestXenditReturnUrl({
-      tagCode: input.tagCode,
-      sessionId: draft.id,
+    const appUrl = getAppUrl();
+    const basePath = `/t/${encodeURIComponent(input.tagCode)}/payment`;
+    const successQuery = new URLSearchParams({
+      session: draft.id,
       flow: 'service',
       result: 'success',
     });
-    const cancelUrl = buildGuestXenditReturnUrl({
-      tagCode: input.tagCode,
-      sessionId: draft.id,
+    const cancelQuery = new URLSearchParams({
+      session: draft.id,
       flow: 'service',
       result: 'cancelled',
     });
+    const successUrl = `${appUrl}${basePath}?${successQuery.toString()}`;
+    const cancelUrl = `${appUrl}${basePath}?${cancelQuery.toString()}`;
 
     const checkout = await createXenditCheckoutSession({
       idempotencyKey: `cloudview-guest-service-${draft.id}`,
@@ -976,15 +995,22 @@ export async function cancelGuestServiceRequestItemAction(
     },
   });
 
-  if (!request) throw new Error('Service request was not found.');
-
-  if (request.status !== ServiceRequestStatus.NEW) {
-    throw new Error('Only new service requests can be cancelled.');
+  if (!request) {
+    redirect(`/t/${tagCode}/requests?error=request-not-found`);
   }
 
-  let restoredServiceIds: string[] = [];
+  // The page can become stale while it is open, or the guest can double-click
+  // the cancel button. Treat those expected races as normal UI outcomes rather
+  // than exposing an uncaught server-action error in the browser.
+  if (request.status === ServiceRequestStatus.CANCELLED) {
+    redirect(`/t/${tagCode}/requests?success=request-already-cancelled`);
+  }
 
-  await db.$transaction(async (tx) => {
+  if (request.status !== ServiceRequestStatus.NEW) {
+    redirect(`/t/${tagCode}/requests?error=request-not-cancellable`);
+  }
+
+  const cancellationResult = await db.$transaction(async (tx) => {
     // Claim the cancellation atomically before restoring inventory. Without
     // this guard, two simultaneous cancellation requests can both restore the
     // same stock and create duplicate cancellation movements.
@@ -1003,10 +1029,24 @@ export async function cancelGuestServiceRequestItemAction(
     });
 
     if (claimed.count !== 1) {
-      throw new Error('Only new service requests can be cancelled.');
+      const latest = await tx.serviceRequest.findUnique({
+        where: { id: request.id },
+        select: { status: true },
+      });
+
+      return {
+        outcome:
+          latest?.status === ServiceRequestStatus.CANCELLED
+            ? ('ALREADY_CANCELLED' as const)
+            : ('NOT_CANCELLABLE' as const),
+        restoredServiceIds: [] as string[],
+      };
     }
 
-    restoredServiceIds = await restoreServiceInventoryForRequest(tx, request);
+    const restoredServiceIds = await restoreServiceInventoryForRequest(
+      tx,
+      request
+    );
 
     await tx.serviceRequestStatusHistory.create({
       data: {
@@ -1021,7 +1061,24 @@ export async function cancelGuestServiceRequestItemAction(
         where: { serviceRequestId: request.id },
       });
     }
+
+    return {
+      outcome: 'CANCELLED' as const,
+      restoredServiceIds,
+    };
   });
+
+  if (cancellationResult.outcome === 'ALREADY_CANCELLED') {
+    revalidatePath(`/t/${tagCode}/requests`);
+    redirect(`/t/${tagCode}/requests?success=request-already-cancelled`);
+  }
+
+  if (cancellationResult.outcome === 'NOT_CANCELLABLE') {
+    revalidatePath(`/t/${tagCode}/requests`);
+    redirect(`/t/${tagCode}/requests?error=request-not-cancellable`);
+  }
+
+  const restoredServiceIds = cancellationResult.restoredServiceIds;
 
   if (
     request.paymentMethod === PaymentMethod.XENDIT &&
