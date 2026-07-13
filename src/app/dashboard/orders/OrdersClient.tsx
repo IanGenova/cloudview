@@ -46,6 +46,7 @@ type PaymentMethod =
   | 'PAY_AT_COUNTER'
   | 'CASH'
   | 'POS'
+  | 'PAYMONGO' // Legacy transactions retained after the Xendit migration.
   | 'XENDIT';
 
 type OrderItemStatus = 'ACTIVE' | 'PARTIALLY_CANCELLED' | 'CANCELLED';

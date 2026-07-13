@@ -122,12 +122,11 @@ function getXenditErrorMessage(input: {
         .join('; ')
     : '';
 
-  if (parsed?.message || parsed?.error_code || details) {
-    return `Xendit ${input.status}: ${[
-      parsed.error_code,
-      parsed.message,
-      details,
-    ]
+  const errorCode = parsed?.error_code;
+  const message = parsed?.message;
+
+  if (message || errorCode || details) {
+    return `Xendit ${input.status}: ${[errorCode, message, details]
       .filter(Boolean)
       .join(' — ')}`;
   }
