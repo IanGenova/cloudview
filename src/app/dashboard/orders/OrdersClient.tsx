@@ -46,7 +46,7 @@ type PaymentMethod =
   | 'PAY_AT_COUNTER'
   | 'CASH'
   | 'POS'
-  | 'PAYMONGO';
+  | 'XENDIT';
 
 type OrderItemStatus = 'ACTIVE' | 'PARTIALLY_CANCELLED' | 'CANCELLED';
 
@@ -96,7 +96,7 @@ type DashboardOrder = {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod;
-  guestPayMongoStatus?: string;
+  guestXenditStatus?: string;
   refundedAmountCents?: number;
   refundErrorMessage?: string;
   totalCents: number;
@@ -252,11 +252,11 @@ function isFinanciallySettled(status: PaymentStatus) {
 }
 
 function canManuallyMarkPaid(order: DashboardOrder) {
-  return order.paymentStatus === 'UNPAID' && order.paymentMethod !== 'PAYMONGO';
+  return order.paymentStatus === 'UNPAID' && order.paymentMethod !== 'XENDIT';
 }
 
 function canStartOrderProcessing(order: DashboardOrder) {
-  if (order.paymentMethod !== 'PAYMONGO') {
+  if (order.paymentMethod !== 'XENDIT') {
     return true;
   }
 
@@ -275,10 +275,10 @@ function getStaffReviewItems(order: DashboardOrder) {
       label: 'Payment verification',
       ready: paymentReady,
       detail:
-        order.paymentMethod === 'PAYMONGO'
+        order.paymentMethod === 'XENDIT'
           ? paymentReady
-            ? 'Verified PayMongo payment received.'
-            : 'Wait for the PayMongo webhook before preparing.'
+            ? 'Verified Xendit payment received.'
+            : 'Wait for the Xendit webhook before preparing.'
           : `${label(order.paymentMethod)} follows the hotel collection workflow.`,
     },
     {
@@ -1040,8 +1040,8 @@ function CancelOrderItemModal({
 
           <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
             This cancels only this food item. Stock is restored automatically.
-            For a paid PayMongo order, CloudView also requests the matching
-            partial refund through PayMongo.
+            For a paid Xendit order, CloudView also requests the matching
+            partial refund through Xendit.
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2">
@@ -1155,7 +1155,7 @@ function CancelOrderModal({
 
           <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
             Cancelling this order restores its deducted stock. When the order
-            was paid through PayMongo, CloudView also requests the remaining
+            was paid through Xendit, CloudView also requests the remaining
             refundable balance automatically.
           </div>
 
@@ -1356,10 +1356,10 @@ function OrderDetailsModal({
                 </div>
               </div>
 
-              {order.paymentMethod === 'PAYMONGO' ? (
+              {order.paymentMethod === 'XENDIT' ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm font-black text-amber-900">
-                    PayMongo QR Ph
+                    Xendit QR Ph
                   </p>
                   <p className="mt-1 text-xs font-bold text-amber-700">
                     Payment: {label(order.paymentStatus)}
@@ -1439,7 +1439,7 @@ function OrderDetailsModal({
                           title={
                             canProcess
                               ? undefined
-                              : 'Wait for verified PayMongo payment before preparing.'
+                              : 'Wait for verified Xendit payment before preparing.'
                           }
                           className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black disabled:cursor-not-allowed disabled:opacity-45 ${action.className}`}
                         >
@@ -1892,9 +1892,9 @@ function OrderCard({
           </p>
         </div>
 
-        {!canProcess && order.paymentMethod === 'PAYMONGO' ? (
+        {!canProcess && order.paymentMethod === 'XENDIT' ? (
           <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
-            Kitchen processing is locked until PayMongo confirms the payment.
+            Kitchen processing is locked until Xendit confirms the payment.
           </div>
         ) : null}
       </div>

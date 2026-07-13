@@ -1,11 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import {
-  PaymentMethod,
-  PaymentStatus,
-  ServiceBillingMode,
-} from '@prisma/client';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
 import { createGuestOrderSchema } from '@/lib/validators';
 import { cleanText } from '@/lib/sanitize';
 import { createGuestFoodOrder } from '@/lib/guest-food-order';
@@ -23,9 +19,9 @@ import {
 export async function createGuestOrder(input: unknown) {
   const parsed = createGuestOrderSchema.parse(input);
 
-  if (String(parsed.paymentMethod) === 'PAYMONGO') {
+  if (String(parsed.paymentMethod) === 'XENDIT') {
     throw new Error(
-      'PayMongo orders must be completed through the secure PayMongo checkout.'
+      'Xendit orders must be completed through the secure Xendit checkout.'
     );
   }
 
@@ -80,12 +76,10 @@ export async function createServiceRequestAction(formData: FormData) {
 
   if (!tagCode) redirect('/t');
 
-  const paymentMethod =
+  // Treat this as a client preference only. The server decides whether
+  // payment is actually required after recalculating the live catalog quote.
+  const requestedPaymentMethod =
     cleanText(formData.get('paymentMethod'), 40) || 'ROOM_CHARGE';
-
-  if (paymentMethod === 'PAYMONGO') {
-    redirectToService(tagCode, { error: 'paymongo_checkout_required' });
-  }
 
   const input = {
     tagCode,
@@ -124,13 +118,14 @@ export async function createServiceRequestAction(formData: FormData) {
     redirectToService(tagCode, { error: 'request_failed' });
   }
 
-  const hasFixedPrice = prepared.services.some(
-    (service) => service.billingMode === ServiceBillingMode.FIXED_PRICE
-  );
-  const hasConfirmation = prepared.services.some(
-    (service) =>
-      service.billingMode === ServiceBillingMode.PRICE_ON_CONFIRMATION
-  );
+  const hasFixedPrice = prepared.fixedPriceTotalCents > 0;
+
+  // A stale browser draft may still say XENDIT even when the current cart
+  // contains only complimentary or price-on-confirmation services. In that
+  // case, ignore the stale value and submit normally with no payment.
+  if (requestedPaymentMethod === 'XENDIT' && hasFixedPrice) {
+    redirectToService(tagCode, { error: 'xendit_checkout_required' });
+  }
 
   if (hasFixedPrice && formData.get('chargeConsent') !== 'true') {
     redirectToService(tagCode, { error: 'consent_required' });
@@ -154,14 +149,11 @@ export async function createServiceRequestAction(formData: FormData) {
     redirectToService(tagCode, { error: 'request_failed' });
   }
 
-  const success =
-    hasFixedPrice && hasConfirmation
-      ? 'mixed'
-      : hasFixedPrice
-        ? 'charged'
-        : hasConfirmation
-          ? 'confirmation'
-          : 'request';
+  const thanksQuery = new URLSearchParams({
+    code: result.requestCode,
+  });
 
-  redirectToService(tagCode, { success, count: result.count });
+  redirect(
+    `/t/${encodeURIComponent(tagCode)}/service/thanks?${thanksQuery.toString()}`
+  );
 }

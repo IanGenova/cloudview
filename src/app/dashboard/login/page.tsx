@@ -54,7 +54,7 @@ export default async function LoginPage({
   if (user) {
     /**
      * Preserve the exact protected route that initiated authentication.
-     * This is required for PayMongo returns because the POS session and result
+     * This is required for Xendit returns because the POS session and result
      * are carried in the sanitized `next` query string.
      */
     if (safeNext) {

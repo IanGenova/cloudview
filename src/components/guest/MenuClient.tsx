@@ -29,11 +29,11 @@ import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { createGuestOrder } from '@/app/t/[tagCode]/actions';
 import {
-  cancelGuestFoodPayMongoCheckout,
-  createGuestFoodPayMongoCheckout,
-  finalizeGuestFoodPayMongoCheckout,
-  getGuestFoodPayMongoStatus,
-} from '@/app/t/[tagCode]/food-paymongo-actions';
+  cancelGuestFoodXenditCheckout,
+  createGuestFoodXenditCheckout,
+  finalizeGuestFoodXenditCheckout,
+  getGuestFoodXenditStatus,
+} from '@/app/t/[tagCode]/food-xendit-actions';
 
 type MenuProductTypeValue = 'SINGLE' | 'BUNDLE';
 
@@ -79,12 +79,12 @@ type StoredFoodCheckoutDraft = {
   notes: string;
   orderType: OrderType;
   confirmedClause: boolean;
-  paymentMethod: 'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'PAYMONGO';
+  paymentMethod: 'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'XENDIT';
   fulfillmentTiming: FulfillmentTimingValue;
   scheduledDate: string;
   scheduledTime: string;
   scheduledNote: string;
-  payMongoSessionId?: string;
+  xenditSessionId?: string;
 };
 
 type OrderType = 'ROOM_SERVICE' | 'DINE_IN' | 'TAKE_OUT' | 'PICK_UP';
@@ -376,8 +376,8 @@ export function MenuClient({
   taxRate = 0,
   serviceChargeRate = 0,
   defaultGuestName = '',
-  returnedPayMongoSessionId = null,
-  returnedPayMongoResult = null,
+  returnedXenditSessionId = null,
+  returnedXenditResult = null,
 }: {
   tagCode: string;
   products: Product[];
@@ -385,8 +385,8 @@ export function MenuClient({
   taxRate?: number;
   serviceChargeRate?: number;
   defaultGuestName?: string;
-  returnedPayMongoSessionId?: string | null;
-  returnedPayMongoResult?: 'success' | 'cancelled' | null;
+  returnedXenditSessionId?: string | null;
+  returnedXenditResult?: 'success' | 'cancelled' | null;
 }) {
   const router = useRouter();
 
@@ -397,7 +397,7 @@ export function MenuClient({
   const [orderType, setOrderType] = useState<OrderType>('ROOM_SERVICE');
   const [confirmedClause, setConfirmedClause] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<
-    'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'PAYMONGO'
+    'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'XENDIT'
   >('ROOM_CHARGE');
 
   const [fulfillmentTiming, setFulfillmentTiming] =
@@ -432,16 +432,16 @@ const [scheduledNote, setScheduledNote] = useState('');
 
         /**
          * A paid checkout is authoritative. Do not restore its old cart after
-         * the guest returns from PayMongo or revisits the menu.
+         * the guest returns from Xendit or revisits the menu.
          */
         if (
-          draft.paymentMethod === 'PAYMONGO' &&
-          typeof draft.payMongoSessionId === 'string' &&
-          draft.payMongoSessionId.trim()
+          draft.paymentMethod === 'XENDIT' &&
+          typeof draft.xenditSessionId === 'string' &&
+          draft.xenditSessionId.trim()
         ) {
-          const paymentStatus = await getGuestFoodPayMongoStatus({
+          const paymentStatus = await getGuestFoodXenditStatus({
             tagCode,
-            paymentSessionId: draft.payMongoSessionId,
+            paymentSessionId: draft.xenditSessionId,
           });
 
           if (disposed) {
@@ -480,8 +480,8 @@ const [scheduledNote, setScheduledNote] = useState('');
         if (typeof draft.confirmedClause === 'boolean') {
           setConfirmedClause(draft.confirmedClause);
         }
-        if (draft.paymentMethod === 'PAYMONGO') {
-          setPaymentMethod('PAYMONGO');
+        if (draft.paymentMethod === 'XENDIT') {
+          setPaymentMethod('XENDIT');
         }
         if (draft.fulfillmentTiming === 'SCHEDULED') {
           setFulfillmentTiming('SCHEDULED');
@@ -532,7 +532,7 @@ const [scheduledNote, setScheduledNote] = useState('');
     return () => window.clearTimeout(timer);
   }, [screen]);
 
-  function saveCheckoutDraft(payMongoSessionId?: string) {
+  function saveCheckoutDraft(xenditSessionId?: string) {
     const draft: StoredFoodCheckoutDraft = {
       cart,
       guestName,
@@ -544,7 +544,7 @@ const [scheduledNote, setScheduledNote] = useState('');
       scheduledDate,
       scheduledTime,
       scheduledNote,
-      payMongoSessionId,
+      xenditSessionId,
     };
 
     try {
@@ -566,24 +566,24 @@ const [scheduledNote, setScheduledNote] = useState('');
   }
 
   useEffect(() => {
-    if (!returnedPayMongoSessionId) {
+    if (!returnedXenditSessionId) {
       return;
     }
 
     let cancelled = false;
     let timer: number | null = null;
 
-    function cleanPayMongoQuery() {
+    function cleanXenditQuery() {
       const url = new URL(window.location.href);
-      url.searchParams.delete('paymongo');
-      url.searchParams.delete('paymongoResult');
+      url.searchParams.delete('xendit');
+      url.searchParams.delete('xenditResult');
       router.replace(`${url.pathname}${url.search}`, { scroll: false });
     }
 
     async function handleCancelledCheckout() {
-      const result = await cancelGuestFoodPayMongoCheckout({
+      const result = await cancelGuestFoodXenditCheckout({
         tagCode,
-        paymentSessionId: returnedPayMongoSessionId!,
+        paymentSessionId: returnedXenditSessionId!,
       });
 
       if (cancelled) return;
@@ -591,13 +591,13 @@ const [scheduledNote, setScheduledNote] = useState('');
       setScreen('cart');
       setError(
         result.ok
-          ? 'PayMongo checkout was cancelled. No order was created and no inventory was deducted.'
+          ? 'Xendit checkout was cancelled. No order was created and no inventory was deducted.'
           : result.error
       );
-      cleanPayMongoQuery();
+      cleanXenditQuery();
     }
 
-    if (returnedPayMongoResult === 'cancelled') {
+    if (returnedXenditResult === 'cancelled') {
       void handleCancelledCheckout();
 
       return () => {
@@ -606,38 +606,38 @@ const [scheduledNote, setScheduledNote] = useState('');
     }
 
     async function waitForPayment(attempt = 0) {
-      const status = await getGuestFoodPayMongoStatus({
+      const status = await getGuestFoodXenditStatus({
         tagCode,
-        paymentSessionId: returnedPayMongoSessionId!,
+        paymentSessionId: returnedXenditSessionId!,
       });
 
       if (cancelled) return;
 
       if (!status.ok) {
         setScreen('cart');
-        setError(status.error || 'Unable to confirm PayMongo payment.');
-        cleanPayMongoQuery();
+        setError(status.error || 'Unable to confirm Xendit payment.');
+        cleanXenditQuery();
         return;
       }
 
       if (status.status === 'COMPLETED' && status.orderCode) {
         clearCart();
-        cleanPayMongoQuery();
+        cleanXenditQuery();
         router.push(`/t/${tagCode}/confirmed/${status.orderCode}`);
         return;
       }
 
       if (status.status === 'PAID') {
-        const result = await finalizeGuestFoodPayMongoCheckout({
+        const result = await finalizeGuestFoodXenditCheckout({
           tagCode,
-          paymentSessionId: returnedPayMongoSessionId!,
+          paymentSessionId: returnedXenditSessionId!,
         });
 
         if (cancelled) return;
 
         if (result.ok) {
           clearCart();
-          cleanPayMongoQuery();
+          cleanXenditQuery();
           router.push(`/t/${tagCode}/confirmed/${result.orderCode}`);
           return;
         }
@@ -646,7 +646,7 @@ const [scheduledNote, setScheduledNote] = useState('');
           clearCart();
           setScreen('menu');
           setError(result.error);
-          cleanPayMongoQuery();
+          cleanXenditQuery();
           return;
         }
       }
@@ -673,7 +673,7 @@ const [scheduledNote, setScheduledNote] = useState('');
               ? 'Payment was refunded because the order could not be completed.'
               : `Payment status: ${status.status.replaceAll('_', ' ')}`)
         );
-        cleanPayMongoQuery();
+        cleanXenditQuery();
         return;
       }
 
@@ -682,7 +682,7 @@ const [scheduledNote, setScheduledNote] = useState('');
         setError(
           'Payment is still being confirmed. Open My Orders in a moment or contact the front desk.'
         );
-        cleanPayMongoQuery();
+        cleanXenditQuery();
         return;
       }
 
@@ -697,9 +697,9 @@ const [scheduledNote, setScheduledNote] = useState('');
         window.clearTimeout(timer);
       }
     };
-    // Handle one PayMongo return per URL.
+    // Handle one Xendit return per URL.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [returnedPayMongoResult, returnedPayMongoSessionId, tagCode]);
+  }, [returnedXenditResult, returnedXenditSessionId, tagCode]);
 
   const productMap = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
@@ -905,8 +905,8 @@ const [scheduledNote, setScheduledNote] = useState('');
           notes,
         });
 
-        if (paymentMethod === 'PAYMONGO') {
-          const checkout = await createGuestFoodPayMongoCheckout({
+        if (paymentMethod === 'XENDIT') {
+          const checkout = await createGuestFoodXenditCheckout({
             tagCode,
             guestName,
             notes: finalNotes,
@@ -1278,7 +1278,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                           | 'PAY_AT_COUNTER'
                           | 'CASH'
                           | 'POS'
-                          | 'PAYMONGO'
+                          | 'XENDIT'
                       )
                     }
                     className={cn(
@@ -1302,12 +1302,12 @@ const [scheduledNote, setScheduledNote] = useState('');
                     <option value="POS" className="bg-[#111] text-white">
                       Card / E-wallet
                     </option>
-                    <option value="PAYMONGO" className="bg-[#111] text-white">
-                      PayMongo QR Ph
+                    <option value="XENDIT" className="bg-[#111] text-white">
+                      Xendit QR Ph
                     </option>
                   </select>
 
-                  {paymentMethod === 'PAYMONGO' ? (
+                  {paymentMethod === 'XENDIT' ? (
                     <div className="mt-3 flex items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.08] p-4">
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
                         <QrCode className="size-5" />
@@ -1317,7 +1317,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                           Secure QR Ph payment
                         </p>
                         <p className="mt-1 text-xs font-medium leading-5 text-white/55">
-                          You will be redirected to PayMongo. The food order and stock deduction happen only after PayMongo confirms the payment.
+                          You will be redirected to Xendit. The food order and stock deduction happen only after Xendit confirms the payment.
                         </p>
                       </div>
                     </div>
@@ -1422,15 +1422,15 @@ const [scheduledNote, setScheduledNote] = useState('');
                 className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-[15px] font-black text-black shadow-[0_14px_34px_rgba(214,167,56,0.24)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {pending ? (
-                  paymentMethod === 'PAYMONGO'
-                    ? 'Opening PayMongo...'
+                  paymentMethod === 'XENDIT'
+                    ? 'Opening Xendit...'
                     : 'Submitting...'
                 ) : (
                   <>
-                    {paymentMethod === 'PAYMONGO'
+                    {paymentMethod === 'XENDIT'
                       ? 'Generate QR & Pay'
                       : 'Place Order'}
-                    {paymentMethod === 'PAYMONGO' ? (
+                    {paymentMethod === 'XENDIT' ? (
                       <QrCode className="size-4.5" />
                     ) : (
                       <PackageCheck className="size-4.5" />

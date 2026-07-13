@@ -19,7 +19,7 @@ import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
-import { cancelGuestServiceRequestItemAction } from '../service-paymongo-actions';
+import { cancelGuestServiceRequestItemAction } from '../service-xendit-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,7 +115,7 @@ export default async function MyRequestsPage({
           guestSessionId: guestSession.id,
         },
         include: {
-          guestPayMongoSession: {
+          guestXenditSession: {
             select: {
               id: true,
               status: true,
@@ -141,8 +141,8 @@ export default async function MyRequestsPage({
   const chargesByRequestId = new Map(
     charges.map((charge) => [charge.serviceRequestId, charge])
   );
-  const payMongoCount = requests.filter(
-    (request) => request.paymentMethod === PaymentMethod.PAYMONGO
+  const xenditCount = requests.filter(
+    (request) => request.paymentMethod === PaymentMethod.XENDIT
   ).length;
 
   return (
@@ -167,9 +167,9 @@ export default async function MyRequestsPage({
           <div />
         </div>
 
-        {query?.success === 'paymongo-completed' ? (
+        {query?.success === 'xendit-completed' ? (
           <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
-            PayMongo payment confirmed. Your service request is now available to
+            Xendit payment confirmed. Your service request is now available to
             the hotel team.
           </div>
         ) : null}
@@ -177,7 +177,7 @@ export default async function MyRequestsPage({
         {query?.success === 'request-cancelled' ? (
           <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
             Service request cancelled. Inventory was restored and any eligible
-            PayMongo refund was submitted.
+            Xendit refund was submitted.
           </div>
         ) : null}
 
@@ -192,9 +192,9 @@ export default async function MyRequestsPage({
           <div className="rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 p-4">
             <CreditCard className="size-5 text-emerald-300" />
             <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-emerald-300/80">
-              PayMongo
+              Xendit
             </p>
-            <p className="mt-1 font-serif text-2xl">{payMongoCount}</p>
+            <p className="mt-1 font-serif text-2xl">{xenditCount}</p>
           </div>
           <div className="rounded-[1.5rem] border border-blue-500/20 bg-blue-500/10 p-4">
             <ReceiptText className="size-5 text-blue-300" />
@@ -208,7 +208,7 @@ export default async function MyRequestsPage({
         <div className="space-y-4">
           {requests.map((request) => {
             const charge = chargesByRequestId.get(request.id);
-            const isPayMongo = request.paymentMethod === PaymentMethod.PAYMONGO;
+            const isXendit = request.paymentMethod === PaymentMethod.XENDIT;
             const canCancel = request.status === ServiceRequestStatus.NEW;
 
             return (
@@ -254,12 +254,12 @@ export default async function MyRequestsPage({
                   ) : null}
                 </div>
 
-                {isPayMongo ? (
+                {isXendit ? (
                   <div className="mt-3 rounded-[1.25rem] border border-gold/20 bg-gold/10 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <QrPaymentIcon />
                       <p className="font-serif text-[15px] font-medium text-gold">
-                        PayMongo QR Ph
+                        Xendit QR Ph
                       </p>
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
@@ -281,9 +281,9 @@ export default async function MyRequestsPage({
                       </p>
                     ) : null}
 
-                    {request.guestPayMongoSession?.refundErrorMessage ? (
+                    {request.guestXenditSession?.refundErrorMessage ? (
                       <p className="mt-2 text-xs font-semibold text-red-200">
-                        {request.guestPayMongoSession.refundErrorMessage}
+                        {request.guestXenditSession.refundErrorMessage}
                       </p>
                     ) : null}
                   </div>
@@ -330,7 +330,7 @@ export default async function MyRequestsPage({
                 ) : request.paymentStatus === PaymentStatus.REFUND_PENDING ? (
                   <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-500/10 p-3 text-xs font-semibold text-amber-200">
                     <RotateCcw className="size-4" />
-                    PayMongo refund is being processed.
+                    Xendit refund is being processed.
                   </div>
                 ) : null}
               </article>
@@ -348,7 +348,7 @@ export default async function MyRequestsPage({
                 </h2>
                 <p className="mt-3 text-[15px] font-medium leading-relaxed text-white/50">
                   Your service requests will appear here after submission or
-                  PayMongo payment confirmation.
+                  Xendit payment confirmation.
                 </p>
                 <Link
                   href={`/t/${tagCode}/service`}

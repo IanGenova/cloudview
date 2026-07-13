@@ -38,7 +38,7 @@ export function isRefundEligiblePaymentStatus(status: PaymentStatus) {
   );
 }
 
-export function isPayMongoKitchenReady(status: PaymentStatus) {
+export function isXenditKitchenReady(status: PaymentStatus) {
   return (
     status === PaymentStatus.PAID ||
     status === PaymentStatus.PARTIALLY_REFUNDED
@@ -60,12 +60,12 @@ export function assertFoodOrderStatusTransition(
   }
 }
 
-export function assertPayMongoOrderCanEnterKitchen(input: {
+export function assertXenditOrderCanEnterKitchen(input: {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   nextStatus: OrderStatus;
 }) {
-  if (input.paymentMethod !== PaymentMethod.PAYMONGO) {
+  if (input.paymentMethod !== PaymentMethod.XENDIT) {
     return;
   }
 
@@ -74,9 +74,9 @@ export function assertPayMongoOrderCanEnterKitchen(input: {
     input.nextStatus === OrderStatus.READY ||
     input.nextStatus === OrderStatus.DELIVERED;
 
-  if (requiresConfirmedPayment && !isPayMongoKitchenReady(input.paymentStatus)) {
+  if (requiresConfirmedPayment && !isXenditKitchenReady(input.paymentStatus)) {
     throw new Error(
-      'This PayMongo order cannot enter kitchen processing until the verified payment is PAID.'
+      'This Xendit order cannot enter kitchen processing until the verified payment is PAID.'
     );
   }
 }

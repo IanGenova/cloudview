@@ -103,6 +103,21 @@ export default async function SettingsPage({
   guideText: hotel?.settings?.guideText ?? '',
   nfcRoomPasscodeEnabled:
     (hotel?.settings?.nfcRoomPasscodeEnabled ?? true) ? 'on' : '',
+  ...(user.role === 'SUPER_ADMIN'
+    ? {
+        xenditSplitEnabled:
+          hotel?.settings?.xenditSplitEnabled ? 'on' : '',
+        xenditLinkedAccountId:
+          hotel?.settings?.xenditLinkedAccountId ?? '',
+        xenditCommissionType:
+          hotel?.settings?.xenditCommissionType ?? 'PERCENTAGE_NET',
+        xenditCommissionDisplayValue: String(
+          Number(hotel?.settings?.xenditCommissionValue ?? 1000) / 100
+        ),
+        xenditFeeBearer:
+          hotel?.settings?.xenditFeeBearer ?? 'HOTEL',
+      }
+    : {}),
 };
 
   return (
@@ -252,6 +267,99 @@ export default async function SettingsPage({
             <FormField label="Service Charge Rate" helper="Example: 0.10 means 10% service charge. Use 0 if not applied.">
               <Input name="serviceChargeRate" type="number" step="0.0001" defaultValue={String(hotel?.settings?.serviceChargeRate ?? 0)} placeholder="0.10" />
             </FormField>
+
+            {user.role === 'SUPER_ADMIN' ? (
+              <>
+                <SectionTitle
+                  title="Xendit Split Payment"
+                  description="Automatically route each paid guest order, paid service request, and POS payment between the linked hotel account and the CloudView platform account. Linked Accounts and payment splitting must first be enabled by Xendit."
+                />
+
+                <div className="md:col-span-2 overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+                  <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-neutral-950 dark:text-white">
+                        Automatic Split Payment
+                      </h3>
+                      <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-neutral-500 dark:text-neutral-400">
+                        Keep this disabled until the hotel is an activated xenPlatform sub-account and XENDIT_MASTER_ACCOUNT_ID is configured on the server. CloudView creates and reuses the required Split Rule automatically.
+                      </p>
+                    </div>
+
+                    <label className="relative flex shrink-0 cursor-pointer items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-950">
+                      <input
+                        name="xenditSplitEnabled"
+                        type="checkbox"
+                        defaultChecked={hotel?.settings?.xenditSplitEnabled ?? false}
+                        className="peer sr-only"
+                      />
+                      <span className="relative h-7 w-12 rounded-full bg-neutral-300 transition peer-checked:bg-emerald-500 peer-checked:[&>span]:translate-x-5 dark:bg-neutral-700">
+                        <span className="absolute left-1 top-1 size-5 rounded-full bg-white shadow transition-transform" />
+                      </span>
+                      <span className="text-sm font-black text-neutral-700 peer-checked:text-emerald-700 dark:text-neutral-300 dark:peer-checked:text-emerald-300">
+                        Enable split
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <FormField
+                  label="Hotel Linked Account ID"
+                  helper="The activated hotel sub-account Business ID from xenPlatform. It is a 24-character hexadecimal value shown in the Xendit Dashboard."
+                >
+                  <Input
+                    name="xenditLinkedAccountId"
+                    defaultValue={hotel?.settings?.xenditLinkedAccountId ?? ''}
+                    placeholder="67514ce3b045c2ebade1d94e"
+                    autoComplete="off"
+                  />
+                </FormField>
+
+                <FormField
+                  label="Commission Type"
+                  helper="Choose how CloudView calculates its commission. Percentage values are stored as basis points; fixed values are stored in centavos."
+                >
+                  <select
+                    name="xenditCommissionType"
+                    defaultValue={hotel?.settings?.xenditCommissionType ?? 'PERCENTAGE_NET'}
+                    className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
+                  >
+                    <option value="PERCENTAGE_NET">Percentage commission</option>
+                    <option value="FIXED">Fixed amount per transaction</option>
+                  </select>
+                </FormField>
+
+                <FormField
+                  label="CloudView Commission Value"
+                  helper="For percentage, enter 10 for 10%. For fixed commission, enter the peso amount such as 50 for ₱50.00."
+                >
+                  <Input
+                    name="xenditCommissionDisplayValue"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={String(
+                      Number(hotel?.settings?.xenditCommissionValue ?? 1000) / 100
+                    )}
+                    placeholder="10"
+                  />
+                </FormField>
+
+                <FormField
+                  label="Processing Fee Bearer"
+                  helper="Hotel means the payment is created on the hotel sub-account and CloudView receives the commission route. CloudView means the payment is created on the master account and the hotel receives its routed share. For fixed commission, leave enough value on the source account to cover Xendit fees and tax."
+                >
+                  <select
+                    name="xenditFeeBearer"
+                    defaultValue={hotel?.settings?.xenditFeeBearer ?? 'HOTEL'}
+                    className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
+                  >
+                    <option value="HOTEL">Hotel absorbs processing fee</option>
+                    <option value="CLOUDVIEW">CloudView absorbs processing fee</option>
+                  </select>
+                </FormField>
+              </>
+            ) : null}
 
             <SectionTitle
               title="Wi-Fi and Guest Access"

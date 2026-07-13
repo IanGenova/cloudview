@@ -44,6 +44,7 @@ enum PaymentMethod {
   CASH
   POS
   PAYMONGO
+  XENDIT
 }
 
 enum PaymentStatus {
@@ -154,6 +155,7 @@ enum GuestStayCheckoutPaymentMethod {
   GCASH
   MAYA
   QRPH
+  EWALLET
   BANK_TRANSFER
   COMPANY_ACCOUNT
   COMPLIMENTARY
@@ -370,7 +372,7 @@ model Hotel {
   rewards                      Reward[]
   rewardRedemptions            RewardRedemption[]
   guestPointSettings           GuestPointSettings?
-  guestPayMongoSessions        GuestPayMongoSession[]
+  guestXenditSessions        GuestXenditSession[]
 
   guideImages            HotelGuideImage[]
   nfcGuestSessions       NfcGuestSession[]
@@ -403,6 +405,16 @@ model HotelSettings {
   guestPortalHeroImageUrl String? @db.Text
 
   nfcRoomPasscodeEnabled Boolean @default(true)
+
+  // Xendit Linked Accounts / automatic payment splitting.
+  // Commission values use basis points for PERCENTAGE_NET and centavos for FIXED.
+  xenditSplitEnabled       Boolean @default(false) @map("paymongoSplitEnabled")
+  xenditLinkedAccountId    String? @db.VarChar(191) @map("paymongoLinkedAccountId")
+  xenditCommissionType     String  @default("PERCENTAGE_NET") @db.VarChar(32) @map("paymongoCommissionType")
+  xenditCommissionValue    Int     @default(1000) @map("paymongoCommissionValue")
+  xenditFeeBearer          String  @default("HOTEL") @db.VarChar(32) @map("paymongoFeeBearer")
+  xenditSplitRuleId        String? @db.VarChar(191)
+  xenditSplitRuleSignature String? @db.VarChar(64)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -473,7 +485,7 @@ model NfcTag {
   orders                Order[]
   serviceRequests       ServiceRequest[]
   guestSessions         NfcGuestSession[]
-  guestPayMongoSessions GuestPayMongoSession[]
+  guestXenditSessions GuestXenditSession[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -665,7 +677,7 @@ model Order {
   guestStayId String?
   guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
 
-  guestPayMongoSessions GuestPayMongoSession[]
+  guestXenditSessions GuestXenditSession[]
 
   fulfillmentTiming FulfillmentTiming @default(ASAP)
 
@@ -790,8 +802,8 @@ model ServiceRequest {
   paymentMethod       PaymentMethod?
   paymentStatus       PaymentStatus      @default(UNPAID)
 
-  guestPayMongoSessionId String?
-  guestPayMongoSession   GuestPayMongoSession? @relation(fields: [guestPayMongoSessionId], references: [id], onDelete: SetNull)
+  guestXenditSessionId String? @map("guestPayMongoSessionId")
+  guestXenditSession   GuestXenditSession? @relation(fields: [guestXenditSessionId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -826,7 +838,7 @@ model ServiceRequest {
   @@index([requestCode])
   @@index([hotelId, requestCode])
   @@index([guestStayId])
-  @@index([guestPayMongoSessionId])
+  @@index([guestXenditSessionId])
   @@index([paymentMethod, paymentStatus])
   @@index([fulfillmentTiming])
   @@index([scheduledFor])
@@ -1008,7 +1020,7 @@ model NfcGuestSession {
 
   orders           Order[]
   serviceRequests  ServiceRequest[]
-  payMongoSessions GuestPayMongoSession[]
+  xenditSessions GuestXenditSession[]
 
   guestStayId String?
   guestStay   GuestStay? @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
@@ -1446,7 +1458,7 @@ model GuestStay {
   folio            GuestStayFolio?
   folioLines       GuestStayFolioLine[]
   folioPayments    GuestStayFolioPayment[]
-  payMongoSessions GuestPayMongoSession[]
+  xenditSessions GuestXenditSession[]
 
   @@index([hotelId])
   @@index([roomId])
@@ -1780,12 +1792,14 @@ model DashboardNotification {
   @@index([type])
 }
 
-enum GuestPayMongoFlow {
+enum GuestXenditFlow {
   FOOD_ORDER
   SERVICE_REQUEST
+
+  @@map("GuestPayMongoFlow")
 }
 
-enum GuestPayMongoStatus {
+enum GuestXenditStatus {
   PENDING
   PAID
   PROCESSING
@@ -1797,24 +1811,31 @@ enum GuestPayMongoStatus {
   REFUND_PENDING
   REFUNDED
   REFUND_FAILED
+
+  @@map("GuestPayMongoStatus")
 }
 
-enum GuestPayMongoRefundStatus {
+enum GuestXenditRefundStatus {
   NOT_REQUESTED
   PENDING
   PROCESSING
   SUCCEEDED
   FAILED
+
+  @@map("GuestPayMongoRefundStatus")
 }
 
-enum GuestPayMongoRefundKind {
+enum GuestXenditRefundKind {
   FULL
   PARTIAL
+
+  @@map("GuestPayMongoRefundKind")
 }
 
-model GuestPayMongoSession {
+model GuestXenditSession {
   id       String            @id @default(cuid())
-  flowType GuestPayMongoFlow
+  flowType GuestXenditFlow
+  paymentProvider String @default("XENDIT") @db.VarChar(20)
 
   hotelId        String
   tagId          String?
@@ -1825,11 +1846,16 @@ model GuestPayMongoSession {
   currency    String @default("PHP") @db.VarChar(3)
   payload     Json
 
-  status GuestPayMongoStatus @default(PENDING)
+  status GuestXenditStatus @default(PENDING)
 
   checkoutSessionId   String? @unique @db.VarChar(191)
   checkoutUrl         String? @db.Text
-  paymongoPaymentId   String? @db.VarChar(191)
+  xenditPaymentId        String? @db.VarChar(191) @map("paymongoPaymentId")
+  xenditPaymentRequestId String? @db.VarChar(191)
+  xenditSplitPaymentId   String? @db.VarChar(191)
+  xenditSplitStatus      String? @db.VarChar(32)
+  xenditSplitAmountCents Int?
+  xenditSplitFailureCode String? @db.VarChar(191)
   paymentSourceType   String? @db.VarChar(40)
   paidAmountCents     Int?
   netAmountCents      Int?
@@ -1843,8 +1869,8 @@ model GuestPayMongoSession {
   serviceRequestCodes Json?
 
   automaticRefundEnabled Boolean                   @default(true)
-  refundStatus           GuestPayMongoRefundStatus @default(NOT_REQUESTED)
-  paymongoRefundId       String?                   @unique @db.VarChar(191)
+  refundStatus           GuestXenditRefundStatus @default(NOT_REQUESTED)
+  xenditRefundId       String?                   @unique @db.VarChar(191) @map("paymongoRefundId")
   refundAmountCents      Int?
   refundReason           String?                   @db.VarChar(191)
   refundNotes            String?                   @db.Text
@@ -1869,34 +1895,38 @@ model GuestPayMongoSession {
   guestStay       GuestStay?            @relation(fields: [guestStayId], references: [id], onDelete: SetNull)
   order           Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
   serviceRequests ServiceRequest[]
-  refunds         GuestPayMongoRefund[]
+  refunds         GuestXenditRefund[]
 
   @@index([hotelId, status])
+  @@index([paymentProvider, status])
   @@index([guestSessionId, createdAt])
   @@index([guestStayId, createdAt])
   @@index([flowType, status])
-  @@index([paymongoPaymentId])
+  @@index([xenditPaymentId])
   @@index([refundStatus])
   @@index([expiresAt])
+  @@index([xenditPaymentRequestId])
+  @@index([xenditSplitPaymentId])
+  @@map("GuestPayMongoSession")
 }
 
-model GuestPayMongoRefund {
+model GuestXenditRefund {
   id String @id @default(cuid())
 
   guestPaymentSessionId String
-  guestPaymentSession   GuestPayMongoSession @relation(fields: [guestPaymentSessionId], references: [id], onDelete: Cascade)
+  guestPaymentSession   GuestXenditSession @relation(fields: [guestPaymentSessionId], references: [id], onDelete: Cascade)
 
   orderId          String?
   orderItemId      String?
   serviceRequestId String?
 
-  kind        GuestPayMongoRefundKind
-  status      GuestPayMongoRefundStatus @default(PENDING)
+  kind        GuestXenditRefundKind
+  status      GuestXenditRefundStatus @default(PENDING)
   amountCents Int
   currency    String                    @default("PHP") @db.VarChar(3)
 
   idempotencyKey   String  @unique @db.VarChar(191)
-  paymongoRefundId String? @unique @db.VarChar(191)
+  xenditRefundId String? @unique @db.VarChar(191) @map("paymongoRefundId")
   reason           String  @db.VarChar(191)
   notes            String? @db.Text
   errorMessage     String? @db.Text
@@ -1910,10 +1940,11 @@ model GuestPayMongoRefund {
   @@index([orderId])
   @@index([orderItemId])
   @@index([serviceRequestId])
-  @@index([paymongoRefundId])
+  @@index([xenditRefundId])
+  @@map("GuestPayMongoRefund")
 }
 
-enum POSPayMongoStatus {
+enum POSXenditStatus {
   PENDING
   PAID
   PROCESSING
@@ -1921,10 +1952,13 @@ enum POSPayMongoStatus {
   CANCELLED
   FAILED
   PAID_REVIEW_REQUIRED
+
+  @@map("POSPayMongoStatus")
 }
 
-model PosPayMongoSession {
+model PosXenditSession {
   id                  String            @id @default(cuid())
+  paymentProvider     String            @default("XENDIT") @db.VarChar(20)
   hotelId             String
   createdById         String
   checkoutSessionId   String?           @unique
@@ -1932,8 +1966,17 @@ model PosPayMongoSession {
   amountCents         Int
   currency            String            @default("PHP") @db.VarChar(3)
   payload             Json
-  status              POSPayMongoStatus @default(PENDING)
-  paymongoPaymentId   String?           @db.VarChar(191)
+  status              POSXenditStatus @default(PENDING)
+  xenditPaymentId        String?           @db.VarChar(191) @map("paymongoPaymentId")
+  xenditPaymentRequestId String?           @db.VarChar(191)
+  xenditSplitPaymentId   String?           @db.VarChar(191)
+  xenditSplitStatus      String?           @db.VarChar(32)
+  xenditSplitAmountCents Int?
+  xenditSplitFailureCode String?           @db.VarChar(191)
+  paymentSourceType      String?           @db.VarChar(80)
+  paidAmountCents        Int?
+  netAmountCents         Int?
+  feeCents               Int?
   orderCode           String?           @db.VarChar(191)
   serviceRequestCodes Json?
   errorMessage        String?           @db.Text
@@ -1944,14 +1987,20 @@ model PosPayMongoSession {
   updatedAt           DateTime          @updatedAt
 
   @@index([hotelId, status])
+  @@index([paymentProvider, status])
   @@index([createdById, createdAt])
+  @@index([xenditPaymentRequestId])
+  @@index([xenditSplitPaymentId])
+  @@map("PosPayMongoSession")
 }
 
-model PayMongoWebhookEvent {
+model XenditWebhookEvent {
   id          String   @id @db.VarChar(191)
   type        String   @db.VarChar(191)
   livemode    Boolean
   processedAt DateTime @default(now())
+
+  @@map("PayMongoWebhookEvent")
 }
 
 model DataBackup {

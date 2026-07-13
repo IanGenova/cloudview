@@ -3,26 +3,26 @@ import 'server-only';
 import { createHash } from 'crypto';
 import type { Prisma } from '@prisma/client';
 import {
-  GuestPayMongoFlow,
-  GuestPayMongoRefundKind,
-  GuestPayMongoRefundStatus,
-  GuestPayMongoStatus,
+  GuestXenditFlow,
+  GuestXenditRefundKind,
+  GuestXenditRefundStatus,
+  GuestXenditStatus,
   PaymentMethod,
   PaymentStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
-import { createPayMongoRefund } from '@/lib/paymongo';
+import { createXenditRefund } from '@/lib/xendit';
 import {
-  notifyGuestPayMongoRefundStatus,
-  notifyGuestPayMongoStatus,
-} from '@/lib/paymongo-dashboard-notifications';
+  notifyGuestXenditRefundStatus,
+  notifyGuestXenditStatus,
+} from '@/lib/xendit-dashboard-notifications';
 
 
 async function safelyNotifyGuestPayment(sessionId: string) {
   try {
-    await notifyGuestPayMongoStatus({ sessionId });
+    await notifyGuestXenditStatus({ sessionId });
   } catch (error) {
-    console.warn('[Guest PayMongo] Unable to create payment notification.', {
+    console.warn('[Guest Xendit] Unable to create payment notification.', {
       sessionId,
       error,
     });
@@ -31,9 +31,9 @@ async function safelyNotifyGuestPayment(sessionId: string) {
 
 async function safelyNotifyGuestRefund(refundId: string) {
   try {
-    await notifyGuestPayMongoRefundStatus({ refundId });
+    await notifyGuestXenditRefundStatus({ refundId });
   } catch (error) {
-    console.warn('[Guest PayMongo] Unable to create refund notification.', {
+    console.warn('[Guest Xendit] Unable to create refund notification.', {
       refundId,
       error,
     });
@@ -46,20 +46,20 @@ function errorMessage(error: unknown, fallback: string) {
     : fallback;
 }
 
-function mapPayMongoRefundStatus(value: string): GuestPayMongoRefundStatus {
+function mapXenditRefundStatus(value: string): GuestXenditRefundStatus {
   if (value === 'succeeded') {
-    return GuestPayMongoRefundStatus.SUCCEEDED;
+    return GuestXenditRefundStatus.SUCCEEDED;
   }
 
   if (value === 'failed') {
-    return GuestPayMongoRefundStatus.FAILED;
+    return GuestXenditRefundStatus.FAILED;
   }
 
   if (value === 'processing') {
-    return GuestPayMongoRefundStatus.PROCESSING;
+    return GuestXenditRefundStatus.PROCESSING;
   }
 
-  return GuestPayMongoRefundStatus.PENDING;
+  return GuestXenditRefundStatus.PENDING;
 }
 
 function safeIdempotencyKey(input: string) {
@@ -75,32 +75,48 @@ function safeIdempotencyKey(input: string) {
 
 const MANUAL_REFUND_REQUIRED_PREFIX = 'MANUAL REFUND REQUIRED:';
 
-const NON_REFUNDABLE_PAYMONGO_SOURCES = new Set([
+const NON_REFUNDABLE_XENDIT_SOURCES = new Set([
   'qrph',
   'qr_ph',
   'qr-ph',
   'qr',
-  'ubp',
-  'ubp_online_banking',
-  'ubp-online-banking',
 ]);
 
 function normalizePaymentSourceType(value?: string | null) {
   return String(value ?? '').trim().toLowerCase();
 }
 
-function getManualRefundRequiredMessage(paymentSourceType?: string | null) {
-  const normalizedSource = normalizePaymentSourceType(paymentSourceType);
-
-  if (!NON_REFUNDABLE_PAYMONGO_SOURCES.has(normalizedSource)) {
+function getRefundForUserId(payload: Prisma.JsonValue) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return null;
   }
 
-  const methodLabel = normalizedSource.startsWith('qr')
-    ? 'QR Ph'
-    : 'UBP Online Banking';
+  const split = (payload as Prisma.JsonObject).xenditSplit;
+  if (!split || typeof split !== 'object' || Array.isArray(split)) {
+    return null;
+  }
 
-  return `${MANUAL_REFUND_REQUIRED_PREFIX} ${methodLabel} payments cannot be refunded through the PayMongo Refund API. The order is cancelled, but staff must settle the amount manually with the guest or contact PayMongo Support.`;
+  const snapshot = split as Prisma.JsonObject;
+  const feeBearer =
+    typeof snapshot.feeBearer === 'string' ? snapshot.feeBearer : '';
+  const sourceAccountId =
+    typeof snapshot.sourceAccountId === 'string'
+      ? snapshot.sourceAccountId.trim()
+      : '';
+
+  return feeBearer === 'HOTEL' && /^[a-f0-9]{24}$/i.test(sourceAccountId)
+    ? sourceAccountId
+    : null;
+}
+
+function getManualRefundRequiredMessage(paymentSourceType?: string | null) {
+  const normalizedSource = normalizePaymentSourceType(paymentSourceType);
+
+  if (!NON_REFUNDABLE_XENDIT_SOURCES.has(normalizedSource)) {
+    return null;
+  }
+
+  return `${MANUAL_REFUND_REQUIRED_PREFIX} QR Ph payments cannot be refunded through the Xendit Refund API. The order is cancelled, but staff must settle the amount manually with the guest or contact Xendit Support.`;
 }
 
 function isManualRefundRequiredError(value?: string | null) {
@@ -108,14 +124,14 @@ function isManualRefundRequiredError(value?: string | null) {
 }
 
 export function isAutomaticGuestRefundEnabled() {
-  return process.env.PAYMONGO_AUTO_REFUND_ON_FULFILLMENT_FAILURE !== 'false';
+  return process.env.XENDIT_AUTO_REFUND_ON_FULFILLMENT_FAILURE !== 'false';
 }
 
 async function recalculateGuestRefundStateTx(
   tx: Prisma.TransactionClient,
   sessionId: string
 ) {
-  const session = await tx.guestPayMongoSession.findUnique({
+  const session = await tx.guestXenditSession.findUnique({
     where: { id: sessionId },
     select: {
       id: true,
@@ -134,7 +150,7 @@ async function recalculateGuestRefundStateTx(
         select: {
           amountCents: true,
           status: true,
-          paymongoRefundId: true,
+          xenditRefundId: true,
           processedAt: true,
           errorMessage: true,
           serviceRequestId: true,
@@ -148,17 +164,17 @@ async function recalculateGuestRefundStateTx(
   }
 
   const succeededAmount = session.refunds
-    .filter((refund) => refund.status === GuestPayMongoRefundStatus.SUCCEEDED)
+    .filter((refund) => refund.status === GuestXenditRefundStatus.SUCCEEDED)
     .reduce((sum, refund) => sum + refund.amountCents, 0);
 
   const pendingRefunds = session.refunds.filter(
     (refund) =>
-      refund.status === GuestPayMongoRefundStatus.PENDING ||
-      refund.status === GuestPayMongoRefundStatus.PROCESSING
+      refund.status === GuestXenditRefundStatus.PENDING ||
+      refund.status === GuestXenditRefundStatus.PROCESSING
   );
 
   const failedRefunds = session.refunds.filter(
-    (refund) => refund.status === GuestPayMongoRefundStatus.FAILED
+    (refund) => refund.status === GuestXenditRefundStatus.FAILED
   );
 
   const paidAmount = session.paidAmountCents ?? session.amountCents;
@@ -174,34 +190,34 @@ async function recalculateGuestRefundStateTx(
         (left.processedAt?.getTime() ?? 0)
     )[0];
 
-  let sessionStatus: GuestPayMongoStatus = session.status;
-  let aggregateRefundStatus: GuestPayMongoRefundStatus =
-    GuestPayMongoRefundStatus.NOT_REQUESTED;
+  let sessionStatus: GuestXenditStatus = session.status;
+  let aggregateRefundStatus: GuestXenditRefundStatus =
+    GuestXenditRefundStatus.NOT_REQUESTED;
 
   if (fullyRefunded) {
-    sessionStatus = GuestPayMongoStatus.REFUNDED;
-    aggregateRefundStatus = GuestPayMongoRefundStatus.SUCCEEDED;
+    sessionStatus = GuestXenditStatus.REFUNDED;
+    aggregateRefundStatus = GuestXenditRefundStatus.SUCCEEDED;
   } else if (hasPending) {
-    sessionStatus = GuestPayMongoStatus.REFUND_PENDING;
+    sessionStatus = GuestXenditStatus.REFUND_PENDING;
     aggregateRefundStatus = pendingRefunds.some(
-      (refund) => refund.status === GuestPayMongoRefundStatus.PROCESSING
+      (refund) => refund.status === GuestXenditRefundStatus.PROCESSING
     )
-      ? GuestPayMongoRefundStatus.PROCESSING
-      : GuestPayMongoRefundStatus.PENDING;
+      ? GuestXenditRefundStatus.PROCESSING
+      : GuestXenditRefundStatus.PENDING;
   } else if (manualReviewRefund) {
-    sessionStatus = GuestPayMongoStatus.PAID_REVIEW_REQUIRED;
-    aggregateRefundStatus = GuestPayMongoRefundStatus.FAILED;
+    sessionStatus = GuestXenditStatus.PAID_REVIEW_REQUIRED;
+    aggregateRefundStatus = GuestXenditRefundStatus.FAILED;
   } else if (hasFailed) {
-    sessionStatus = GuestPayMongoStatus.REFUND_FAILED;
-    aggregateRefundStatus = GuestPayMongoRefundStatus.FAILED;
+    sessionStatus = GuestXenditStatus.REFUND_FAILED;
+    aggregateRefundStatus = GuestXenditRefundStatus.FAILED;
   } else if (partiallyRefunded) {
     sessionStatus =
       session.orderId || session.serviceRequests.length > 0
-        ? GuestPayMongoStatus.COMPLETED
-        : GuestPayMongoStatus.PAID;
-    aggregateRefundStatus = GuestPayMongoRefundStatus.SUCCEEDED;
+        ? GuestXenditStatus.COMPLETED
+        : GuestXenditStatus.PAID;
+    aggregateRefundStatus = GuestXenditRefundStatus.SUCCEEDED;
   } else if (session.orderId || session.serviceRequests.length > 0) {
-    sessionStatus = GuestPayMongoStatus.COMPLETED;
+    sessionStatus = GuestXenditStatus.COMPLETED;
   }
 
   const latestRefund = [...session.refunds]
@@ -211,15 +227,15 @@ async function recalculateGuestRefundStateTx(
         (left.processedAt?.getTime() ?? 0)
     )[0];
 
-  await tx.guestPayMongoSession.update({
+  await tx.guestXenditSession.update({
     where: { id: session.id },
     data: {
       status: sessionStatus,
       refundStatus: aggregateRefundStatus,
       refundedAmountCents: succeededAmount,
       refundAmountCents: succeededAmount || null,
-      paymongoRefundId:
-        latestRefund?.paymongoRefundId ?? undefined,
+      xenditRefundId:
+        latestRefund?.xenditRefundId ?? undefined,
       refundedAt: fullyRefunded ? new Date() : null,
       refundErrorMessage: manualReviewRefund?.errorMessage
         ? manualReviewRefund.errorMessage
@@ -231,7 +247,7 @@ async function recalculateGuestRefundStateTx(
                   (right.processedAt?.getTime() ?? 0) -
                   (left.processedAt?.getTime() ?? 0)
               )[0]?.errorMessage ||
-            'One or more PayMongo refunds failed and require retry.'
+            'One or more Xendit refunds failed and require retry.'
           : null,
     },
   });
@@ -264,17 +280,17 @@ async function recalculateGuestRefundStateTx(
       (refund) => refund.serviceRequestId === request.id
     );
     const requestSucceeded = requestRefunds
-      .filter((refund) => refund.status === GuestPayMongoRefundStatus.SUCCEEDED)
+      .filter((refund) => refund.status === GuestXenditRefundStatus.SUCCEEDED)
       .reduce((sum, refund) => sum + refund.amountCents, 0);
     const requestPending = requestRefunds.some(
       (refund) =>
-        refund.status === GuestPayMongoRefundStatus.PENDING ||
-        refund.status === GuestPayMongoRefundStatus.PROCESSING
+        refund.status === GuestXenditRefundStatus.PENDING ||
+        refund.status === GuestXenditRefundStatus.PROCESSING
     );
     const requestFailed =
       !requestPending &&
       requestRefunds.some(
-        (refund) => refund.status === GuestPayMongoRefundStatus.FAILED
+        (refund) => refund.status === GuestXenditRefundStatus.FAILED
       );
 
     let requestPaymentStatus: PaymentStatus = PaymentStatus.PAID;
@@ -315,7 +331,7 @@ async function recordManualRefundRequired(input: {
   orderId?: string | null;
   orderItemId?: string | null;
   serviceRequestId?: string | null;
-  kind: GuestPayMongoRefundKind;
+  kind: GuestXenditRefundKind;
   amountCents: number;
   currency: string;
   idempotencyKey: string;
@@ -324,10 +340,10 @@ async function recordManualRefundRequired(input: {
 }) {
   const refund = await db.$transaction(
     async (tx) => {
-      const refundRecord = await tx.guestPayMongoRefund.upsert({
+      const refundRecord = await tx.guestXenditRefund.upsert({
         where: { idempotencyKey: input.idempotencyKey },
         update: {
-          status: GuestPayMongoRefundStatus.FAILED,
+          status: GuestXenditRefundStatus.FAILED,
           amountCents: input.amountCents,
           reason: input.reason.slice(0, 191),
           notes: input.message.slice(0, 2000),
@@ -340,7 +356,7 @@ async function recordManualRefundRequired(input: {
           orderItemId: input.orderItemId ?? null,
           serviceRequestId: input.serviceRequestId ?? null,
           kind: input.kind,
-          status: GuestPayMongoRefundStatus.FAILED,
+          status: GuestXenditRefundStatus.FAILED,
           amountCents: input.amountCents,
           currency: input.currency,
           idempotencyKey: input.idempotencyKey,
@@ -366,26 +382,26 @@ async function recordManualRefundRequired(input: {
   return refund;
 }
 
-export async function requestGuestPayMongoRefund(input: {
+export async function requestGuestXenditRefund(input: {
   sessionId: string;
   amountCents?: number;
   reason: string;
-  kind?: GuestPayMongoRefundKind;
+  kind?: GuestXenditRefundKind;
   orderId?: string | null;
   orderItemId?: string | null;
   serviceRequestId?: string | null;
   idempotencySuffix?: string;
   notes?: string;
 }) {
-  const session = await db.guestPayMongoSession.findUnique({
-    where: { id: input.sessionId },
+  const session = await db.guestXenditSession.findFirst({
+    where: { id: input.sessionId, paymentProvider: 'XENDIT' },
     include: {
       refunds: {
         select: {
           amountCents: true,
           status: true,
           idempotencyKey: true,
-          paymongoRefundId: true,
+          xenditRefundId: true,
         },
       },
     },
@@ -395,18 +411,18 @@ export async function requestGuestPayMongoRefund(input: {
     return {
       ok: false as const,
       skipped: true as const,
-      message: 'Guest PayMongo session was not found.',
+      message: 'Guest Xendit session was not found.',
     };
   }
 
-  if (!session.paymongoPaymentId) {
+  if (!session.xenditPaymentRequestId) {
     const message =
-      'Payment was received, but its PayMongo payment ID is missing. Manual review is required.';
+      'Payment was received, but its Xendit payment request ID is missing. Manual review is required.';
 
-    await db.guestPayMongoSession.update({
+    await db.guestXenditSession.update({
       where: { id: session.id },
       data: {
-        status: GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+        status: GuestXenditStatus.PAID_REVIEW_REQUIRED,
         refundErrorMessage: message,
       },
     });
@@ -424,9 +440,9 @@ export async function requestGuestPayMongoRefund(input: {
   const committedAmount = session.refunds
     .filter(
       (refund) =>
-        refund.status === GuestPayMongoRefundStatus.PENDING ||
-        refund.status === GuestPayMongoRefundStatus.PROCESSING ||
-        refund.status === GuestPayMongoRefundStatus.SUCCEEDED
+        refund.status === GuestXenditRefundStatus.PENDING ||
+        refund.status === GuestXenditRefundStatus.PROCESSING ||
+        refund.status === GuestXenditRefundStatus.SUCCEEDED
     )
     .reduce((sum, refund) => sum + refund.amountCents, 0);
 
@@ -441,7 +457,7 @@ export async function requestGuestPayMongoRefund(input: {
       ok: true as const,
       skipped: true as const,
       alreadyRefunded: true as const,
-      message: 'No refundable PayMongo balance remains.',
+      message: 'No refundable Xendit balance remains.',
     };
   }
 
@@ -469,7 +485,7 @@ export async function requestGuestPayMongoRefund(input: {
       orderId: input.orderId ?? session.orderId,
       orderItemId: input.orderItemId ?? null,
       serviceRequestId: input.serviceRequestId ?? null,
-      kind: input.kind ?? GuestPayMongoRefundKind.FULL,
+      kind: input.kind ?? GuestXenditRefundKind.FULL,
       amountCents,
       currency: session.currency,
       idempotencyKey,
@@ -487,7 +503,7 @@ export async function requestGuestPayMongoRefund(input: {
     };
   }
 
-  const existing = await db.guestPayMongoRefund.findUnique({
+  const existing = await db.guestXenditRefund.findUnique({
     where: { idempotencyKey },
   });
 
@@ -495,25 +511,25 @@ export async function requestGuestPayMongoRefund(input: {
     await refreshGuestRefundState(session.id);
 
     return {
-      ok: existing.status !== GuestPayMongoRefundStatus.FAILED,
+      ok: existing.status !== GuestXenditRefundStatus.FAILED,
       skipped: true as const,
       alreadyRefunded:
-        existing.status === GuestPayMongoRefundStatus.SUCCEEDED,
-      refundId: existing.paymongoRefundId,
+        existing.status === GuestXenditRefundStatus.SUCCEEDED,
+      refundId: existing.xenditRefundId,
       status: existing.status,
       message: 'This refund request was already created.',
     };
   }
 
   const refundRecord = await db.$transaction(async (tx) => {
-    const refund = await tx.guestPayMongoRefund.create({
+    const refund = await tx.guestXenditRefund.create({
       data: {
         guestPaymentSessionId: session.id,
         orderId: input.orderId ?? session.orderId,
         orderItemId: input.orderItemId ?? null,
         serviceRequestId: input.serviceRequestId ?? null,
-        kind: input.kind ?? GuestPayMongoRefundKind.FULL,
-        status: GuestPayMongoRefundStatus.PENDING,
+        kind: input.kind ?? GuestXenditRefundKind.FULL,
+        status: GuestXenditRefundStatus.PENDING,
         amountCents,
         currency: session.currency,
         idempotencyKey,
@@ -522,11 +538,11 @@ export async function requestGuestPayMongoRefund(input: {
       },
     });
 
-    await tx.guestPayMongoSession.update({
+    await tx.guestXenditSession.update({
       where: { id: session.id },
       data: {
-        status: GuestPayMongoStatus.REFUND_PENDING,
-        refundStatus: GuestPayMongoRefundStatus.PENDING,
+        status: GuestXenditStatus.REFUND_PENDING,
+        refundStatus: GuestXenditRefundStatus.PENDING,
         refundRequestedAt: new Date(),
         refundReason: input.reason.slice(0, 191),
         refundNotes: (input.notes || input.reason).slice(0, 2000),
@@ -554,12 +570,13 @@ export async function requestGuestPayMongoRefund(input: {
   await safelyNotifyGuestRefund(refundRecord.id);
 
   try {
-    const refund = await createPayMongoRefund({
+    const refund = await createXenditRefund({
       idempotencyKey,
-      paymentId: session.paymongoPaymentId,
+      paymentRequestId: session.xenditPaymentRequestId,
       amount: amountCents,
-      reason: 'others',
-      notes: `CloudView ${input.kind ?? GuestPayMongoRefundKind.FULL} refund: ${input.reason}`,
+      reason: 'OTHERS',
+      notes: `CloudView ${input.kind ?? GuestXenditRefundKind.FULL} refund: ${input.reason}`,
+      forUserId: getRefundForUserId(session.payload),
       metadata: {
         guest_payment_session_id: session.id,
         guest_refund_id: refundRecord.id,
@@ -575,22 +592,22 @@ export async function requestGuestPayMongoRefund(input: {
       },
     });
 
-    const mappedStatus = mapPayMongoRefundStatus(refund.status);
+    const mappedStatus = mapXenditRefundStatus(refund.status);
 
     await db.$transaction(async (tx) => {
-      await tx.guestPayMongoRefund.update({
+      await tx.guestXenditRefund.update({
         where: { id: refundRecord.id },
         data: {
-          paymongoRefundId: refund.id,
+          xenditRefundId: refund.id,
           status: mappedStatus,
           processedAt:
-            mappedStatus === GuestPayMongoRefundStatus.SUCCEEDED ||
-            mappedStatus === GuestPayMongoRefundStatus.FAILED
+            mappedStatus === GuestXenditRefundStatus.SUCCEEDED ||
+            mappedStatus === GuestXenditRefundStatus.FAILED
               ? new Date()
               : null,
           errorMessage:
-            mappedStatus === GuestPayMongoRefundStatus.FAILED
-              ? 'PayMongo reported that the refund failed.'
+            mappedStatus === GuestXenditRefundStatus.FAILED
+              ? 'Xendit reported that the refund failed.'
               : null,
         },
       });
@@ -601,7 +618,7 @@ export async function requestGuestPayMongoRefund(input: {
     await safelyNotifyGuestRefund(refundRecord.id);
 
     return {
-      ok: mappedStatus !== GuestPayMongoRefundStatus.FAILED,
+      ok: mappedStatus !== GuestXenditRefundStatus.FAILED,
       skipped: false as const,
       refundId: refund.id,
       status: mappedStatus,
@@ -610,14 +627,14 @@ export async function requestGuestPayMongoRefund(input: {
   } catch (error) {
     const message = errorMessage(
       error,
-      'Unable to create the PayMongo refund.'
+      'Unable to create the Xendit refund.'
     );
 
     await db.$transaction(async (tx) => {
-      await tx.guestPayMongoRefund.update({
+      await tx.guestXenditRefund.update({
         where: { id: refundRecord.id },
         data: {
-          status: GuestPayMongoRefundStatus.FAILED,
+          status: GuestXenditRefundStatus.FAILED,
           errorMessage: message.slice(0, 2000),
           processedAt: new Date(),
         },
@@ -628,10 +645,10 @@ export async function requestGuestPayMongoRefund(input: {
 
     await safelyNotifyGuestRefund(refundRecord.id);
 
-    console.error('[Guest PayMongo] Refund request failed.', {
+    console.error('[Guest Xendit] Refund request failed.', {
       sessionId: session.id,
       refundRecordId: refundRecord.id,
-      paymentId: session.paymongoPaymentId,
+      paymentRequestId: session.xenditPaymentRequestId,
       amountCents,
       message,
     });
@@ -653,14 +670,14 @@ export async function requestAutomaticGuestRefund(input: {
     return {
       ok: false as const,
       skipped: true as const,
-      message: 'Automatic PayMongo refunds are disabled.',
+      message: 'Automatic Xendit refunds are disabled.',
     };
   }
 
-  return requestGuestPayMongoRefund({
+  return requestGuestXenditRefund({
     sessionId: input.sessionId,
     reason: input.reason,
-    kind: GuestPayMongoRefundKind.FULL,
+    kind: GuestXenditRefundKind.FULL,
     idempotencySuffix: 'automatic-full-refund',
   });
 }
@@ -672,11 +689,12 @@ export async function requestGuestFoodOrderRefund(input: {
   orderItemId?: string | null;
   idempotencySuffix?: string;
 }) {
-  const session = await db.guestPayMongoSession.findFirst({
+  const session = await db.guestXenditSession.findFirst({
     where: {
       orderId: input.orderId,
-      flowType: GuestPayMongoFlow.FOOD_ORDER,
-      paymongoPaymentId: { not: null },
+      flowType: GuestXenditFlow.FOOD_ORDER,
+      paymentProvider: 'XENDIT',
+      xenditPaymentId: { not: null },
     },
     orderBy: { createdAt: 'desc' },
     select: { id: true },
@@ -686,17 +704,17 @@ export async function requestGuestFoodOrderRefund(input: {
     return {
       ok: false as const,
       skipped: true as const,
-      message: 'This order is not linked to a paid Guest PayMongo session.',
+      message: 'This order is not linked to a paid Guest Xendit session.',
     };
   }
 
-  return requestGuestPayMongoRefund({
+  return requestGuestXenditRefund({
     sessionId: session.id,
     amountCents: input.amountCents,
     reason: input.reason,
     kind: input.orderItemId
-      ? GuestPayMongoRefundKind.PARTIAL
-      : GuestPayMongoRefundKind.FULL,
+      ? GuestXenditRefundKind.PARTIAL
+      : GuestXenditRefundKind.FULL,
     orderId: input.orderId,
     orderItemId: input.orderItemId,
     idempotencySuffix:
@@ -711,7 +729,7 @@ export async function requestGuestServiceRequestRefund(input: {
   serviceRequestId: string;
   amountCents?: number;
   reason: string;
-  kind?: GuestPayMongoRefundKind;
+  kind?: GuestXenditRefundKind;
   idempotencySuffix?: string;
 }) {
   const request = await db.serviceRequest.findUnique({
@@ -719,27 +737,27 @@ export async function requestGuestServiceRequestRefund(input: {
     select: {
       id: true,
       amountCents: true,
-      guestPayMongoSessionId: true,
+      guestXenditSessionId: true,
       paymentMethod: true,
     },
   });
 
   if (
-    !request?.guestPayMongoSessionId ||
-    request.paymentMethod !== PaymentMethod.PAYMONGO
+    !request?.guestXenditSessionId ||
+    request.paymentMethod !== PaymentMethod.XENDIT
   ) {
     return {
       ok: false as const,
       skipped: true as const,
-      message: 'This service request is not linked to a paid Guest PayMongo session.',
+      message: 'This service request is not linked to a paid Guest Xendit session.',
     };
   }
 
-  return requestGuestPayMongoRefund({
-    sessionId: request.guestPayMongoSessionId,
+  return requestGuestXenditRefund({
+    sessionId: request.guestXenditSessionId,
     amountCents: input.amountCents ?? request.amountCents,
     reason: input.reason,
-    kind: input.kind ?? GuestPayMongoRefundKind.PARTIAL,
+    kind: input.kind ?? GuestXenditRefundKind.PARTIAL,
     serviceRequestId: request.id,
     idempotencySuffix:
       input.idempotencySuffix || `service-request-${request.id}`,
@@ -755,19 +773,19 @@ export async function markGuestPaymentFinalizationFailedAndRefund(input: {
     'The payment succeeded, but CloudView could not complete the guest transaction.'
   );
 
-  await db.guestPayMongoSession.updateMany({
+  await db.guestXenditSession.updateMany({
     where: {
       id: input.sessionId,
       status: {
         in: [
-          GuestPayMongoStatus.PAID,
-          GuestPayMongoStatus.PROCESSING,
-          GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+          GuestXenditStatus.PAID,
+          GuestXenditStatus.PROCESSING,
+          GuestXenditStatus.PAID_REVIEW_REQUIRED,
         ],
       },
     },
     data: {
-      status: GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+      status: GuestXenditStatus.PAID_REVIEW_REQUIRED,
       errorMessage: message.slice(0, 2000),
     },
   });
@@ -789,17 +807,17 @@ export async function applyGuestRefundWebhookUpdateTx(
     status?: string | null;
   }
 ) {
-  const mappedStatus = mapPayMongoRefundStatus(input.status || 'pending');
+  const mappedStatus = mapXenditRefundStatus(input.status || 'pending');
 
   let refund = input.refundId
-    ? await tx.guestPayMongoRefund.findUnique({
-        where: { paymongoRefundId: input.refundId },
+    ? await tx.guestXenditRefund.findUnique({
+        where: { xenditRefundId: input.refundId },
       })
     : null;
 
   if (!refund && input.paymentId) {
-    const session = await tx.guestPayMongoSession.findFirst({
-      where: { paymongoPaymentId: input.paymentId },
+    const session = await tx.guestXenditSession.findFirst({
+      where: { xenditPaymentId: input.paymentId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -808,14 +826,14 @@ export async function applyGuestRefundWebhookUpdateTx(
         `cloudview-webhook-refund-${input.refundId}`
       );
 
-      refund = await tx.guestPayMongoRefund.upsert({
+      refund = await tx.guestXenditRefund.upsert({
         where: { idempotencyKey },
         update: {
-          paymongoRefundId: input.refundId,
+          xenditRefundId: input.refundId,
           status: mappedStatus,
           processedAt:
-            mappedStatus === GuestPayMongoRefundStatus.SUCCEEDED ||
-            mappedStatus === GuestPayMongoRefundStatus.FAILED
+            mappedStatus === GuestXenditRefundStatus.SUCCEEDED ||
+            mappedStatus === GuestXenditRefundStatus.FAILED
               ? new Date()
               : null,
         },
@@ -825,18 +843,18 @@ export async function applyGuestRefundWebhookUpdateTx(
           kind:
             input.amountCents >=
             (session.paidAmountCents ?? session.amountCents)
-              ? GuestPayMongoRefundKind.FULL
-              : GuestPayMongoRefundKind.PARTIAL,
+              ? GuestXenditRefundKind.FULL
+              : GuestXenditRefundKind.PARTIAL,
           status: mappedStatus,
           amountCents: input.amountCents,
           currency: session.currency,
           idempotencyKey,
-          paymongoRefundId: input.refundId,
-          reason: 'Refund received from PayMongo webhook',
-          notes: 'Refund record reconstructed from PayMongo webhook.',
+          xenditRefundId: input.refundId,
+          reason: 'Refund received from Xendit webhook',
+          notes: 'Refund record reconstructed from Xendit webhook.',
           processedAt:
-            mappedStatus === GuestPayMongoRefundStatus.SUCCEEDED ||
-            mappedStatus === GuestPayMongoRefundStatus.FAILED
+            mappedStatus === GuestXenditRefundStatus.SUCCEEDED ||
+            mappedStatus === GuestXenditRefundStatus.FAILED
               ? new Date()
               : null,
         },
@@ -848,23 +866,23 @@ export async function applyGuestRefundWebhookUpdateTx(
     return null;
   }
 
-  const updated = await tx.guestPayMongoRefund.update({
+  const updated = await tx.guestXenditRefund.update({
     where: { id: refund.id },
     data: {
-      paymongoRefundId: input.refundId ?? refund.paymongoRefundId,
+      xenditRefundId: input.refundId ?? refund.xenditRefundId,
       amountCents:
         typeof input.amountCents === 'number' && input.amountCents > 0
           ? input.amountCents
           : refund.amountCents,
       status: mappedStatus,
       processedAt:
-        mappedStatus === GuestPayMongoRefundStatus.SUCCEEDED ||
-        mappedStatus === GuestPayMongoRefundStatus.FAILED
+        mappedStatus === GuestXenditRefundStatus.SUCCEEDED ||
+        mappedStatus === GuestXenditRefundStatus.FAILED
           ? new Date()
           : null,
       errorMessage:
-        mappedStatus === GuestPayMongoRefundStatus.FAILED
-          ? 'PayMongo reported that the refund failed.'
+        mappedStatus === GuestXenditRefundStatus.FAILED
+          ? 'Xendit reported that the refund failed.'
           : null,
     },
   });
@@ -891,8 +909,8 @@ export async function applyGuestRefundWebhookUpdate(input: {
   return updated;
 }
 
-export async function retryGuestPayMongoRefund(refundRecordId: string) {
-  const refundRecord = await db.guestPayMongoRefund.findUnique({
+export async function retryGuestXenditRefund(refundRecordId: string) {
+  const refundRecord = await db.guestXenditRefund.findUnique({
     where: { id: refundRecordId },
     include: { guestPaymentSession: true },
   });
@@ -905,34 +923,34 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
     };
   }
 
-  if (refundRecord.status === GuestPayMongoRefundStatus.SUCCEEDED) {
+  if (refundRecord.status === GuestXenditRefundStatus.SUCCEEDED) {
     return {
       ok: true as const,
       skipped: true as const,
       alreadyRefunded: true as const,
-      refundId: refundRecord.paymongoRefundId,
+      refundId: refundRecord.xenditRefundId,
     };
   }
 
   if (
-    refundRecord.status === GuestPayMongoRefundStatus.PENDING ||
-    refundRecord.status === GuestPayMongoRefundStatus.PROCESSING
+    refundRecord.status === GuestXenditRefundStatus.PENDING ||
+    refundRecord.status === GuestXenditRefundStatus.PROCESSING
   ) {
     return {
       ok: true as const,
       skipped: true as const,
       message: 'Refund is already being processed.',
-      refundId: refundRecord.paymongoRefundId,
+      refundId: refundRecord.xenditRefundId,
     };
   }
 
   const session = refundRecord.guestPaymentSession;
 
-  if (!session.paymongoPaymentId) {
+  if (!session.xenditPaymentRequestId) {
     return {
       ok: false as const,
       skipped: true as const,
-      message: 'PayMongo payment ID is missing.',
+      message: 'Xendit payment request ID is missing.',
     };
   }
 
@@ -943,10 +961,10 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
   if (manualRefundMessage) {
     await db.$transaction(
       async (tx) => {
-        await tx.guestPayMongoRefund.update({
+        await tx.guestXenditRefund.update({
           where: { id: refundRecord.id },
           data: {
-            status: GuestPayMongoRefundStatus.FAILED,
+            status: GuestXenditRefundStatus.FAILED,
             errorMessage: manualRefundMessage.slice(0, 2000),
             processedAt: new Date(),
           },
@@ -970,10 +988,10 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
     };
   }
 
-  await db.guestPayMongoRefund.update({
+  await db.guestXenditRefund.update({
     where: { id: refundRecord.id },
     data: {
-      status: GuestPayMongoRefundStatus.PENDING,
+      status: GuestXenditRefundStatus.PENDING,
       errorMessage: null,
       processedAt: null,
     },
@@ -982,12 +1000,13 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
   await safelyNotifyGuestRefund(refundRecord.id);
 
   try {
-    const refund = await createPayMongoRefund({
+    const refund = await createXenditRefund({
       idempotencyKey: refundRecord.idempotencyKey,
-      paymentId: session.paymongoPaymentId,
+      paymentRequestId: session.xenditPaymentRequestId,
       amount: refundRecord.amountCents,
-      reason: 'others',
+      reason: 'OTHERS',
       notes: refundRecord.notes || refundRecord.reason,
+      forUserId: getRefundForUserId(session.payload),
       metadata: {
         guest_payment_session_id: session.id,
         guest_refund_id: refundRecord.id,
@@ -1005,22 +1024,22 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
       },
     });
 
-    const mappedStatus = mapPayMongoRefundStatus(refund.status);
+    const mappedStatus = mapXenditRefundStatus(refund.status);
 
     await db.$transaction(async (tx) => {
-      await tx.guestPayMongoRefund.update({
+      await tx.guestXenditRefund.update({
         where: { id: refundRecord.id },
         data: {
-          paymongoRefundId: refund.id,
+          xenditRefundId: refund.id,
           status: mappedStatus,
           processedAt:
-            mappedStatus === GuestPayMongoRefundStatus.SUCCEEDED ||
-            mappedStatus === GuestPayMongoRefundStatus.FAILED
+            mappedStatus === GuestXenditRefundStatus.SUCCEEDED ||
+            mappedStatus === GuestXenditRefundStatus.FAILED
               ? new Date()
               : null,
           errorMessage:
-            mappedStatus === GuestPayMongoRefundStatus.FAILED
-              ? 'PayMongo reported that the retried refund failed.'
+            mappedStatus === GuestXenditRefundStatus.FAILED
+              ? 'Xendit reported that the retried refund failed.'
               : null,
         },
       });
@@ -1031,19 +1050,19 @@ export async function retryGuestPayMongoRefund(refundRecordId: string) {
     await safelyNotifyGuestRefund(refundRecord.id);
 
     return {
-      ok: mappedStatus !== GuestPayMongoRefundStatus.FAILED,
+      ok: mappedStatus !== GuestXenditRefundStatus.FAILED,
       skipped: false as const,
       refundId: refund.id,
       status: mappedStatus,
     };
   } catch (error) {
-    const message = errorMessage(error, 'Unable to retry the PayMongo refund.');
+    const message = errorMessage(error, 'Unable to retry the Xendit refund.');
 
     await db.$transaction(async (tx) => {
-      await tx.guestPayMongoRefund.update({
+      await tx.guestXenditRefund.update({
         where: { id: refundRecord.id },
         data: {
-          status: GuestPayMongoRefundStatus.FAILED,
+          status: GuestXenditRefundStatus.FAILED,
           errorMessage: message.slice(0, 2000),
           processedAt: new Date(),
         },

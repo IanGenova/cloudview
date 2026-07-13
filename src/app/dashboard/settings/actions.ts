@@ -11,6 +11,10 @@ import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { scopedHotelId } from '@/lib/access';
 import { cleanText } from '@/lib/sanitize';
+import {
+  getXenditPlatformMerchantId,
+  normalizeXenditOrganizationId,
+} from '@/lib/xendit-split';
 
 const SETTINGS_UPLOAD_DIR = path.join(
   process.cwd(),
@@ -47,6 +51,69 @@ function parseCheckbox(formData: FormData, fieldName: string) {
     value === '1' ||
     value === 'yes'
   );
+}
+
+function parseXenditSplitSettings(formData: FormData) {
+  const xenditSplitEnabled = parseCheckbox(
+    formData,
+    'xenditSplitEnabled'
+  );
+  const rawXenditLinkedAccountId =
+    cleanText(formData.get('xenditLinkedAccountId'), 191) || null;
+  const xenditCommissionType =
+    cleanText(formData.get('xenditCommissionType'), 32) === 'FIXED'
+      ? 'FIXED'
+      : 'PERCENTAGE_NET';
+  const xenditFeeBearer =
+    cleanText(formData.get('xenditFeeBearer'), 32) === 'CLOUDVIEW'
+      ? 'CLOUDVIEW'
+      : 'HOTEL';
+  const displayValue = Number(formData.get('xenditCommissionDisplayValue'));
+
+  if (!Number.isFinite(displayValue) || displayValue < 0) {
+    throw new Error('Xendit commission must be zero or greater.');
+  }
+
+  // The settings UI uses percentage points or pesos. Store the API-ready
+  // representation: basis points for percentage and centavos for fixed.
+  const xenditCommissionValue = Math.round(displayValue * 100);
+
+  if (xenditCommissionType === 'PERCENTAGE_NET' && displayValue >= 100) {
+    throw new Error('Xendit percentage commission must be below 100%.');
+  }
+
+  const xenditLinkedAccountId = rawXenditLinkedAccountId
+    ? normalizeXenditOrganizationId(
+        rawXenditLinkedAccountId,
+        'Hotel Xendit Business ID'
+      )
+    : null;
+
+  if (xenditSplitEnabled) {
+    const platformMerchantId = getXenditPlatformMerchantId();
+    const hotelMerchantId = normalizeXenditOrganizationId(
+      xenditLinkedAccountId,
+      'Hotel Xendit Business ID'
+    );
+
+    if (platformMerchantId === hotelMerchantId) {
+      throw new Error(
+        'The CloudView master account and hotel Xendit Business IDs must be different.'
+      );
+    }
+
+    if (xenditCommissionValue <= 0) {
+      throw new Error('Xendit commission must be greater than zero when splitting is enabled.');
+    }
+  }
+
+  return {
+    xenditSplitEnabled,
+    xenditLinkedAccountId,
+    xenditCommissionType,
+    xenditCommissionValue,
+    xenditFeeBearer,
+  };
 }
 
 async function saveHotelSettingsImageFile(file: File) {
@@ -134,13 +201,49 @@ export async function saveHotelSettingsAction(formData: FormData) {
     formData,
     'nfcRoomPasscodeEnabled'
   );
+  const xenditSplitSettings =
+    user.role === Role.SUPER_ADMIN
+      ? parseXenditSplitSettings(formData)
+      : null;
 
   const existingSettings = await db.hotelSettings.findUnique({
     where: { hotelId },
     select: {
       guestPortalHeroImageUrl: true,
+      xenditSplitEnabled: true,
+      xenditLinkedAccountId: true,
+      xenditCommissionType: true,
+      xenditCommissionValue: true,
+      xenditFeeBearer: true,
     },
   });
+
+  const xenditSettingsChanged = Boolean(
+    xenditSplitSettings &&
+      (!existingSettings ||
+        existingSettings.xenditSplitEnabled !==
+          xenditSplitSettings.xenditSplitEnabled ||
+        existingSettings.xenditLinkedAccountId !==
+          xenditSplitSettings.xenditLinkedAccountId ||
+        existingSettings.xenditCommissionType !==
+          xenditSplitSettings.xenditCommissionType ||
+        existingSettings.xenditCommissionValue !==
+          xenditSplitSettings.xenditCommissionValue ||
+        existingSettings.xenditFeeBearer !==
+          xenditSplitSettings.xenditFeeBearer)
+  );
+
+  const xenditSplitSettingsForWrite = xenditSplitSettings
+    ? {
+        ...xenditSplitSettings,
+        ...(xenditSettingsChanged
+          ? {
+              xenditSplitRuleId: null,
+              xenditSplitRuleSignature: null,
+            }
+          : {}),
+      }
+    : null;
 
   let uploadedHeroImageUrl: string | null = null;
 
@@ -183,6 +286,7 @@ export async function saveHotelSettingsAction(formData: FormData) {
         contactEmail: cleanText(formData.get('contactEmail'), 160),
         guestPortalHeroImageUrl: heroImage.imageUrl,
         nfcRoomPasscodeEnabled,
+        ...(xenditSplitSettingsForWrite || {}),
       },
       create: {
         hotelId,
@@ -204,6 +308,7 @@ export async function saveHotelSettingsAction(formData: FormData) {
         contactEmail: cleanText(formData.get('contactEmail'), 160),
         guestPortalHeroImageUrl: heroImage.imageUrl,
         nfcRoomPasscodeEnabled,
+        ...(xenditSplitSettingsForWrite || {}),
       },
     });
 

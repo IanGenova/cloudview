@@ -4,9 +4,10 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import type { Prisma } from '@prisma/client';
 import {
-  GuestPayMongoFlow,
-  GuestPayMongoStatus,
-  GuestPayMongoRefundKind,
+  GuestXenditFlow,
+  GuestXenditStatus,
+  GuestXenditRefundKind,
+  GuestXenditRefundStatus,
   PaymentMethod,
   PaymentStatus,
   ServiceAvailabilityMovementType,
@@ -16,15 +17,15 @@ import {
 import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 import {
-  createPayMongoCheckoutSession,
-  expirePayMongoCheckoutSession,
-  getPayMongoGuestPaymentMethods,
-  type PayMongoLineItem,
-} from '@/lib/paymongo';
+  createXenditCheckoutSession,
+  expireXenditCheckoutSession,
+  getXenditGuestPaymentMethods,
+  type XenditLineItem,
+} from '@/lib/xendit';
 import {
-  requireOwnedGuestPayMongoSession,
-  requireGuestPayMongoSecurityContext,
-} from '@/lib/guest-paymongo-security';
+  requireOwnedGuestXenditSession,
+  requireGuestXenditSecurityContext,
+} from '@/lib/guest-xendit-security';
 import {
   cleanupStagedGuestServiceAttachments,
   createGuestServiceRequests,
@@ -36,8 +37,13 @@ import {
 import {
   markGuestPaymentFinalizationFailedAndRefund,
   requestGuestServiceRequestRefund,
-} from '@/lib/guest-paymongo-refund';
-import { notifyGuestPayMongoStatus } from '@/lib/paymongo-dashboard-notifications';
+} from '@/lib/guest-xendit-refund';
+import { notifyGuestXenditStatus } from '@/lib/xendit-dashboard-notifications';
+import {
+  buildXenditSplitConfiguration,
+  getXenditForUserIdFromPayload,
+  type XenditSplitSnapshot,
+} from '@/lib/xendit-split';
 import {
   getServiceRequestImageFiles,
   validateServiceRequestImageFile,
@@ -45,9 +51,9 @@ import {
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestUpdated } from '@/lib/realtime/service-request-events';
 
-export type GuestServicePayMongoStatusResult = {
+export type GuestServiceXenditStatusResult = {
   ok: boolean;
-  status?: GuestPayMongoStatus;
+  status?: GuestXenditStatus;
   requestCode?: string | null;
   requestIds?: string[];
   checkoutUrl?: string | null;
@@ -58,8 +64,9 @@ export type GuestServicePayMongoStatusResult = {
 };
 
 type StoredGuestServicePayload = GuestServiceRequestInput & {
-  paymentMethod: 'PAYMONGO';
+  paymentMethod: 'XENDIT';
   stagedAttachments: StagedServiceAttachment[];
+  xenditSplit: XenditSplitSnapshot | null;
 };
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -73,7 +80,7 @@ function getPublicError(error: unknown, fallback: string) {
 
   if (process.env.NODE_ENV !== 'production') return message;
 
-  if (/paymongo|secret key|checkout|webhook|app_url|payment id/i.test(message)) {
+  if (/xendit|secret key|checkout|webhook|app_url|payment id/i.test(message)) {
     return 'Unable to start or confirm the secure payment. Please try again or contact the front desk.';
   }
 
@@ -146,7 +153,7 @@ function parseStoredPayload(value: Prisma.JsonValue) {
   if (
     typeof payload.tagCode !== 'string' ||
     !Array.isArray(payload.services) ||
-    payload.paymentMethod !== 'PAYMONGO' ||
+    payload.paymentMethod !== 'XENDIT' ||
     !Array.isArray(payload.stagedAttachments)
   ) {
     throw new Error('Stored guest service checkout data is incomplete.');
@@ -160,6 +167,96 @@ function parseStringArray(value: Prisma.JsonValue | null) {
   return value.filter((item): item is string => typeof item === 'string');
 }
 
+
+function isFalseDuplicateServiceFinalizationError(
+  value: string | null | undefined
+) {
+  return /xendit service payment was finalized by another request/i.test(
+    value || ''
+  );
+}
+
+async function getFinalizedServiceRequestResult(paymentSessionId: string) {
+  const requests = await db.serviceRequest.findMany({
+    where: {
+      guestXenditSessionId: paymentSessionId,
+    },
+    select: {
+      id: true,
+      requestCode: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  if (!requests.length) {
+    return null;
+  }
+
+  const requestCode = requests[0].requestCode;
+  const requestIds = requests.map((request) => request.id);
+
+  await db.guestXenditSession
+    .update({
+      where: {
+        id: paymentSessionId,
+      },
+      data: {
+        status: GuestXenditStatus.COMPLETED,
+        serviceRequestIds: requestIds as unknown as Prisma.InputJsonValue,
+        serviceRequestCodes: [requestCode] as unknown as Prisma.InputJsonValue,
+        completedAt: new Date(),
+        errorMessage: null,
+        refundErrorMessage: null,
+      },
+    })
+    .catch((error) => {
+      console.warn(
+        '[Guest Service Xendit] Unable to backfill completed service payment session.',
+        error
+      );
+    });
+
+  return {
+    requestCode,
+    requestIds,
+  };
+}
+
+async function recoverFalseDuplicateServiceFinalization(paymentSessionId: string) {
+  const recovered = await db.guestXenditSession.updateMany({
+    where: {
+      id: paymentSessionId,
+      status: GuestXenditStatus.PAID_REVIEW_REQUIRED,
+      serviceRequests: {
+        none: {},
+      },
+      refundStatus: {
+        in: [
+          GuestXenditRefundStatus.NOT_REQUESTED,
+          GuestXenditRefundStatus.FAILED,
+        ],
+      },
+    },
+    data: {
+      status: GuestXenditStatus.PAID,
+      refundStatus: GuestXenditRefundStatus.NOT_REQUESTED,
+      refundErrorMessage: null,
+      refundAmountCents: null,
+      refundReason: null,
+      refundNotes: null,
+      refundRequestedAt: null,
+      refundedAt: null,
+      processingStartedAt: null,
+      errorMessage:
+        'Recovered from a false duplicate service finalization error. Retrying service request creation.',
+    },
+  });
+
+  return recovered.count === 1;
+}
+
 async function cleanupPaymentDraft(payment: {
   payload: Prisma.JsonValue;
 }) {
@@ -171,7 +268,7 @@ async function cleanupPaymentDraft(payment: {
   }
 }
 
-export async function createGuestServicePayMongoCheckout(formData: FormData) {
+export async function createGuestServiceXenditCheckout(formData: FormData) {
   let draftId: string | null = null;
   let stagedAttachments: StagedServiceAttachment[] = [];
 
@@ -189,16 +286,28 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
     const quote = await prepareGuestServiceRequest(input);
 
     if (quote.fixedPriceTotalCents <= 0) {
-      throw new Error(
-        'This request has no fixed-price amount. Submit it without PayMongo.'
-      );
+      return {
+        ok: false as const,
+        code: 'NO_PAYMENT_REQUIRED' as const,
+        error:
+          'No online payment is required for this request. Send it directly to the hotel team.',
+      };
     }
 
     const fixedPriceServices = quote.services.filter(
       (service) => service.billingMode === ServiceBillingMode.FIXED_PRICE
     );
 
-    const lineItems: PayMongoLineItem[] = fixedPriceServices.map((service) => ({
+    if (!fixedPriceServices.length) {
+      return {
+        ok: false as const,
+        code: 'NO_PAYMENT_REQUIRED' as const,
+        error:
+          'No online payment is required for this request. Send it directly to the hotel team.',
+      };
+    }
+
+    const lineItems: XenditLineItem[] = fixedPriceServices.map((service) => ({
       name: service.name,
       description: service.description || 'CloudView guest service request',
       amount: service.unitPriceCents,
@@ -206,14 +315,24 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
       quantity: service.quantity,
     }));
 
+    const hotelSettings = await db.hotelSettings.findUnique({
+      where: { hotelId: quote.context.tag.hotelId },
+    });
+    const splitConfiguration = await buildXenditSplitConfiguration({
+      hotelId: quote.context.tag.hotelId,
+      amountCents: quote.fixedPriceTotalCents,
+      settings: hotelSettings,
+    });
+
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
 
-    const olderSessions = await db.guestPayMongoSession.findMany({
+    const olderSessions = await db.guestXenditSession.findMany({
       where: {
-        flowType: GuestPayMongoFlow.SERVICE_REQUEST,
+        paymentProvider: 'XENDIT',
+        flowType: GuestXenditFlow.SERVICE_REQUEST,
         guestSessionId: quote.context.session.id,
-        status: GuestPayMongoStatus.PENDING,
+        status: GuestXenditStatus.PENDING,
       },
       select: {
         id: true,
@@ -223,10 +342,10 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
     });
 
     if (olderSessions.length) {
-      await db.guestPayMongoSession.updateMany({
+      await db.guestXenditSession.updateMany({
         where: { id: { in: olderSessions.map((session) => session.id) } },
         data: {
-          status: GuestPayMongoStatus.CANCELLED,
+          status: GuestXenditStatus.CANCELLED,
           cancelledAt: now,
           cancelReason: 'Replaced by a newer guest service checkout.',
         },
@@ -237,7 +356,10 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
           await cleanupPaymentDraft(session);
 
           if (session.checkoutSessionId) {
-            await expirePayMongoCheckoutSession(session.checkoutSessionId);
+            await expireXenditCheckoutSession(
+              session.checkoutSessionId,
+              getXenditForUserIdFromPayload(session.payload)
+            );
           }
         })
       );
@@ -245,13 +367,15 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
 
     const initialPayload: StoredGuestServicePayload = {
       ...input,
-      paymentMethod: 'PAYMONGO',
+      paymentMethod: 'XENDIT',
       stagedAttachments: [],
+      xenditSplit: splitConfiguration?.snapshot ?? null,
     };
 
-    const draft = await db.guestPayMongoSession.create({
+    const draft = await db.guestXenditSession.create({
       data: {
-        flowType: GuestPayMongoFlow.SERVICE_REQUEST,
+        paymentProvider: 'XENDIT',
+        flowType: GuestXenditFlow.SERVICE_REQUEST,
         hotelId: quote.context.tag.hotelId,
         tagId: quote.context.tag.id,
         guestSessionId: quote.context.session.id,
@@ -259,7 +383,7 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
         amountCents: quote.fixedPriceTotalCents,
         currency: 'PHP',
         payload: initialPayload as unknown as Prisma.InputJsonValue,
-        status: GuestPayMongoStatus.PENDING,
+        status: GuestXenditStatus.PENDING,
         automaticRefundEnabled: true,
         expiresAt,
       },
@@ -277,7 +401,7 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
       stagedAttachments,
     };
 
-    await db.guestPayMongoSession.update({
+    await db.guestXenditSession.update({
       where: { id: draft.id },
       data: {
         payload: storedPayload as unknown as Prisma.InputJsonValue,
@@ -299,14 +423,14 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
     const successUrl = `${appUrl}${basePath}?${successQuery.toString()}`;
     const cancelUrl = `${appUrl}${basePath}?${cancelQuery.toString()}`;
 
-    const checkout = await createPayMongoCheckoutSession({
+    const checkout = await createXenditCheckoutSession({
       idempotencyKey: `cloudview-guest-service-${draft.id}`,
       lineItems,
       successUrl,
       cancelUrl,
       description: `${quote.hotelName} guest service request`,
       referenceNumber: draft.id,
-      paymentMethods: getPayMongoGuestPaymentMethods(),
+      paymentMethods: getXenditGuestPaymentMethods(),
       metadata: {
         flow_type: 'GUEST_SERVICE_REQUEST',
         guest_payment_session_id: draft.id,
@@ -314,14 +438,19 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
         tag_id: quote.context.tag.id,
         guest_session_id: quote.context.session.id,
         guest_stay_id: quote.context.guestStayId || '',
+        split_enabled: splitConfiguration ? 'true' : 'false',
+        split_fee_bearer:
+          splitConfiguration?.snapshot.feeBearer ?? '',
       },
+      splitPayment: splitConfiguration?.splitPayment,
     });
 
-    await db.guestPayMongoSession.update({
+    await db.guestXenditSession.update({
       where: { id: draft.id },
       data: {
         checkoutSessionId: checkout.id,
         checkoutUrl: checkout.checkoutUrl,
+        xenditPaymentRequestId: checkout.paymentRequestId,
         errorMessage: null,
       },
     });
@@ -335,15 +464,15 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
   } catch (error) {
     const message = getErrorMessage(
       error,
-      'Unable to create PayMongo service checkout.'
+      'Unable to create Xendit service checkout.'
     );
 
     if (draftId) {
-      await db.guestPayMongoSession
+      await db.guestXenditSession
         .update({
           where: { id: draftId },
           data: {
-            status: GuestPayMongoStatus.FAILED,
+            status: GuestXenditStatus.FAILED,
             errorMessage: message.slice(0, 2000),
           },
         })
@@ -354,7 +483,7 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
       await cleanupStagedGuestServiceAttachments(stagedAttachments);
     }
 
-    console.error('[Guest Service PayMongo] Create checkout failed.', error);
+    console.error('[Guest Service Xendit] Create checkout failed.', error);
 
     return {
       ok: false as const,
@@ -363,51 +492,93 @@ export async function createGuestServicePayMongoCheckout(formData: FormData) {
   }
 }
 
-export async function getGuestServicePayMongoStatus(input: {
+export async function getGuestServiceXenditStatus(input: {
   tagCode: string;
   paymentSessionId: string;
-}): Promise<GuestServicePayMongoStatusResult> {
+}): Promise<GuestServiceXenditStatusResult> {
   try {
-    const { payment } = await requireOwnedGuestPayMongoSession({
+    const { payment } = await requireOwnedGuestXenditSession({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
-      flowType: GuestPayMongoFlow.SERVICE_REQUEST,
+      flowType: GuestXenditFlow.SERVICE_REQUEST,
     });
 
     if (
-      payment.status === GuestPayMongoStatus.PENDING &&
+      payment.status === GuestXenditStatus.PENDING &&
       payment.expiresAt &&
       payment.expiresAt <= new Date()
     ) {
-      await db.guestPayMongoSession.updateMany({
-        where: { id: payment.id, status: GuestPayMongoStatus.PENDING },
+      await db.guestXenditSession.updateMany({
+        where: { id: payment.id, status: GuestXenditStatus.PENDING },
         data: {
-          status: GuestPayMongoStatus.EXPIRED,
+          status: GuestXenditStatus.EXPIRED,
           checkoutExpiredAt: new Date(),
-          errorMessage: 'The PayMongo checkout expired before payment.',
+          errorMessage: 'The Xendit checkout expired before payment.',
         },
       });
 
       if (payment.checkoutSessionId) {
-        await expirePayMongoCheckoutSession(payment.checkoutSessionId).catch(
+        await expireXenditCheckoutSession(
+          payment.checkoutSessionId,
+          getXenditForUserIdFromPayload(payment.payload)
+        ).catch(
           () => undefined
         );
       }
 
       await cleanupPaymentDraft(payment);
 
-      await notifyGuestPayMongoStatus({ sessionId: payment.id }).catch(
+      await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
         (error) =>
-          console.warn('[Guest Service PayMongo] Unable to notify checkout expiry.', error)
+          console.warn('[Guest Service Xendit] Unable to notify checkout expiry.', error)
       );
 
       return {
         ok: true,
-        status: GuestPayMongoStatus.EXPIRED,
+        status: GuestXenditStatus.EXPIRED,
         errorMessage: 'The QR payment request expired. Please create a new one.',
         refundStatus: payment.refundStatus,
         refundedAmountCents: payment.refundedAmountCents,
       };
+    }
+
+    const finalized = await getFinalizedServiceRequestResult(payment.id);
+
+    if (finalized) {
+      return {
+        ok: true,
+        status: GuestXenditStatus.COMPLETED,
+        requestCode: finalized.requestCode,
+        requestIds: finalized.requestIds,
+        checkoutUrl: payment.checkoutUrl,
+        errorMessage: null,
+        refundStatus: payment.refundStatus,
+        refundedAmountCents: payment.refundedAmountCents,
+      };
+    }
+
+    if (
+      payment.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
+      isFalseDuplicateServiceFinalizationError(
+        payment.errorMessage || payment.refundErrorMessage
+      )
+    ) {
+      const recovered = await recoverFalseDuplicateServiceFinalization(
+        payment.id
+      );
+
+      if (recovered) {
+        return {
+          ok: true,
+          status: GuestXenditStatus.PAID,
+          requestCode: null,
+          requestIds: [],
+          checkoutUrl: payment.checkoutUrl,
+          errorMessage: null,
+          refundStatus: GuestXenditRefundStatus.NOT_REQUESTED,
+          refundedAmountCents: payment.refundedAmountCents,
+        };
+      }
     }
 
     return {
@@ -428,54 +599,57 @@ export async function getGuestServicePayMongoStatus(input: {
   }
 }
 
-export async function cancelGuestServicePayMongoCheckout(input: {
+export async function cancelGuestServiceXenditCheckout(input: {
   tagCode: string;
   paymentSessionId: string;
 }) {
   try {
-    const { payment } = await requireOwnedGuestPayMongoSession({
+    const { payment } = await requireOwnedGuestXenditSession({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
-      flowType: GuestPayMongoFlow.SERVICE_REQUEST,
+      flowType: GuestXenditFlow.SERVICE_REQUEST,
     });
 
-    if (payment.status === GuestPayMongoStatus.CANCELLED) {
+    if (payment.status === GuestXenditStatus.CANCELLED) {
       return { ok: true as const, alreadyCancelled: true as const };
     }
 
-    if (payment.status !== GuestPayMongoStatus.PENDING) {
+    if (payment.status !== GuestXenditStatus.PENDING) {
       return {
         ok: false as const,
         error:
-          payment.status === GuestPayMongoStatus.PAID ||
-          payment.status === GuestPayMongoStatus.PROCESSING ||
-          payment.status === GuestPayMongoStatus.COMPLETED
+          payment.status === GuestXenditStatus.PAID ||
+          payment.status === GuestXenditStatus.PROCESSING ||
+          payment.status === GuestXenditStatus.COMPLETED
             ? 'Payment was already received and can no longer be cancelled from checkout.'
             : 'This checkout can no longer be cancelled.',
       };
     }
 
-    await db.guestPayMongoSession.update({
+    await db.guestXenditSession.update({
       where: { id: payment.id },
       data: {
-        status: GuestPayMongoStatus.CANCELLED,
+        status: GuestXenditStatus.CANCELLED,
         cancelledAt: new Date(),
-        cancelReason: 'Guest cancelled PayMongo service checkout.',
+        cancelReason: 'Guest cancelled Xendit service checkout.',
         errorMessage: null,
       },
     });
 
     if (payment.checkoutSessionId) {
-      await expirePayMongoCheckoutSession(payment.checkoutSessionId).catch(
+      await expireXenditCheckoutSession(
+          payment.checkoutSessionId,
+          getXenditForUserIdFromPayload(payment.payload)
+        ).catch(
         () => undefined
       );
     }
 
     await cleanupPaymentDraft(payment);
 
-    await notifyGuestPayMongoStatus({ sessionId: payment.id }).catch(
+    await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
       (error) =>
-        console.warn('[Guest Service PayMongo] Unable to notify checkout cancellation.', error)
+        console.warn('[Guest Service Xendit] Unable to notify checkout cancellation.', error)
     );
 
     return { ok: true as const, alreadyCancelled: false as const };
@@ -487,21 +661,32 @@ export async function cancelGuestServicePayMongoCheckout(input: {
   }
 }
 
-export async function finalizeGuestServicePayMongoCheckout(input: {
+export async function finalizeGuestServiceXenditCheckout(input: {
   tagCode: string;
   paymentSessionId: string;
 }) {
   try {
-    const { payment } = await requireOwnedGuestPayMongoSession({
+    const { payment } = await requireOwnedGuestXenditSession({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
-      flowType: GuestPayMongoFlow.SERVICE_REQUEST,
+      flowType: GuestXenditFlow.SERVICE_REQUEST,
     });
+
+    const alreadyCreated = await getFinalizedServiceRequestResult(payment.id);
+
+    if (alreadyCreated) {
+      return {
+        ok: true as const,
+        alreadyFinalized: true as const,
+        requestCode: alreadyCreated.requestCode,
+        requestIds: alreadyCreated.requestIds,
+      };
+    }
 
     const existingCodes = parseStringArray(payment.serviceRequestCodes);
 
     if (
-      payment.status === GuestPayMongoStatus.COMPLETED &&
+      payment.status === GuestXenditStatus.COMPLETED &&
       existingCodes.length
     ) {
       return {
@@ -512,7 +697,27 @@ export async function finalizeGuestServicePayMongoCheckout(input: {
       };
     }
 
-    if (payment.status === GuestPayMongoStatus.PROCESSING) {
+    if (
+      payment.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
+      isFalseDuplicateServiceFinalizationError(
+        payment.errorMessage || payment.refundErrorMessage
+      )
+    ) {
+      const recovered = await recoverFalseDuplicateServiceFinalization(
+        payment.id
+      );
+
+      if (!recovered) {
+        return {
+          ok: false as const,
+          waiting: true as const,
+          message:
+            'This payment is being reviewed. Please refresh the request status in a moment.',
+        };
+      }
+    }
+
+    if (payment.status === GuestXenditStatus.PROCESSING) {
       const started = payment.processingStartedAt?.getTime() ?? 0;
       const stale = started < Date.now() - 5 * 60 * 1000;
 
@@ -524,32 +729,66 @@ export async function finalizeGuestServicePayMongoCheckout(input: {
         };
       }
 
-      await db.guestPayMongoSession.updateMany({
+      await db.guestXenditSession.updateMany({
         where: {
           id: payment.id,
-          status: GuestPayMongoStatus.PROCESSING,
+          status: GuestXenditStatus.PROCESSING,
           serviceRequests: { none: {} },
         },
         data: {
-          status: GuestPayMongoStatus.PAID,
+          status: GuestXenditStatus.PAID,
           processingStartedAt: null,
           errorMessage: 'Recovered a stale service finalization attempt.',
         },
       });
     }
 
-    const current = await db.guestPayMongoSession.findUnique({
+    let current = await db.guestXenditSession.findUnique({
       where: { id: payment.id },
     });
 
-    if (!current) throw new Error('Guest PayMongo session was not found.');
+    if (!current) throw new Error('Guest Xendit session was not found.');
 
-    if (current.status !== GuestPayMongoStatus.PAID) {
-      if (current.status === GuestPayMongoStatus.PENDING) {
+    const finalizedAfterRefresh = await getFinalizedServiceRequestResult(
+      current.id
+    );
+
+    if (finalizedAfterRefresh) {
+      return {
+        ok: true as const,
+        alreadyFinalized: true as const,
+        requestCode: finalizedAfterRefresh.requestCode,
+        requestIds: finalizedAfterRefresh.requestIds,
+      };
+    }
+
+    if (
+      current.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
+      isFalseDuplicateServiceFinalizationError(
+        current.errorMessage || current.refundErrorMessage
+      )
+    ) {
+      const recovered = await recoverFalseDuplicateServiceFinalization(
+        current.id
+      );
+
+      if (recovered) {
+        current = await db.guestXenditSession.findUnique({
+          where: { id: payment.id },
+        });
+
+        if (!current) {
+          throw new Error('Guest Xendit session was not found.');
+        }
+      }
+    }
+
+    if (current.status !== GuestXenditStatus.PAID) {
+      if (current.status === GuestXenditStatus.PENDING) {
         return {
           ok: false as const,
           waiting: true as const,
-          message: 'Waiting for PayMongo payment confirmation.',
+          message: 'Waiting for Xendit payment confirmation.',
         };
       }
 
@@ -560,14 +799,14 @@ export async function finalizeGuestServicePayMongoCheckout(input: {
       );
     }
 
-    const claimed = await db.guestPayMongoSession.updateMany({
+    const claimed = await db.guestXenditSession.updateMany({
       where: {
         id: current.id,
-        status: GuestPayMongoStatus.PAID,
+        status: GuestXenditStatus.PAID,
         serviceRequests: { none: {} },
       },
       data: {
-        status: GuestPayMongoStatus.PROCESSING,
+        status: GuestXenditStatus.PROCESSING,
         processingStartedAt: new Date(),
         errorMessage: null,
       },
@@ -585,9 +824,9 @@ export async function finalizeGuestServicePayMongoCheckout(input: {
 
     try {
       const result = await createGuestServiceRequests(payload, {
-        paymentMethod: PaymentMethod.PAYMONGO,
+        paymentMethod: PaymentMethod.XENDIT,
         paymentStatus: PaymentStatus.PAID,
-        guestPayMongoSessionId: current.id,
+        guestXenditSessionId: current.id,
         createRoomCharges: false,
         stagedAttachments: payload.stagedAttachments,
       });
@@ -599,6 +838,30 @@ export async function finalizeGuestServicePayMongoCheckout(input: {
         requestIds: result.requestIds,
       };
     } catch (error) {
+      const message = getErrorMessage(error, '');
+
+      if (isFalseDuplicateServiceFinalizationError(message)) {
+        await db.guestXenditSession.updateMany({
+          where: {
+            id: current.id,
+            status: GuestXenditStatus.PROCESSING,
+            serviceRequests: {
+              none: {},
+            },
+          },
+          data: {
+            status: GuestXenditStatus.PAID,
+            processingStartedAt: null,
+            errorMessage:
+              'Recovered from a false duplicate service finalization error. Please retry finalization.',
+          },
+        });
+
+        throw new Error(
+          'Payment was received, but the service request finalization hit a known duplicate-check bug. The payment was kept paid and can be retried safely.'
+        );
+      }
+
       await markGuestPaymentFinalizationFailedAndRefund({
         sessionId: current.id,
         error,
@@ -607,14 +870,11 @@ export async function finalizeGuestServicePayMongoCheckout(input: {
       await cleanupStagedGuestServiceAttachments(payload.stagedAttachments);
 
       throw new Error(
-        `Payment was received, but the service request could not be completed. A PayMongo refund was requested automatically. ${getErrorMessage(
-          error,
-          ''
-        )}`.trim()
+        `Payment was received, but the service request could not be completed. A Xendit refund was requested automatically. ${message}`.trim()
       );
     }
   } catch (error) {
-    console.error('[Guest Service PayMongo] Finalization failed.', error);
+    console.error('[Guest Service Xendit] Finalization failed.', error);
 
     return {
       ok: false as const,
@@ -713,7 +973,7 @@ export async function cancelGuestServiceRequestItemAction(
     throw new Error('Service cancellation details are incomplete.');
   }
 
-  const context = await requireGuestPayMongoSecurityContext(tagCode);
+  const context = await requireGuestXenditSecurityContext(tagCode);
   const request = await db.serviceRequest.findFirst({
     where: {
       id: requestId,
@@ -731,7 +991,7 @@ export async function cancelGuestServiceRequestItemAction(
       amountCents: true,
       paymentMethod: true,
       paymentStatus: true,
-      guestPayMongoSessionId: true,
+      guestXenditSessionId: true,
     },
   });
 
@@ -744,10 +1004,14 @@ export async function cancelGuestServiceRequestItemAction(
   let restoredServiceIds: string[] = [];
 
   await db.$transaction(async (tx) => {
-    restoredServiceIds = await restoreServiceInventoryForRequest(tx, request);
-
-    await tx.serviceRequest.update({
-      where: { id: request.id },
+    // Claim the cancellation atomically before restoring inventory. Without
+    // this guard, two simultaneous cancellation requests can both restore the
+    // same stock and create duplicate cancellation movements.
+    const claimed = await tx.serviceRequest.updateMany({
+      where: {
+        id: request.id,
+        status: ServiceRequestStatus.NEW,
+      },
       data: {
         status: ServiceRequestStatus.CANCELLED,
         cancelledQty: request.quantity,
@@ -757,6 +1021,12 @@ export async function cancelGuestServiceRequestItemAction(
       },
     });
 
+    if (claimed.count !== 1) {
+      throw new Error('Only new service requests can be cancelled.');
+    }
+
+    restoredServiceIds = await restoreServiceInventoryForRequest(tx, request);
+
     await tx.serviceRequestStatusHistory.create({
       data: {
         requestId: request.id,
@@ -765,7 +1035,7 @@ export async function cancelGuestServiceRequestItemAction(
       },
     });
 
-    if (request.paymentMethod !== PaymentMethod.PAYMONGO) {
+    if (request.paymentMethod !== PaymentMethod.XENDIT) {
       await tx.roomAddOnCharge.deleteMany({
         where: { serviceRequestId: request.id },
       });
@@ -773,8 +1043,8 @@ export async function cancelGuestServiceRequestItemAction(
   });
 
   if (
-    request.paymentMethod === PaymentMethod.PAYMONGO &&
-    request.guestPayMongoSessionId &&
+    request.paymentMethod === PaymentMethod.XENDIT &&
+    request.guestXenditSessionId &&
     request.amountCents > 0 &&
     (request.paymentStatus === PaymentStatus.PAID ||
       request.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ||
@@ -784,7 +1054,7 @@ export async function cancelGuestServiceRequestItemAction(
       serviceRequestId: request.id,
       amountCents: request.amountCents,
       reason,
-      kind: GuestPayMongoRefundKind.PARTIAL,
+      kind: GuestXenditRefundKind.PARTIAL,
       idempotencySuffix: `guest-service-${request.id}`,
     });
   }

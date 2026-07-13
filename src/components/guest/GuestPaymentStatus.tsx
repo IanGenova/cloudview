@@ -78,7 +78,7 @@ function getPresentation(
       return {
         title: 'Waiting for payment confirmation',
         description:
-          'PayMongo has not confirmed the payment yet. Keep this page open while we check securely.',
+          'Xendit has not confirmed the payment yet. Keep this page open while we check securely.',
         icon: Clock3,
         tone: 'gold',
       };
@@ -124,7 +124,7 @@ function getPresentation(
       return {
         title: 'QR payment expired',
         description:
-          'The checkout expired before PayMongo confirmed payment. Create a new checkout to continue.',
+          'The checkout expired before Xendit confirmed payment. Create a new checkout to continue.',
         icon: TimerOff,
         tone: 'red',
       };
@@ -148,7 +148,7 @@ function getPresentation(
       return {
         title: 'Refund is being processed',
         description:
-          'CloudView requested a refund through PayMongo. The money will return through the original payment method after processing.',
+          'CloudView requested a refund through Xendit. The money will return through the original payment method after processing.',
         icon: RotateCcw,
         tone: 'gold',
         spinning: true,
@@ -157,7 +157,7 @@ function getPresentation(
       return {
         title: 'Payment refunded',
         description:
-          'PayMongo confirmed the refund. The return timing depends on the original bank or payment method.',
+          'Xendit confirmed the refund. The return timing depends on the original bank or payment method.',
         icon: Undo2,
         tone: 'blue',
       };
@@ -491,7 +491,7 @@ export function GuestPaymentStatus({
           className={`mt-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.17em] ${classes.pill}`}
         >
           <ShieldCheck className="size-3.5" />
-          PayMongo secure status
+          Xendit secure status
         </span>
 
         <h1 className="mt-5 font-serif text-3xl font-normal tracking-wide text-white">
@@ -583,7 +583,7 @@ export function GuestPaymentStatus({
                 href={checkoutUrl}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-sm font-black text-black"
               >
-                Continue PayMongo Payment
+                Continue Xendit Payment
                 <ExternalLink className="size-4" />
               </a>
             ) : null}

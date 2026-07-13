@@ -35,7 +35,7 @@ import {
   syncOrderPoints,
   voidSyncedOrderPoints,
 } from '@/lib/guest-point-sync';
-import { requestGuestFoodOrderRefund } from '@/lib/guest-paymongo-refund';
+import { requestGuestFoodOrderRefund } from '@/lib/guest-xendit-refund';
 
 type RestoreOrderItem = {
   id: string;
@@ -81,7 +81,7 @@ function isRefundEligiblePaymentStatus(status: PaymentStatus) {
   return REFUND_ELIGIBLE_PAYMENT_STATUSES.includes(status);
 }
 
-const PROCESSABLE_PAYMONGO_PAYMENT_STATUSES: readonly PaymentStatus[] = [
+const PROCESSABLE_XENDIT_PAYMENT_STATUSES: readonly PaymentStatus[] = [
   PaymentStatus.PAID,
   PaymentStatus.PARTIALLY_REFUNDED,
 ];
@@ -95,8 +95,8 @@ const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.CANCELLED]: [],
 };
 
-function isProcessablePayMongoPaymentStatus(status: PaymentStatus) {
-  return PROCESSABLE_PAYMONGO_PAYMENT_STATUSES.includes(status);
+function isProcessableXenditPaymentStatus(status: PaymentStatus) {
+  return PROCESSABLE_XENDIT_PAYMENT_STATUSES.includes(status);
 }
 
 function assertValidOrderStatusTransition(
@@ -860,7 +860,7 @@ if (order.status !== OrderStatus.PENDING) {
   });
 
   if (
-    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    order.paymentMethod === PaymentMethod.XENDIT &&
     isRefundEligiblePaymentStatus(order.paymentStatus) &&
     refundAmountCents > 0
   ) {
@@ -879,7 +879,7 @@ if (order.status !== OrderStatus.PENDING) {
     });
 
     if (!refundResult.ok && !refundResult.skipped) {
-      console.error('[Dashboard order cancellation] PayMongo refund failed.', {
+      console.error('[Dashboard order cancellation] Xendit refund failed.', {
         orderId: order.id,
         refundAmountCents,
         refundResult,
@@ -1006,14 +1006,14 @@ export async function updateOrderStatusAction(formData: FormData) {
   assertValidOrderStatusTransition(order.status, status);
 
   if (
-    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    order.paymentMethod === PaymentMethod.XENDIT &&
     (status === OrderStatus.PREPARING ||
       status === OrderStatus.READY ||
       status === OrderStatus.DELIVERED) &&
-    !isProcessablePayMongoPaymentStatus(order.paymentStatus)
+    !isProcessableXenditPaymentStatus(order.paymentStatus)
   ) {
     throw new Error(
-      'Wait for the verified PayMongo payment before preparing this order.'
+      'Wait for the verified Xendit payment before preparing this order.'
     );
   }
 
@@ -1109,7 +1109,7 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   if (
     status === OrderStatus.CANCELLED &&
-    order.paymentMethod === PaymentMethod.PAYMONGO &&
+    order.paymentMethod === PaymentMethod.XENDIT &&
     isRefundEligiblePaymentStatus(order.paymentStatus) &&
     order.totalCents > 0
   ) {
@@ -1120,7 +1120,7 @@ export async function updateOrderStatusAction(formData: FormData) {
     });
 
     if (!refundResult.ok && !refundResult.skipped) {
-      console.error('[Dashboard order cancellation] Full PayMongo refund failed.', {
+      console.error('[Dashboard order cancellation] Full Xendit refund failed.', {
         orderId: order.id,
         refundResult,
       });
@@ -1189,9 +1189,9 @@ export async function markOrderPaidAction(formData: FormData) {
   assertHotelScope(user, order.hotelId);
   await assertOrderManagementEditAccess(user);
 
-  if (order.paymentMethod === PaymentMethod.PAYMONGO) {
+  if (order.paymentMethod === PaymentMethod.XENDIT) {
     throw new Error(
-      'PayMongo payments can only be marked paid by the verified PayMongo webhook.'
+      'Xendit payments can only be marked paid by the verified Xendit webhook.'
     );
   }
 

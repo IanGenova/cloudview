@@ -11,7 +11,7 @@ type KitchenRealtimePayload = {
   flowType?: string;
   status?: string;
   paymentStatus?: string;
-  payMongoStatus?: string;
+  xenditStatus?: string;
   refundStatus?: string;
   source?: string;
   updatedAt?: string;
@@ -50,7 +50,7 @@ function getKitchenEventKey(value: unknown) {
     data.sessionId || 'no-session',
     data.status ||
       data.paymentStatus ||
-      data.payMongoStatus ||
+      data.xenditStatus ||
       data.refundStatus ||
       'no-status',
     data.source || 'no-source',
@@ -81,7 +81,7 @@ function isRelevantKitchenEvent(value: unknown) {
   }
 
   return (
-    event.includes('paymongo') &&
+    event.includes('xendit') &&
     (flowType === 'FOOD_ORDER' ||
       flowType === 'GUEST_FOOD_ORDER' ||
       flowType === 'POS_SALE' ||

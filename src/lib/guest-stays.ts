@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { GuestPayMongoStatus, GuestStayStatus } from '@prisma/client';
+import { GuestXenditStatus, GuestStayStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 
 function getGuestStaySecret() {
@@ -257,15 +257,15 @@ export async function createGuestStayWithPasscode(params: {
         },
       });
 
-      await tx.guestPayMongoSession.updateMany({
+      await tx.guestXenditSession.updateMany({
         where: {
           guestStayId: {
             in: previousStayIds,
           },
-          status: GuestPayMongoStatus.PENDING,
+          status: GuestXenditStatus.PENDING,
         },
         data: {
-          status: GuestPayMongoStatus.EXPIRED,
+          status: GuestXenditStatus.EXPIRED,
           expiresAt: now,
           errorMessage:
             'The previous room stay ended before payment was completed.',

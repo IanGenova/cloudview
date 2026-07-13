@@ -3,8 +3,8 @@ import 'server-only';
 import type { Prisma } from '@prisma/client';
 import {
   FulfillmentTiming,
-  GuestPayMongoFlow,
-  GuestPayMongoStatus,
+  GuestXenditFlow,
+  GuestXenditStatus,
   MenuAvailabilityMovementType,
   MenuProductType,
   PaymentMethod,
@@ -25,7 +25,7 @@ import {
 } from '@/lib/scheduled-fulfillment';
 import { generateSeriesCode } from '@/lib/series-code';
 import { createDashboardNotification } from '@/lib/dashboard-notifications';
-import { notifyGuestPayMongoStatus } from '@/lib/paymongo-dashboard-notifications';
+import { notifyGuestXenditStatus } from '@/lib/xendit-dashboard-notifications';
 
 type StockRequirement = {
   productId: string;
@@ -54,7 +54,7 @@ export type GuestFoodOrderInput = {
 
 export type CreateGuestFoodOrderOptions = {
   paymentStatus?: PaymentStatus;
-  guestPayMongoSessionId?: string | null;
+  guestXenditSessionId?: string | null;
 };
 
 function addStockRequirement(
@@ -305,7 +305,7 @@ export async function createGuestFoodOrder(
   });
 
   const paymentStatus = options.paymentStatus ?? PaymentStatus.UNPAID;
-  const payMongoSessionId = cleanText(options.guestPayMongoSessionId) || null;
+  const xenditSessionId = cleanText(options.guestXenditSessionId) || null;
 
   const order = await db.$transaction(
     async (tx: Prisma.TransactionClient) => {
@@ -344,27 +344,27 @@ export async function createGuestFoodOrder(
         stockByProductId.set(requirement.productId, stock);
       }
 
-      if (payMongoSessionId) {
-        const payment = await tx.guestPayMongoSession.findFirst({
+      if (xenditSessionId) {
+        const payment = await tx.guestXenditSession.findFirst({
           where: {
-            id: payMongoSessionId,
-            flowType: GuestPayMongoFlow.FOOD_ORDER,
+            id: xenditSessionId,
+            flowType: GuestXenditFlow.FOOD_ORDER,
             hotelId: tag.hotelId,
             tagId: tag.id,
             guestSessionId: guestSession.id,
-            status: GuestPayMongoStatus.PROCESSING,
+            status: GuestXenditStatus.PROCESSING,
             orderId: null,
           },
           select: { id: true, amountCents: true },
         });
 
         if (!payment) {
-          throw new Error('Paid Guest PayMongo session is no longer claimable.');
+          throw new Error('Paid Guest Xendit session is no longer claimable.');
         }
 
         if (payment.amountCents !== total) {
           throw new Error(
-            'The current order total no longer matches the PayMongo payment.'
+            'The current order total no longer matches the Xendit payment.'
           );
         }
       }
@@ -403,8 +403,8 @@ export async function createGuestFoodOrder(
           statusHistory: {
             create: {
               status: 'PENDING',
-              note: payMongoSessionId
-                ? 'PayMongo payment confirmed; guest order created from NFC portal'
+              note: xenditSessionId
+                ? 'Xendit payment confirmed; guest order created from NFC portal'
                 : 'Guest submitted order from NFC portal',
             },
           },
@@ -511,15 +511,15 @@ export async function createGuestFoodOrder(
         }
       }
 
-      if (payMongoSessionId) {
-        const completed = await tx.guestPayMongoSession.updateMany({
+      if (xenditSessionId) {
+        const completed = await tx.guestXenditSession.updateMany({
           where: {
-            id: payMongoSessionId,
-            status: GuestPayMongoStatus.PROCESSING,
+            id: xenditSessionId,
+            status: GuestXenditStatus.PROCESSING,
             orderId: null,
           },
           data: {
-            status: GuestPayMongoStatus.COMPLETED,
+            status: GuestXenditStatus.COMPLETED,
             orderId: createdOrder.id,
             orderCode: createdOrder.orderCode,
             completedAt: new Date(),
@@ -528,7 +528,7 @@ export async function createGuestFoodOrder(
         });
 
         if (completed.count !== 1) {
-          throw new Error('The PayMongo payment was finalized by another request.');
+          throw new Error('The Xendit payment was finalized by another request.');
         }
       }
 
@@ -601,11 +601,11 @@ export async function createGuestFoodOrder(
     console.error('Failed to trigger inventory realtime event', error);
   }
 
-  if (payMongoSessionId) {
-    await notifyGuestPayMongoStatus({
-      sessionId: payMongoSessionId,
+  if (xenditSessionId) {
+    await notifyGuestXenditStatus({
+      sessionId: xenditSessionId,
     }).catch((error) =>
-      console.warn('Failed to create PayMongo completion notification.', error)
+      console.warn('Failed to create Xendit completion notification.', error)
     );
   }
 

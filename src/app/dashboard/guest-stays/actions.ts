@@ -9,7 +9,7 @@ import {
   GuestStayStatus,
   OrderStatus,
   PaymentStatus,
-  POSPayMongoStatus,
+  POSXenditStatus,
   Role,
   RoomAddOnPaymentStatus,
   ServiceRequestStatus,
@@ -30,9 +30,13 @@ import {
 import { awardGuestStayCheckInPoints } from '@/lib/guest-point-sync';
 import { sendGuestStayPasscodeSms } from '@/lib/sms';
 import {
-  createPayMongoCheckoutSession,
-  type PayMongoLineItem,
-} from '@/lib/paymongo';
+  createXenditCheckoutSession,
+  type XenditLineItem,
+} from '@/lib/xendit';
+import {
+  buildXenditSplitConfiguration,
+  type XenditSplitSnapshot,
+} from '@/lib/xendit-split';
 
 function cleanText(value: FormDataEntryValue | null, maxLength = 200) {
   if (typeof value !== 'string') {
@@ -465,6 +469,7 @@ function parseCheckoutPaymentMethod(value: FormDataEntryValue | null) {
     raw === GuestStayCheckoutPaymentMethod.GCASH ||
     raw === GuestStayCheckoutPaymentMethod.MAYA ||
     raw === GuestStayCheckoutPaymentMethod.QRPH ||
+    raw === GuestStayCheckoutPaymentMethod.EWALLET ||
     raw === GuestStayCheckoutPaymentMethod.BANK_TRANSFER ||
     raw === GuestStayCheckoutPaymentMethod.COMPANY_ACCOUNT ||
     raw === GuestStayCheckoutPaymentMethod.COMPLIMENTARY ||
@@ -485,7 +490,7 @@ type CheckoutPaymentInput = {
 };
 
 
-type GuestStayPayMongoPayload = {
+type GuestStayXenditPayload = {
   flow: 'GUEST_STAY_CHECKOUT';
   guestStayId: string;
   hotelId: string;
@@ -498,12 +503,14 @@ type GuestStayPayMongoPayload = {
   expectedServiceTotalCents: number;
   expectedSubtotalCents: number;
   createdAt: string;
-  paymongoSourceType?: string;
-  paymongoPaymentId?: string;
-  paymongoCheckoutSessionId?: string;
-  paymongoPaidAmountCents?: number;
-  paymongoNetAmountCents?: number;
-  paymongoFeeCents?: number;
+  xenditSourceType?: string;
+  xenditPaymentId?: string;
+  xenditCheckoutSessionId?: string;
+  xenditPaidAmountCents?: number;
+  xenditNetAmountCents?: number;
+  xenditFeeCents?: number;
+  xenditPaymentRequestId?: string;
+  xenditSplit?: XenditSplitSnapshot;
 };
 
 function getAppUrl() {
@@ -528,14 +535,14 @@ function isJsonRecord(value: Prisma.JsonValue): value is Prisma.JsonObject {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function parseGuestStayPayMongoPayload(
+function parseGuestStayXenditPayload(
   value: Prisma.JsonValue
-): GuestStayPayMongoPayload {
+): GuestStayXenditPayload {
   if (!isJsonRecord(value)) {
     throw new Error('Stored guest checkout payment data is invalid.');
   }
 
-  const payload = value as unknown as GuestStayPayMongoPayload;
+  const payload = value as unknown as GuestStayXenditPayload;
 
   if (
     payload.flow !== 'GUEST_STAY_CHECKOUT' ||
@@ -550,7 +557,7 @@ function parseGuestStayPayMongoPayload(
   return payload;
 }
 
-function mapPayMongoSourceToCheckoutMethod(
+function mapXenditSourceToCheckoutMethod(
   sourceType?: string
 ): GuestStayCheckoutPaymentMethod {
   const normalized = (sourceType || '').trim().toLowerCase();
@@ -567,10 +574,19 @@ function mapPayMongoSourceToCheckoutMethod(
     return GuestStayCheckoutPaymentMethod.QRPH;
   }
 
+  if (
+    normalized === 'shopeepay' ||
+    normalized === 'grabpay' ||
+    normalized === 'ewallet' ||
+    normalized === 'e-wallet'
+  ) {
+    return GuestStayCheckoutPaymentMethod.EWALLET;
+  }
+
   return GuestStayCheckoutPaymentMethod.CARD;
 }
 
-async function loadGuestStayPayMongoQuote(guestStayId: string) {
+async function loadGuestStayXenditQuote(guestStayId: string) {
   const stay = await db.guestStay.findUnique({
     where: {
       id: guestStayId,
@@ -586,6 +602,13 @@ async function loadGuestStayPayMongoQuote(guestStayId: string) {
           settings: {
             select: {
               currency: true,
+              xenditSplitEnabled: true,
+              xenditLinkedAccountId: true,
+              xenditCommissionType: true,
+              xenditCommissionValue: true,
+              xenditFeeBearer: true,
+              xenditSplitRuleId: true,
+              xenditSplitRuleSignature: true,
             },
           },
         },
@@ -636,7 +659,7 @@ async function loadGuestStayPayMongoQuote(guestStayId: string) {
   }
 
   if (stay.status !== GuestStayStatus.ACTIVE) {
-    throw new Error('Only active guest stays can use PayMongo checkout.');
+    throw new Error('Only active guest stays can use Xendit checkout.');
   }
 
   if (stay.folio) {
@@ -700,7 +723,7 @@ async function loadGuestStayPayMongoQuote(guestStayId: string) {
   const currency = (stay.hotel.settings?.currency || 'PHP').toUpperCase();
 
   if (currency !== 'PHP') {
-    throw new Error('PayMongo guest checkout currently requires PHP currency.');
+    throw new Error('Xendit guest checkout currently requires PHP currency.');
   }
 
   return {
@@ -1452,7 +1475,7 @@ export async function checkoutGuestStayAction(formData: FormData) {
 }
 
 
-export async function createGuestStayPayMongoCheckoutAction(formData: FormData) {
+export async function createGuestStayXenditCheckoutAction(formData: FormData) {
   let draftId = '';
 
   try {
@@ -1486,7 +1509,7 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
       };
     }
 
-    const quote = await loadGuestStayPayMongoQuote(guestStay.id);
+    const quote = await loadGuestStayXenditQuote(guestStay.id);
 
     if (quote.stay.hotelId !== guestStay.hotelId) {
       return {
@@ -1514,7 +1537,13 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
       };
     }
 
-    const payload: GuestStayPayMongoPayload = {
+    const splitConfiguration = await buildXenditSplitConfiguration({
+      hotelId: quote.stay.hotelId,
+      amountCents: subtotalCents,
+      settings: quote.stay.hotel.settings,
+    });
+
+    const payload: GuestStayXenditPayload = {
       flow: 'GUEST_STAY_CHECKOUT',
       guestStayId: quote.stay.id,
       hotelId: quote.stay.hotelId,
@@ -1527,16 +1556,20 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
       expectedServiceTotalCents: quote.serviceTotalCents,
       expectedSubtotalCents: subtotalCents,
       createdAt: new Date().toISOString(),
+      ...(splitConfiguration?.snapshot
+        ? { xenditSplit: splitConfiguration.snapshot }
+        : {}),
     };
 
-    const draft = await db.posPayMongoSession.create({
+    const draft = await db.posXenditSession.create({
       data: {
+        paymentProvider: 'XENDIT',
         hotelId: quote.stay.hotelId,
         createdById: user.id,
         amountCents: subtotalCents,
         currency: 'PHP',
         payload: payload as unknown as Prisma.InputJsonValue,
-        status: POSPayMongoStatus.PENDING,
+        status: POSXenditStatus.PENDING,
       },
       select: {
         id: true,
@@ -1547,12 +1580,12 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
 
     const appUrl = getAppUrl();
     const query = new URLSearchParams({
-      paymongo: draft.id,
+      xendit: draft.id,
     });
-    const successUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&paymongoResult=success`;
-    const cancelUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&paymongoResult=cancelled`;
+    const successUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&xenditResult=success`;
+    const cancelUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&xenditResult=cancelled`;
 
-    const lineItems: PayMongoLineItem[] = [
+    const lineItems: XenditLineItem[] = [
       {
         name: `Room ${quote.stay.room.number} stay settlement`.slice(0, 120),
         description: [
@@ -1578,7 +1611,7 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
       },
     ];
 
-    const checkout = await createPayMongoCheckoutSession({
+    const checkout = await createXenditCheckoutSession({
       idempotencyKey: `cloudview-guest-stay-${draft.id}`,
       lineItems,
       successUrl,
@@ -1587,20 +1620,24 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
       referenceNumber: draft.id,
       metadata: {
         flow: 'guest_stay_checkout',
-        paymongo_session_id: draft.id,
+        xendit_session_id: draft.id,
         guest_stay_id: quote.stay.id,
         hotel_id: quote.stay.hotelId,
         created_by: user.id,
+        split_enabled: splitConfiguration ? 'true' : 'false',
+        split_rule_id: splitConfiguration?.snapshot.splitRuleId || '',
       },
+      splitPayment: splitConfiguration?.splitPayment,
     });
 
-    await db.posPayMongoSession.update({
+    await db.posXenditSession.update({
       where: {
         id: draft.id,
       },
       data: {
         checkoutSessionId: checkout.id,
         checkoutUrl: checkout.checkoutUrl,
+        xenditPaymentRequestId: checkout.paymentRequestId,
       },
     });
 
@@ -1614,16 +1651,16 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
     const message =
       error instanceof Error
         ? error.message
-        : 'Unable to create PayMongo guest checkout.';
+        : 'Unable to create Xendit guest checkout.';
 
     if (draftId) {
-      await db.posPayMongoSession
+      await db.posXenditSession
         .update({
           where: {
             id: draftId,
           },
           data: {
-            status: POSPayMongoStatus.FAILED,
+            status: POSXenditStatus.FAILED,
             errorMessage: message,
           },
         })
@@ -1637,7 +1674,7 @@ export async function createGuestStayPayMongoCheckoutAction(formData: FormData) 
   }
 }
 
-export async function getGuestStayPayMongoStatusAction(
+export async function getGuestStayXenditStatusAction(
   sessionIdInput: string
 ) {
   try {
@@ -1646,7 +1683,7 @@ export async function getGuestStayPayMongoStatusAction(
     if (!sessionId) {
       return {
         ok: false as const,
-        error: 'PayMongo session is required.',
+        error: 'Xendit session is required.',
       };
     }
 
@@ -1655,9 +1692,10 @@ export async function getGuestStayPayMongoStatusAction(
       'canView'
     );
 
-    const session = await db.posPayMongoSession.findUnique({
+    const session = await db.posXenditSession.findFirst({
       where: {
         id: sessionId,
+        paymentProvider: 'XENDIT',
       },
       select: {
         id: true,
@@ -1672,7 +1710,7 @@ export async function getGuestStayPayMongoStatusAction(
     if (!session) {
       return {
         ok: false as const,
-        error: 'PayMongo guest checkout session was not found.',
+        error: 'Xendit guest checkout session was not found.',
       };
     }
 
@@ -1683,7 +1721,7 @@ export async function getGuestStayPayMongoStatusAction(
       };
     }
 
-    const payload = parseGuestStayPayMongoPayload(session.payload);
+    const payload = parseGuestStayXenditPayload(session.payload);
 
     return {
       ok: true as const,
@@ -1699,12 +1737,12 @@ export async function getGuestStayPayMongoStatusAction(
       error:
         error instanceof Error
           ? error.message
-          : 'Unable to read PayMongo payment status.',
+          : 'Unable to read Xendit payment status.',
     };
   }
 }
 
-export async function finalizeGuestStayPayMongoCheckoutAction(
+export async function finalizeGuestStayXenditCheckoutAction(
   sessionIdInput: string
 ) {
   const sessionId = sessionIdInput.trim();
@@ -1712,7 +1750,7 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
   if (!sessionId) {
     return {
       ok: false as const,
-      error: 'PayMongo session is required.',
+      error: 'Xendit session is required.',
     };
   }
 
@@ -1721,16 +1759,17 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
     'canEdit'
   );
 
-  const session = await db.posPayMongoSession.findUnique({
+  const session = await db.posXenditSession.findFirst({
     where: {
       id: sessionId,
+      paymentProvider: 'XENDIT',
     },
   });
 
   if (!session) {
     return {
       ok: false as const,
-      error: 'PayMongo guest checkout session was not found.',
+      error: 'Xendit guest checkout session was not found.',
     };
   }
 
@@ -1741,10 +1780,10 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
     };
   }
 
-  let payload: GuestStayPayMongoPayload;
+  let payload: GuestStayXenditPayload;
 
   try {
-    payload = parseGuestStayPayMongoPayload(session.payload);
+    payload = parseGuestStayXenditPayload(session.payload);
   } catch (error) {
     return {
       ok: false as const,
@@ -1752,16 +1791,16 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
     };
   }
 
-  if (session.status === POSPayMongoStatus.COMPLETED) {
+  if (session.status === POSXenditStatus.COMPLETED) {
     return {
       ok: true as const,
       alreadyFinalized: true,
       guestStayId: payload.guestStayId,
-      message: 'This PayMongo checkout was already completed.',
+      message: 'This Xendit checkout was already completed.',
     };
   }
 
-  if (session.status === POSPayMongoStatus.PROCESSING) {
+  if (session.status === POSXenditStatus.PROCESSING) {
     const completedStay = await db.guestStay.findFirst({
       where: {
         id: payload.guestStayId,
@@ -1776,12 +1815,12 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
     });
 
     if (completedStay) {
-      await db.posPayMongoSession.update({
+      await db.posXenditSession.update({
         where: {
           id: session.id,
         },
         data: {
-          status: POSPayMongoStatus.COMPLETED,
+          status: POSXenditStatus.COMPLETED,
           completedAt: new Date(),
           errorMessage: null,
         },
@@ -1802,22 +1841,23 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
     };
   }
 
-  if (session.status !== POSPayMongoStatus.PAID) {
+  if (session.status !== POSXenditStatus.PAID) {
     return {
       ok: false as const,
-      waiting: session.status === POSPayMongoStatus.PENDING,
+      waiting: session.status === POSXenditStatus.PENDING,
       error:
-        session.errorMessage || 'Waiting for PayMongo payment confirmation.',
+        session.errorMessage || 'Waiting for Xendit payment confirmation.',
     };
   }
 
-  const claimed = await db.posPayMongoSession.updateMany({
+  const claimed = await db.posXenditSession.updateMany({
     where: {
       id: session.id,
-      status: POSPayMongoStatus.PAID,
+      paymentProvider: 'XENDIT',
+      status: POSXenditStatus.PAID,
     },
     data: {
-      status: POSPayMongoStatus.PROCESSING,
+      status: POSXenditStatus.PROCESSING,
       processingStartedAt: new Date(),
       errorMessage: null,
     },
@@ -1832,7 +1872,7 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
   }
 
   try {
-    const quote = await loadGuestStayPayMongoQuote(payload.guestStayId);
+    const quote = await loadGuestStayXenditQuote(payload.guestStayId);
     const subtotalBeforeDiscountCents =
       quote.foodTotalCents +
       quote.serviceTotalCents +
@@ -1857,12 +1897,12 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
       );
     }
 
-    const paymentMethod = mapPayMongoSourceToCheckoutMethod(
-      payload.paymongoSourceType
+    const paymentMethod = mapXenditSourceToCheckoutMethod(
+      payload.xenditSourceType
     );
     const paymentReference =
-      payload.paymongoPaymentId ||
-      session.paymongoPaymentId ||
+      payload.xenditPaymentId ||
+      session.xenditPaymentId ||
       session.checkoutSessionId ||
       session.id;
 
@@ -1886,9 +1926,9 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
     checkoutFormData.append('paymentReference', paymentReference);
     checkoutFormData.append(
       'paymentNote',
-      `PayMongo hosted checkout${
-        payload.paymongoSourceType
-          ? ` · ${payload.paymongoSourceType.toUpperCase()}`
+      `Xendit hosted checkout${
+        payload.xenditSourceType
+          ? ` · ${payload.xenditSourceType.toUpperCase()}`
           : ''
       }`
     );
@@ -1899,12 +1939,12 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
       throw new Error(result.error);
     }
 
-    await db.posPayMongoSession.update({
+    await db.posXenditSession.update({
       where: {
         id: session.id,
       },
       data: {
-        status: POSPayMongoStatus.COMPLETED,
+        status: POSXenditStatus.COMPLETED,
         completedAt: new Date(),
         errorMessage: null,
       },
@@ -1925,12 +1965,12 @@ export async function finalizeGuestStayPayMongoCheckoutAction(
         ? error.message
         : 'Payment was received, but guest checkout needs manual review.';
 
-    await db.posPayMongoSession.update({
+    await db.posXenditSession.update({
       where: {
         id: session.id,
       },
       data: {
-        status: POSPayMongoStatus.PAID_REVIEW_REQUIRED,
+        status: POSXenditStatus.PAID_REVIEW_REQUIRED,
         errorMessage: message,
       },
     });

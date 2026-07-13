@@ -87,5 +87,5 @@ export const SANITIZED_FIELDS = [
   'GuestStayDevice.*',
   'PosIntegration.apiKeyEncrypted',
   'PosIntegration.webhookSecret',
-  'PayMongoWebhookEvent.*',
+  'XenditWebhookEvent.*',
 ] as const;

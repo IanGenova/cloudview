@@ -25,9 +25,9 @@ function getOrdersMessage(success?: string, error?: string) {
   if (success) {
     const messages: Record<string, string> = {
       'item-cancelled':
-        'Food item was cancelled. Stock restoration and any required PayMongo refund were started.',
+        'Food item was cancelled. Stock restoration and any required Xendit refund were started.',
       'order-cancelled':
-        'Order was cancelled. Stock restoration and any required PayMongo refund were started.',
+        'Order was cancelled. Stock restoration and any required Xendit refund were started.',
       'order-accepted': 'Order was accepted.',
       'order-started': 'Order moved to Preparing.',
       'order-ready': 'Order is ready for delivery.',
@@ -94,7 +94,7 @@ export default async function OrdersPage({
       tag: {
         select: { code: true },
       },
-      guestPayMongoSessions: {
+      guestXenditSessions: {
         orderBy: { createdAt: 'desc' },
         take: 1,
         select: {
@@ -243,7 +243,7 @@ export default async function OrdersPage({
 
       <PageHeader
         title="Orders"
-        description="Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with PayMongo refund and stock-restoration details."
+        description="Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with Xendit refund and stock-restoration details."
       />
 
       <OrdersClient
@@ -256,7 +256,7 @@ export default async function OrdersPage({
         }}
         statusCounts={statusCounts}
         orders={orders.map((order) => {
-          const payMongo = order.guestPayMongoSessions[0];
+          const xendit = order.guestXenditSessions[0];
 
           return {
             id: order.id,
@@ -270,9 +270,9 @@ export default async function OrdersPage({
             status: order.status,
             paymentStatus: order.paymentStatus,
             paymentMethod: order.paymentMethod,
-            guestPayMongoStatus: payMongo?.status,
-            refundedAmountCents: payMongo?.refundedAmountCents ?? 0,
-            refundErrorMessage: payMongo?.refundErrorMessage ?? '',
+            guestXenditStatus: xendit?.status,
+            refundedAmountCents: xendit?.refundedAmountCents ?? 0,
+            refundErrorMessage: xendit?.refundErrorMessage ?? '',
             totalCents: order.totalCents,
             subtotalCents: order.subtotalCents,
             serviceChargeCents: order.serviceChargeCents,

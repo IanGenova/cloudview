@@ -690,8 +690,8 @@ export default async function GuestStaysPage() {
         })}
         defaultHotelId={defaultHotelId}
         isSuperAdmin={user.role === Role.SUPER_ADMIN}
-        payMongoEnabled={Boolean(
-          process.env.PAYMONGO_SECRET_KEY &&
+        xenditEnabled={Boolean(
+          process.env.XENDIT_SECRET_KEY &&
             (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL)
         )}
       />

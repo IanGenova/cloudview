@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import {
-  GuestPayMongoStatus,
+  GuestXenditStatus,
   GuestStayStatus,
   OrderStatus,
   ServiceRequestStatus,
@@ -27,12 +27,12 @@ export const ACTIVE_SERVICE_REQUEST_STATUSES = [
  * detached from the NFC browser session.
  */
 export const ACTIVE_GUEST_PAYMENT_STATUSES = [
-  GuestPayMongoStatus.PENDING,
-  GuestPayMongoStatus.PAID,
-  GuestPayMongoStatus.PROCESSING,
-  GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
-  GuestPayMongoStatus.REFUND_PENDING,
-  GuestPayMongoStatus.REFUND_FAILED,
+  GuestXenditStatus.PENDING,
+  GuestXenditStatus.PAID,
+  GuestXenditStatus.PROCESSING,
+  GuestXenditStatus.PAID_REVIEW_REQUIRED,
+  GuestXenditStatus.REFUND_PENDING,
+  GuestXenditStatus.REFUND_FAILED,
 ] as const;
 
 const nfcGuestSessionSelect = {
@@ -104,7 +104,7 @@ export async function getNfcGuestSessionPendingCounts(sessionId: string) {
         },
       }),
 
-      db.guestPayMongoSession.count({
+      db.guestXenditSession.count({
         where: {
           guestSessionId: sessionId,
           status: {
@@ -161,16 +161,16 @@ async function normalizeSessionGuestStay(
           endedAt: now,
         },
       }),
-      db.guestPayMongoSession.updateMany({
+      db.guestXenditSession.updateMany({
         where: {
           guestSessionId: session.id,
-          status: GuestPayMongoStatus.PENDING,
+          status: GuestXenditStatus.PENDING,
         },
         data: {
-          status: GuestPayMongoStatus.EXPIRED,
+          status: GuestXenditStatus.EXPIRED,
           expiresAt: now,
           errorMessage:
-            'The guest stay ended before the PayMongo checkout was completed.',
+            'The guest stay ended before the Xendit checkout was completed.',
         },
       }),
     ]);
@@ -252,7 +252,7 @@ export async function getReusableNfcGuestSessionForTag({
           },
         },
         {
-          payMongoSessions: {
+          xenditSessions: {
             some: {
               status: {
                 in: [...ACTIVE_GUEST_PAYMENT_STATUSES],

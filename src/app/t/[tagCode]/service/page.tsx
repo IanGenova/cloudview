@@ -18,8 +18,8 @@ export default async function ServicePage({
     error?: string;
     success?: string;
     count?: string;
-    paymongo?: string;
-    paymongoResult?: string;
+    xendit?: string;
+    xenditResult?: string;
   }>;
 }) {
   const { tagCode } = await params;

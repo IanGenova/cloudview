@@ -1,15 +1,15 @@
 'use server';
 
 import {
-  cancelGuestFoodPayMongoCheckout,
-  finalizeGuestFoodPayMongoCheckout,
-  getGuestFoodPayMongoStatus,
-} from '@/app/t/[tagCode]/food-paymongo-actions';
+  cancelGuestFoodXenditCheckout,
+  finalizeGuestFoodXenditCheckout,
+  getGuestFoodXenditStatus,
+} from '@/app/t/[tagCode]/food-xendit-actions';
 import {
-  cancelGuestServicePayMongoCheckout,
-  finalizeGuestServicePayMongoCheckout,
-  getGuestServicePayMongoStatus,
-} from '@/app/t/[tagCode]/service-paymongo-actions';
+  cancelGuestServiceXenditCheckout,
+  finalizeGuestServiceXenditCheckout,
+  getGuestServiceXenditStatus,
+} from '@/app/t/[tagCode]/service-xendit-actions';
 
 export type GuestPaymentFlow = 'FOOD_ORDER' | 'SERVICE_REQUEST';
 
@@ -59,7 +59,7 @@ export async function getGuestPaymentStatusAction(
   const flow = normalizeFlow(input.flow);
 
   if (flow === 'FOOD_ORDER') {
-    const result = await getGuestFoodPayMongoStatus({
+    const result = await getGuestFoodXenditStatus({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
     });
@@ -71,7 +71,7 @@ export async function getGuestPaymentStatusAction(
     };
   }
 
-  const result = await getGuestServicePayMongoStatus({
+  const result = await getGuestServiceXenditStatus({
     tagCode: input.tagCode,
     paymentSessionId: input.paymentSessionId,
   });
@@ -89,7 +89,7 @@ export async function finalizeGuestPaymentAction(
   const flow = normalizeFlow(input.flow);
 
   if (flow === 'FOOD_ORDER') {
-    const result = await finalizeGuestFoodPayMongoCheckout({
+    const result = await finalizeGuestFoodXenditCheckout({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
     });
@@ -100,7 +100,7 @@ export async function finalizeGuestPaymentAction(
     };
   }
 
-  const result = await finalizeGuestServicePayMongoCheckout({
+  const result = await finalizeGuestServiceXenditCheckout({
     tagCode: input.tagCode,
     paymentSessionId: input.paymentSessionId,
   });
@@ -117,13 +117,13 @@ export async function cancelGuestPaymentAction(
   const flow = normalizeFlow(input.flow);
 
   if (flow === 'FOOD_ORDER') {
-    return cancelGuestFoodPayMongoCheckout({
+    return cancelGuestFoodXenditCheckout({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
     });
   }
 
-  return cancelGuestServicePayMongoCheckout({
+  return cancelGuestServiceXenditCheckout({
     tagCode: input.tagCode,
     paymentSessionId: input.paymentSessionId,
   });

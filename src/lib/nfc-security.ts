@@ -87,7 +87,7 @@ export function getPublicAppUrl() {
   const lanIp = process.env.NEXT_PUBLIC_LAN_IP?.trim() || 'localhost';
   // NFC links should use the guest-facing URL first.
   // APP_URL stays reserved for server-to-server/public integrations such as
-  // PayMongo webhook and checkout return URLs.
+  // Xendit webhook and checkout return URLs.
   const rawUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.APP_URL?.trim() ||

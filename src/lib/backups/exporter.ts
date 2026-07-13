@@ -389,9 +389,9 @@ async function exportOrdersModule(hotelId: string) {
     orderItemBundleComponents,
     orderStatusHistory,
     posSyncLogs,
-    guestPayMongoSessions,
-    guestPayMongoRefunds,
-    posPayMongoSessions,
+    guestXenditSessions,
+    guestXenditRefunds,
+    posXenditSessions,
   ] = await Promise.all([
     db.order.findMany({
       where: { hotelId },
@@ -413,11 +413,11 @@ async function exportOrdersModule(hotelId: string) {
       where: { hotelId },
       orderBy: { createdAt: 'asc' },
     }),
-    db.guestPayMongoSession.findMany({
+    db.guestXenditSession.findMany({
       where: { hotelId },
       orderBy: { createdAt: 'asc' },
     }),
-    db.guestPayMongoRefund.findMany({
+    db.guestXenditRefund.findMany({
       where: {
         guestPaymentSession: {
           hotelId,
@@ -425,7 +425,7 @@ async function exportOrdersModule(hotelId: string) {
       },
       orderBy: { createdAt: 'asc' },
     }),
-    db.posPayMongoSession.findMany({
+    db.posXenditSession.findMany({
       where: { hotelId },
       orderBy: { createdAt: 'asc' },
     }),
@@ -437,9 +437,9 @@ async function exportOrdersModule(hotelId: string) {
     orderItemBundleComponents,
     orderStatusHistory,
     posSyncLogs,
-    guestPayMongoSessions,
-    guestPayMongoRefunds,
-    posPayMongoSessions,
+    guestXenditSessions,
+    guestXenditRefunds,
+    posXenditSessions,
   };
 }
 

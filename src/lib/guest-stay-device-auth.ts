@@ -186,7 +186,7 @@ export async function getAuthorizedGuestStayDeviceFromRequest({
 
 /**
  * Server Action / Server Component equivalent of the Request-based helper.
- * Guest PayMongo actions use this to prove that the current browser is one of
+ * Guest Xendit actions use this to prove that the current browser is one of
  * the authorized devices for the active room stay.
  */
 export async function getAuthorizedGuestStayDevice(guestStayId: string) {

@@ -1,12 +1,12 @@
 import crypto from 'crypto';
 
-export type POSPayMongoReturnResult = 'success' | 'cancelled';
+export type POSXenditReturnResult = 'success' | 'cancelled';
 
-type POSPayMongoReturnPayload = {
+type POSXenditReturnPayload = {
   version: 1;
   sessionId: string;
   hotelId: string;
-  result: POSPayMongoReturnResult;
+  result: POSXenditReturnResult;
   expiresAt: number;
 };
 
@@ -17,7 +17,7 @@ function getReturnSigningSecret() {
 
   if (!value) {
     throw new Error(
-      'AUTH_SECRET is required to sign the POS PayMongo return state.'
+      'AUTH_SECRET is required to sign the POS Xendit return state.'
     );
   }
 
@@ -42,10 +42,10 @@ function safeEqual(left: string, right: string) {
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export function createPOSPayMongoReturnState(input: {
+export function createPOSXenditReturnState(input: {
   sessionId: string;
   hotelId: string;
-  result: POSPayMongoReturnResult;
+  result: POSXenditReturnResult;
   ttlSeconds?: number;
 }) {
   const ttlSeconds = Math.max(
@@ -53,7 +53,7 @@ export function createPOSPayMongoReturnState(input: {
     Math.min(input.ttlSeconds ?? DEFAULT_RETURN_TTL_SECONDS, 24 * 60 * 60)
   );
 
-  const payload: POSPayMongoReturnPayload = {
+  const payload: POSXenditReturnPayload = {
     version: 1,
     sessionId: input.sessionId,
     hotelId: input.hotelId,
@@ -69,9 +69,9 @@ export function createPOSPayMongoReturnState(input: {
   return `${encodedPayload}.${signature}`;
 }
 
-export function verifyPOSPayMongoReturnState(
+export function verifyPOSXenditReturnState(
   tokenInput: string | null | undefined
-): POSPayMongoReturnPayload | null {
+): POSXenditReturnPayload | null {
   const token = String(tokenInput ?? '').trim();
   const [encodedPayload, suppliedSignature, ...extraParts] = token.split('.');
 
@@ -105,7 +105,7 @@ export function verifyPOSPayMongoReturnState(
     return null;
   }
 
-  const value = payload as Partial<POSPayMongoReturnPayload>;
+  const value = payload as Partial<POSXenditReturnPayload>;
 
   if (
     value.version !== 1 ||
@@ -123,5 +123,5 @@ export function verifyPOSPayMongoReturnState(
     return null;
   }
 
-  return value as POSPayMongoReturnPayload;
+  return value as POSXenditReturnPayload;
 }

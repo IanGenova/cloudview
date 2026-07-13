@@ -54,7 +54,7 @@ function isRelevantInventoryEvent(value: unknown) {
   }
 
   return (
-    event.includes('paymongo') &&
+    event.includes('xendit') &&
     (event.includes('refund') ||
       event.includes('rollback') ||
       event.includes('fulfillment'))

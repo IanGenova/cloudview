@@ -21,8 +21,8 @@ export default async function POSPage({
 }: {
   searchParams?: Promise<{
     hotelId?: string;
-    paymongo?: string;
-    paymongoResult?: string;
+    xendit?: string;
+    xenditResult?: string;
   }>;
 }) {
   const user = await requireDashboardPermission(
@@ -331,11 +331,11 @@ export default async function POSPage({
       products={mappedProducts}
       services={mappedServices}
       currency={hotel.settings?.currency || 'PHP'}
-      returnedPayMongoSessionId={params?.paymongo || null}
-      returnedPayMongoResult={
-        params?.paymongoResult === 'success' ||
-        params?.paymongoResult === 'cancelled'
-          ? params.paymongoResult
+      returnedXenditSessionId={params?.xendit || null}
+      returnedXenditResult={
+        params?.xenditResult === 'success' ||
+        params?.xenditResult === 'cancelled'
+          ? params.xenditResult
           : null
       }
     />

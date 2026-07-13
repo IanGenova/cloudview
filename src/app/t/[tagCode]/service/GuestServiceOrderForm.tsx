@@ -47,11 +47,11 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { createServiceRequestAction } from '../actions';
 import {
-  cancelGuestServicePayMongoCheckout,
-  createGuestServicePayMongoCheckout,
-  finalizeGuestServicePayMongoCheckout,
-  getGuestServicePayMongoStatus,
-} from '../service-paymongo-actions';
+  cancelGuestServiceXenditCheckout,
+  createGuestServiceXenditCheckout,
+  finalizeGuestServiceXenditCheckout,
+  getGuestServiceXenditStatus,
+} from '../service-xendit-actions';
 
 type GuestServiceBillingMode =
   | 'FREE'
@@ -86,7 +86,7 @@ type AttachmentPreview = {
 };
 
 type FulfillmentTimingValue = 'ASAP' | 'SCHEDULED';
-type ServicePaymentMethod = 'ROOM_CHARGE' | 'PAYMONGO';
+type ServicePaymentMethod = 'ROOM_CHARGE' | 'XENDIT';
 
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
@@ -193,10 +193,10 @@ function getErrorMessage(error?: string) {
       'Please select a valid future date and time for the scheduled request.',
     service_stock_unavailable:
       'One or more selected services are no longer available in that quantity.',
-    paymongo_checkout_required:
-      'Please use the secure PayMongo checkout button for this payment.',
-    paymongo_cancelled:
-      'PayMongo checkout was cancelled. Your selected services were restored; attached photos must be selected again.',
+    xendit_checkout_required:
+      'Please use the secure Xendit checkout button for this payment.',
+    xendit_cancelled:
+      'Xendit checkout was cancelled. Your selected services were restored; attached photos must be selected again.',
   };
 
   return messages[error] ?? 'Unable to submit the request. Please try again.';
@@ -271,13 +271,16 @@ function SubmitButton({
   disabled,
   clientPending,
   paymentMethod,
+  requiresPayment,
 }: {
   disabled: boolean;
   clientPending: boolean;
   paymentMethod: ServicePaymentMethod;
+  requiresPayment: boolean;
 }) {
   const { pending: formPending } = useFormStatus();
   const pending = formPending || clientPending;
+  const usesXendit = requiresPayment && paymentMethod === 'XENDIT';
 
   return (
     <Button
@@ -287,10 +290,10 @@ function SubmitButton({
       className="mt-5 h-14 w-full rounded-2xl bg-gold text-[15px] font-black tracking-wide text-black shadow-[0_16px_36px_rgba(214,167,56,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
     >
       {pending
-        ? paymentMethod === 'PAYMONGO'
+        ? usesXendit
           ? 'Opening secure checkout...'
           : 'Sending requests...'
-        : paymentMethod === 'PAYMONGO'
+        : usesXendit
           ? 'Generate QR & Pay'
           : 'Send Requests'}
     </Button>
@@ -375,7 +378,8 @@ export function GuestServiceOrderForm({
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
 
   function restoreCheckoutDraft() {
-    const stored = sessionStorage.getItem(`cv-service-checkout-${tagCode}`);
+    const storageKey = `cv-service-checkout-${tagCode}`;
+    const stored = sessionStorage.getItem(storageKey);
 
     if (!stored) {
       return false;
@@ -383,24 +387,79 @@ export function GuestServiceOrderForm({
 
     try {
       const draft = JSON.parse(stored) as {
-        cart?: ServiceCartItem[];
-        guestName?: string;
-        notes?: string;
-        fulfillmentTiming?: FulfillmentTimingValue;
-        scheduledDate?: string;
-        scheduledTime?: string;
-        scheduledNote?: string;
-        paymentMethod?: ServicePaymentMethod;
+        cart?: unknown;
+        guestName?: unknown;
+        notes?: unknown;
+        fulfillmentTiming?: unknown;
+        scheduledDate?: unknown;
+        scheduledTime?: unknown;
+        scheduledNote?: unknown;
+        paymentMethod?: unknown;
       };
 
-      if (Array.isArray(draft.cart) && draft.cart.length) {
-        setCart(draft.cart);
-        setScreen('cart');
+      const restoredQuantities = new Map<string, number>();
+
+      if (Array.isArray(draft.cart)) {
+        for (const rawItem of draft.cart) {
+          if (!rawItem || typeof rawItem !== 'object') continue;
+
+          const item = rawItem as Partial<ServiceCartItem>;
+          const serviceCode =
+            typeof item.serviceCode === 'string' ? item.serviceCode : '';
+          const service = services.find(
+            (candidate) => candidate.code === serviceCode
+          );
+          const quantity = Number(item.quantity);
+
+          if (
+            !service ||
+            isServiceUnavailable(service) ||
+            !Number.isInteger(quantity) ||
+            quantity <= 0
+          ) {
+            continue;
+          }
+
+          const limit = getServiceQuantityLimit(service);
+          const nextQuantity = Math.min(
+            (restoredQuantities.get(serviceCode) ?? 0) + quantity,
+            limit
+          );
+
+          if (nextQuantity > 0) {
+            restoredQuantities.set(serviceCode, nextQuantity);
+          }
+        }
       }
+
+      const restoredCart = Array.from(restoredQuantities.entries()).map(
+        ([serviceCode, quantity]) => ({ serviceCode, quantity })
+      );
+
+      if (!restoredCart.length) {
+        sessionStorage.removeItem(storageKey);
+        return false;
+      }
+
+      const restoredHasPayableItem = restoredCart.some((item) => {
+        const service = services.find(
+          (candidate) => candidate.code === item.serviceCode
+        );
+
+        return (
+          service?.billingMode === 'FIXED_PRICE' && service.unitPrice > 0
+        );
+      });
+
+      setCart(restoredCart);
+      setScreen('cart');
 
       if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
       if (typeof draft.notes === 'string') setNotes(draft.notes);
-      if (draft.fulfillmentTiming) {
+      if (
+        draft.fulfillmentTiming === 'ASAP' ||
+        draft.fulfillmentTiming === 'SCHEDULED'
+      ) {
         setFulfillmentTiming(draft.fulfillmentTiming);
       }
       if (typeof draft.scheduledDate === 'string') {
@@ -412,11 +471,17 @@ export function GuestServiceOrderForm({
       if (typeof draft.scheduledNote === 'string') {
         setScheduledNote(draft.scheduledNote);
       }
-      if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod);
+
+      setPaymentMethod(
+        restoredHasPayableItem && draft.paymentMethod === 'XENDIT'
+          ? 'XENDIT'
+          : 'ROOM_CHARGE'
+      );
+      setChargeConsent(false);
 
       return true;
     } catch {
-      sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
+      sessionStorage.removeItem(storageKey);
       return false;
     }
   }
@@ -434,10 +499,10 @@ export function GuestServiceOrderForm({
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    const paymentSessionId = url.searchParams.get('paymongo');
-    const paymongoResult = url.searchParams.get('paymongoResult');
+    const paymentSessionId = url.searchParams.get('xendit');
+    const xenditResult = url.searchParams.get('xenditResult');
 
-    if (!paymentSessionId || !paymongoResult) {
+    if (!paymentSessionId || !xenditResult) {
       return;
     }
 
@@ -446,8 +511,8 @@ export function GuestServiceOrderForm({
 
     const clearPaymentQuery = () => {
       const cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.delete('paymongo');
-      cleanUrl.searchParams.delete('paymongoResult');
+      cleanUrl.searchParams.delete('xendit');
+      cleanUrl.searchParams.delete('xenditResult');
       window.history.replaceState(
         null,
         '',
@@ -455,9 +520,24 @@ export function GuestServiceOrderForm({
       );
     };
 
+    const openThankYouPage = (requestCode: string) => {
+      sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
+      sessionStorage.setItem(
+        `cv-service-reset-${tagCode}`,
+        requestCode
+      );
+      clearCart();
+
+      const query = new URLSearchParams({ code: requestCode });
+      router.replace(
+        `/t/${encodeURIComponent(tagCode)}/service/thanks?${query.toString()}`
+      );
+      router.refresh();
+    };
+
     const run = async () => {
-      if (paymongoResult === 'cancelled') {
-        const cancelled = await cancelGuestServicePayMongoCheckout({
+      if (xenditResult === 'cancelled') {
+        const cancelled = await cancelGuestServiceXenditCheckout({
           tagCode,
           paymentSessionId,
         });
@@ -466,19 +546,19 @@ export function GuestServiceOrderForm({
           restoreCheckoutDraft();
           setLocalError(
             cancelled.ok
-              ? 'PayMongo checkout was cancelled. Your selected services were restored, but photos must be attached again. No service inventory was deducted.'
+              ? 'Xendit checkout was cancelled. Your selected services were restored, but photos must be attached again. No service inventory was deducted.'
               : cancelled.error || 'Unable to cancel the payment checkout.'
           );
           setPaymentMessage(null);
           clearPaymentQuery();
-          router.replace(`/t/${tagCode}/service?error=paymongo_cancelled`);
+          router.replace(`/t/${tagCode}/service?error=xendit_cancelled`);
           router.refresh();
         }
         return;
       }
 
-      setPaymentMessage('Confirming your PayMongo payment...');
-      const status = await getGuestServicePayMongoStatus({
+      setPaymentMessage('Confirming your Xendit payment...');
+      const status = await getGuestServiceXenditStatus({
         tagCode,
         paymentSessionId,
       });
@@ -492,7 +572,7 @@ export function GuestServiceOrderForm({
       }
 
       if (status.status === 'PAID' || status.status === 'PROCESSING') {
-        const finalized = await finalizeGuestServicePayMongoCheckout({
+        const finalized = await finalizeGuestServiceXenditCheckout({
           tagCode,
           paymentSessionId,
         });
@@ -500,12 +580,7 @@ export function GuestServiceOrderForm({
         if (stopped) return;
 
         if (finalized.ok) {
-          sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
-          clearCart();
-          router.replace(
-            `/t/${tagCode}/requests?success=paymongo-completed`
-          );
-          router.refresh();
+          openThankYouPage(finalized.requestCode);
           return;
         }
 
@@ -521,10 +596,16 @@ export function GuestServiceOrderForm({
       }
 
       if (status.status === 'COMPLETED') {
-        sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
-        clearCart();
-        router.replace(`/t/${tagCode}/requests?success=paymongo-completed`);
-        router.refresh();
+        if (status.requestCode) {
+          openThankYouPage(status.requestCode);
+          return;
+        }
+
+        setPaymentMessage(null);
+        setLocalError(
+          'Payment is complete, but the request reference could not be loaded. Please open My Requests.'
+        );
+        clearPaymentQuery();
         return;
       }
 
@@ -567,14 +648,60 @@ export function GuestServiceOrderForm({
   }, [router, tagCode]);
 
   useEffect(() => {
+    const checkoutKey = `cv-service-checkout-${tagCode}`;
+    const resetKey = `cv-service-reset-${tagCode}`;
+
+    const resetCompletedRequest = () => {
+      if (!sessionStorage.getItem(resetKey)) {
+        return false;
+      }
+
+      sessionStorage.removeItem(resetKey);
+      sessionStorage.removeItem(checkoutKey);
+
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current = [];
+
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = '';
+      }
+
+      setScreen('services');
+      setCart([]);
+      setGuestName(defaultGuestName);
+      setNotes('');
+      setChargeConsent(false);
+      setPaymentMethod('ROOM_CHARGE');
+      setFulfillmentTiming('ASAP');
+      setScheduledDate('');
+      setScheduledTime('');
+      setScheduledNote('');
+      setActiveCategory('All');
+      setSearchQuery('');
+      setLocalError(null);
+      setPaymentMessage(null);
+      setAttachments([]);
+
+      return true;
+    };
+
+    const resetOnMount = resetCompletedRequest();
     const url = new URL(window.location.href);
 
-    if (url.searchParams.has('paymongo')) {
-      return;
+    if (!resetOnMount && !url.searchParams.has('xendit')) {
+      restoreCheckoutDraft();
     }
 
-    restoreCheckoutDraft();
-  }, [tagCode]);
+    const handlePageShow = () => {
+      resetCompletedRequest();
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [defaultGuestName, tagCode]);
 
   const serviceMap = useMemo(
     () => new Map(services.map((service) => [service.code, service])),
@@ -647,9 +774,19 @@ export function GuestServiceOrderForm({
     0
   );
 
-  const hasFixedPriceItem = selectedServices.some(
-    (item) => item.service.billingMode === 'FIXED_PRICE'
-  );
+  const hasPayableFixedPrice = fixedPriceTotal > 0;
+  const effectivePaymentMethod: ServicePaymentMethod = hasPayableFixedPrice
+    ? paymentMethod
+    : 'ROOM_CHARGE';
+  const usesXendit =
+    hasPayableFixedPrice && effectivePaymentMethod === 'XENDIT';
+
+  useEffect(() => {
+    if (!hasPayableFixedPrice && paymentMethod !== 'ROOM_CHARGE') {
+      setPaymentMethod('ROOM_CHARGE');
+      setChargeConsent(false);
+    }
+  }, [hasPayableFixedPrice, paymentMethod]);
 
   const hasConfirmationItem = selectedServices.some(
     (item) => item.service.billingMode === 'PRICE_ON_CONFIRMATION'
@@ -731,6 +868,7 @@ export function GuestServiceOrderForm({
   }
 
   function clearCart() {
+    sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
     setCart([]);
     setNotes('');
     setChargeConsent(false);
@@ -888,17 +1026,17 @@ export function GuestServiceOrderForm({
       }
     }
 
-    if (hasFixedPriceItem && !chargeConsent) {
+    if (hasPayableFixedPrice && !chargeConsent) {
       event.preventDefault();
       setLocalError(
-        paymentMethod === 'PAYMONGO'
-          ? 'Please confirm the PayMongo payment before continuing.'
+        usesXendit
+          ? 'Please confirm the Xendit payment before continuing.'
           : 'Please confirm the room add-on charge before submitting.'
       );
       return;
     }
 
-    if (paymentMethod !== 'PAYMONGO') {
+    if (!usesXendit) {
       return;
     }
 
@@ -915,14 +1053,14 @@ export function GuestServiceOrderForm({
         scheduledDate,
         scheduledTime,
         scheduledNote,
-        paymentMethod,
+        paymentMethod: effectivePaymentMethod,
       })
     );
 
     startPaymentTransition(() => {
       void (async () => {
         setPaymentMessage('Preparing your secure QR Ph checkout...');
-        const result = await createGuestServicePayMongoCheckout(formData);
+        const result = await createGuestServiceXenditCheckout(formData);
 
         if (!result.ok) {
           setPaymentMessage(null);
@@ -1000,7 +1138,11 @@ export function GuestServiceOrderForm({
         ) : (
           <form action={createServiceRequestAction} onSubmit={handleSubmit}>
             <input type="hidden" name="tagCode" value={tagCode} />
-            <input type="hidden" name="paymentMethod" value={paymentMethod} />
+            <input
+              type="hidden"
+              name="paymentMethod"
+              value={effectivePaymentMethod}
+            />
             <input
               type="hidden"
               name="fulfillmentTiming"
@@ -1316,7 +1458,7 @@ export function GuestServiceOrderForm({
                   )}
                 </div>
 
-                {hasFixedPriceItem ? (
+                {hasPayableFixedPrice ? (
                   <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gold">
                       Payment method
@@ -1352,12 +1494,12 @@ export function GuestServiceOrderForm({
                       <button
                         type="button"
                         onClick={() => {
-                          setPaymentMethod('PAYMONGO');
+                          setPaymentMethod('XENDIT');
                           setChargeConsent(false);
                         }}
                         className={cn(
                           'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
-                          paymentMethod === 'PAYMONGO'
+                          paymentMethod === 'XENDIT'
                             ? 'border-gold/45 bg-gold/10'
                             : 'border-white/10 bg-white/[0.03]'
                         )}
@@ -1367,7 +1509,7 @@ export function GuestServiceOrderForm({
                         </span>
                         <span>
                           <span className="block text-sm font-black text-white">
-                            PayMongo QR Ph
+                            Xendit QR Ph
                           </span>
                           <span className="mt-1 block text-xs font-medium text-white/45">
                             Pay securely before the service request is released to staff.
@@ -1378,7 +1520,7 @@ export function GuestServiceOrderForm({
                   </div>
                 ) : null}
 
-                {hasFixedPriceItem ? (
+                {hasPayableFixedPrice ? (
                   <label className="flex cursor-pointer items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90">
                     <input
                       name="chargeConsent"
@@ -1391,12 +1533,19 @@ export function GuestServiceOrderForm({
                       className="mt-1 size-5 rounded border-gold/40 bg-black accent-gold"
                     />
                     <span>
-                      {paymentMethod === 'PAYMONGO'
-                        ? 'I confirm the secure PayMongo payment of '
+                      {paymentMethod === 'XENDIT'
+                        ? 'I confirm the secure Xendit payment of '
                         : 'I approve room charges totaling '}
                       <b className="text-white">{money(fixedPriceTotal)}</b>.
                     </span>
                   </label>
+                ) : null}
+
+                {!hasPayableFixedPrice ? (
+                  <div className="rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/[0.08] p-4 text-sm font-semibold leading-6 text-emerald-200">
+                    No online payment is required. This request will be sent
+                    directly to the hotel team.
+                  </div>
                 ) : null}
 
                 {hasConfirmationItem ? (
@@ -1442,10 +1591,11 @@ export function GuestServiceOrderForm({
               <SubmitButton
                 disabled={
                   cart.length === 0 ||
-                  (hasFixedPriceItem && !chargeConsent)
+                  (hasPayableFixedPrice && !chargeConsent)
                 }
                 clientPending={paymentPending}
-                paymentMethod={paymentMethod}
+                paymentMethod={effectivePaymentMethod}
+                requiresPayment={hasPayableFixedPrice}
               />
             </section>
           </form>

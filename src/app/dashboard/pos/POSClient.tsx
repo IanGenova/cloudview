@@ -19,10 +19,10 @@ import { ServiceBillingMode } from '@prisma/client';
 import { cn } from '@/lib/utils';
 import { createPOSOrder } from './actions';
 import {
-  createPayMongoPOSCheckout,
-  finalizePayMongoPOSCheckout,
-  getPayMongoPOSStatus,
-} from './paymongo-actions';
+  createXenditPOSCheckout,
+  finalizeXenditPOSCheckout,
+  getXenditPOSStatus,
+} from './xendit-actions';
 
 type POSHotel = {
   id: string;
@@ -125,24 +125,24 @@ type POSToast =
   | null;
 
 const POS_TOAST_STORAGE_KEY = 'cloudview-pos-toast';
-const POS_PAYMONGO_PENDING_STORAGE_KEY = 'cloudview-pos-paymongo-pending';
-const POS_PAYMONGO_PENDING_TTL_MS = 2 * 60 * 60 * 1000;
+const POS_XENDIT_PENDING_STORAGE_KEY = 'cloudview-pos-xendit-pending';
+const POS_XENDIT_PENDING_TTL_MS = 2 * 60 * 60 * 1000;
 
-type StoredPendingPOSPayMongo = {
+type StoredPendingPOSXendit = {
   sessionId: string;
   hotelId: string;
   result?: 'success' | 'cancelled';
   createdAt: number;
 };
 
-function savePendingPOSPayMongo(input: StoredPendingPOSPayMongo) {
+function savePendingPOSXendit(input: StoredPendingPOSXendit) {
   if (typeof window === 'undefined') {
     return;
   }
 
   try {
     window.sessionStorage.setItem(
-      POS_PAYMONGO_PENDING_STORAGE_KEY,
+      POS_XENDIT_PENDING_STORAGE_KEY,
       JSON.stringify(input)
     );
   } catch {
@@ -150,23 +150,23 @@ function savePendingPOSPayMongo(input: StoredPendingPOSPayMongo) {
   }
 }
 
-function readPendingPOSPayMongo(
+function readPendingPOSXendit(
   selectedHotelId: string
-): StoredPendingPOSPayMongo | null {
+): StoredPendingPOSXendit | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
   try {
     const raw = window.sessionStorage.getItem(
-      POS_PAYMONGO_PENDING_STORAGE_KEY
+      POS_XENDIT_PENDING_STORAGE_KEY
     );
 
     if (!raw) {
       return null;
     }
 
-    const parsed = JSON.parse(raw) as Partial<StoredPendingPOSPayMongo>;
+    const parsed = JSON.parse(raw) as Partial<StoredPendingPOSXendit>;
     const valid =
       typeof parsed.sessionId === 'string' &&
       parsed.sessionId.trim().length > 0 &&
@@ -175,28 +175,28 @@ function readPendingPOSPayMongo(
         parsed.result === 'success' ||
         parsed.result === 'cancelled') &&
       typeof parsed.createdAt === 'number' &&
-      Date.now() - parsed.createdAt <= POS_PAYMONGO_PENDING_TTL_MS;
+      Date.now() - parsed.createdAt <= POS_XENDIT_PENDING_TTL_MS;
 
     if (!valid) {
       window.sessionStorage.removeItem(
-        POS_PAYMONGO_PENDING_STORAGE_KEY
+        POS_XENDIT_PENDING_STORAGE_KEY
       );
       return null;
     }
 
-    return parsed as StoredPendingPOSPayMongo;
+    return parsed as StoredPendingPOSXendit;
   } catch {
     return null;
   }
 }
 
-function clearPendingPOSPayMongo() {
+function clearPendingPOSXendit() {
   if (typeof window === 'undefined') {
     return;
   }
 
   try {
-    window.sessionStorage.removeItem(POS_PAYMONGO_PENDING_STORAGE_KEY);
+    window.sessionStorage.removeItem(POS_XENDIT_PENDING_STORAGE_KEY);
   } catch {
     // Ignore storage failures.
   }
@@ -601,8 +601,8 @@ export function POSClient({
   products,
   services,
   currency,
-  returnedPayMongoSessionId = null,
-  returnedPayMongoResult = null,
+  returnedXenditSessionId = null,
+  returnedXenditResult = null,
 }: {
   selectedHotelId: string;
   hotels: POSHotel[];
@@ -610,12 +610,12 @@ export function POSClient({
   products: POSProduct[];
   services: POSService[];
   currency: string;
-  returnedPayMongoSessionId?: string | null;
-  returnedPayMongoResult?: 'success' | 'cancelled' | null;
+  returnedXenditSessionId?: string | null;
+  returnedXenditResult?: 'success' | 'cancelled' | null;
 }) {
   const router = useRouter();
-  const [recoveredPayMongo, setRecoveredPayMongo] =
-    useState<StoredPendingPOSPayMongo | null>(null);
+  const [recoveredXendit, setRecoveredXendit] =
+    useState<StoredPendingPOSXendit | null>(null);
 
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
   const [activeMode, setActiveMode] = useState<POSMode>('food');
@@ -637,7 +637,7 @@ export function POSClient({
   const [roomId, setRoomId] = useState('');
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
-    'CASH' | 'POS' | 'PAYMONGO' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER'
+    'CASH' | 'POS' | 'XENDIT' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER'
   >('CASH');
   const [cashTendered, setCashTendered] = useState('');
   const [lastReceiptLabel, setLastReceiptLabel] = useState<string | null>(null);
@@ -668,53 +668,53 @@ export function POSClient({
   }, [toast]);
 
   useEffect(() => {
-    if (returnedPayMongoSessionId) {
-      setRecoveredPayMongo(null);
+    if (returnedXenditSessionId) {
+      setRecoveredXendit(null);
       return;
     }
 
-    setRecoveredPayMongo(readPendingPOSPayMongo(selectedHotelId));
-  }, [returnedPayMongoSessionId, selectedHotelId]);
+    setRecoveredXendit(readPendingPOSXendit(selectedHotelId));
+  }, [returnedXenditSessionId, selectedHotelId]);
 
-  const activePayMongoSessionId =
-    returnedPayMongoSessionId || recoveredPayMongo?.sessionId || null;
-  const activePayMongoResult =
-    returnedPayMongoResult || recoveredPayMongo?.result || null;
+  const activeXenditSessionId =
+    returnedXenditSessionId || recoveredXendit?.sessionId || null;
+  const activeXenditResult =
+    returnedXenditResult || recoveredXendit?.result || null;
 
   useEffect(() => {
-    if (!activePayMongoSessionId) {
+    if (!activeXenditSessionId) {
       return;
     }
 
-    const paymentSessionId = activePayMongoSessionId;
+    const paymentSessionId = activeXenditSessionId;
 
     let cancelled = false;
     let timer: number | null = null;
 
-    function cleanPayMongoQuery() {
+    function cleanXenditQuery() {
       const url = new URL(window.location.href);
-      url.searchParams.delete('paymongo');
-      url.searchParams.delete('paymongoResult');
+      url.searchParams.delete('xendit');
+      url.searchParams.delete('xenditResult');
       router.replace(`${url.pathname}${url.search}`, { scroll: false });
     }
 
-    if (activePayMongoResult === 'cancelled') {
-      clearPendingPOSPayMongo();
-      setRecoveredPayMongo(null);
-      showError('PayMongo checkout was cancelled. No sale was created.');
-      cleanPayMongoQuery();
+    if (activeXenditResult === 'cancelled') {
+      clearPendingPOSXendit();
+      setRecoveredXendit(null);
+      showError('Xendit checkout was cancelled. No sale was created.');
+      cleanXenditQuery();
       return;
     }
 
     async function waitForPaymentConfirmation(attempt = 0) {
       try {
-        const status = await getPayMongoPOSStatus(paymentSessionId);
+        const status = await getXenditPOSStatus(paymentSessionId);
 
         if (cancelled) return;
 
         if (!status.ok) {
           showError(status.error);
-          cleanPayMongoQuery();
+          cleanXenditQuery();
           return;
         }
 
@@ -726,18 +726,18 @@ export function POSClient({
               : null,
           ].filter(Boolean);
 
-          clearPendingPOSPayMongo();
-          setRecoveredPayMongo(null);
+          clearPendingPOSXendit();
+          setRecoveredXendit(null);
           clearCart();
           setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
-          showSuccessAfterRefresh('PayMongo payment confirmed and POS sale completed.');
-          cleanPayMongoQuery();
+          showSuccessAfterRefresh('Xendit payment confirmed and POS sale completed.');
+          cleanXenditQuery();
           router.refresh();
           return;
         }
 
         if (status.status === 'PAID') {
-          const result = await finalizePayMongoPOSCheckout(paymentSessionId);
+          const result = await finalizeXenditPOSCheckout(paymentSessionId);
 
           if (cancelled) return;
 
@@ -749,21 +749,21 @@ export function POSClient({
                 : null,
             ].filter(Boolean);
 
-            clearPendingPOSPayMongo();
-            setRecoveredPayMongo(null);
+            clearPendingPOSXendit();
+            setRecoveredXendit(null);
             clearCart();
             setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
             showSuccessAfterRefresh(
-              'PayMongo payment confirmed and POS sale completed.'
+              'Xendit payment confirmed and POS sale completed.'
             );
-            cleanPayMongoQuery();
+            cleanXenditQuery();
             router.refresh();
             return;
           }
 
           if (!result.waiting) {
             showError(result.error);
-            cleanPayMongoQuery();
+            cleanXenditQuery();
             return;
           }
         }
@@ -772,13 +772,13 @@ export function POSClient({
           status.status === 'FAILED' ||
           status.status === 'PAID_REVIEW_REQUIRED'
         ) {
-          clearPendingPOSPayMongo();
-          setRecoveredPayMongo(null);
+          clearPendingPOSXendit();
+          setRecoveredXendit(null);
           showError(
             status.errorMessage ||
-              'The PayMongo payment needs manual review.'
+              'The Xendit payment needs manual review.'
           );
-          cleanPayMongoQuery();
+          cleanXenditQuery();
           return;
         }
 
@@ -786,7 +786,7 @@ export function POSClient({
           showError(
             'Payment is still being confirmed. Open this POS session again in a moment.'
           );
-          cleanPayMongoQuery();
+          cleanXenditQuery();
           return;
         }
 
@@ -800,9 +800,9 @@ export function POSClient({
         showError(
           err instanceof Error
             ? err.message
-            : 'Unable to confirm the PayMongo payment.'
+            : 'Unable to confirm the Xendit payment.'
         );
-        cleanPayMongoQuery();
+        cleanXenditQuery();
       }
     }
 
@@ -817,8 +817,8 @@ export function POSClient({
     // The return identifiers should be handled only once per page load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    activePayMongoSessionId,
-    activePayMongoResult,
+    activeXenditSessionId,
+    activeXenditResult,
     router,
   ]);
 
@@ -1189,8 +1189,8 @@ export function POSClient({
 
     startTransition(async () => {
       try {
-        if (paymentMethod === 'PAYMONGO') {
-          const checkout = await createPayMongoPOSCheckout({
+        if (paymentMethod === 'XENDIT') {
+          const checkout = await createXenditPOSCheckout({
             hotelId: selectedHotelId,
             roomId: roomId || null,
             guestName,
@@ -1204,7 +1204,7 @@ export function POSClient({
             return;
           }
 
-          savePendingPOSPayMongo({
+          savePendingPOSXendit({
             sessionId: checkout.sessionId,
             hotelId: selectedHotelId,
             createdAt: Date.now(),
@@ -1212,7 +1212,7 @@ export function POSClient({
 
           queuePOSToast({
             type: 'success',
-            text: 'Opening secure PayMongo checkout...',
+            text: 'Opening secure Xendit checkout...',
           });
           window.location.assign(checkout.checkoutUrl);
           return;
@@ -1950,12 +1950,12 @@ export function POSClient({
                   >
                     <option value="CASH">Cash</option>
                     <option value="POS">Card / E-wallet (manual terminal)</option>
-                    <option value="PAYMONGO">PayMongo (GCash / Card / QR Ph)</option>
+                    <option value="XENDIT">Xendit (GCash / Card / QR Ph)</option>
                     <option value="ROOM_CHARGE">Room Charge</option>
                     <option value="PAY_AT_COUNTER">Pay Later</option>
                   </select>
                   <p className="mt-1 text-[11px] font-bold text-neutral-500">
-                    Cash/manual terminal sales are completed immediately. PayMongo opens a secure hosted checkout and creates the POS sale only after payment confirmation.
+                    Cash/manual terminal sales are completed immediately. Xendit opens a secure hosted checkout and creates the POS sale only after payment confirmation.
                   </p>
                 </div>
 
@@ -2044,11 +2044,11 @@ export function POSClient({
                   className="min-h-10 touch-manipulation rounded-xl bg-black px-3 py-2 text-xs font-black text-white hover:bg-neutral-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pending
-                    ? paymentMethod === 'PAYMONGO'
-                      ? 'Opening PayMongo...'
+                    ? paymentMethod === 'XENDIT'
+                      ? 'Opening Xendit...'
                       : 'Processing...'
-                    : paymentMethod === 'PAYMONGO'
-                      ? 'Pay with PayMongo'
+                    : paymentMethod === 'XENDIT'
+                      ? 'Pay with Xendit'
                       : 'Complete Sale'}
                 </button>
               </div>

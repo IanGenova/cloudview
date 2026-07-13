@@ -1307,7 +1307,7 @@ const verifiedKitchenPaymentWhere: Prisma.OrderWhereInput = {
   OR: [
     {
       paymentMethod: {
-        not: PaymentMethod.PAYMONGO,
+        not: PaymentMethod.XENDIT,
       },
     },
     {

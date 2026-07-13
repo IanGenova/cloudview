@@ -6,8 +6,8 @@ import path from 'path';
 import type { Prisma } from '@prisma/client';
 import {
   FulfillmentTiming,
-  GuestPayMongoFlow,
-  GuestPayMongoStatus,
+  GuestXenditFlow,
+  GuestXenditStatus,
   PaymentMethod,
   PaymentStatus,
   ServiceAvailabilityMovementType,
@@ -23,7 +23,7 @@ import { logActivity } from '@/lib/activity';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
 import { createDashboardNotification } from '@/lib/dashboard-notifications';
-import { notifyGuestPayMongoStatus } from '@/lib/paymongo-dashboard-notifications';
+import { notifyGuestXenditStatus } from '@/lib/xendit-dashboard-notifications';
 import { generateSeriesCode } from '@/lib/series-code';
 import {
   buildScheduledFulfillment,
@@ -34,7 +34,7 @@ import {
   saveServiceRequestImageFiles,
   validateServiceRequestImageFile,
 } from '@/lib/service-request-attachments';
-import { requireGuestPayMongoSecurityContext } from '@/lib/guest-paymongo-security';
+import { requireGuestXenditSecurityContext } from '@/lib/guest-xendit-security';
 
 export type GuestServiceSelection = {
   serviceCode: string;
@@ -61,7 +61,7 @@ export type GuestServiceRequestInput = {
 export type GuestServiceRequestOptions = {
   paymentMethod?: PaymentMethod | null;
   paymentStatus?: PaymentStatus;
-  guestPayMongoSessionId?: string | null;
+  guestXenditSessionId?: string | null;
   createRoomCharges?: boolean;
   attachmentFiles?: File[];
   stagedAttachments?: StagedServiceAttachment[];
@@ -79,7 +79,7 @@ type PreparedService = {
 };
 
 type PreparedGuestServiceRequest = {
-  context: Awaited<ReturnType<typeof requireGuestPayMongoSecurityContext>>;
+  context: Awaited<ReturnType<typeof requireGuestXenditSecurityContext>>;
   hotelName: string;
   guestName: string;
   notes: string;
@@ -141,7 +141,7 @@ function normalizeSelections(values: GuestServiceSelection[]) {
 export async function prepareGuestServiceRequest(
   input: GuestServiceRequestInput
 ): Promise<PreparedGuestServiceRequest> {
-  const context = await requireGuestPayMongoSecurityContext(input.tagCode);
+  const context = await requireGuestXenditSecurityContext(input.tagCode);
   const selections = normalizeSelections(input.services);
   const serviceCodes = selections.map((item) => item.serviceCode);
 
@@ -296,7 +296,7 @@ export async function stageGuestServiceAttachments(input: {
     process.cwd(),
     'public',
     'uploads',
-    'service-request-paymongo',
+    'service-request-xendit',
     input.paymentSessionId
   );
 
@@ -309,7 +309,7 @@ export async function stageGuestServiceAttachments(input: {
       validateServiceRequestImageFile(file);
 
       const filename = `${crypto.randomUUID()}${extensionForMime(file.type)}`;
-      const imageUrl = `/uploads/service-request-paymongo/${input.paymentSessionId}/${filename}`;
+      const imageUrl = `/uploads/service-request-xendit/${input.paymentSessionId}/${filename}`;
       const buffer = Buffer.from(await file.arrayBuffer());
 
       await writeFile(path.join(root, filename), buffer, { flag: 'wx' });
@@ -351,15 +351,54 @@ export async function createGuestServiceRequests(
   options: GuestServiceRequestOptions = {}
 ) {
   const prepared = await prepareGuestServiceRequest(input);
-  const payMongoSessionId =
-    cleanText(options.guestPayMongoSessionId || '') || null;
-  const paymentMethod = options.paymentMethod ?? null;
+  const xenditSessionId =
+    cleanText(options.guestXenditSessionId || '') || null;
+  const requestedPaymentMethod = options.paymentMethod ?? null;
   const paymentStatus = options.paymentStatus ?? PaymentStatus.UNPAID;
   const createRoomCharges = Boolean(options.createRoomCharges);
+  const hasPayableFixedPrice = prepared.fixedPriceTotalCents > 0;
+  const paymentMethod = hasPayableFixedPrice
+    ? requestedPaymentMethod
+    : null;
+
+  if (xenditSessionId && !hasPayableFixedPrice) {
+    throw new GuestServiceRequestError(
+      'request_failed',
+      'A Xendit session cannot be attached to a request with no payable amount.'
+    );
+  }
+
+  if (xenditSessionId && paymentMethod !== PaymentMethod.XENDIT) {
+    throw new GuestServiceRequestError(
+      'request_failed',
+      'The paid service request has an invalid payment method.'
+    );
+  }
+
+  if (paymentMethod === PaymentMethod.XENDIT && !xenditSessionId) {
+    throw new GuestServiceRequestError(
+      'request_failed',
+      'A Xendit service request requires a verified payment session.'
+    );
+  }
+
+  if (createRoomCharges && paymentMethod !== PaymentMethod.ROOM_CHARGE) {
+    throw new GuestServiceRequestError(
+      'request_failed',
+      'Room add-on charges require the room-charge payment method.'
+    );
+  }
+
+  if (hasPayableFixedPrice && !paymentMethod) {
+    throw new GuestServiceRequestError(
+      'request_failed',
+      'A payment method is required for fixed-price service requests.'
+    );
+  }
 
   if (
     createRoomCharges &&
-    prepared.fixedPriceTotalCents > 0 &&
+    hasPayableFixedPrice &&
     !prepared.context.tag.roomId
   ) {
     throw new GuestServiceRequestError(
@@ -402,27 +441,27 @@ export async function createGuestServiceRequests(
         stockByServiceId.set(service.id, stock);
       }
 
-      if (payMongoSessionId) {
-        const session = await tx.guestPayMongoSession.findFirst({
+      if (xenditSessionId) {
+        const session = await tx.guestXenditSession.findFirst({
           where: {
-            id: payMongoSessionId,
-            flowType: GuestPayMongoFlow.SERVICE_REQUEST,
+            id: xenditSessionId,
+            flowType: GuestXenditFlow.SERVICE_REQUEST,
             hotelId: prepared.context.tag.hotelId,
             tagId: prepared.context.tag.id,
             guestSessionId: prepared.context.session.id,
-            status: GuestPayMongoStatus.PROCESSING,
+            status: GuestXenditStatus.PROCESSING,
             serviceRequests: { none: {} },
           },
           select: { id: true, amountCents: true },
         });
 
         if (!session) {
-          throw new Error('Paid Guest PayMongo session is no longer claimable.');
+          throw new Error('Paid Guest Xendit session is no longer claimable.');
         }
 
         if (session.amountCents !== prepared.fixedPriceTotalCents) {
           throw new Error(
-            'The current fixed-price service total no longer matches the PayMongo payment.'
+            'The current fixed-price service total no longer matches the Xendit payment.'
           );
         }
       }
@@ -458,7 +497,7 @@ export async function createGuestServiceRequests(
             guestSessionId: prepared.context.session.id,
             guestStayId: prepared.context.guestStayId,
             guestMemberId: prepared.context.guestMemberId,
-            guestPayMongoSessionId: payMongoSessionId,
+            guestXenditSessionId: xenditSessionId,
             requestCode,
             type: service.name,
             serviceCodeSnapshot: service.code,
@@ -486,8 +525,8 @@ export async function createGuestServiceRequests(
                   : null,
                 service.billingMode === ServiceBillingMode.FIXED_PRICE
                   ? `${
-                      payMongoSessionId
-                        ? 'Paid through PayMongo'
+                      xenditSessionId
+                        ? 'Paid through Xendit'
                         : 'Room add-on selected'
                     }. Quantity: ${service.quantity}.`
                   : null,
@@ -500,8 +539,8 @@ export async function createGuestServiceRequests(
             statusHistory: {
               create: {
                 status: ServiceRequestStatus.NEW,
-                note: payMongoSessionId
-                  ? `PayMongo payment confirmed; grouped service request ${requestCode} created from NFC portal`
+                note: xenditSessionId
+                  ? `Xendit payment confirmed; grouped service request ${requestCode} created from NFC portal`
                   : `Guest submitted grouped service request order ${requestCode} from NFC portal`,
               },
             },
@@ -606,15 +645,14 @@ export async function createGuestServiceRequests(
         });
       }
 
-      if (payMongoSessionId) {
-        const completed = await tx.guestPayMongoSession.updateMany({
+      if (xenditSessionId) {
+        const completed = await tx.guestXenditSession.updateMany({
           where: {
-            id: payMongoSessionId,
-            status: GuestPayMongoStatus.PROCESSING,
-            serviceRequests: { none: {} },
+            id: xenditSessionId,
+            status: GuestXenditStatus.PROCESSING,
           },
           data: {
-            status: GuestPayMongoStatus.COMPLETED,
+            status: GuestXenditStatus.COMPLETED,
             serviceRequestIds: requests.map(
               (request) => request.id
             ) as unknown as Prisma.InputJsonValue,
@@ -626,7 +664,7 @@ export async function createGuestServiceRequests(
 
         if (completed.count !== 1) {
           throw new Error(
-            'The PayMongo service payment was finalized by another request.'
+            'The Xendit service payment was finalized by another request.'
           );
         }
       }
@@ -682,7 +720,7 @@ export async function createGuestServiceRequests(
         requestCode: created.requestCode,
         requestIds: created.requests.map((request) => request.id),
         count: created.requests.length,
-        paymentMethod: payMongoSessionId ? 'PAYMONGO' : paymentMethod,
+        paymentMethod: xenditSessionId ? 'XENDIT' : paymentMethod,
         fulfillmentTiming: prepared.schedule.fulfillmentTiming,
         source: 'GUEST_PORTAL',
       },
@@ -716,11 +754,11 @@ export async function createGuestServiceRequests(
     );
   }
 
-  if (payMongoSessionId) {
-    await notifyGuestPayMongoStatus({
-      sessionId: payMongoSessionId,
+  if (xenditSessionId) {
+    await notifyGuestXenditStatus({
+      sessionId: xenditSessionId,
     }).catch((error) =>
-      console.warn('Failed to create PayMongo completion notification.', error)
+      console.warn('Failed to create Xendit completion notification.', error)
     );
   }
 

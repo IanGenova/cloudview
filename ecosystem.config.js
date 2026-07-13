@@ -1,7 +1,7 @@
 const dotenv = require("dotenv");
 const path = require("path");
 
-const PROJECT_ROOT = path.resolve("C:/Users/iange/Downloads/cloudviewhotel/cloudview");
+const PROJECT_ROOT = path.resolve("D:/Genova/NASPIN TECH/PROJECTS/cloud-view-mvp");
 const CENTRIFUGO_ROOT = path.join(PROJECT_ROOT, "centrifugo");
 
 dotenv.config({

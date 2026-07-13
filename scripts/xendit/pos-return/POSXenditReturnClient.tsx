@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, LoaderCircle, ShieldCheck } from 'lucide-react';
 
-const POS_PAYMONGO_PENDING_STORAGE_KEY = 'cloudview-pos-paymongo-pending';
+const POS_XENDIT_PENDING_STORAGE_KEY = 'cloudview-pos-xendit-pending';
 
 type ReturnResult = 'success' | 'cancelled';
 
-export function POSPayMongoReturnClient({
+export function POSXenditReturnClient({
   sessionId,
   hotelId,
   result,
@@ -26,7 +26,7 @@ export function POSPayMongoReturnClient({
   useEffect(() => {
     try {
       window.sessionStorage.setItem(
-        POS_PAYMONGO_PENDING_STORAGE_KEY,
+        POS_XENDIT_PENDING_STORAGE_KEY,
         JSON.stringify({
           sessionId,
           hotelId,
@@ -63,7 +63,7 @@ export function POSPayMongoReturnClient({
           Returning to the POS terminal
         </h1>
         <p className="mt-3 text-sm font-semibold leading-6 text-white/55">
-          CloudView is restoring the cashier session and verifying the PayMongo
+          CloudView is restoring the cashier session and verifying the Xendit
           payment status. Do not close this tab.
         </p>
 

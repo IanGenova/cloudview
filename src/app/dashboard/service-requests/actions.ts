@@ -2,7 +2,7 @@
 
 import {
   DashboardModule,
-  GuestPayMongoRefundKind,
+  GuestXenditRefundKind,
   PaymentMethod,
   Prisma,
   ServiceAvailabilityMovementType,
@@ -20,7 +20,7 @@ import {
   syncServiceRequestPoints,
   voidSyncedServiceRequestPoints,
 } from '@/lib/guest-point-sync';
-import { requestGuestServiceRequestRefund } from '@/lib/guest-paymongo-refund';
+import { requestGuestServiceRequestRefund } from '@/lib/guest-xendit-refund';
 import {
   assertServiceRequestStatusTransition,
   isRefundEligiblePaymentStatus,
@@ -282,7 +282,7 @@ export async function updateServiceRequestAction(formData: FormData) {
       amountCents: true,
       paymentMethod: true,
       paymentStatus: true,
-      guestPayMongoSessionId: true,
+      guestXenditSessionId: true,
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -349,9 +349,9 @@ export async function updateServiceRequestAction(formData: FormData) {
         throw new Error('A cancelled service item cannot receive a room charge.');
       }
 
-      if (request.paymentMethod === PaymentMethod.PAYMONGO) {
+      if (request.paymentMethod === PaymentMethod.XENDIT) {
         throw new Error(
-          'This service item was already paid through PayMongo and must not be posted as a room charge.'
+          'This service item was already paid through Xendit and must not be posted as a room charge.'
         );
       }
 
@@ -559,7 +559,7 @@ export async function updateServiceRequestAction(formData: FormData) {
       statusRequests
         .filter(
           (request) =>
-            request.paymentMethod === PaymentMethod.PAYMONGO &&
+            request.paymentMethod === PaymentMethod.XENDIT &&
             request.amountCents > 0 &&
             isRefundEligiblePaymentStatus(request.paymentStatus)
         )
@@ -568,12 +568,12 @@ export async function updateServiceRequestAction(formData: FormData) {
             serviceRequestId: request.id,
             amountCents: request.amountCents,
             reason: note || 'Service request cancelled from dashboard',
-            kind: GuestPayMongoRefundKind.PARTIAL,
+            kind: GuestXenditRefundKind.PARTIAL,
             idempotencySuffix: `dashboard-group-${request.id}`,
           });
 
           if (!result.ok && !result.skipped) {
-            console.error('[Service cancellation] PayMongo refund failed.', {
+            console.error('[Service cancellation] Xendit refund failed.', {
               serviceRequestId: request.id,
               result,
             });
@@ -619,7 +619,7 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
       amountCents: true,
       paymentMethod: true,
       paymentStatus: true,
-      guestPayMongoSessionId: true,
+      guestXenditSessionId: true,
     },
   });
 
@@ -691,7 +691,7 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
   }
 
   if (
-    request.paymentMethod === PaymentMethod.PAYMONGO &&
+    request.paymentMethod === PaymentMethod.XENDIT &&
     request.amountCents > 0 &&
     isRefundEligiblePaymentStatus(request.paymentStatus)
   ) {
@@ -699,12 +699,12 @@ export async function cancelServiceRequestItemAction(formData: FormData) {
       serviceRequestId: request.id,
       amountCents: request.amountCents,
       reason: reason || 'Service request item cancelled from dashboard',
-      kind: GuestPayMongoRefundKind.PARTIAL,
+      kind: GuestXenditRefundKind.PARTIAL,
       idempotencySuffix: `dashboard-item-${request.id}`,
     });
 
     if (!refundResult.ok && !refundResult.skipped) {
-      console.error('[Service item cancellation] PayMongo refund failed.', {
+      console.error('[Service item cancellation] Xendit refund failed.', {
         serviceRequestId: request.id,
         refundResult,
       });

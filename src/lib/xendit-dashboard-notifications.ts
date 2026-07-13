@@ -2,10 +2,10 @@ import 'server-only';
 
 import type { Prisma } from '@prisma/client';
 import {
-  GuestPayMongoFlow,
-  GuestPayMongoRefundStatus,
-  GuestPayMongoStatus,
-  POSPayMongoStatus,
+  GuestXenditFlow,
+  GuestXenditRefundStatus,
+  GuestXenditStatus,
+  POSXenditStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
 
@@ -35,14 +35,14 @@ function jsonStringArray(value: Prisma.JsonValue | null | undefined) {
   return value.filter((item): item is string => typeof item === 'string');
 }
 
-function guestFlowLabel(flowType: GuestPayMongoFlow) {
-  return flowType === GuestPayMongoFlow.FOOD_ORDER
+function guestFlowLabel(flowType: GuestXenditFlow) {
+  return flowType === GuestXenditFlow.FOOD_ORDER
     ? 'food order'
     : 'service request';
 }
 
-function guestFlowUrl(flowType: GuestPayMongoFlow) {
-  return flowType === GuestPayMongoFlow.FOOD_ORDER
+function guestFlowUrl(flowType: GuestXenditFlow) {
+  return flowType === GuestXenditFlow.FOOD_ORDER
     ? '/dashboard/orders'
     : '/dashboard/service-requests';
 }
@@ -79,7 +79,7 @@ async function createUniqueNotification(input: NotificationInput) {
       url: input.url,
       payload: {
         ...input.payload,
-        source: 'PAYMONGO',
+        source: 'XENDIT',
         ...(dedupeKey ? { dedupeKey } : {}),
       } as Prisma.InputJsonValue,
     },
@@ -107,11 +107,11 @@ function guestReference(input: {
   return `payment ${input.sessionId.slice(-8).toUpperCase()}`;
 }
 
-export async function notifyGuestPayMongoStatus(input: {
+export async function notifyGuestXenditStatus(input: {
   sessionId: string;
   eventId?: string | null;
 }) {
-  const session = await db.guestPayMongoSession.findUnique({
+  const session = await db.guestXenditSession.findUnique({
     where: {
       id: input.sessionId,
     },
@@ -126,13 +126,13 @@ export async function notifyGuestPayMongoStatus(input: {
       orderCode: true,
       serviceRequestCodes: true,
       checkoutSessionId: true,
-      paymongoPaymentId: true,
+      xenditPaymentId: true,
       errorMessage: true,
       refundErrorMessage: true,
     },
   });
 
-  if (!session || session.status === GuestPayMongoStatus.PENDING) {
+  if (!session || session.status === GuestXenditStatus.PENDING) {
     return null;
   }
 
@@ -146,9 +146,9 @@ export async function notifyGuestPayMongoStatus(input: {
   const url = guestFlowUrl(session.flowType);
   const basePayload = {
     dedupeKey: `guest:${session.id}:${session.status}:${input.eventId ?? ''}`,
-    guestPayMongoSessionId: session.id,
+    guestXenditSessionId: session.id,
     checkoutSessionId: session.checkoutSessionId ?? '',
-    paymongoPaymentId: session.paymongoPaymentId ?? '',
+    xenditPaymentId: session.xenditPaymentId ?? '',
     flowType: session.flowType,
     status: session.status,
     reference,
@@ -158,66 +158,66 @@ export async function notifyGuestPayMongoStatus(input: {
     eventId: input.eventId ?? '',
   } satisfies Record<string, Prisma.JsonValue>;
 
-  if (session.status === GuestPayMongoStatus.PAID) {
+  if (session.status === GuestXenditStatus.PAID) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_PAYMENT_PAID',
-      title: 'PayMongo Payment Confirmed',
+      type: 'XENDIT_PAYMENT_PAID',
+      title: 'Xendit Payment Confirmed',
       message: `${amount} was confirmed for ${flowLabel} ${reference}. CloudView is finalizing the transaction.`,
       url,
       payload: basePayload,
     });
   }
 
-  if (session.status === GuestPayMongoStatus.COMPLETED) {
+  if (session.status === GuestXenditStatus.COMPLETED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_FULFILLMENT_COMPLETED',
-      title: 'PayMongo Transaction Completed',
-      message: `${flowLabel.charAt(0).toUpperCase()}${flowLabel.slice(1)} ${reference} was created successfully after PayMongo confirmation.`,
+      type: 'XENDIT_FULFILLMENT_COMPLETED',
+      title: 'Xendit Transaction Completed',
+      message: `${flowLabel.charAt(0).toUpperCase()}${flowLabel.slice(1)} ${reference} was created successfully after Xendit confirmation.`,
       url,
       payload: basePayload,
     });
   }
 
-  if (session.status === GuestPayMongoStatus.CANCELLED) {
+  if (session.status === GuestXenditStatus.CANCELLED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_CHECKOUT_CANCELLED',
-      title: 'PayMongo Checkout Cancelled',
-      message: `The guest cancelled the PayMongo checkout for ${flowLabel} ${reference}. No fulfillment should begin.`,
+      type: 'XENDIT_CHECKOUT_CANCELLED',
+      title: 'Xendit Checkout Cancelled',
+      message: `The guest cancelled the Xendit checkout for ${flowLabel} ${reference}. No fulfillment should begin.`,
       url,
       payload: basePayload,
     });
   }
 
-  if (session.status === GuestPayMongoStatus.EXPIRED) {
+  if (session.status === GuestXenditStatus.EXPIRED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_CHECKOUT_EXPIRED',
-      title: 'PayMongo Checkout Expired',
-      message: `The PayMongo checkout for ${flowLabel} ${reference} expired before completion.`,
+      type: 'XENDIT_CHECKOUT_EXPIRED',
+      title: 'Xendit Checkout Expired',
+      message: `The Xendit checkout for ${flowLabel} ${reference} expired before completion.`,
       url,
       payload: basePayload,
     });
   }
 
-  if (session.status === GuestPayMongoStatus.FAILED) {
+  if (session.status === GuestXenditStatus.FAILED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_PAYMENT_FAILED',
-      title: 'PayMongo Payment Failed',
+      type: 'XENDIT_PAYMENT_FAILED',
+      title: 'Xendit Payment Failed',
       message: `Payment for ${flowLabel} ${reference} failed. ${session.errorMessage || 'The guest may retry with a new checkout.'}`,
       url,
       payload: basePayload,
     });
   }
 
-  if (session.status === GuestPayMongoStatus.PAID_REVIEW_REQUIRED) {
+  if (session.status === GuestXenditStatus.PAID_REVIEW_REQUIRED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_REVIEW_REQUIRED',
-      title: 'PayMongo Payment Needs Review',
+      type: 'XENDIT_REVIEW_REQUIRED',
+      title: 'Xendit Payment Needs Review',
       message: `${amount} was received for ${flowLabel} ${reference}, but CloudView requires staff review. ${session.errorMessage || session.refundErrorMessage || ''}`.trim(),
       url,
       payload: basePayload,
@@ -227,11 +227,11 @@ export async function notifyGuestPayMongoStatus(input: {
   return null;
 }
 
-export async function notifyPosPayMongoStatus(input: {
+export async function notifyPosXenditStatus(input: {
   sessionId: string;
   eventId?: string | null;
 }) {
-  const session = await db.posPayMongoSession.findUnique({
+  const session = await db.posXenditSession.findUnique({
     where: {
       id: input.sessionId,
     },
@@ -241,14 +241,14 @@ export async function notifyPosPayMongoStatus(input: {
       status: true,
       amountCents: true,
       checkoutSessionId: true,
-      paymongoPaymentId: true,
+      xenditPaymentId: true,
       orderCode: true,
       serviceRequestCodes: true,
       errorMessage: true,
     },
   });
 
-  if (!session || session.status === POSPayMongoStatus.PENDING) {
+  if (!session || session.status === POSXenditStatus.PENDING) {
     return null;
   }
 
@@ -260,64 +260,64 @@ export async function notifyPosPayMongoStatus(input: {
   const amount = money(session.amountCents);
   const payload = {
     dedupeKey: `pos:${session.id}:${session.status}:${input.eventId ?? ''}`,
-    posPayMongoSessionId: session.id,
+    posXenditSessionId: session.id,
     checkoutSessionId: session.checkoutSessionId ?? '',
-    paymongoPaymentId: session.paymongoPaymentId ?? '',
+    xenditPaymentId: session.xenditPaymentId ?? '',
     status: session.status,
     reference,
     amountCents: session.amountCents,
     eventId: input.eventId ?? '',
   } satisfies Record<string, Prisma.JsonValue>;
 
-  if (session.status === POSPayMongoStatus.PAID) {
+  if (session.status === POSXenditStatus.PAID) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_POS_PAID',
-      title: 'POS PayMongo Payment Confirmed',
+      type: 'XENDIT_POS_PAID',
+      title: 'POS Xendit Payment Confirmed',
       message: `${amount} was confirmed for ${reference}. The POS can now finalize the sale.`,
       url: '/dashboard/pos',
       payload,
     });
   }
 
-  if (session.status === POSPayMongoStatus.COMPLETED) {
+  if (session.status === POSXenditStatus.COMPLETED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_POS_COMPLETED',
-      title: 'POS PayMongo Sale Completed',
-      message: `${reference} was completed successfully after PayMongo confirmation.`,
+      type: 'XENDIT_POS_COMPLETED',
+      title: 'POS Xendit Sale Completed',
+      message: `${reference} was completed successfully after Xendit confirmation.`,
       url: '/dashboard/pos',
       payload,
     });
   }
 
-  if (session.status === POSPayMongoStatus.CANCELLED) {
+  if (session.status === POSXenditStatus.CANCELLED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_POS_CANCELLED',
-      title: 'POS PayMongo Checkout Cancelled',
-      message: `The PayMongo checkout for ${reference} was cancelled.`,
+      type: 'XENDIT_POS_CANCELLED',
+      title: 'POS Xendit Checkout Cancelled',
+      message: `The Xendit checkout for ${reference} was cancelled.`,
       url: '/dashboard/pos',
       payload,
     });
   }
 
-  if (session.status === POSPayMongoStatus.FAILED) {
+  if (session.status === POSXenditStatus.FAILED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_POS_FAILED',
-      title: 'POS PayMongo Payment Failed',
-      message: `PayMongo payment for ${reference} failed. ${session.errorMessage || ''}`.trim(),
+      type: 'XENDIT_POS_FAILED',
+      title: 'POS Xendit Payment Failed',
+      message: `Xendit payment for ${reference} failed. ${session.errorMessage || ''}`.trim(),
       url: '/dashboard/pos',
       payload,
     });
   }
 
-  if (session.status === POSPayMongoStatus.PAID_REVIEW_REQUIRED) {
+  if (session.status === POSXenditStatus.PAID_REVIEW_REQUIRED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_POS_REVIEW_REQUIRED',
-      title: 'POS PayMongo Payment Needs Review',
+      type: 'XENDIT_POS_REVIEW_REQUIRED',
+      title: 'POS Xendit Payment Needs Review',
       message: `${amount} was received for ${reference}, but the transaction requires staff review. ${session.errorMessage || ''}`.trim(),
       url: '/dashboard/pos',
       payload,
@@ -327,11 +327,11 @@ export async function notifyPosPayMongoStatus(input: {
   return null;
 }
 
-export async function notifyGuestPayMongoRefundStatus(input: {
+export async function notifyGuestXenditRefundStatus(input: {
   refundId: string;
   eventId?: string | null;
 }) {
-  const refund = await db.guestPayMongoRefund.findUnique({
+  const refund = await db.guestXenditRefund.findUnique({
     where: {
       id: input.refundId,
     },
@@ -339,7 +339,7 @@ export async function notifyGuestPayMongoRefundStatus(input: {
       id: true,
       status: true,
       amountCents: true,
-      paymongoRefundId: true,
+      xenditRefundId: true,
       errorMessage: true,
       orderId: true,
       orderItemId: true,
@@ -358,7 +358,7 @@ export async function notifyGuestPayMongoRefundStatus(input: {
 
   if (
     !refund ||
-    refund.status === GuestPayMongoRefundStatus.NOT_REQUESTED
+    refund.status === GuestXenditRefundStatus.NOT_REQUESTED
   ) {
     return null;
   }
@@ -373,9 +373,9 @@ export async function notifyGuestPayMongoRefundStatus(input: {
   const url = guestFlowUrl(session.flowType);
   const payload = {
     dedupeKey: `refund:${refund.id}:${refund.status}:${input.eventId ?? ''}`,
-    guestPayMongoSessionId: session.id,
-    guestPayMongoRefundId: refund.id,
-    paymongoRefundId: refund.paymongoRefundId ?? '',
+    guestXenditSessionId: session.id,
+    guestXenditRefundId: refund.id,
+    xenditRefundId: refund.xenditRefundId ?? '',
     status: refund.status,
     flowType: session.flowType,
     reference,
@@ -387,35 +387,35 @@ export async function notifyGuestPayMongoRefundStatus(input: {
   } satisfies Record<string, Prisma.JsonValue>;
 
   if (
-    refund.status === GuestPayMongoRefundStatus.PENDING ||
-    refund.status === GuestPayMongoRefundStatus.PROCESSING
+    refund.status === GuestXenditRefundStatus.PENDING ||
+    refund.status === GuestXenditRefundStatus.PROCESSING
   ) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_REFUND_PENDING',
-      title: 'PayMongo Refund Processing',
-      message: `${amount} refund for ${reference} is being processed by PayMongo.`,
+      type: 'XENDIT_REFUND_PENDING',
+      title: 'Xendit Refund Processing',
+      message: `${amount} refund for ${reference} is being processed by Xendit.`,
       url,
       payload,
     });
   }
 
-  if (refund.status === GuestPayMongoRefundStatus.SUCCEEDED) {
+  if (refund.status === GuestXenditRefundStatus.SUCCEEDED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_REFUND_SUCCEEDED',
-      title: 'PayMongo Refund Completed',
+      type: 'XENDIT_REFUND_SUCCEEDED',
+      title: 'Xendit Refund Completed',
       message: `${amount} was refunded successfully for ${reference}.`,
       url,
       payload,
     });
   }
 
-  if (refund.status === GuestPayMongoRefundStatus.FAILED) {
+  if (refund.status === GuestXenditRefundStatus.FAILED) {
     return createUniqueNotification({
       hotelId: session.hotelId,
-      type: 'PAYMONGO_REFUND_FAILED',
-      title: 'PayMongo Refund Failed',
+      type: 'XENDIT_REFUND_FAILED',
+      title: 'Xendit Refund Failed',
       message: `${amount} refund for ${reference} failed and needs retry or manual review. ${refund.errorMessage || ''}`.trim(),
       url,
       payload,

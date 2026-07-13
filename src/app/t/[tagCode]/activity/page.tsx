@@ -114,8 +114,8 @@ export default async function GuestActivityPage({
     redirect(`/t/${tagCode}?error=session_expired`);
   }
 
-  const recentPayMongoPayments = identity.session
-    ? await db.guestPayMongoSession.findMany({
+  const recentXenditPayments = identity.session
+    ? await db.guestXenditSession.findMany({
         where: {
           guestSessionId: identity.session.id,
           hotelId: tag.hotelId,
@@ -224,17 +224,17 @@ export default async function GuestActivityPage({
           ) : null}
         </section>
 
-        {recentPayMongoPayments.length ? (
+        {recentXenditPayments.length ? (
           <section className="rounded-[2rem] border border-[#c99c38]/20 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <CreditCard className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">
-                PayMongo Payments
+                Xendit Payments
               </h2>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              {recentPayMongoPayments.map((payment) => (
+              {recentXenditPayments.map((payment) => (
                 <div
                   key={payment.id}
                   className="rounded-[1.5rem] border border-white/10 bg-black/25 p-4"

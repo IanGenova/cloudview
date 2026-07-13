@@ -2,9 +2,9 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import {
   DataBackupStatus,
-  GuestPayMongoStatus,
+  GuestXenditStatus,
   GuestStayStatus,
-  POSPayMongoStatus,
+  POSXenditStatus,
   Prisma,
 } from '@prisma/client';
 import { db } from '@/lib/db';
@@ -51,20 +51,40 @@ function omit(row: JsonRow, keys: string[]) {
 
 function terminalGuestPaymentStatus(status: unknown) {
   return (
-    status === GuestPayMongoStatus.COMPLETED ||
-    status === GuestPayMongoStatus.REFUNDED ||
-    status === GuestPayMongoStatus.CANCELLED ||
-    status === GuestPayMongoStatus.EXPIRED ||
-    status === GuestPayMongoStatus.FAILED
+    status === GuestXenditStatus.COMPLETED ||
+    status === GuestXenditStatus.REFUNDED ||
+    status === GuestXenditStatus.CANCELLED ||
+    status === GuestXenditStatus.EXPIRED ||
+    status === GuestXenditStatus.FAILED
   );
 }
 
 function terminalPosPaymentStatus(status: unknown) {
   return (
-    status === POSPayMongoStatus.COMPLETED ||
-    status === POSPayMongoStatus.CANCELLED ||
-    status === POSPayMongoStatus.FAILED
+    status === POSXenditStatus.COMPLETED ||
+    status === POSXenditStatus.CANCELLED ||
+    status === POSXenditStatus.FAILED
   );
+}
+
+function inferPaymentProvider(session: JsonRow): 'PAYMONGO' | 'XENDIT' {
+  if (session.paymentProvider === 'PAYMONGO' || session.paymentProvider === 'XENDIT') {
+    return session.paymentProvider;
+  }
+
+  const checkoutId = String(session.checkoutSessionId ?? '');
+  const paymentId = String(session.xenditPaymentId ?? session.paymongoPaymentId ?? '');
+  const paymentRequestId = String(session.xenditPaymentRequestId ?? '');
+
+  if (
+    checkoutId.startsWith('ps-') ||
+    paymentId.startsWith('py-') ||
+    paymentRequestId.startsWith('pr-')
+  ) {
+    return 'XENDIT';
+  }
+
+  return 'PAYMONGO';
 }
 
 export async function performFullHotelRestore(input: {
@@ -192,11 +212,11 @@ async function deleteOperationalData(hotelId: string) {
       await tx.dashboardNotification.deleteMany({ where: { hotelId } });
       await tx.activityLog.deleteMany({ where: { hotelId } });
 
-      await tx.guestPayMongoRefund.deleteMany({
+      await tx.guestXenditRefund.deleteMany({
         where: { guestPaymentSession: { hotelId } },
       });
-      await tx.guestPayMongoSession.deleteMany({ where: { hotelId } });
-      await tx.posPayMongoSession.deleteMany({ where: { hotelId } });
+      await tx.guestXenditSession.deleteMany({ where: { hotelId } });
+      await tx.posXenditSession.deleteMany({ where: { hotelId } });
 
       await tx.serviceRequestAttachment.deleteMany({ where: { hotelId } });
       await tx.serviceRequestStatusHistory.deleteMany({
@@ -699,15 +719,16 @@ async function restoreOrdersAndPayments(
 
   await db.$transaction(
     async (tx) => {
-      const sessions = rows(ordersData, 'guestPayMongoSessions').map(
+      const sessions = rows(ordersData, 'guestXenditSessions').map(
         (session) => {
           const terminal = terminalGuestPaymentStatus(session.status);
 
           return {
             ...withHotelId(session, hotelId),
+            paymentProvider: inferPaymentProvider(session),
             status: terminal
               ? session.status
-              : GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+              : GuestXenditStatus.PAID_REVIEW_REQUIRED,
             automaticRefundEnabled: terminal
               ? Boolean(session.automaticRefundEnabled)
               : false,
@@ -722,25 +743,26 @@ async function restoreOrdersAndPayments(
       );
 
       if (sessions.length) {
-        await tx.guestPayMongoSession.createMany({
-          data: sessions as Prisma.GuestPayMongoSessionCreateManyInput[],
+        await tx.guestXenditSession.createMany({
+          data: sessions as Prisma.GuestXenditSessionCreateManyInput[],
         });
       }
 
       await createManyWithoutHotelId(
-        tx.guestPayMongoRefund,
-        rows(ordersData, 'guestPayMongoRefunds')
+        tx.guestXenditRefund,
+        rows(ordersData, 'guestXenditRefunds')
       );
 
-      const posSessions = rows(ordersData, 'posPayMongoSessions').map(
+      const posSessions = rows(ordersData, 'posXenditSessions').map(
         (session) => {
           const terminal = terminalPosPaymentStatus(session.status);
 
           return {
             ...withHotelId(session, hotelId),
+            paymentProvider: inferPaymentProvider(session),
             status: terminal
               ? session.status
-              : POSPayMongoStatus.PAID_REVIEW_REQUIRED,
+              : POSXenditStatus.PAID_REVIEW_REQUIRED,
             checkoutSessionId: terminal ? session.checkoutSessionId : null,
             checkoutUrl: terminal ? session.checkoutUrl : null,
             processingStartedAt: null,
@@ -752,8 +774,8 @@ async function restoreOrdersAndPayments(
       );
 
       if (posSessions.length) {
-        await tx.posPayMongoSession.createMany({
-          data: posSessions as Prisma.PosPayMongoSessionCreateManyInput[],
+        await tx.posXenditSession.createMany({
+          data: posSessions as Prisma.PosXenditSessionCreateManyInput[],
         });
       }
     },

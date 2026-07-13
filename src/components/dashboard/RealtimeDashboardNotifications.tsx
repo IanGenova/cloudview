@@ -44,7 +44,7 @@ type KitchenPayload = {
   flowType?: string;
   status?: string;
   paymentStatus?: string;
-  payMongoStatus?: string;
+  xenditStatus?: string;
   refundStatus?: string;
   amountCents?: number;
   refundedAmountCents?: number;
@@ -63,7 +63,7 @@ type ServiceRequestPayload = {
   flowType?: string;
   status?: string;
   paymentStatus?: string;
-  payMongoStatus?: string;
+  xenditStatus?: string;
   refundStatus?: string;
   amountCents?: number;
   refundedAmountCents?: number;
@@ -96,14 +96,14 @@ type CancelledItemPayload = {
   updatedAt?: string;
 };
 
-type PayMongoPayload = {
+type XenditPayload = {
   event?: string;
   hotelId?: string;
   sessionId?: string;
   flowType?: string;
   status?: string;
   paymentStatus?: string;
-  payMongoStatus?: string;
+  xenditStatus?: string;
   refundStatus?: string;
   orderCode?: string;
   requestCode?: string;
@@ -117,7 +117,7 @@ type PayMongoPayload = {
 type OperationsPayload =
   | LowStockPayload
   | CancelledItemPayload
-  | PayMongoPayload;
+  | XenditPayload;
 
 type DashboardNotification = {
   id: string;
@@ -127,7 +127,7 @@ type DashboardNotification = {
     | 'SERVICE_REQUEST'
     | 'LOW_STOCK'
     | 'CANCELLED_ITEM'
-    | 'PAYMONGO'
+    | 'XENDIT'
     | 'SYSTEM';
   title: string;
   message: string;
@@ -393,19 +393,19 @@ function isCancelledItemEvent(data: unknown): data is CancelledItemPayload {
   );
 }
 
-function isPayMongoEvent(data: unknown): data is PayMongoPayload {
+function isXenditEvent(data: unknown): data is XenditPayload {
   if (!data || typeof data !== 'object') {
     return false;
   }
 
-  const payload = data as PayMongoPayload;
+  const payload = data as XenditPayload;
   const event = normalizeEventName(payload.event);
   const source = normalizeValue(payload.source);
 
   return (
-    event.includes('paymongo') ||
-    source.includes('PAYMONGO') ||
-    Boolean(payload.payMongoStatus) ||
+    event.includes('xendit') ||
+    source.includes('XENDIT') ||
+    Boolean(payload.xenditStatus) ||
     Boolean(payload.refundStatus)
   );
 }
@@ -504,7 +504,7 @@ function getNotificationIcon(type: DashboardNotification['type']) {
     return Ban;
   }
 
-  if (type === 'PAYMONGO') {
+  if (type === 'XENDIT') {
     return CreditCard;
   }
 
@@ -533,7 +533,7 @@ function getNotificationStyle(type: DashboardNotification['type']) {
     };
   }
 
-  if (type === 'PAYMONGO') {
+  if (type === 'XENDIT') {
     return {
       iconWrap:
         'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200',
@@ -567,8 +567,8 @@ function toDashboardNotificationType(
 ): DashboardNotification['type'] {
   const normalizedType = normalizeValue(value);
 
-  if (normalizedType.includes('PAYMONGO')) {
-    return 'PAYMONGO';
+  if (normalizedType.includes('XENDIT')) {
+    return 'XENDIT';
   }
 
   if (normalizedType.includes('KITCHEN')) {
@@ -748,7 +748,7 @@ const alertsEnabledRef = useRef(false);
 
           if (
             incomingUnread.some(
-              (notification) => notification.type === 'PAYMONGO'
+              (notification) => notification.type === 'XENDIT'
             )
           ) {
             router.refresh();
@@ -1403,7 +1403,7 @@ function pushTestNotification() {
 
             console.info('Kitchen realtime publication:', data);
 
-            if (isPayMongoEvent(data)) {
+            if (isXenditEvent(data)) {
               refreshPersistedNotificationsRef.current();
               router.refresh();
             }
@@ -1534,7 +1534,7 @@ function pushTestNotification() {
 
             console.info('Service request realtime publication:', data);
 
-            if (isPayMongoEvent(data)) {
+            if (isXenditEvent(data)) {
               refreshPersistedNotificationsRef.current();
               router.refresh();
             }
@@ -1655,11 +1655,11 @@ function pushTestNotification() {
 
             console.info('Operations realtime publication:', data);
 
-            if (isPayMongoEvent(data)) {
-              const eventKey = `paymongo:${data.sessionId ?? 'session'}:${
+            if (isXenditEvent(data)) {
+              const eventKey = `xendit:${data.sessionId ?? 'session'}:${
                 data.refundStatus ??
                 data.paymentStatus ??
-                data.payMongoStatus ??
+                data.xenditStatus ??
                 data.status ??
                 'update'
               }:${data.updatedAt ?? ''}`;
@@ -2136,7 +2136,7 @@ function pushTestNotification() {
                     No notifications yet
                   </p>
                   <p className="mt-1 text-xs font-semibold text-neutral-400 dark:text-neutral-500">
-                    New orders, service requests, PayMongo payments, refunds, low stock, and cancellations will
+                    New orders, service requests, Xendit payments, refunds, low stock, and cancellations will
                     appear here.
                   </p>
                 </div>

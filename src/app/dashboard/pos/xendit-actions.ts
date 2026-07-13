@@ -3,7 +3,7 @@
 import type { Prisma } from '@prisma/client';
 import {
   MenuProductType,
-  POSPayMongoStatus,
+  POSXenditStatus,
   ServiceBillingMode,
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
@@ -12,12 +12,16 @@ import { assertHotelScope } from '@/lib/access';
 import { requireRole, requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import {
-  createPayMongoCheckoutSession,
-  type PayMongoLineItem,
-} from '@/lib/paymongo';
+  createXenditCheckoutSession,
+  type XenditLineItem,
+} from '@/lib/xendit';
 import { cleanText } from '@/lib/sanitize';
-import { notifyPosPayMongoStatus } from '@/lib/paymongo-dashboard-notifications';
-import { createPOSPayMongoReturnState } from '@/lib/pos-paymongo-return';
+import { notifyPosXenditStatus } from '@/lib/xendit-dashboard-notifications';
+import { createPOSXenditReturnState } from '@/lib/pos-xendit-return';
+import {
+  buildXenditSplitConfiguration,
+  type XenditSplitSnapshot,
+} from '@/lib/xendit-split';
 import { createPOSOrder } from './actions';
 
 type CheckoutInput = {
@@ -48,9 +52,10 @@ type StoredPOSPayload = {
     serviceId: string;
     quantity: number;
   }>;
+  xenditSplit: XenditSplitSnapshot | null;
 };
 
-export type CreatePayMongoPOSCheckoutResult =
+export type CreateXenditPOSCheckoutResult =
   | {
       ok: true;
       sessionId: string;
@@ -61,11 +66,11 @@ export type CreatePayMongoPOSCheckoutResult =
       error: string;
     };
 
-export type PayMongoPOSStatusResult =
+export type XenditPOSStatusResult =
   | {
       ok: true;
       id: string;
-      status: POSPayMongoStatus;
+      status: POSXenditStatus;
       orderCode: string | null;
       serviceRequestCodes: string[];
       errorMessage: string | null;
@@ -75,7 +80,7 @@ export type PayMongoPOSStatusResult =
       error: string;
     };
 
-export type FinalizePayMongoPOSCheckoutResult =
+export type FinalizeXenditPOSCheckoutResult =
   | {
       ok: true;
       alreadyFinalized: boolean;
@@ -99,7 +104,7 @@ function getErrorMessage(error: unknown, fallback: string) {
     : fallback;
 }
 
-function getPublicPayMongoError(error: unknown, fallback: string) {
+function getPublicXenditError(error: unknown, fallback: string) {
   const message = getErrorMessage(error, fallback);
 
   if (process.env.NODE_ENV !== 'production') {
@@ -109,26 +114,26 @@ function getPublicPayMongoError(error: unknown, fallback: string) {
   const lowerMessage = message.toLowerCase();
 
   if (
-    lowerMessage.includes('paymongo') ||
+    lowerMessage.includes('xendit') ||
     lowerMessage.includes('secret key') ||
     lowerMessage.includes('app_url') ||
     lowerMessage.includes('checkout session') ||
     lowerMessage.includes('request failed')
   ) {
-    return 'Unable to start the secure PayMongo checkout. Please verify the payment configuration or use another payment method.';
+    return 'Unable to start the secure Xendit checkout. Please verify the payment configuration or use another payment method.';
   }
 
   return message;
 }
 
-function logPayMongoActionError(
+function logXenditActionError(
   operation: string,
   error: unknown,
   context: Record<string, string | null | undefined> = {}
 ) {
-  console.error(`[POS PayMongo] ${operation} failed.`, {
+  console.error(`[POS Xendit] ${operation} failed.`, {
     ...context,
-    message: getErrorMessage(error, 'Unknown PayMongo error.'),
+    message: getErrorMessage(error, 'Unknown Xendit error.'),
     ...(process.env.NODE_ENV !== 'production' && error instanceof Error
       ? { stack: error.stack }
       : {}),
@@ -228,7 +233,7 @@ function normalizePOSReturnBaseUrl(value: string, source: string) {
   return url.origin;
 }
 
-async function getPOSPayMongoReturnBaseUrl() {
+async function getPOSXenditReturnBaseUrl() {
   const requestHeaders = await headers();
 
   /**
@@ -269,30 +274,30 @@ async function getPOSPayMongoReturnBaseUrl() {
    * on which the cashier actually opened the dashboard.
    */
   const fallback =
-    process.env.POS_PAYMONGO_RETURN_URL?.trim() ||
+    process.env.POS_XENDIT_RETURN_URL?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.APP_URL?.trim() ||
     '';
 
   if (!fallback) {
     throw new Error(
-      'Unable to determine the POS PayMongo return URL. Configure NEXT_PUBLIC_APP_URL or APP_URL.'
+      'Unable to determine the POS Xendit return URL. Configure NEXT_PUBLIC_APP_URL or APP_URL.'
     );
   }
 
-  return normalizePOSReturnBaseUrl(fallback, 'POS PayMongo fallback URL');
+  return normalizePOSReturnBaseUrl(fallback, 'POS Xendit fallback URL');
 }
 
-function createPOSPayMongoReturnUrls(input: {
+function createPOSXenditReturnUrls(input: {
   baseUrl: string;
   hotelId: string;
   sessionId: string;
 }) {
   const createReturnUrl = (result: 'success' | 'cancelled') => {
-    const returnUrl = new URL('/paymongo/pos-return', `${input.baseUrl}/`);
+    const returnUrl = new URL('/xendit/pos-return', `${input.baseUrl}/`);
     returnUrl.searchParams.set(
       'state',
-      createPOSPayMongoReturnState({
+      createPOSXenditReturnState({
         sessionId: input.sessionId,
         hotelId: input.hotelId,
         result,
@@ -310,7 +315,7 @@ function createPOSPayMongoReturnUrls(input: {
 
 function parseStoredPayload(value: Prisma.JsonValue): StoredPOSPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Stored PayMongo cart data is invalid.');
+    throw new Error('Stored Xendit cart data is invalid.');
   }
 
   const payload = value as unknown as StoredPOSPayload;
@@ -320,13 +325,13 @@ function parseStoredPayload(value: Prisma.JsonValue): StoredPOSPayload {
     !Array.isArray(payload.items) ||
     !Array.isArray(payload.services)
   ) {
-    throw new Error('Stored PayMongo cart data is incomplete.');
+    throw new Error('Stored Xendit cart data is incomplete.');
   }
 
   return payload;
 }
 
-async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
+async function createXenditPOSCheckoutInternal(input: CheckoutInput) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
@@ -401,7 +406,7 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
   const hotelCurrency = hotel.settings?.currency || 'PHP';
 
   if (hotelCurrency !== 'PHP') {
-    throw new Error('PayMongo checkout currently requires PHP currency.');
+    throw new Error('Xendit checkout currently requires PHP currency.');
   }
 
   if (products.length !== productIds.length) {
@@ -490,7 +495,7 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
     }
   }
 
-  const lineItems: PayMongoLineItem[] = [];
+  const lineItems: XenditLineItem[] = [];
   let amountCents = 0;
 
   for (const item of items) {
@@ -546,6 +551,12 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
     );
   }
 
+  const splitConfiguration = await buildXenditSplitConfiguration({
+    hotelId,
+    amountCents,
+    settings: hotel.settings,
+  });
+
   const payload: StoredPOSPayload = {
     hotelId,
     roomId,
@@ -553,16 +564,18 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
     notes,
     items,
     services,
+    xenditSplit: splitConfiguration?.snapshot ?? null,
   };
 
-  const draft = await db.posPayMongoSession.create({
+  const draft = await db.posXenditSession.create({
     data: {
+      paymentProvider: 'XENDIT',
       hotelId,
       createdById: user.id,
       amountCents,
       currency: 'PHP',
       payload: payload as unknown as Prisma.InputJsonValue,
-      status: POSPayMongoStatus.PENDING,
+      status: POSXenditStatus.PENDING,
     },
     select: {
       id: true,
@@ -570,22 +583,22 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
   });
 
   try {
-    const returnBaseUrl = await getPOSPayMongoReturnBaseUrl();
-    const { successUrl, cancelUrl } = createPOSPayMongoReturnUrls({
+    const returnBaseUrl = await getPOSXenditReturnBaseUrl();
+    const { successUrl, cancelUrl } = createPOSXenditReturnUrls({
       baseUrl: returnBaseUrl,
       hotelId,
       sessionId: draft.id,
     });
 
     if (process.env.NODE_ENV !== 'production') {
-      console.info('[POS PayMongo] Checkout return URLs prepared.', {
+      console.info('[POS Xendit] Checkout return URLs prepared.', {
         sessionId: draft.id,
         successUrl,
         cancelUrl,
       });
     }
 
-    const checkout = await createPayMongoCheckoutSession({
+    const checkout = await createXenditCheckoutSession({
       idempotencyKey: `cloudview-pos-${draft.id}`,
       lineItems,
       successUrl,
@@ -597,14 +610,19 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
         hotel_id: hotelId,
         created_by: user.id,
         return_origin: returnBaseUrl,
+        split_enabled: splitConfiguration ? 'true' : 'false',
+        split_fee_bearer:
+          splitConfiguration?.snapshot.feeBearer ?? '',
       },
+      splitPayment: splitConfiguration?.splitPayment,
     });
 
-    await db.posPayMongoSession.update({
+    await db.posXenditSession.update({
       where: { id: draft.id },
       data: {
         checkoutSessionId: checkout.id,
         checkoutUrl: checkout.checkoutUrl,
+        xenditPaymentRequestId: checkout.paymentRequestId,
         errorMessage: null,
       },
     });
@@ -617,27 +635,27 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
   } catch (error) {
     const message = getErrorMessage(
       error,
-      'Unable to create PayMongo checkout.'
+      'Unable to create Xendit checkout.'
     );
 
     try {
-      await db.posPayMongoSession.update({
+      await db.posXenditSession.update({
         where: { id: draft.id },
         data: {
-          status: POSPayMongoStatus.FAILED,
+          status: POSXenditStatus.FAILED,
           errorMessage: message.slice(0, 2000),
         },
       });
 
-      await notifyPosPayMongoStatus({ sessionId: draft.id }).catch(
+      await notifyPosXenditStatus({ sessionId: draft.id }).catch(
         (notificationError) =>
           console.warn(
-            '[POS PayMongo] Unable to create failed-payment notification.',
+            '[POS Xendit] Unable to create failed-payment notification.',
             notificationError
           )
       );
     } catch (updateError) {
-      logPayMongoActionError('mark checkout as failed', updateError, {
+      logXenditActionError('mark checkout as failed', updateError, {
         hotelId,
         sessionId: draft.id,
       });
@@ -647,13 +665,13 @@ async function createPayMongoPOSCheckoutInternal(input: CheckoutInput) {
   }
 }
 
-export async function createPayMongoPOSCheckout(
+export async function createXenditPOSCheckout(
   input: CheckoutInput
-): Promise<CreatePayMongoPOSCheckoutResult> {
+): Promise<CreateXenditPOSCheckoutResult> {
   try {
-    return await createPayMongoPOSCheckoutInternal(input);
+    return await createXenditPOSCheckoutInternal(input);
   } catch (error) {
-    logPayMongoActionError('create checkout', error, {
+    logXenditActionError('create checkout', error, {
       hotelId:
         typeof input?.hotelId === 'string'
           ? input.hotelId
@@ -662,26 +680,26 @@ export async function createPayMongoPOSCheckout(
 
     return {
       ok: false,
-      error: getPublicPayMongoError(
+      error: getPublicXenditError(
         error,
-        'Unable to create PayMongo checkout.'
+        'Unable to create Xendit checkout.'
       ),
     };
   }
 }
 
-async function getPayMongoPOSStatusInternal(sessionIdInput: string) {
+async function getXenditPOSStatusInternal(sessionIdInput: string) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
   const sessionId = cleanText(sessionIdInput);
 
   if (!sessionId) {
-    throw new Error('PayMongo session is required.');
+    throw new Error('Xendit session is required.');
   }
 
-  const session = await db.posPayMongoSession.findUnique({
-    where: { id: sessionId },
+  const session = await db.posXenditSession.findFirst({
+    where: { id: sessionId, paymentProvider: 'XENDIT' },
     select: {
       id: true,
       hotelId: true,
@@ -693,7 +711,7 @@ async function getPayMongoPOSStatusInternal(sessionIdInput: string) {
   });
 
   if (!session) {
-    throw new Error('PayMongo POS session was not found.');
+    throw new Error('Xendit POS session was not found.');
   }
 
   assertHotelScope(user, session.hotelId);
@@ -712,13 +730,13 @@ async function getPayMongoPOSStatusInternal(sessionIdInput: string) {
   };
 }
 
-export async function getPayMongoPOSStatus(
+export async function getXenditPOSStatus(
   sessionIdInput: string
-): Promise<PayMongoPOSStatusResult> {
+): Promise<XenditPOSStatusResult> {
   try {
-    return await getPayMongoPOSStatusInternal(sessionIdInput);
+    return await getXenditPOSStatusInternal(sessionIdInput);
   } catch (error) {
-    logPayMongoActionError('read checkout status', error, {
+    logXenditActionError('read checkout status', error, {
       sessionId:
         typeof sessionIdInput === 'string'
           ? sessionIdInput
@@ -727,35 +745,35 @@ export async function getPayMongoPOSStatus(
 
     return {
       ok: false,
-      error: getPublicPayMongoError(
+      error: getPublicXenditError(
         error,
-        'Unable to read the PayMongo payment status.'
+        'Unable to read the Xendit payment status.'
       ),
     };
   }
 }
 
-async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
+async function finalizeXenditPOSCheckoutInternal(sessionIdInput: string) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
   const sessionId = cleanText(sessionIdInput);
 
   if (!sessionId) {
-    throw new Error('PayMongo session is required.');
+    throw new Error('Xendit session is required.');
   }
 
-  const session = await db.posPayMongoSession.findUnique({
-    where: { id: sessionId },
+  const session = await db.posXenditSession.findFirst({
+    where: { id: sessionId, paymentProvider: 'XENDIT' },
   });
 
   if (!session) {
-    throw new Error('PayMongo POS session was not found.');
+    throw new Error('Xendit POS session was not found.');
   }
 
   assertHotelScope(user, session.hotelId);
 
-  if (session.status === POSPayMongoStatus.COMPLETED) {
+  if (session.status === POSXenditStatus.COMPLETED) {
     return {
       ok: true as const,
       alreadyFinalized: true,
@@ -768,8 +786,8 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
     };
   }
 
-  if (session.status !== POSPayMongoStatus.PAID) {
-    if (session.status === POSPayMongoStatus.PROCESSING) {
+  if (session.status !== POSXenditStatus.PAID) {
+    if (session.status === POSXenditStatus.PROCESSING) {
       return {
         ok: false as const,
         waiting: true as const,
@@ -778,17 +796,18 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
     }
 
     throw new Error(
-      session.errorMessage || 'Waiting for PayMongo payment confirmation.'
+      session.errorMessage || 'Waiting for Xendit payment confirmation.'
     );
   }
 
-  const claimed = await db.posPayMongoSession.updateMany({
+  const claimed = await db.posXenditSession.updateMany({
     where: {
       id: session.id,
-      status: POSPayMongoStatus.PAID,
+      paymentProvider: 'XENDIT',
+      status: POSXenditStatus.PAID,
     },
     data: {
-      status: POSPayMongoStatus.PROCESSING,
+      status: POSXenditStatus.PROCESSING,
       processingStartedAt: new Date(),
       errorMessage: null,
     },
@@ -803,7 +822,7 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
   }
 
   const payload = parseStoredPayload(session.payload);
-  const payMongoReference = session.checkoutSessionId || session.id;
+  const xenditReference = session.checkoutSessionId || session.id;
 
   try {
     // Existing createPOSOrder remains the single source of truth for stock,
@@ -813,16 +832,16 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
       paymentMethod: 'POS',
       notes: [
         payload.notes || null,
-        `PayMongo checkout: ${payMongoReference}`,
+        `Xendit checkout: ${xenditReference}`,
       ]
         .filter(Boolean)
         .join('\n'),
     });
 
-    await db.posPayMongoSession.update({
+    await db.posXenditSession.update({
       where: { id: session.id },
       data: {
-        status: POSPayMongoStatus.COMPLETED,
+        status: POSXenditStatus.COMPLETED,
         orderCode: result.orderCode,
         serviceRequestCodes:
           result.serviceRequestCodes as unknown as Prisma.InputJsonValue,
@@ -831,10 +850,10 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
       },
     });
 
-    await notifyPosPayMongoStatus({ sessionId: session.id }).catch(
+    await notifyPosXenditStatus({ sessionId: session.id }).catch(
       (notificationError) =>
         console.warn(
-          '[POS PayMongo] Unable to create completion notification.',
+          '[POS Xendit] Unable to create completion notification.',
           notificationError
         )
     );
@@ -853,18 +872,18 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
         ? error.message
         : 'The payment succeeded, but the POS sale needs manual review.';
 
-    await db.posPayMongoSession.update({
+    await db.posXenditSession.update({
       where: { id: session.id },
       data: {
-        status: POSPayMongoStatus.PAID_REVIEW_REQUIRED,
+        status: POSXenditStatus.PAID_REVIEW_REQUIRED,
         errorMessage: message,
       },
     });
 
-    await notifyPosPayMongoStatus({ sessionId: session.id }).catch(
+    await notifyPosXenditStatus({ sessionId: session.id }).catch(
       (notificationError) =>
         console.warn(
-          '[POS PayMongo] Unable to create review notification.',
+          '[POS Xendit] Unable to create review notification.',
           notificationError
         )
     );
@@ -875,13 +894,13 @@ async function finalizePayMongoPOSCheckoutInternal(sessionIdInput: string) {
   }
 }
 
-export async function finalizePayMongoPOSCheckout(
+export async function finalizeXenditPOSCheckout(
   sessionIdInput: string
-): Promise<FinalizePayMongoPOSCheckoutResult> {
+): Promise<FinalizeXenditPOSCheckoutResult> {
   try {
-    return await finalizePayMongoPOSCheckoutInternal(sessionIdInput);
+    return await finalizeXenditPOSCheckoutInternal(sessionIdInput);
   } catch (error) {
-    logPayMongoActionError('finalize paid checkout', error, {
+    logXenditActionError('finalize paid checkout', error, {
       sessionId:
         typeof sessionIdInput === 'string'
           ? sessionIdInput
@@ -891,7 +910,7 @@ export async function finalizePayMongoPOSCheckout(
     return {
       ok: false,
       waiting: false,
-      error: getPublicPayMongoError(
+      error: getPublicXenditError(
         error,
         'The payment could not be finalized.'
       ),

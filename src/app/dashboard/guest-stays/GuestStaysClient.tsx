@@ -42,9 +42,9 @@ import {
 import {
   checkoutGuestStayAction,
   createGuestStayAction,
-  createGuestStayPayMongoCheckoutAction,
-  finalizeGuestStayPayMongoCheckoutAction,
-  getGuestStayPayMongoStatusAction,
+  createGuestStayXenditCheckoutAction,
+  finalizeGuestStayXenditCheckoutAction,
+  getGuestStayXenditStatusAction,
   getGuestStayPasscodeAction,
   markGuestStayReceiptPrintedAction,
   resetGuestStayPasscodeAction,
@@ -63,6 +63,7 @@ type GuestStayCheckoutPaymentMethodValue =
   | 'GCASH'
   | 'MAYA'
   | 'QRPH'
+  | 'EWALLET'
   | 'BANK_TRANSFER'
   | 'COMPANY_ACCOUNT'
   | 'COMPLIMENTARY'
@@ -154,7 +155,7 @@ type CheckoutPaymentDraft = {
 };
 
 
-type CheckoutSettlementMode = 'FRONT_DESK' | 'PAYMONGO';
+type CheckoutSettlementMode = 'FRONT_DESK' | 'XENDIT';
 type GuestStayStatusFilter = 'ALL' | GuestStayStatusValue;
 
 type GuestStayCheckoutSummary = {
@@ -338,6 +339,11 @@ const checkoutPaymentMethods: Array<{
     value: 'QRPH',
     label: 'QRPH',
     helper: 'QR code / QRPH payment.',
+  },
+  {
+    value: 'EWALLET',
+    label: 'Other E-wallet',
+    helper: 'ShopeePay, GrabPay, or another supported wallet.',
   },
   {
     value: 'BANK_TRANSFER',
@@ -925,14 +931,14 @@ export function GuestStaysClient({
   guestStays,
   defaultHotelId,
   isSuperAdmin,
-  payMongoEnabled,
+  xenditEnabled,
 }: {
   hotels: HotelOption[];
   rooms: RoomOption[];
   guestStays: GuestStayRecord[];
   defaultHotelId: string;
   isSuperAdmin: boolean;
-  payMongoEnabled: boolean;
+  xenditEnabled: boolean;
 }) {
   const router = useRouter();
   const checkoutFormRef = useRef<HTMLFormElement | null>(null);
@@ -954,8 +960,8 @@ export function GuestStaysClient({
     useState<GuestStayStatusFilter>('ALL');
   const [checkoutSettlementMode, setCheckoutSettlementMode] =
     useState<CheckoutSettlementMode>('FRONT_DESK');
-  const [payMongoStatusText, setPayMongoStatusText] = useState('');
-  const [payMongoReturn, setPayMongoReturn] = useState({
+  const [xenditStatusText, setXenditStatusText] = useState('');
+  const [xenditReturn, setXenditReturn] = useState({
     sessionId: '',
     result: '',
   });
@@ -1174,7 +1180,7 @@ const checkoutPreviewTotals = useMemo(() => {
   function openCheckoutModal(stay: GuestStayRecord) {
     resetFeedback();
     setCheckoutSettlementMode('FRONT_DESK');
-    setPayMongoStatusText('');
+    setXenditStatusText('');
     setViewStay(null);
     setCheckoutManualChargeAmount(
       centsToInputAmount(stay.checkoutSummary.manualChargeCents)
@@ -1215,7 +1221,7 @@ const checkoutPreviewTotals = useMemo(() => {
   }
 
 
-  function handlePayMongoCheckout() {
+  function handleXenditCheckout() {
     const form = checkoutFormRef.current;
 
     if (!form || !checkoutStay) {
@@ -1226,19 +1232,19 @@ const checkoutPreviewTotals = useMemo(() => {
     const formData = new FormData(form);
 
     resetFeedback();
-    setPayMongoStatusText('Creating secure PayMongo checkout...');
+    setXenditStatusText('Creating secure Xendit checkout...');
 
     startTransition(() => {
       void (async () => {
-        const result = await createGuestStayPayMongoCheckoutAction(formData);
+        const result = await createGuestStayXenditCheckoutAction(formData);
 
         if (!result.ok) {
-          setPayMongoStatusText('');
+          setXenditStatusText('');
           setError(result.error);
           return;
         }
 
-        setPayMongoStatusText('Redirecting to PayMongo...');
+        setXenditStatusText('Redirecting to Xendit...');
         window.location.assign(result.checkoutUrl);
       })();
     });
@@ -1375,22 +1381,22 @@ function handleResetPasscode(guestStayId: string) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
-    setPayMongoReturn({
-      sessionId: params.get('paymongo') || '',
-      result: params.get('paymongoResult') || '',
+    setXenditReturn({
+      sessionId: params.get('xendit') || '',
+      result: params.get('xenditResult') || '',
     });
   }, []);
 
   useEffect(() => {
-    const payMongoSessionId = payMongoReturn.sessionId;
-    const payMongoResult = payMongoReturn.result;
+    const xenditSessionId = xenditReturn.sessionId;
+    const xenditResult = xenditReturn.result;
 
-    if (!payMongoSessionId) {
+    if (!xenditSessionId) {
       return;
     }
 
-    if (payMongoResult === 'cancelled') {
-      setMessage('PayMongo checkout was cancelled. No payment was recorded.');
+    if (xenditResult === 'cancelled') {
+      setMessage('Xendit checkout was cancelled. No payment was recorded.');
       router.replace('/dashboard/guest-stays');
       return;
     }
@@ -1405,10 +1411,10 @@ function handleResetPasscode(guestStayId: string) {
       }
 
       attempts += 1;
-      setPayMongoStatusText('Confirming PayMongo payment...');
+      setXenditStatusText('Confirming Xendit payment...');
 
-      const statusResult = await getGuestStayPayMongoStatusAction(
-        payMongoSessionId
+      const statusResult = await getGuestStayXenditStatusAction(
+        xenditSessionId
       );
 
       if (disposed) {
@@ -1416,17 +1422,17 @@ function handleResetPasscode(guestStayId: string) {
       }
 
       if (!statusResult.ok) {
-        setPayMongoStatusText('');
+        setXenditStatusText('');
         setError(statusResult.error);
         router.replace('/dashboard/guest-stays');
         return;
       }
 
       if (statusResult.status === 'PAID') {
-        setPayMongoStatusText('Payment confirmed. Completing guest checkout...');
+        setXenditStatusText('Payment confirmed. Completing guest checkout...');
 
         const finalizeResult =
-          await finalizeGuestStayPayMongoCheckoutAction(payMongoSessionId);
+          await finalizeGuestStayXenditCheckoutAction(xenditSessionId);
 
         if (disposed) {
           return;
@@ -1442,13 +1448,13 @@ function handleResetPasscode(guestStayId: string) {
             return;
           }
 
-          setPayMongoStatusText('');
+          setXenditStatusText('');
           setError(finalizeResult.error);
           router.replace('/dashboard/guest-stays');
           return;
         }
 
-        setPayMongoStatusText('');
+        setXenditStatusText('');
         setMessage(finalizeResult.message);
         setCheckoutStay(null);
         router.replace('/dashboard/guest-stays');
@@ -1457,8 +1463,8 @@ function handleResetPasscode(guestStayId: string) {
       }
 
       if (statusResult.status === 'COMPLETED') {
-        setPayMongoStatusText('');
-        setMessage('PayMongo payment and guest checkout are complete.');
+        setXenditStatusText('');
+        setMessage('Xendit payment and guest checkout are complete.');
         router.replace('/dashboard/guest-stays');
         router.refresh();
         return;
@@ -1469,17 +1475,17 @@ function handleResetPasscode(guestStayId: string) {
         statusResult.status === 'CANCELLED' ||
         statusResult.status === 'PAID_REVIEW_REQUIRED'
       ) {
-        setPayMongoStatusText('');
+        setXenditStatusText('');
         setError(
           statusResult.errorMessage ||
-            'The PayMongo payment requires front desk review.'
+            'The Xendit payment requires front desk review.'
         );
         router.replace('/dashboard/guest-stays');
         return;
       }
 
       if (attempts >= 20) {
-        setPayMongoStatusText('');
+        setXenditStatusText('');
         setMessage(
           'Payment confirmation is taking longer than expected. Refresh this page in a moment.'
         );
@@ -1498,7 +1504,7 @@ function handleResetPasscode(guestStayId: string) {
         clearTimeout(timeoutId);
       }
     };
-  }, [payMongoReturn, router]);
+  }, [xenditReturn, router]);
 
   return (
     <div className="space-y-7">
@@ -1514,10 +1520,10 @@ function handleResetPasscode(guestStayId: string) {
         </div>
       ) : null}
 
-      {payMongoStatusText ? (
+      {xenditStatusText ? (
         <div className="flex items-center gap-3 rounded-2xl border border-[#d8b45f] bg-[#fff8e4] px-5 py-4 text-sm font-black text-[#7a5414] shadow-sm">
           <Loader2 className="size-5 animate-spin" />
-          {payMongoStatusText}
+          {xenditStatusText}
         </div>
       ) : null}
 
@@ -2480,10 +2486,10 @@ function handleResetPasscode(guestStayId: string) {
 
                 <button
                   type="button"
-                  disabled={!payMongoEnabled || checkoutPreviewTotals.subtotalCents <= 0}
-                  onClick={() => setCheckoutSettlementMode('PAYMONGO')}
+                  disabled={!xenditEnabled || checkoutPreviewTotals.subtotalCents <= 0}
+                  onClick={() => setCheckoutSettlementMode('XENDIT')}
                   className={
-                    checkoutSettlementMode === 'PAYMONGO'
+                    checkoutSettlementMode === 'XENDIT'
                       ? 'flex items-center gap-3 rounded-2xl border border-[#d6a738] bg-[#fff7dd] p-4 text-left text-[#11100b] shadow-[0_12px_32px_rgba(214,167,56,0.2)]'
                       : 'flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45'
                   }
@@ -2492,7 +2498,7 @@ function handleResetPasscode(guestStayId: string) {
                     <CreditCard className="size-5" />
                   </span>
                   <span>
-                    <span className="block text-sm font-black">PayMongo Online</span>
+                    <span className="block text-sm font-black">Xendit Online</span>
                     <span className="mt-1 block text-xs font-semibold text-neutral-500">
                       Secure card, GCash, and QR Ph hosted checkout.
                     </span>
@@ -2500,9 +2506,9 @@ function handleResetPasscode(guestStayId: string) {
                 </button>
               </div>
 
-              {!payMongoEnabled ? (
+              {!xenditEnabled ? (
                 <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
-                  PayMongo is unavailable until PAYMONGO_SECRET_KEY and APP_URL are configured.
+                  Xendit is unavailable until XENDIT_SECRET_KEY and APP_URL are configured.
                 </p>
               ) : null}
             </section>
@@ -2838,9 +2844,9 @@ function handleResetPasscode(guestStayId: string) {
                         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d6a738]">
                           Secure Online Settlement
                         </p>
-                        <h4 className="mt-2 text-xl font-black">Pay with PayMongo</h4>
+                        <h4 className="mt-2 text-xl font-black">Pay with Xendit</h4>
                         <p className="mt-1 text-xs font-semibold leading-5 text-white/55">
-                          The guest completes payment on PayMongo's hosted page. Checkout is finalized only after the signed webhook confirms payment.
+                          The guest completes payment on Xendit's hosted page. Checkout is finalized only after the signed webhook confirms payment.
                         </p>
                       </div>
                       <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d6a738] text-black">
@@ -2867,7 +2873,7 @@ function handleResetPasscode(guestStayId: string) {
                     <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#d6a738]/25 bg-white/70 p-4">
                       <Smartphone className="mt-0.5 size-5 shrink-0 text-[#9a6b18]" />
                       <p className="text-xs font-semibold leading-5 text-neutral-600">
-                        After payment, CloudView verifies the PayMongo webhook, records the folio payment, marks eligible food and service charges paid, revokes guest devices, and completes checkout.
+                        After payment, CloudView verifies the Xendit webhook, records the folio payment, marks eligible food and service charges paid, revokes guest devices, and completes checkout.
                       </p>
                     </div>
                   </div>
@@ -2888,21 +2894,21 @@ function handleResetPasscode(guestStayId: string) {
                     type="button"
                     disabled={
                       isPending ||
-                      !payMongoEnabled ||
+                      !xenditEnabled ||
                       checkoutPreviewTotals.subtotalCents <= 0
                     }
-                    onClick={handlePayMongoCheckout}
+                    onClick={handleXenditCheckout}
                     className="inline-flex h-14 min-h-14 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#d9ad45,#bd8219)] px-5 py-4 text-sm font-black text-black shadow-[0_16px_38px_rgba(214,167,56,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isPending ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        Preparing PayMongo...
+                        Preparing Xendit...
                       </>
                     ) : (
                       <>
                         <CreditCard className="size-4" />
-                        Continue to PayMongo
+                        Continue to Xendit
                       </>
                     )}
                   </button>
@@ -2911,7 +2917,7 @@ function handleResetPasscode(guestStayId: string) {
                 <p className="text-xs font-semibold leading-5 text-neutral-500">
                   {checkoutSettlementMode === 'FRONT_DESK'
                     ? 'Completing checkout records the settlement, revokes authorized stay devices, and ends active NFC guest sessions.'
-                    : 'The stay remains active until PayMongo confirms payment and CloudView finishes the folio automatically.'}
+                    : 'The stay remains active until Xendit confirms payment and CloudView finishes the folio automatically.'}
                 </p>
               </aside>
             </div>

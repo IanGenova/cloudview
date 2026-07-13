@@ -12,7 +12,7 @@ type ServiceRequestRealtimePayload = {
   flowType?: string;
   status?: string;
   paymentStatus?: string;
-  payMongoStatus?: string;
+  xenditStatus?: string;
   refundStatus?: string;
   source?: string;
   updatedAt?: string;
@@ -44,7 +44,7 @@ function getServiceRequestEventKey(value: unknown) {
     data.sessionId || 'no-session',
     data.status ||
       data.paymentStatus ||
-      data.payMongoStatus ||
+      data.xenditStatus ||
       data.refundStatus ||
       'no-status',
     data.source || 'no-source',
@@ -70,7 +70,7 @@ function isRelevantServiceRequestEvent(value: unknown) {
   }
 
   return (
-    event.includes('paymongo') &&
+    event.includes('xendit') &&
     (flowType === 'SERVICE_REQUEST' ||
       flowType === 'GUEST_SERVICE_REQUEST' ||
       Boolean(data.requestCode || data.requestId))

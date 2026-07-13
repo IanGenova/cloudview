@@ -82,7 +82,7 @@ type ServiceRequestOrderItem = {
   amountCents: number;
   paymentMethod: string | null;
   paymentStatus: string;
-  payMongoStatus: string | null;
+  xenditStatus: string | null;
   refundStatus: string | null;
   refundedAmountCents: number;
   refundErrorMessage: string;
@@ -105,10 +105,10 @@ type RequestGroup = {
   updatedAt: string;
   itemCount: number;
   billedCount: number;
-  payMongoPaidCount: number;
+  xenditPaidCount: number;
   refundPendingCount: number;
   refundedCount: number;
-  totalPayMongoAmountCents: number;
+  totalXenditAmountCents: number;
   totalChargeAmount: number;
   items: ServiceRequestOrderItem[];
   attachments: ServiceRequestAttachment[];
@@ -415,9 +415,9 @@ function getServiceReviewItems(request: RequestGroup) {
   const activeItems = request.items.filter(
     (item) => item.status !== 'CANCELLED' && item.status !== 'COMPLETED'
   );
-  const unpaidPayMongoItems = request.items.filter(
+  const unpaidXenditItems = request.items.filter(
     (item) =>
-      item.paymentMethod === 'PAYMONGO' &&
+      item.paymentMethod === 'XENDIT' &&
       item.paymentStatus !== 'PAID' &&
       item.paymentStatus !== 'PARTIALLY_REFUNDED' &&
       item.paymentStatus !== 'REFUNDED'
@@ -430,12 +430,12 @@ function getServiceReviewItems(request: RequestGroup) {
       detail: `${request.itemCount} service item${request.itemCount === 1 ? '' : 's'} in this request order.`,
     },
     {
-      label: 'PayMongo verification',
-      ready: unpaidPayMongoItems.length === 0,
+      label: 'Xendit verification',
+      ready: unpaidXenditItems.length === 0,
       detail:
-        unpaidPayMongoItems.length === 0
-          ? 'All PayMongo-paid items are verified.'
-          : `${unpaidPayMongoItems.length} PayMongo item${unpaidPayMongoItems.length === 1 ? '' : 's'} need payment review.`,
+        unpaidXenditItems.length === 0
+          ? 'All Xendit-paid items are verified.'
+          : `${unpaidXenditItems.length} Xendit item${unpaidXenditItems.length === 1 ? '' : 's'} need payment review.`,
     },
     {
       label: 'Fulfillment workload',
@@ -734,10 +734,10 @@ function RequestItemCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
-          {item.paymentMethod === 'PAYMONGO' ? (
+          {item.paymentMethod === 'XENDIT' ? (
             <div className="flex flex-col items-end gap-1">
               <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
-                PAYMONGO {money(item.amountCents / 100)}
+                XENDIT {money(item.amountCents / 100)}
               </span>
               <PaymentStatusPill status={item.paymentStatus} />
             </div>
@@ -774,9 +774,9 @@ function RequestItemCard({
         </div>
       ) : null}
 
-      {item.paymentMethod === 'PAYMONGO' ? (
+      {item.paymentMethod === 'XENDIT' ? (
         <div className="mt-3 rounded-xl bg-gold/10 p-3 text-xs font-bold text-gold">
-          <p>Secure PayMongo payment: {money(item.amountCents / 100)}</p>
+          <p>Secure Xendit payment: {money(item.amountCents / 100)}</p>
           <p className="mt-1">Payment status: {statusLabel(item.paymentStatus)}</p>
           {item.refundedAmountCents > 0 ? (
             <p className="mt-1">Refunded: {money(item.refundedAmountCents / 100)}</p>
@@ -903,7 +903,7 @@ function CancelServiceItemModal({
 
           <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700 dark:bg-red-500/10 dark:text-red-200">
             This cancels only this service item. Tracked inventory is restored,
-            its room charge is removed, and a PayMongo-paid item starts the
+            its room charge is removed, and a Xendit-paid item starts the
             matching refund workflow. Other service items remain active.
           </div>
 
@@ -959,7 +959,7 @@ function DetailsModal({
   const chargeableItems = request.items.filter(
     (item) =>
       item.status !== 'CANCELLED' &&
-      item.paymentMethod !== 'PAYMONGO' &&
+      item.paymentMethod !== 'XENDIT' &&
       item.billingMode !== 'FREE'
   );
 
@@ -1088,8 +1088,8 @@ function DetailsModal({
                   </div>
 
                   <div className="flex justify-between gap-3">
-                    <span className="text-neutral-500">PayMongo Paid</span>
-                    <b>{money(request.totalPayMongoAmountCents / 100)}</b>
+                    <span className="text-neutral-500">Xendit Paid</span>
+                    <b>{money(request.totalXenditAmountCents / 100)}</b>
                   </div>
                 </div>
               </div>
@@ -1176,7 +1176,7 @@ function DetailsModal({
                     />
 
                     <span>
-                      Post or update room add-on charges for non-PayMongo items only.
+                      Post or update room add-on charges for non-Xendit items only.
                     </span>
                   </label>
 
@@ -1437,7 +1437,7 @@ export function ServiceRequestsClient({
         nextStatus === 'CANCELLED'
           ? request.items.filter(
               (item) =>
-                item.paymentMethod === 'PAYMONGO' &&
+                item.paymentMethod === 'XENDIT' &&
                 item.amountCents > 0 &&
                 (item.paymentStatus === 'PAID' ||
                   item.paymentStatus === 'PARTIALLY_REFUNDED' ||
@@ -1449,7 +1449,7 @@ export function ServiceRequestsClient({
         status: nextStatus,
         paymentStatus:
           nextStatus === 'CANCELLED' &&
-          item.paymentMethod === 'PAYMONGO' &&
+          item.paymentMethod === 'XENDIT' &&
           item.amountCents > 0
             ? 'REFUND_PENDING'
             : item.paymentStatus,
@@ -1476,7 +1476,7 @@ export function ServiceRequestsClient({
             status: 'CANCELLED',
             charge: null,
             paymentStatus:
-              item.paymentMethod === 'PAYMONGO' && item.amountCents > 0
+              item.paymentMethod === 'XENDIT' && item.amountCents > 0
                 ? 'REFUND_PENDING'
                 : item.paymentStatus,
           }

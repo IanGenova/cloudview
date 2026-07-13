@@ -1,19 +1,19 @@
 import { notFound } from 'next/navigation';
 import {
-  GuestPayMongoFlow,
+  GuestXenditFlow,
   type Prisma,
 } from '@prisma/client';
 import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { GuestPaymentStatus } from '@/components/guest/GuestPaymentStatus';
 import type { GuestPaymentStatusValue } from './actions';
-import { requireOwnedGuestPayMongoSession } from '@/lib/guest-paymongo-security';
+import { requireOwnedGuestXenditSession } from '@/lib/guest-xendit-security';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 
 export const dynamic = 'force-dynamic';
 
 function parseFlow(value?: string) {
-  if (value === 'food') return GuestPayMongoFlow.FOOD_ORDER;
-  if (value === 'service') return GuestPayMongoFlow.SERVICE_REQUEST;
+  if (value === 'food') return GuestXenditFlow.FOOD_ORDER;
+  if (value === 'service') return GuestXenditFlow.SERVICE_REQUEST;
   return null;
 }
 
@@ -45,11 +45,11 @@ export default async function GuestPaymentPage({
   const tag = await requireNfcGuestAccess(tagCode);
 
   let ownedPayment: Awaited<
-    ReturnType<typeof requireOwnedGuestPayMongoSession>
+    ReturnType<typeof requireOwnedGuestXenditSession>
   >;
 
   try {
-    ownedPayment = await requireOwnedGuestPayMongoSession({
+    ownedPayment = await requireOwnedGuestXenditSession({
       tagCode,
       paymentSessionId,
       flowType: flow,
@@ -65,7 +65,7 @@ export default async function GuestPaymentPage({
     : tag.location?.name ?? tag.label;
 
   const referenceCode =
-    flow === GuestPayMongoFlow.FOOD_ORDER
+    flow === GuestXenditFlow.FOOD_ORDER
       ? payment.orderCode
       : parseStringArray(payment.serviceRequestCodes)[0] || null;
 
@@ -81,7 +81,7 @@ export default async function GuestPaymentPage({
         title="Secure Payment"
         subtitle={roomLabel}
         backHref={
-          flow === GuestPayMongoFlow.FOOD_ORDER
+          flow === GuestXenditFlow.FOOD_ORDER
             ? `/t/${tagCode}/menu`
             : `/t/${tagCode}/service`
         }
@@ -109,7 +109,7 @@ export default async function GuestPaymentPage({
       <GuestBottomNav
         tagCode={tagCode}
         active={
-          flow === GuestPayMongoFlow.FOOD_ORDER ? 'order' : 'services'
+          flow === GuestXenditFlow.FOOD_ORDER ? 'order' : 'services'
         }
         dark
       />

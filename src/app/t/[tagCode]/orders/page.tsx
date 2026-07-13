@@ -13,7 +13,7 @@ import {
   QrCode,
 } from 'lucide-react';
 import {
-  GuestPayMongoFlow,
+  GuestXenditFlow,
   OrderItemStatus,
   OrderStatus,
   PaymentStatus,
@@ -328,13 +328,13 @@ export default async function MyOrdersPage({
       })
     : [];
 
-  const payMongoSessions = guestSession
-    ? await db.guestPayMongoSession.findMany({
+  const xenditSessions = guestSession
+    ? await db.guestXenditSession.findMany({
         where: {
           guestSessionId: guestSession.id,
           hotelId: tag.hotelId,
           tagId: tag.id,
-          flowType: GuestPayMongoFlow.FOOD_ORDER,
+          flowType: GuestXenditFlow.FOOD_ORDER,
         },
         select: {
           id: true,
@@ -354,11 +354,11 @@ export default async function MyOrdersPage({
     : [];
 
   /**
-   * A completed PayMongo session with an order code is already represented by
+   * A completed Xendit session with an order code is already represented by
    * the order card below. Hide the duplicate payment activity card, while
    * keeping pending, processing, review, and refund states visible.
    */
-  const visiblePayMongoSessions = payMongoSessions.filter(
+  const visibleXenditSessions = xenditSessions.filter(
     (payment) =>
       payment.status !== 'COMPLETED' || !payment.orderCode
   );
@@ -456,7 +456,7 @@ export default async function MyOrdersPage({
           </section>
         )}
 
-        {visiblePayMongoSessions.length ? (
+        {visibleXenditSessions.length ? (
           <section className="mb-5 rounded-[2rem] border border-gold/20 bg-white/[0.035] p-5 backdrop-blur-md">
             <div className="mb-4 flex items-center gap-3">
               <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
@@ -464,7 +464,7 @@ export default async function MyOrdersPage({
               </span>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
-                  PayMongo Activity
+                  Xendit Activity
                 </p>
                 <h2 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
                   Payment activity
@@ -473,7 +473,7 @@ export default async function MyOrdersPage({
             </div>
 
             <div className="space-y-3">
-              {visiblePayMongoSessions.map((payment) => {
+              {visibleXenditSessions.map((payment) => {
                 const canResume =
                   payment.status === 'PENDING' &&
                   Boolean(payment.checkoutUrl) &&

@@ -42,7 +42,7 @@ export default async function OrderConfirmedPage({
     },
     include: {
       items: true,
-      guestPayMongoSessions: {
+      guestXenditSessions: {
         orderBy: { createdAt: 'desc' },
         take: 1,
         select: {
@@ -61,7 +61,7 @@ export default async function OrderConfirmedPage({
   const deliveryPlace = tag.room
     ? `Room ${tag.room.number}`
     : tag.location?.name || tag.label;
-  const payment = order.guestPayMongoSessions[0];
+  const payment = order.guestXenditSessions[0];
   const isCancelled = order.status === OrderStatus.CANCELLED;
   const isRefunding =
     order.paymentStatus === PaymentStatus.REFUND_PENDING ||
@@ -117,9 +117,9 @@ export default async function OrderConfirmedPage({
 
             <p className="mx-auto mt-4 max-w-xs text-sm font-medium leading-6 text-white/60">
               {isRefunded
-                ? 'PayMongo confirmed the refund. The return timing depends on the original payment method.'
+                ? 'Xendit confirmed the refund. The return timing depends on the original payment method.'
                 : isRefunding
-                  ? 'The order is cancelled and CloudView is processing the eligible PayMongo refund.'
+                  ? 'The order is cancelled and CloudView is processing the eligible Xendit refund.'
                   : isCancelled
                     ? 'This order was cancelled. Review the payment status below for any refund update.'
                     : 'Your order has been received. You can track it in real time from confirmation to delivery.'}
@@ -163,7 +163,7 @@ export default async function OrderConfirmedPage({
                   </div>
                   {payment?.status ? (
                     <div className="flex justify-between gap-3">
-                      <span className="text-white/50">PayMongo</span>
+                      <span className="text-white/50">Xendit</span>
                       <b className="text-white">{label(payment.status)}</b>
                     </div>
                   ) : null}
@@ -191,7 +191,7 @@ export default async function OrderConfirmedPage({
                 Track Order
               </Link>
 
-              {order.paymentMethod === PaymentMethod.PAYMONGO &&
+              {order.paymentMethod === PaymentMethod.XENDIT &&
               payment?.refundErrorMessage ? (
                 <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold leading-5 text-red-200">
                   Refund review: {payment.refundErrorMessage}

@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import {
-  GuestPayMongoFlow,
-  GuestPayMongoRefundStatus,
-  GuestPayMongoStatus,
+  GuestXenditFlow,
+  GuestXenditRefundStatus,
+  GuestXenditStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
-import { expirePayMongoCheckoutSession } from '@/lib/paymongo';
+import { expireXenditCheckoutSession } from '@/lib/xendit';
+import { getXenditForUserIdFromPayload } from '@/lib/xendit-split';
 import {
   requestAutomaticGuestRefund,
-  retryGuestPayMongoRefund,
-} from '@/lib/guest-paymongo-refund';
+  retryGuestXenditRefund,
+} from '@/lib/guest-xendit-refund';
 import {
   cleanupStagedGuestServiceAttachments,
   type StagedServiceAttachment,
@@ -22,7 +23,7 @@ const MANUAL_REFUND_REQUIRED_PREFIX = 'MANUAL REFUND REQUIRED:';
 
 function isAuthorized(request: Request) {
   const secret =
-    process.env.PAYMONGO_REFUND_CRON_SECRET?.trim() ||
+    process.env.XENDIT_REFUND_CRON_SECRET?.trim() ||
     process.env.SCHEDULED_RELEASE_CRON_SECRET?.trim();
 
   if (!secret) return false;
@@ -41,9 +42,10 @@ async function run(request: Request) {
     );
   }
 
-  const expiredCheckoutCandidates = await db.guestPayMongoSession.findMany({
+  const expiredCheckoutCandidates = await db.guestXenditSession.findMany({
     where: {
-      status: GuestPayMongoStatus.PENDING,
+      paymentProvider: 'XENDIT',
+      status: GuestXenditStatus.PENDING,
       expiresAt: { lte: new Date() },
     },
     select: {
@@ -59,15 +61,15 @@ async function run(request: Request) {
   const expiredCheckoutResults = [];
 
   for (const session of expiredCheckoutCandidates) {
-    const expired = await db.guestPayMongoSession.updateMany({
+    const expired = await db.guestXenditSession.updateMany({
       where: {
         id: session.id,
-        status: GuestPayMongoStatus.PENDING,
+        status: GuestXenditStatus.PENDING,
       },
       data: {
-        status: GuestPayMongoStatus.EXPIRED,
+        status: GuestXenditStatus.EXPIRED,
         checkoutExpiredAt: new Date(),
-        errorMessage: 'The guest PayMongo checkout expired before payment.',
+        errorMessage: 'The guest Xendit checkout expired before payment.',
       },
     });
 
@@ -76,7 +78,7 @@ async function run(request: Request) {
     let remoteExpired = false;
     let remoteError: string | null = null;
 
-    if (session.flowType === GuestPayMongoFlow.SERVICE_REQUEST) {
+    if (session.flowType === GuestXenditFlow.SERVICE_REQUEST) {
       const payload =
         session.payload &&
         typeof session.payload === 'object' &&
@@ -95,16 +97,19 @@ async function run(request: Request) {
 
     if (session.checkoutSessionId) {
       try {
-        await expirePayMongoCheckoutSession(session.checkoutSessionId);
+        await expireXenditCheckoutSession(
+          session.checkoutSessionId,
+          getXenditForUserIdFromPayload(session.payload)
+        );
         remoteExpired = true;
       } catch (error) {
         remoteError =
           error instanceof Error
             ? error.message
-            : 'Unable to expire the PayMongo checkout session.';
+            : 'Unable to expire the Xendit checkout session.';
 
         console.warn(
-          '[Guest PayMongo maintenance] Checkout expiration failed.',
+          '[Guest Xendit maintenance] Checkout expiration failed.',
           {
             sessionId: session.id,
             checkoutSessionId: session.checkoutSessionId,
@@ -121,8 +126,11 @@ async function run(request: Request) {
     });
   }
 
-  const failedRefunds = await db.guestPayMongoRefund.findMany({
-    where: { status: GuestPayMongoRefundStatus.FAILED },
+  const failedRefunds = await db.guestXenditRefund.findMany({
+    where: {
+      status: GuestXenditRefundStatus.FAILED,
+      guestPaymentSession: { paymentProvider: 'XENDIT' },
+    },
     select: {
       id: true,
       errorMessage: true,
@@ -152,7 +160,7 @@ async function run(request: Request) {
     try {
       refundResults.push({
         refundRecordId: refund.id,
-        ...(await retryGuestPayMongoRefund(refund.id)),
+        ...(await retryGuestXenditRefund(refund.id)),
       });
     } catch (error) {
       refundResults.push({
@@ -167,11 +175,12 @@ async function run(request: Request) {
     }
   }
 
-  const unrecordedSessions = await db.guestPayMongoSession.findMany({
+  const unrecordedSessions = await db.guestXenditSession.findMany({
     where: {
+      paymentProvider: 'XENDIT',
       automaticRefundEnabled: true,
-      paymongoPaymentId: { not: null },
-      status: GuestPayMongoStatus.PAID_REVIEW_REQUIRED,
+      xenditPaymentId: { not: null },
+      status: GuestXenditStatus.PAID_REVIEW_REQUIRED,
       refunds: { none: {} },
     },
     select: {

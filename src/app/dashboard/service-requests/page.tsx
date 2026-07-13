@@ -24,9 +24,9 @@ function getServiceRequestsMessage(success?: string, error?: string) {
       'request-started': 'Service request order moved to In Progress.',
       'request-completed': 'Service request order was marked as completed.',
       'request-cancelled':
-        'Service request order was cancelled. Inventory was restored and eligible PayMongo refunds were submitted.',
+        'Service request order was cancelled. Inventory was restored and eligible Xendit refunds were submitted.',
       'request-item-cancelled':
-        'Service request item was cancelled. Inventory, charges, and eligible PayMongo refunds were updated.',
+        'Service request item was cancelled. Inventory, charges, and eligible Xendit refunds were updated.',
       'charge-updated': 'Room add-on charge was added or updated successfully.',
       'request-created': 'Service request was added successfully.',
     };
@@ -268,7 +268,7 @@ export default async function ServiceRequestsPage({
             email: true,
           },
         },
-        guestPayMongoSession: {
+        guestXenditSession: {
           select: {
             id: true,
             status: true,
@@ -492,9 +492,9 @@ function buildGroupedRequests(sourceRequests: typeof requests) {
         .toISOString(),
       itemCount: sortedGroup.length,
       billedCount: groupCharges.length,
-      payMongoPaidCount: sortedGroup.filter(
+      xenditPaidCount: sortedGroup.filter(
         (request) =>
-          request.paymentMethod === 'PAYMONGO' &&
+          request.paymentMethod === 'XENDIT' &&
           request.paymentStatus === 'PAID'
       ).length,
       refundPendingCount: sortedGroup.filter(
@@ -503,9 +503,9 @@ function buildGroupedRequests(sourceRequests: typeof requests) {
       refundedCount: sortedGroup.filter(
         (request) => request.paymentStatus === 'REFUNDED'
       ).length,
-      totalPayMongoAmountCents: sortedGroup.reduce(
+      totalXenditAmountCents: sortedGroup.reduce(
         (sum, request) =>
-          sum + (request.paymentMethod === 'PAYMONGO' ? request.amountCents : 0),
+          sum + (request.paymentMethod === 'XENDIT' ? request.amountCents : 0),
         0
       ),
       totalChargeAmount,
@@ -529,12 +529,12 @@ function buildGroupedRequests(sourceRequests: typeof requests) {
           amountCents: request.amountCents,
           paymentMethod: request.paymentMethod,
           paymentStatus: request.paymentStatus,
-          payMongoStatus: request.guestPayMongoSession?.status ?? null,
-          refundStatus: request.guestPayMongoSession?.refundStatus ?? null,
+          xenditStatus: request.guestXenditSession?.status ?? null,
+          refundStatus: request.guestXenditSession?.refundStatus ?? null,
           refundedAmountCents:
-            request.guestPayMongoSession?.refundedAmountCents ?? 0,
+            request.guestXenditSession?.refundedAmountCents ?? 0,
           refundErrorMessage:
-            request.guestPayMongoSession?.refundErrorMessage ?? '',
+            request.guestXenditSession?.refundErrorMessage ?? '',
           charge: charge
             ? {
                 id: charge.id,

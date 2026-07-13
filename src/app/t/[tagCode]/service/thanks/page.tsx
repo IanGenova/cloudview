@@ -5,11 +5,15 @@ import {
   Clock3,
   CreditCard,
   ReceiptText,
+  RotateCcw,
 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { ResetGuestServiceRequest } from './ResetGuestServiceRequest';
+
+export const dynamic = 'force-dynamic';
 
 function label(value: string) {
   return value.replaceAll('_', ' ');
@@ -46,7 +50,7 @@ export default async function ServiceThanksPage({
       guestSessionId: guestSession.id,
     },
     include: {
-      guestPayMongoSession: {
+      guestXenditSession: {
         select: {
           status: true,
           refundStatus: true,
@@ -61,21 +65,26 @@ export default async function ServiceThanksPage({
   if (!requests.length) notFound();
 
   const paidItems = requests.filter(
-    (request) => request.paymentMethod === 'PAYMONGO'
+    (request) => request.paymentMethod === 'XENDIT'
   );
   const totalPaidCents = paidItems.reduce(
     (sum, request) => sum + request.amountCents,
     0
   );
-  const firstPayment = paidItems[0]?.guestPayMongoSession;
+  const firstPayment = paidItems[0]?.guestXenditSession;
 
   return (
     <>
+      <ResetGuestServiceRequest
+        tagCode={tagCode}
+        requestCode={requestCode}
+      />
+
       <GuestShell
         hotel={tag.hotel}
-        title="Request Sent"
+        title="Thank You"
         subtitle={`Reference: ${requestCode}`}
-        backHref={`/t/${tagCode}/service`}
+        backHref={`/t/${tagCode}`}
         variant="dark"
       >
         <div className="grid min-h-[65vh] place-items-center bg-[#050505] py-10 text-center text-white">
@@ -84,13 +93,17 @@ export default async function ServiceThanksPage({
               <CheckCircle2 className="size-11" />
             </div>
 
-            <h2 className="mt-6 font-serif text-3xl font-normal tracking-wide">
-              Staff has received your request.
+            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+              Request received
+            </p>
+
+            <h2 className="mt-2 font-serif text-3xl font-normal tracking-wide">
+              Your request has been received.
             </h2>
 
             <p className="mt-3 text-sm font-medium leading-6 text-white/55">
-              A hotel team member will review and handle it shortly. Keep this
-              reference number for follow-up.
+              Our hotel staff has received your request and will review it
+              shortly. Keep the reference number below for follow-up.
             </p>
 
             <section className="mt-7 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 text-left shadow-[0_24px_60px_rgba(0,0,0,0.3)]">
@@ -98,6 +111,7 @@ export default async function ServiceThanksPage({
                 <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
                   <ReceiptText className="size-5" />
                 </span>
+
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.17em] text-white/35">
                     Request Reference
@@ -115,6 +129,7 @@ export default async function ServiceThanksPage({
                   </p>
                   <p className="mt-1 text-lg font-black">{requests.length}</p>
                 </div>
+
                 <div className="rounded-2xl bg-black/25 p-4">
                   <p className="text-[9px] font-black uppercase tracking-widest text-white/35">
                     Status
@@ -129,23 +144,27 @@ export default async function ServiceThanksPage({
                 <div className="mt-3 rounded-2xl border border-gold/15 bg-gold/[0.07] p-4 text-sm">
                   <div className="flex items-center gap-2 text-gold">
                     <CreditCard className="size-4" />
-                    <b>PayMongo payment</b>
+                    <b>Xendit payment</b>
                   </div>
+
                   <div className="mt-3 space-y-2 text-white/60">
                     <p className="flex justify-between gap-3">
                       <span>Paid services</span>
                       <b className="text-white">{paidItems.length}</b>
                     </p>
+
                     <p className="flex justify-between gap-3">
                       <span>Amount</span>
                       <b className="text-gold">{money(totalPaidCents)}</b>
                     </p>
+
                     {firstPayment?.status ? (
                       <p className="flex justify-between gap-3">
                         <span>Payment status</span>
                         <b className="text-white">{label(firstPayment.status)}</b>
                       </p>
                     ) : null}
+
                     {firstPayment?.refundedAmountCents ? (
                       <p className="flex justify-between gap-3">
                         <span>Refunded</span>
@@ -159,8 +178,8 @@ export default async function ServiceThanksPage({
               ) : (
                 <div className="mt-3 flex items-start gap-3 rounded-2xl bg-white/[0.04] p-4 text-left text-xs font-medium leading-5 text-white/45">
                   <Clock3 className="mt-0.5 size-4 shrink-0 text-gold" />
-                  Complimentary and price-on-confirmation requests may not show a
-                  PayMongo payment amount.
+                  No online payment was required. Complimentary and
+                  price-on-confirmation requests are sent directly to staff.
                 </div>
               )}
 
@@ -171,6 +190,15 @@ export default async function ServiceThanksPage({
                 >
                   View My Requests
                 </Link>
+
+                <Link
+                  href={`/t/${tagCode}/service`}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-center text-sm font-black text-white"
+                >
+                  <RotateCcw className="size-4" />
+                  Make Another Request
+                </Link>
+
                 <Link
                   href={`/t/${tagCode}`}
                   className="block rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-center text-sm font-black text-white"

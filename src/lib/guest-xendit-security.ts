@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { GuestPayMongoFlow } from '@prisma/client';
+import { GuestXenditFlow } from '@prisma/client';
 import { db } from '@/lib/db';
 import {
   getCurrentNfcGuestIdentity,
@@ -10,7 +10,7 @@ import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { requireAuthorizedGuestStayDevice } from '@/lib/guest-stay-device-auth';
 
-export class GuestPayMongoSecurityError extends Error {
+export class GuestXenditSecurityError extends Error {
   constructor(
     public code:
       | 'INVALID_TAG_CONTEXT'
@@ -22,16 +22,16 @@ export class GuestPayMongoSecurityError extends Error {
     message: string
   ) {
     super(message);
-    this.name = 'GuestPayMongoSecurityError';
+    this.name = 'GuestXenditSecurityError';
   }
 }
 
 /**
  * Central security gate for Batch 3 food checkout and Batch 4 service checkout.
- * It binds a PayMongo session to the NFC tag, browser session, active stay,
+ * It binds a Xendit session to the NFC tag, browser session, active stay,
  * room/location, guest identity, and (for protected room stays) device cookie.
  */
-export async function requireGuestPayMongoSecurityContext(tagCode: string) {
+export async function requireGuestXenditSecurityContext(tagCode: string) {
   const tag = await requireNfcGuestAccess(tagCode);
   const session = await requireCurrentNfcGuestSession(tagCode);
   const identity = await getCurrentNfcGuestIdentity(tagCode);
@@ -41,7 +41,7 @@ export async function requireGuestPayMongoSecurityContext(tagCode: string) {
     session.tagId !== tag.id ||
     identity.session?.id !== session.id
   ) {
-    throw new GuestPayMongoSecurityError(
+    throw new GuestXenditSecurityError(
       'SESSION_MISMATCH',
       'The NFC browser session does not match this hotel tag.'
     );
@@ -57,7 +57,7 @@ export async function requireGuestPayMongoSecurityContext(tagCode: string) {
 
   if (policy.mode === 'PRIVATE_ROOM') {
     if (!tag.roomId || session.roomId !== tag.roomId) {
-      throw new GuestPayMongoSecurityError(
+      throw new GuestXenditSecurityError(
         'ROOM_MISMATCH',
         'The NFC session does not belong to this room.'
       );
@@ -67,7 +67,7 @@ export async function requireGuestPayMongoSecurityContext(tagCode: string) {
       policy.paymentRequiresActiveStay &&
       (!identity.guestStay || identity.guestStay.roomId !== tag.roomId)
     ) {
-      throw new GuestPayMongoSecurityError(
+      throw new GuestXenditSecurityError(
         'ACTIVE_STAY_REQUIRED',
         'An active guest stay is required before paying from a room NFC portal.'
       );
@@ -87,7 +87,7 @@ export async function requireGuestPayMongoSecurityContext(tagCode: string) {
     tag.locationId &&
     session.locationId !== tag.locationId
   ) {
-    throw new GuestPayMongoSecurityError(
+    throw new GuestXenditSecurityError(
       'LOCATION_MISMATCH',
       'The NFC session does not belong to this hotel location.'
     );
@@ -110,24 +110,25 @@ export async function requireGuestPayMongoSecurityContext(tagCode: string) {
  * Use this for guest payment status/finalize/cancel actions. A guessed payment
  * session ID cannot be read unless it belongs to the same NFC browser context.
  */
-export async function requireOwnedGuestPayMongoSession(input: {
+export async function requireOwnedGuestXenditSession(input: {
   tagCode: string;
   paymentSessionId: string;
-  flowType?: GuestPayMongoFlow;
+  flowType?: GuestXenditFlow;
 }) {
-  const context = await requireGuestPayMongoSecurityContext(input.tagCode);
+  const context = await requireGuestXenditSecurityContext(input.tagCode);
   const paymentSessionId = input.paymentSessionId.trim();
 
   if (!paymentSessionId) {
-    throw new GuestPayMongoSecurityError(
+    throw new GuestXenditSecurityError(
       'PAYMENT_NOT_FOUND',
       'Guest payment session is required.'
     );
   }
 
-  const payment = await db.guestPayMongoSession.findFirst({
+  const payment = await db.guestXenditSession.findFirst({
     where: {
       id: paymentSessionId,
+      paymentProvider: 'XENDIT',
       hotelId: context.tag.hotelId,
       tagId: context.tag.id,
       guestSessionId: context.session.id,
@@ -145,7 +146,7 @@ export async function requireOwnedGuestPayMongoSession(input: {
   });
 
   if (!payment) {
-    throw new GuestPayMongoSecurityError(
+    throw new GuestXenditSecurityError(
       'PAYMENT_NOT_FOUND',
       'The guest payment session was not found for this NFC browser.'
     );

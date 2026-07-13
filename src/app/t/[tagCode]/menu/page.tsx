@@ -115,16 +115,16 @@ export default async function GuestMenuPage({
     tagCode: string;
   }>;
   searchParams?: Promise<{
-    paymongo?: string;
-    paymongoResult?: string;
+    xendit?: string;
+    xenditResult?: string;
   }>;
 }) {
   const { tagCode } = await params;
   const query = await searchParams;
-  const returnedPayMongoSessionId = query?.paymongo?.trim() || null;
-  const returnedPayMongoResult =
-    query?.paymongoResult === 'success' || query?.paymongoResult === 'cancelled'
-      ? query.paymongoResult
+  const returnedXenditSessionId = query?.xendit?.trim() || null;
+  const returnedXenditResult =
+    query?.xenditResult === 'success' || query?.xenditResult === 'cancelled'
+      ? query.xenditResult
       : null;
 
   const tag = await requireNfcGuestAccess(tagCode);
@@ -388,8 +388,8 @@ export default async function GuestMenuPage({
           taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
           serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
           defaultGuestName={defaultGuestName}
-          returnedPayMongoSessionId={returnedPayMongoSessionId}
-          returnedPayMongoResult={returnedPayMongoResult}
+          returnedXenditSessionId={returnedXenditSessionId}
+          returnedXenditResult={returnedXenditResult}
         />
       </GuestShell>
 

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { db } from '@/lib/db';
-import { verifyPOSPayMongoReturnState } from '@/lib/pos-paymongo-return';
-import { POSPayMongoReturnClient } from './POSPayMongoReturnClient';
+import { verifyPOSXenditReturnState } from '@/lib/pos-xendit-return';
+import { POSXenditReturnClient } from './POSXenditReturnClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ function ReturnError({ message }: { message: string }) {
   );
 }
 
-export default async function POSPayMongoReturnPage({
+export default async function POSXenditReturnPage({
   searchParams,
 }: {
   searchParams?: Promise<{
@@ -38,18 +38,19 @@ export default async function POSPayMongoReturnPage({
   }>;
 }) {
   const params = await searchParams;
-  const returnState = verifyPOSPayMongoReturnState(params?.state);
+  const returnState = verifyPOSXenditReturnState(params?.state);
 
   if (!returnState) {
     return (
-      <ReturnError message="The payment return link is invalid or has expired. Open the dashboard and review the latest POS PayMongo transaction." />
+      <ReturnError message="The payment return link is invalid or has expired. Open the dashboard and review the latest POS Xendit transaction." />
     );
   }
 
-  const session = await db.posPayMongoSession.findFirst({
+  const session = await db.posXenditSession.findFirst({
     where: {
       id: returnState.sessionId,
       hotelId: returnState.hotelId,
+      paymentProvider: 'XENDIT',
     },
     select: {
       id: true,
@@ -59,19 +60,19 @@ export default async function POSPayMongoReturnPage({
 
   if (!session) {
     return (
-      <ReturnError message="The matching POS PayMongo session was not found. Open the dashboard and review the payment records before retrying." />
+      <ReturnError message="The matching POS Xendit session was not found. Open the dashboard and review the payment records before retrying." />
     );
   }
 
   const query = new URLSearchParams({
     hotelId: session.hotelId,
-    paymongo: session.id,
-    paymongoResult: returnState.result,
+    xendit: session.id,
+    xenditResult: returnState.result,
   });
   const dashboardTarget = `/dashboard/pos?${query.toString()}`;
 
   return (
-    <POSPayMongoReturnClient
+    <POSXenditReturnClient
       sessionId={session.id}
       hotelId={session.hotelId}
       result={returnState.result}
