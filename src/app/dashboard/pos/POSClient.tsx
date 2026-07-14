@@ -1949,13 +1949,12 @@ export function POSClient({
                     className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold outline-none"
                   >
                     <option value="CASH">Cash</option>
-                    <option value="POS">Card / E-wallet (manual terminal)</option>
-                    <option value="XENDIT">Xendit (GCash / Card / QR Ph)</option>
+                    <option value="XENDIT">Card / E-wallet / QR Ph (Xendit)</option>
                     <option value="ROOM_CHARGE">Room Charge</option>
                     <option value="PAY_AT_COUNTER">Pay Later</option>
                   </select>
                   <p className="mt-1 text-[11px] font-bold text-neutral-500">
-                    Cash/manual terminal sales are completed immediately. Xendit opens a secure hosted checkout and creates the POS sale only after payment confirmation.
+                    Cash, room charge, and pay-later sales follow the hotel workflow. Card, e-wallet, and QR payments open Xendit's secure checkout and create the POS sale only after payment confirmation.
                   </p>
                 </div>
 
@@ -2048,7 +2047,7 @@ export function POSClient({
                       ? 'Opening Xendit...'
                       : 'Processing...'
                     : paymentMethod === 'XENDIT'
-                      ? 'Pay with Xendit'
+                      ? 'Open Secure Checkout'
                       : 'Complete Sale'}
                 </button>
               </div>

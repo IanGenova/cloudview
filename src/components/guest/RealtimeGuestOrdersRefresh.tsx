@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
 
@@ -27,7 +27,7 @@ const RELEVANT_EVENTS = new Set<RealtimeOrderEvent>([
   'order-items-updated',
 ]);
 
-function getEventKey(data: RealtimeOrderPayload) {
+function eventKey(data: RealtimeOrderPayload) {
   return [
     data.event || 'unknown',
     data.orderCode || 'no-order',
@@ -39,42 +39,44 @@ function getEventKey(data: RealtimeOrderPayload) {
   ].join(':');
 }
 
-function isRelevantOrderEvent(data: RealtimeOrderPayload, orderCode: string) {
-  if (!data?.event || !RELEVANT_EVENTS.has(data.event)) {
-    return false;
-  }
-
-  if (data.orderCode && data.orderCode !== orderCode) {
-    return false;
-  }
-
-  return true;
-}
-
-export function RealtimeOrderRefresh({
+export function RealtimeGuestOrdersRefresh({
   tagCode,
-  orderCode,
+  orderCodes,
   fallbackIntervalMs = 120_000,
   refreshDebounceMs = 500,
 }: {
   tagCode: string;
-  orderCode: string;
+  orderCodes: string[];
   fallbackIntervalMs?: number;
   refreshDebounceMs?: number;
 }) {
   const router = useRouter();
+  const normalizedOrderCodes = useMemo(
+    () =>
+      Array.from(
+        new Set(orderCodes.map((value) => value.trim()).filter(Boolean))
+      ).slice(0, 50),
+    [orderCodes]
+  );
+  const orderCodeKey = normalizedOrderCodes.join(',');
 
   const refreshTimeoutRef = useRef<number | null>(null);
   const lastEventKeyRef = useRef('');
-  const realtimeReadyRef = useRef(false);
+  const activeSubscriptionsRef = useRef(0);
   const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
+    if (!orderCodeKey) {
+      return;
+    }
+
     let disposed = false;
     let centrifuge: ReturnType<typeof createCentrifugoClient> | null = null;
-    let subscription: ReturnType<
-      NonNullable<ReturnType<typeof createCentrifugoClient>>['newSubscription']
-    > | null = null;
+    const subscriptions: Array<
+      ReturnType<
+        NonNullable<ReturnType<typeof createCentrifugoClient>>['newSubscription']
+      >
+    > = [];
 
     function clearScheduledRefresh() {
       if (refreshTimeoutRef.current) {
@@ -98,10 +100,7 @@ export function RealtimeOrderRefresh({
         lastRefreshAtRef.current = Date.now();
 
         if (process.env.NODE_ENV !== 'production') {
-          console.info('Refreshing order tracking page:', {
-            reason,
-            orderCode,
-          });
+          console.info('Refreshing guest order history:', { reason });
         }
 
         router.refresh();
@@ -114,7 +113,7 @@ export function RealtimeOrderRefresh({
         return;
       }
 
-      if (realtimeReadyRef.current) {
+      if (activeSubscriptionsRef.current > 0) {
         return;
       }
 
@@ -143,14 +142,14 @@ export function RealtimeOrderRefresh({
       try {
         const tokenEndpoint = `/api/realtime/centrifugo-token?tagCode=${encodeURIComponent(
           tagCode
-        )}&orderCode=${encodeURIComponent(orderCode)}`;
+        )}&orderCodes=${encodeURIComponent(orderCodeKey)}`;
 
         const response = await fetch(tokenEndpoint, {
           cache: 'no-store',
         });
 
         if (!response.ok) {
-          console.warn('Unable to get Centrifugo token.');
+          console.warn('Unable to get guest order-list Centrifugo token.');
           return;
         }
 
@@ -159,66 +158,73 @@ export function RealtimeOrderRefresh({
           channels?: string[];
         };
 
-        if (!payload.token || disposed) {
+        if (!payload.token || !payload.channels?.length || disposed) {
           return;
         }
 
         centrifuge = createCentrifugoClient(payload.token, {
           tokenEndpoint,
-          debugLabel: `Order tracking ${orderCode}`,
+          debugLabel: 'Guest order history',
         });
 
         if (!centrifuge) {
           return;
         }
 
-        const channel = payload.channels?.[0] || `order-${orderCode}`;
+        for (const channel of payload.channels) {
+          const subscription = centrifuge.newSubscription(channel);
 
-        subscription = centrifuge.newSubscription(channel);
+          subscription.on('publication', (ctx) => {
+            const data = ctx.data as RealtimeOrderPayload;
 
-        subscription.on('publication', (ctx) => {
-          const data = ctx.data as RealtimeOrderPayload;
+            if (!data.event || !RELEVANT_EVENTS.has(data.event)) {
+              return;
+            }
 
-          if (!isRelevantOrderEvent(data, orderCode)) {
-            return;
-          }
+            if (
+              data.orderCode &&
+              !normalizedOrderCodes.includes(data.orderCode)
+            ) {
+              return;
+            }
 
-          const eventKey = getEventKey(data);
+            const key = eventKey(data);
 
-          if (eventKey === lastEventKeyRef.current) {
-            return;
-          }
+            if (key === lastEventKeyRef.current) {
+              return;
+            }
 
-          lastEventKeyRef.current = eventKey;
-          scheduleRefresh(data.event || 'order-publication');
-        });
+            lastEventKeyRef.current = key;
+            scheduleRefresh(data.event);
+          });
 
-        subscription.on('subscribed', () => {
-          realtimeReadyRef.current = true;
+          subscription.on('subscribed', () => {
+            activeSubscriptionsRef.current += 1;
+          });
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.info(`Subscribed to ${channel}`);
-          }
-        });
+          subscription.on('unsubscribed', () => {
+            activeSubscriptionsRef.current = Math.max(
+              activeSubscriptionsRef.current - 1,
+              0
+            );
+          });
 
-        subscription.on('unsubscribed', () => {
-          realtimeReadyRef.current = false;
-        });
+          subscription.on('error', (ctx) => {
+            console.warn('Guest order-list subscription error:', ctx);
+          });
 
-        subscription.on('error', (ctx) => {
-          realtimeReadyRef.current = false;
-          console.warn('Centrifugo order subscription error:', ctx);
-        });
+          subscriptions.push(subscription);
+          subscription.subscribe();
+        }
 
         centrifuge.on('disconnected', () => {
-          realtimeReadyRef.current = false;
+          activeSubscriptionsRef.current = 0;
         });
 
-        subscription.subscribe();
         centrifuge.connect();
       } catch (error) {
-        realtimeReadyRef.current = false;
-        console.error('Centrifugo realtime connection error:', error);
+        activeSubscriptionsRef.current = 0;
+        console.error('Guest order-list realtime connection error:', error);
       }
     }
 
@@ -226,15 +232,17 @@ export function RealtimeOrderRefresh({
 
     return () => {
       disposed = true;
-      realtimeReadyRef.current = false;
-
+      activeSubscriptionsRef.current = 0;
       window.clearInterval(fallbackTimer);
       clearScheduledRefresh();
       window.removeEventListener('focus', handleVisibilityChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
 
       try {
-        subscription?.unsubscribe();
+        for (const subscription of subscriptions) {
+          subscription.unsubscribe();
+        }
+
         centrifuge?.disconnect();
       } catch {
         // Ignore disconnect errors.
@@ -242,7 +250,8 @@ export function RealtimeOrderRefresh({
     };
   }, [
     fallbackIntervalMs,
-    orderCode,
+    normalizedOrderCodes,
+    orderCodeKey,
     refreshDebounceMs,
     router,
     tagCode,

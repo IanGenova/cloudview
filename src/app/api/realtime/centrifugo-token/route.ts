@@ -7,8 +7,22 @@ import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
 
+const MAX_ORDER_CHANNELS = 50;
+
 function cleanParam(value: string | null, maxLength = 160) {
   return String(value ?? '').trim().slice(0, maxLength);
+}
+
+function parseOrderCodes(url: URL) {
+  const singleOrderCode = cleanParam(url.searchParams.get('orderCode'), 120);
+  const multipleOrderCodes = String(url.searchParams.get('orderCodes') ?? '')
+    .split(',')
+    .map((value) => cleanParam(value, 120))
+    .filter(Boolean);
+
+  return Array.from(
+    new Set([singleOrderCode, ...multipleOrderCodes].filter(Boolean))
+  ).slice(0, MAX_ORDER_CHANNELS);
 }
 
 function jsonError(message: string, status: number) {
@@ -26,10 +40,10 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
 
   const tagCode = cleanParam(url.searchParams.get('tagCode'), 160);
-  const orderCode = cleanParam(url.searchParams.get('orderCode'), 120);
+  const orderCodes = parseOrderCodes(url);
 
-  if (!tagCode || !orderCode) {
-    return jsonError('tagCode and orderCode are required.', 400);
+  if (!tagCode || orderCodes.length === 0) {
+    return jsonError('tagCode and at least one order code are required.', 400);
   }
 
   const tag = await requireNfcGuestAccess(tagCode);
@@ -48,9 +62,11 @@ export async function GET(request: Request) {
     return jsonError('Guest session does not match this NFC tag.', 403);
   }
 
-  const order = await db.order.findFirst({
+  const orders = await db.order.findMany({
     where: {
-      orderCode,
+      orderCode: {
+        in: orderCodes,
+      },
       hotelId: tag.hotelId,
       tagId: tag.id,
       guestSessionId: guestSession.id,
@@ -61,19 +77,30 @@ export async function GET(request: Request) {
     },
   });
 
-  if (!order) {
-    return jsonError('Order not found in current guest session.', 404);
+  if (orders.length === 0) {
+    return jsonError('No orders were found in the current guest session.', 404);
   }
 
-  const channel = realtimeChannels.guestOrder(order.orderCode);
+  const allowedOrderCodes = new Set(orders.map((order) => order.orderCode));
+  const unauthorizedOrderCodes = orderCodes.filter(
+    (orderCode) => !allowedOrderCodes.has(orderCode)
+  );
+
+  if (unauthorizedOrderCodes.length > 0) {
+    return jsonError('One or more orders are not available to this guest.', 403);
+  }
+
+  const channels = orders.map((order) =>
+    realtimeChannels.guestOrder(order.orderCode)
+  );
 
   const token = createCentrifugoConnectionToken({
-    subject: `guest:${guestSession.id}:order:${order.id}`,
+    subject: `guest:${guestSession.id}:orders`,
     ttlSeconds: 60 * 60,
   });
 
   return NextResponse.json({
     token,
-    channels: [channel],
+    channels,
   });
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
+  CheckCircle2,
   ChevronLeft,
   Clock,
   ConciergeBell,
@@ -8,6 +9,7 @@ import {
   MessageCircle,
   ReceiptText,
   RotateCcw,
+  UserCheck,
   XCircle,
 } from 'lucide-react';
 import {
@@ -17,6 +19,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
+import { RealtimeGuestServiceRequestsRefresh } from '@/components/guest/RealtimeGuestServiceRequestsRefresh';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
 import { cancelGuestServiceRequestItemAction } from '../service-xendit-actions';
@@ -48,6 +51,126 @@ function formatDateTime(date: Date) {
 
 function label(value: string) {
   return value.replaceAll('_', ' ');
+}
+
+function requestStatusLabel(
+  status: ServiceRequestStatus,
+  assignedToName?: string | null
+) {
+  if (status === ServiceRequestStatus.NEW && assignedToName) {
+    return 'ACCEPTED';
+  }
+
+  if (status === ServiceRequestStatus.COMPLETED) {
+    return 'FINISHED';
+  }
+
+  return label(status);
+}
+
+function ServiceRequestProgress({
+  status,
+  assignedToName,
+  history,
+  cancelReason,
+}: {
+  status: ServiceRequestStatus;
+  assignedToName?: string | null;
+  history: Array<{ status: ServiceRequestStatus }>;
+  cancelReason?: string | null;
+}) {
+  const reachedInProgress =
+    status === ServiceRequestStatus.IN_PROGRESS ||
+    status === ServiceRequestStatus.COMPLETED ||
+    history.some((entry) => entry.status === ServiceRequestStatus.IN_PROGRESS);
+  const accepted = Boolean(assignedToName) || reachedInProgress;
+  const finished = status === ServiceRequestStatus.COMPLETED;
+  const cancelled = status === ServiceRequestStatus.CANCELLED;
+
+  const steps = [
+    { label: 'Submitted', complete: true },
+    { label: 'Accepted', complete: accepted },
+    { label: 'In progress', complete: reachedInProgress },
+    { label: 'Finished', complete: finished },
+  ];
+
+  return (
+    <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-black/20 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
+          Live tracking
+        </p>
+        {assignedToName ? (
+          <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-gold">
+            <UserCheck className="size-3.5 shrink-0" />
+            <span className="truncate">{assignedToName}</span>
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid grid-cols-4 gap-1">
+        {steps.map((step, index) => (
+          <div key={step.label} className="relative text-center">
+            {index < steps.length - 1 ? (
+              <span
+                className={
+                  steps[index + 1].complete
+                    ? 'absolute left-1/2 top-3 h-0.5 w-full bg-gold'
+                    : 'absolute left-1/2 top-3 h-0.5 w-full bg-white/10'
+                }
+              />
+            ) : null}
+
+            <span
+              className={
+                step.complete
+                  ? 'relative z-10 mx-auto grid size-6 place-items-center rounded-full bg-gold text-black'
+                  : 'relative z-10 mx-auto grid size-6 place-items-center rounded-full border border-white/15 bg-[#111] text-white/35'
+              }
+            >
+              {step.complete ? (
+                <CheckCircle2 className="size-3.5" />
+              ) : (
+                <span className="size-1.5 rounded-full bg-current" />
+              )}
+            </span>
+
+            <p
+              className={
+                step.complete
+                  ? 'mt-2 text-[9px] font-bold text-white/80'
+                  : 'mt-2 text-[9px] font-semibold text-white/35'
+              }
+            >
+              {step.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {cancelled ? (
+        <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold text-red-200">
+          Request cancelled{cancelReason ? ` — ${cancelReason}` : '.'}
+        </div>
+      ) : status === ServiceRequestStatus.NEW && !assignedToName ? (
+        <p className="mt-4 text-xs font-medium text-white/45">
+          Waiting for the hotel team to accept this request.
+        </p>
+      ) : status === ServiceRequestStatus.NEW && assignedToName ? (
+        <p className="mt-4 text-xs font-medium text-white/55">
+          Accepted by {assignedToName}. Work will begin shortly.
+        </p>
+      ) : status === ServiceRequestStatus.IN_PROGRESS ? (
+        <p className="mt-4 text-xs font-medium text-white/55">
+          The hotel team is currently working on this request.
+        </p>
+      ) : finished ? (
+        <p className="mt-4 text-xs font-medium text-emerald-200/80">
+          This service request has been finished.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function statusBadgeClass(status: ServiceRequestStatus) {
@@ -124,6 +247,20 @@ export default async function MyRequestsPage({
               refundErrorMessage: true,
             },
           },
+          assignedTo: {
+            select: {
+              name: true,
+            },
+          },
+          statusHistory: {
+            select: {
+              status: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 8,
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: 50,
@@ -147,6 +284,9 @@ export default async function MyRequestsPage({
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
+      {guestSession ? (
+        <RealtimeGuestServiceRequestsRefresh tagCode={tagCode} />
+      ) : null}
       <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-5">
         <div className="mb-7 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
@@ -248,7 +388,10 @@ export default async function MyRequestsPage({
                           request.status
                         )}`}
                       >
-                        {label(request.status)}
+                        {requestStatusLabel(
+                          request.status,
+                          request.assignedTo?.name
+                        )}
                       </span>
                     </div>
                     <p className="mt-1 text-xs font-medium text-white/50">
@@ -262,6 +405,13 @@ export default async function MyRequestsPage({
                     </p>
                   ) : null}
                 </div>
+
+                <ServiceRequestProgress
+                  status={request.status}
+                  assignedToName={request.assignedTo?.name}
+                  history={request.statusHistory}
+                  cancelReason={request.cancelReason}
+                />
 
                 <div className="mt-4 rounded-[1.25rem] bg-white/5 p-4">
                   <p className="flex items-center gap-2 font-serif text-[15px] font-medium tracking-wide">
@@ -280,7 +430,7 @@ export default async function MyRequestsPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <QrPaymentIcon />
                       <p className="font-serif text-[15px] font-medium text-gold">
-                        Xendit QR Ph
+                        Xendit online payment
                       </p>
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(

@@ -20,6 +20,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
+import { RealtimeGuestOrdersRefresh } from '@/components/guest/RealtimeGuestOrdersRefresh';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 import { getGuestRewardsContextForTag } from '@/lib/nfc-rewards';
@@ -365,6 +366,10 @@ export default async function MyOrdersPage({
 
   return (
     <main className="min-h-screen bg-[#050505] text-white">
+      <RealtimeGuestOrdersRefresh
+        tagCode={tagCode}
+        orderCodes={orders.map((order) => order.orderCode)}
+      />
       <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-5">
         <div className="mb-6 grid grid-cols-[44px_1fr_44px] items-center">
           <Link

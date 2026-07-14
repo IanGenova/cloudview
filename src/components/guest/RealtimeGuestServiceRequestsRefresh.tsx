@@ -4,66 +4,57 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
 
-type RealtimeOrderEvent =
-  | 'order-status-updated'
-  | 'order-payment-updated'
-  | 'order-refund-updated'
-  | 'order-items-updated';
+type RealtimeServiceRequestEvent =
+  | 'service-request-created'
+  | 'service-request-updated'
+  | 'service-request-billed'
+  | 'service-request-payment-updated'
+  | 'service-request-refund-updated';
 
-type RealtimeOrderPayload = {
-  event?: RealtimeOrderEvent;
-  orderCode?: string;
+type RealtimeServiceRequestPayload = {
+  event?: RealtimeServiceRequestEvent;
+  requestId?: string;
+  requestCode?: string;
   status?: string;
   paymentStatus?: string;
   refundStatus?: string;
   refundedAmountCents?: number;
+  billed?: boolean;
   updatedAt?: string;
 };
 
-const RELEVANT_EVENTS = new Set<RealtimeOrderEvent>([
-  'order-status-updated',
-  'order-payment-updated',
-  'order-refund-updated',
-  'order-items-updated',
+const RELEVANT_EVENTS = new Set<RealtimeServiceRequestEvent>([
+  'service-request-created',
+  'service-request-updated',
+  'service-request-billed',
+  'service-request-payment-updated',
+  'service-request-refund-updated',
 ]);
 
-function getEventKey(data: RealtimeOrderPayload) {
+function eventKey(data: RealtimeServiceRequestPayload) {
   return [
     data.event || 'unknown',
-    data.orderCode || 'no-order',
-    data.status || 'no-order-status',
+    data.requestId || 'no-request-id',
+    data.requestCode || 'no-request-code',
+    data.status || 'no-status',
     data.paymentStatus || 'no-payment-status',
     data.refundStatus || 'no-refund-status',
     String(data.refundedAmountCents ?? 'no-refund-amount'),
+    String(data.billed ?? 'no-billing-state'),
     data.updatedAt || 'no-time',
   ].join(':');
 }
 
-function isRelevantOrderEvent(data: RealtimeOrderPayload, orderCode: string) {
-  if (!data?.event || !RELEVANT_EVENTS.has(data.event)) {
-    return false;
-  }
-
-  if (data.orderCode && data.orderCode !== orderCode) {
-    return false;
-  }
-
-  return true;
-}
-
-export function RealtimeOrderRefresh({
+export function RealtimeGuestServiceRequestsRefresh({
   tagCode,
-  orderCode,
   fallbackIntervalMs = 120_000,
-  refreshDebounceMs = 500,
+  refreshDebounceMs = 450,
 }: {
   tagCode: string;
-  orderCode: string;
   fallbackIntervalMs?: number;
   refreshDebounceMs?: number;
 }) {
   const router = useRouter();
-
   const refreshTimeoutRef = useRef<number | null>(null);
   const lastEventKeyRef = useRef('');
   const realtimeReadyRef = useRef(false);
@@ -98,10 +89,7 @@ export function RealtimeOrderRefresh({
         lastRefreshAtRef.current = Date.now();
 
         if (process.env.NODE_ENV !== 'production') {
-          console.info('Refreshing order tracking page:', {
-            reason,
-            orderCode,
-          });
+          console.info('Refreshing guest service requests:', { reason });
         }
 
         router.refresh();
@@ -141,16 +129,16 @@ export function RealtimeOrderRefresh({
 
     async function connect() {
       try {
-        const tokenEndpoint = `/api/realtime/centrifugo-token?tagCode=${encodeURIComponent(
+        const tokenEndpoint = `/api/realtime/guest-service-requests-token?tagCode=${encodeURIComponent(
           tagCode
-        )}&orderCode=${encodeURIComponent(orderCode)}`;
+        )}`;
 
         const response = await fetch(tokenEndpoint, {
           cache: 'no-store',
         });
 
         if (!response.ok) {
-          console.warn('Unable to get Centrifugo token.');
+          console.warn('Unable to get guest service-request Centrifugo token.');
           return;
         }
 
@@ -159,38 +147,37 @@ export function RealtimeOrderRefresh({
           channels?: string[];
         };
 
-        if (!payload.token || disposed) {
+        if (!payload.token || !payload.channels?.length || disposed) {
           return;
         }
 
         centrifuge = createCentrifugoClient(payload.token, {
           tokenEndpoint,
-          debugLabel: `Order tracking ${orderCode}`,
+          debugLabel: 'Guest service-request tracking',
         });
 
         if (!centrifuge) {
           return;
         }
 
-        const channel = payload.channels?.[0] || `order-${orderCode}`;
-
+        const channel = payload.channels[0];
         subscription = centrifuge.newSubscription(channel);
 
         subscription.on('publication', (ctx) => {
-          const data = ctx.data as RealtimeOrderPayload;
+          const data = ctx.data as RealtimeServiceRequestPayload;
 
-          if (!isRelevantOrderEvent(data, orderCode)) {
+          if (!data.event || !RELEVANT_EVENTS.has(data.event)) {
             return;
           }
 
-          const eventKey = getEventKey(data);
+          const key = eventKey(data);
 
-          if (eventKey === lastEventKeyRef.current) {
+          if (key === lastEventKeyRef.current) {
             return;
           }
 
-          lastEventKeyRef.current = eventKey;
-          scheduleRefresh(data.event || 'order-publication');
+          lastEventKeyRef.current = key;
+          scheduleRefresh(data.event);
         });
 
         subscription.on('subscribed', () => {
@@ -207,7 +194,7 @@ export function RealtimeOrderRefresh({
 
         subscription.on('error', (ctx) => {
           realtimeReadyRef.current = false;
-          console.warn('Centrifugo order subscription error:', ctx);
+          console.warn('Guest service-request subscription error:', ctx);
         });
 
         centrifuge.on('disconnected', () => {
@@ -218,7 +205,7 @@ export function RealtimeOrderRefresh({
         centrifuge.connect();
       } catch (error) {
         realtimeReadyRef.current = false;
-        console.error('Centrifugo realtime connection error:', error);
+        console.error('Guest service-request realtime error:', error);
       }
     }
 
@@ -227,7 +214,6 @@ export function RealtimeOrderRefresh({
     return () => {
       disposed = true;
       realtimeReadyRef.current = false;
-
       window.clearInterval(fallbackTimer);
       clearScheduledRefresh();
       window.removeEventListener('focus', handleVisibilityChange);
@@ -240,13 +226,7 @@ export function RealtimeOrderRefresh({
         // Ignore disconnect errors.
       }
     };
-  }, [
-    fallbackIntervalMs,
-    orderCode,
-    refreshDebounceMs,
-    router,
-    tagCode,
-  ]);
+  }, [fallbackIntervalMs, refreshDebounceMs, router, tagCode]);
 
   return null;
 }

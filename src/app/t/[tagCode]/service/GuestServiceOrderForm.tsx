@@ -294,7 +294,7 @@ function SubmitButton({
           ? 'Opening secure checkout...'
           : 'Sending requests...'
         : usesXendit
-          ? 'Generate QR & Pay'
+          ? 'Continue to Secure Payment'
           : 'Send Requests'}
     </Button>
   );
@@ -1509,10 +1509,10 @@ export function GuestServiceOrderForm({
                         </span>
                         <span>
                           <span className="block text-sm font-black text-white">
-                            Xendit QR Ph
+                            Card / E-wallet / QR Ph
                           </span>
                           <span className="mt-1 block text-xs font-medium text-white/45">
-                            Pay securely before the service request is released to staff.
+                            Continue to Xendit and choose Card, GCash, Maya, QR Ph, or another enabled method before the request is released to staff.
                           </span>
                         </span>
                       </button>
@@ -1534,7 +1534,7 @@ export function GuestServiceOrderForm({
                     />
                     <span>
                       {paymentMethod === 'XENDIT'
-                        ? 'I confirm the secure Xendit payment of '
+                        ? 'I confirm the secure online payment of '
                         : 'I approve room charges totaling '}
                       <b className="text-white">{money(fixedPriceTotal)}</b>.
                     </span>

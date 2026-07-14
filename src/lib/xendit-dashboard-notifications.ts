@@ -8,6 +8,10 @@ import {
   POSXenditStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { triggerOrderRefundUpdate } from '@/lib/realtime/order-events';
+import {
+  triggerServiceRequestPaymentUpdate,
+} from '@/lib/realtime/service-request-events';
 
 const DEDUPE_WINDOW_MS = 12 * 60 * 60 * 1000;
 
@@ -351,6 +355,26 @@ export async function notifyGuestXenditRefundStatus(input: {
           flowType: true,
           orderCode: true,
           serviceRequestCodes: true,
+          refundStatus: true,
+          refundedAmountCents: true,
+          refundErrorMessage: true,
+          updatedAt: true,
+          order: {
+            select: {
+              status: true,
+              paymentStatus: true,
+            },
+          },
+          serviceRequests: {
+            select: {
+              id: true,
+              hotelId: true,
+              requestCode: true,
+              status: true,
+              paymentStatus: true,
+              guestSessionId: true,
+            },
+          },
         },
       },
     },
@@ -364,6 +388,70 @@ export async function notifyGuestXenditRefundStatus(input: {
   }
 
   const session = refund.guestPaymentSession;
+
+  if (
+    session.flowType === GuestXenditFlow.FOOD_ORDER &&
+    session.orderCode &&
+    session.order
+  ) {
+    try {
+      await triggerOrderRefundUpdate({
+        orderCode: session.orderCode,
+        status: session.order.status,
+        paymentStatus: session.order.paymentStatus,
+        refundStatus: session.refundStatus,
+        refundedAmountCents: session.refundedAmountCents,
+        refundErrorMessage: session.refundErrorMessage,
+        updatedAt: session.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      console.warn('[Guest Xendit] Unable to publish refund realtime update.', {
+        refundId: refund.id,
+        orderCode: session.orderCode,
+        error,
+      });
+    }
+  }
+
+  if (session.flowType === GuestXenditFlow.SERVICE_REQUEST) {
+    const affectedRequests = refund.serviceRequestId
+      ? session.serviceRequests.filter(
+          (request) => request.id === refund.serviceRequestId
+        )
+      : session.serviceRequests;
+
+    const publications = await Promise.allSettled(
+      affectedRequests.map((request) =>
+        triggerServiceRequestPaymentUpdate({
+          hotelId: request.hotelId,
+          requestId: request.id,
+          requestCode: request.requestCode,
+          status: request.status,
+          paymentStatus: request.paymentStatus,
+          refundStatus: session.refundStatus,
+          refundedAmountCents: session.refundedAmountCents,
+          refundErrorMessage: session.refundErrorMessage,
+          guestSessionId: request.guestSessionId,
+          updatedAt: session.updatedAt.toISOString(),
+        })
+      )
+    );
+
+    const failedPublications = publications.filter(
+      (publication) => publication.status === 'rejected'
+    );
+
+    if (failedPublications.length > 0) {
+      console.warn(
+        '[Guest Xendit] One or more service-refund realtime updates failed.',
+        {
+          refundId: refund.id,
+          failedCount: failedPublications.length,
+        }
+      );
+    }
+  }
+
   const reference = guestReference({
     orderCode: session.orderCode,
     serviceRequestCodes: session.serviceRequestCodes,

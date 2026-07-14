@@ -27,6 +27,10 @@ export const realtimeChannels = {
     return 'service-requests-global';
   },
 
+  guestServiceRequests(guestSessionId: string) {
+    return `guest-service-requests-${guestSessionId}`;
+  },
+
   dashboardHotelOrders(hotelId: string) {
     return `dashboard-hotel-${hotelId}-orders`;
   },

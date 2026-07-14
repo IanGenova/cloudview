@@ -16,6 +16,7 @@ import {
   Minus,
   PackageCheck,
   Plus,
+  CreditCard,
   QrCode,
   ReceiptText,
   Search,
@@ -397,7 +398,7 @@ export function MenuClient({
   const [orderType, setOrderType] = useState<OrderType>('ROOM_SERVICE');
   const [confirmedClause, setConfirmedClause] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<
-    'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'POS' | 'XENDIT'
+    'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'XENDIT'
   >('ROOM_CHARGE');
 
   const [fulfillmentTiming, setFulfillmentTiming] =
@@ -480,7 +481,10 @@ const [scheduledNote, setScheduledNote] = useState('');
         if (typeof draft.confirmedClause === 'boolean') {
           setConfirmedClause(draft.confirmedClause);
         }
-        if (draft.paymentMethod === 'XENDIT') {
+        // Older browser drafts may still contain POS from the former
+        // manual Card / E-wallet option. Route those drafts through the
+        // single Xendit hosted checkout instead of restoring a legacy path.
+        if (draft.paymentMethod === 'XENDIT' || draft.paymentMethod === 'POS') {
           setPaymentMethod('XENDIT');
         }
         if (draft.fulfillmentTiming === 'SCHEDULED') {
@@ -1277,7 +1281,6 @@ const [scheduledNote, setScheduledNote] = useState('');
                           | 'ROOM_CHARGE'
                           | 'PAY_AT_COUNTER'
                           | 'CASH'
-                          | 'POS'
                           | 'XENDIT'
                       )
                     }
@@ -1299,25 +1302,22 @@ const [scheduledNote, setScheduledNote] = useState('');
                     <option value="CASH" className="bg-[#111] text-white">
                       Cash
                     </option>
-                    <option value="POS" className="bg-[#111] text-white">
-                      Card / E-wallet
-                    </option>
                     <option value="XENDIT" className="bg-[#111] text-white">
-                      Xendit QR Ph
+                      Card / E-wallet / QR Ph (Xendit)
                     </option>
                   </select>
 
                   {paymentMethod === 'XENDIT' ? (
                     <div className="mt-3 flex items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.08] p-4">
                       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
-                        <QrCode className="size-5" />
+                        <CreditCard className="size-5" />
                       </span>
                       <div>
                         <p className="text-sm font-black text-white">
-                          Secure QR Ph payment
+                          Secure online payment via Xendit
                         </p>
                         <p className="mt-1 text-xs font-medium leading-5 text-white/55">
-                          You will be redirected to Xendit. The food order and stock deduction happen only after Xendit confirms the payment.
+                          Choose Card, GCash, Maya, QR Ph, or another enabled method on Xendit. The order and stock deduction happen only after payment confirmation.
                         </p>
                       </div>
                     </div>
@@ -1428,10 +1428,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                 ) : (
                   <>
                     {paymentMethod === 'XENDIT'
-                      ? 'Generate QR & Pay'
+                      ? 'Continue to Secure Payment'
                       : 'Place Order'}
                     {paymentMethod === 'XENDIT' ? (
-                      <QrCode className="size-4.5" />
+                      <CreditCard className="size-4.5" />
                     ) : (
                       <PackageCheck className="size-4.5" />
                     )}

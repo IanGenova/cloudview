@@ -1360,7 +1360,7 @@ function OrderDetailsModal({
               {order.paymentMethod === 'XENDIT' ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <p className="text-sm font-black text-amber-900">
-                    Xendit QR Ph
+                    Xendit online payment
                   </p>
                   <p className="mt-1 text-xs font-bold text-amber-700">
                     Payment: {label(order.paymentStatus)}
