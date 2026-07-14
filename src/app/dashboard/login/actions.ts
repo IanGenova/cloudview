@@ -205,6 +205,7 @@ export async function loginAction(
     role: result.user.role,
     hotelId: result.user.hotelId,
     isActive: result.user.isActive,
+    authVersion: result.user.authVersion,
   });
 
   redirect(result.redirectTo);
@@ -228,6 +229,7 @@ export async function loginDirectAction(formData: FormData) {
     role: result.user.role,
     hotelId: result.user.hotelId,
     isActive: result.user.isActive,
+    authVersion: result.user.authVersion,
   });
 
   redirect(result.redirectTo);

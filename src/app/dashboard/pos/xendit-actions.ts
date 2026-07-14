@@ -217,7 +217,8 @@ function createPOSXenditReturnUrls(input: {
   sessionId: string;
 }) {
   const createReturnUrl = (result: 'success' | 'cancelled') => {
-    const returnUrl = new URL('/xendit/pos-return', `${input.baseUrl}/`);
+    const returnUrl = new URL('/api/xendit/admin-return', `${input.baseUrl}/`);
+    returnUrl.searchParams.set('target', 'pos');
     returnUrl.searchParams.set(
       'state',
       createPOSXenditReturnState({
@@ -840,3 +841,4 @@ export async function finalizeXenditPOSCheckout(
     };
   }
 }
+

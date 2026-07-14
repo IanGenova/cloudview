@@ -20,6 +20,10 @@ const routeRules: Array<{
     roles: ['SUPER_ADMIN'],
   },
   {
+    prefix: '/dashboard/settings/users',
+    roles: ['SUPER_ADMIN', 'HOTEL_ADMIN'],
+  },
+  {
     prefix: '/dashboard/settings/user-account',
     roles: ['SUPER_ADMIN', 'HOTEL_ADMIN'],
   },

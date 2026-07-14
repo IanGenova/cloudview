@@ -37,6 +37,7 @@ import {
   buildXenditSplitConfiguration,
   type XenditSplitSnapshot,
 } from '@/lib/xendit-split';
+import { createGuestStayXenditReturnState } from '@/lib/guest-stay-xendit-return';
 
 function cleanText(value: FormDataEntryValue | null, maxLength = 200) {
   if (typeof value !== 'string') {
@@ -513,22 +514,74 @@ type GuestStayXenditPayload = {
   xenditSplit?: XenditSplitSnapshot;
 };
 
-function getAppUrl() {
-  const value = (
-    process.env.APP_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    ''
-  ).replace(/\/$/, '');
+function normalizeGuestStayReturnBaseUrl(value: string, source: string) {
+  let url: URL;
+
+  try {
+    url = new URL(value.trim());
+  } catch {
+    throw new Error(`${source} must be an absolute HTTPS URL.`);
+  }
+
+  if (url.protocol !== 'https:') {
+    throw new Error(
+      `${source} must use HTTPS. Use the public ngrok URL during local Xendit testing.`
+    );
+  }
+
+  return url.origin;
+}
+
+function getGuestStayXenditReturnBaseUrl() {
+  /*
+   * Xendit requires a public HTTPS return URL. The public callback page then
+   * redirects the browser to NEXT_PUBLIC_APP_URL, where the dashboard auth
+   * cookie already exists.
+   */
+  const value =
+    process.env.GUEST_STAY_XENDIT_RETURN_URL?.trim() ||
+    process.env.POS_XENDIT_RETURN_URL?.trim() ||
+    process.env.APP_URL?.trim() ||
+    '';
 
   if (!value) {
-    throw new Error('APP_URL is not configured.');
+    throw new Error(
+      'GUEST_STAY_XENDIT_RETURN_URL, POS_XENDIT_RETURN_URL, or APP_URL is required for the guest-stay Xendit return URL.'
+    );
   }
 
-  if (process.env.NODE_ENV === 'production' && !value.startsWith('https://')) {
-    throw new Error('APP_URL must use HTTPS in production.');
-  }
+  return normalizeGuestStayReturnBaseUrl(
+    value,
+    'Guest-stay Xendit public return URL'
+  );
+}
 
-  return value;
+function createGuestStayXenditReturnUrls(input: {
+  baseUrl: string;
+  sessionId: string;
+  hotelId: string;
+  guestStayId: string;
+}) {
+  const createReturnUrl = (result: 'success' | 'cancelled') => {
+    const returnUrl = new URL('/api/xendit/admin-return', `${input.baseUrl}/`);
+    returnUrl.searchParams.set('target', 'guest-stay');
+    returnUrl.searchParams.set(
+      'state',
+      createGuestStayXenditReturnState({
+        sessionId: input.sessionId,
+        hotelId: input.hotelId,
+        guestStayId: input.guestStayId,
+        result,
+      })
+    );
+
+    return returnUrl.toString();
+  };
+
+  return {
+    successUrl: createReturnUrl('success'),
+    cancelUrl: createReturnUrl('cancelled'),
+  };
 }
 
 function isJsonRecord(value: Prisma.JsonValue): value is Prisma.JsonObject {
@@ -1578,12 +1631,13 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
 
     draftId = draft.id;
 
-    const appUrl = getAppUrl();
-    const query = new URLSearchParams({
-      xendit: draft.id,
+    const returnBaseUrl = getGuestStayXenditReturnBaseUrl();
+    const { successUrl, cancelUrl } = createGuestStayXenditReturnUrls({
+      baseUrl: returnBaseUrl,
+      sessionId: draft.id,
+      hotelId: quote.stay.hotelId,
+      guestStayId: quote.stay.id,
     });
-    const successUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&xenditResult=success`;
-    const cancelUrl = `${appUrl}/dashboard/guest-stays?${query.toString()}&xenditResult=cancelled`;
 
     const lineItems: XenditLineItem[] = [
       {
@@ -1624,6 +1678,7 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
         guest_stay_id: quote.stay.id,
         hotel_id: quote.stay.hotelId,
         created_by: user.id,
+        return_origin: returnBaseUrl,
         split_enabled: splitConfiguration ? 'true' : 'false',
         split_rule_id: splitConfiguration?.snapshot.splitRuleId || '',
       },

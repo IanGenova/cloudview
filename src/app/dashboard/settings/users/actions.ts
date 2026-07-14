@@ -49,6 +49,56 @@ function getAllowedRoles(currentUserRole: Role) {
   return HOTEL_ADMIN_ALLOWED_ROLES;
 }
 
+function isHotelManagedRole(role: Role) {
+  return role === Role.STAFF || role === Role.KITCHEN;
+}
+
+function canManageTargetUser(
+  currentUser: { role: Role; hotelId: string | null },
+  targetUser: { role: Role; hotelId: string | null }
+) {
+  if (currentUser.role === Role.SUPER_ADMIN) {
+    return true;
+  }
+
+  return (
+    currentUser.role === Role.HOTEL_ADMIN &&
+    Boolean(currentUser.hotelId) &&
+    targetUser.hotelId === currentUser.hotelId &&
+    isHotelManagedRole(targetUser.role)
+  );
+}
+
+async function hotelExists(hotelId: string) {
+  const hotel = await db.hotel.findUnique({
+    where: { id: hotelId },
+    select: { id: true },
+  });
+
+  return Boolean(hotel);
+}
+
+async function isLastActiveSuperAdmin(userId: string) {
+  const [target, activeSuperAdminCount] = await Promise.all([
+    db.user.findUnique({
+      where: { id: userId },
+      select: { role: true, isActive: true },
+    }),
+    db.user.count({
+      where: {
+        role: Role.SUPER_ADMIN,
+        isActive: true,
+      },
+    }),
+  ]);
+
+  return Boolean(
+    target?.role === Role.SUPER_ADMIN &&
+      target.isActive &&
+      activeSuperAdminCount <= 1
+  );
+}
+
 function getAssignableDashboardModules(currentUserRole: Role) {
   if (currentUserRole === Role.SUPER_ADMIN) {
     return ALL_DASHBOARD_MODULES;
@@ -72,8 +122,8 @@ function validatePassword(password: string) {
     return 'Password is required.';
   }
 
-  if (password.length < 5) {
-    return 'Password must be at least 5 characters.';
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters.';
   }
 
   return null;
@@ -86,7 +136,7 @@ function getReadablePrismaError(error: unknown) {
     }
 
     if (error.code === 'P2003') {
-      return 'This user cannot be deleted because the account is already connected to records in the system.';
+      return 'This account is connected to audit or operational records. Deactivate it instead of deleting it.';
     }
   }
 
@@ -255,6 +305,10 @@ function normalizeDashboardPermissionsForSafeLogin(
   // so delete HOTELS directly instead of comparing again.
   permissionMap.delete(DashboardModule.HOTELS);
 
+  if (targetRole === Role.KITCHEN) {
+    permissionMap.delete(DashboardModule.ORDERS);
+  }
+
   if (targetRole !== Role.HOTEL_ADMIN) {
     permissionMap.delete(DashboardModule.HOTEL_SETTINGS);
     permissionMap.delete(DashboardModule.USER_ACCOUNT_SETTINGS);
@@ -363,6 +417,8 @@ export async function createUserAccountAction(
     const name = cleanText(formData.get('name'), 120);
     const email = normalizeEmail(formData.get('email'));
     const password = cleanText(formData.get('password'), 160) ?? '';
+    const confirmPassword =
+      cleanText(formData.get('confirmPassword'), 160) ?? '';
     const role = formData.get('role') as Role;
     const hotelIdFromForm = cleanText(formData.get('hotelId'));
 
@@ -380,6 +436,10 @@ export async function createUserAccountAction(
 
     if (passwordError) {
       return { ok: false, message: passwordError };
+    }
+
+    if (password !== confirmPassword) {
+      return { ok: false, message: 'Passwords do not match.' };
     }
 
     if (!Object.values(Role).includes(role) || !allowedRoles.includes(role)) {
@@ -401,6 +461,10 @@ export async function createUserAccountAction(
         ok: false,
         message: 'Hotel access is required for this user role.',
       };
+    }
+
+    if (hotelId && !(await hotelExists(hotelId))) {
+      return { ok: false, message: 'The selected hotel was not found.' };
     }
 
     const passwordHash = await hashPassword(password);
@@ -475,8 +539,13 @@ export async function updateUserAccountAction(
     }
 
     const targetUser = await db.user.findUnique({
-      where: {
-        id: userId,
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        hotelId: true,
+        email: true,
+        isActive: true,
       },
     });
 
@@ -484,29 +553,29 @@ export async function updateUserAccountAction(
       return { ok: false, message: 'User account was not found.' };
     }
 
-    if (
-      currentUser.role !== Role.SUPER_ADMIN &&
-      targetUser.hotelId !== currentUser.hotelId
-    ) {
+    if (!canManageTargetUser(currentUser, targetUser)) {
       return {
         ok: false,
         message: 'You are not allowed to update this user account.',
       };
     }
 
-    if (targetUser.role === Role.SUPER_ADMIN && role !== Role.SUPER_ADMIN) {
-      const superAdminCount = await db.user.count({
-        where: {
-          role: Role.SUPER_ADMIN,
-        },
-      });
+    if (userId === currentUser.id && role !== targetUser.role) {
+      return {
+        ok: false,
+        message: 'You cannot change your own account role.',
+      };
+    }
 
-      if (superAdminCount <= 1) {
-        return {
-          ok: false,
-          message: 'You cannot demote the last Super Admin account.',
-        };
-      }
+    if (
+      targetUser.role === Role.SUPER_ADMIN &&
+      role !== Role.SUPER_ADMIN &&
+      (await isLastActiveSuperAdmin(userId))
+    ) {
+      return {
+        ok: false,
+        message: 'You cannot demote the last active Super Admin account.',
+      };
     }
 
     const hotelId =
@@ -523,10 +592,25 @@ export async function updateUserAccountAction(
       };
     }
 
-    const parsedPermissions =
+    if (hotelId && !(await hotelExists(hotelId))) {
+      return { ok: false, message: 'The selected hotel was not found.' };
+    }
+
+    const permissions = normalizeDashboardPermissionsForSafeLogin(
       role === Role.SUPER_ADMIN
         ? getDefaultDashboardPermissions(Role.SUPER_ADMIN)
-        : parseDashboardPermissionsFromForm(formData, currentUser.role, role);
+        : parseDashboardPermissionsFromForm(
+            formData,
+            currentUser.role,
+            role
+          ) ?? getDefaultDashboardPermissions(role),
+      role
+    );
+
+    const securityContextChanged =
+      targetUser.email !== email ||
+      targetUser.role !== role ||
+      targetUser.hotelId !== hotelId;
 
     await db.$transaction(async (tx) => {
       await tx.user.update({
@@ -538,12 +622,13 @@ export async function updateUserAccountAction(
           email,
           role,
           hotelId,
+          ...(securityContextChanged
+            ? { authVersion: { increment: 1 } }
+            : {}),
         },
       });
 
-      if (parsedPermissions) {
-        await syncDashboardPermissions(tx, userId, parsedPermissions);
-      }
+      await syncDashboardPermissions(tx, userId, permissions);
     });
 
     revalidateUserAccountSettings();
@@ -584,8 +669,11 @@ export async function resetUserPasswordAction(
     }
 
     const targetUser = await db.user.findUnique({
-      where: {
-        id: userId,
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        hotelId: true,
       },
     });
 
@@ -593,10 +681,7 @@ export async function resetUserPasswordAction(
       return { ok: false, message: 'User account was not found.' };
     }
 
-    if (
-      currentUser.role !== Role.SUPER_ADMIN &&
-      targetUser.hotelId !== currentUser.hotelId
-    ) {
+    if (!canManageTargetUser(currentUser, targetUser)) {
       return {
         ok: false,
         message: 'You are not allowed to reset this user password.',
@@ -611,6 +696,9 @@ export async function resetUserPasswordAction(
       },
       data: {
         passwordHash,
+        authVersion: {
+          increment: 1,
+        },
       },
     });
 
@@ -619,7 +707,93 @@ export async function resetUserPasswordAction(
     return {
       ok: true,
       message:
-        'Password reset successfully. The new plain temporary password can now be used to sign in.',
+        'Password reset successfully. Existing dashboard sessions for this user have been revoked.',
+    };
+  } catch (error) {
+    return { ok: false, message: getReadablePrismaError(error) };
+  }
+}
+
+export async function setUserActiveStateAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    const currentUser = await requireDashboardPermission(
+      DashboardModule.USER_ACCOUNT_SETTINGS,
+      'canEdit'
+    );
+    requireRole(currentUser.role, [Role.SUPER_ADMIN, Role.HOTEL_ADMIN]);
+
+    const userId = cleanText(formData.get('userId'));
+    const nextIsActive = formData.get('isActive') === 'true';
+
+    if (!userId) {
+      return { ok: false, message: 'User account is required.' };
+    }
+
+    const targetUser = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        hotelId: true,
+        isActive: true,
+      },
+    });
+
+    if (!targetUser) {
+      return { ok: false, message: 'User account was not found.' };
+    }
+
+    if (!canManageTargetUser(currentUser, targetUser)) {
+      return {
+        ok: false,
+        message: 'You are not allowed to change this account status.',
+      };
+    }
+
+    if (userId === currentUser.id && !nextIsActive) {
+      return { ok: false, message: 'You cannot deactivate your own account.' };
+    }
+
+    if (
+      !nextIsActive &&
+      targetUser.role === Role.SUPER_ADMIN &&
+      (await isLastActiveSuperAdmin(userId))
+    ) {
+      return {
+        ok: false,
+        message: 'You cannot deactivate the last active Super Admin account.',
+      };
+    }
+
+    if (targetUser.isActive === nextIsActive) {
+      return {
+        ok: true,
+        message: nextIsActive
+          ? 'User account is already active.'
+          : 'User account is already inactive.',
+      };
+    }
+
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        isActive: nextIsActive,
+        authVersion: {
+          increment: 1,
+        },
+      },
+    });
+
+    revalidateUserAccountSettings();
+
+    return {
+      ok: true,
+      message: nextIsActive
+        ? 'User account activated successfully.'
+        : 'User account deactivated successfully.',
     };
   } catch (error) {
     return { ok: false, message: getReadablePrismaError(error) };
@@ -648,8 +822,12 @@ export async function deleteUserAccountAction(
     }
 
     const targetUser = await db.user.findUnique({
-      where: {
-        id: userId,
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        hotelId: true,
+        isActive: true,
       },
     });
 
@@ -657,29 +835,28 @@ export async function deleteUserAccountAction(
       return { ok: false, message: 'User account was not found.' };
     }
 
-    if (
-      currentUser.role !== Role.SUPER_ADMIN &&
-      targetUser.hotelId !== currentUser.hotelId
-    ) {
+    if (!canManageTargetUser(currentUser, targetUser)) {
       return {
         ok: false,
         message: 'You are not allowed to delete this user account.',
       };
     }
 
-    if (targetUser.role === Role.SUPER_ADMIN) {
-      const superAdminCount = await db.user.count({
-        where: {
-          role: Role.SUPER_ADMIN,
-        },
-      });
+    if (targetUser.isActive) {
+      return {
+        ok: false,
+        message: 'Deactivate this account before permanently deleting it.',
+      };
+    }
 
-      if (superAdminCount <= 1) {
-        return {
-          ok: false,
-          message: 'You cannot delete the last Super Admin account.',
-        };
-      }
+    if (
+      targetUser.role === Role.SUPER_ADMIN &&
+      (await isLastActiveSuperAdmin(userId))
+    ) {
+      return {
+        ok: false,
+        message: 'You cannot delete the last active Super Admin account.',
+      };
     }
 
     await db.user.delete({

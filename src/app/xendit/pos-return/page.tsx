@@ -20,10 +20,10 @@ function ReturnError({ message }: { message: string }) {
           {message}
         </p>
         <Link
-          href="/dashboard/login"
+          href={getPOSFallbackUrl()}
           className="mt-7 inline-flex h-12 items-center justify-center rounded-2xl bg-[#c99c38] px-5 text-sm font-black text-black transition hover:bg-[#e0b64f]"
         >
-          Open dashboard login
+          Open POS terminal
         </Link>
       </section>
     </main>
@@ -75,6 +75,14 @@ function getPOSDashboardBaseUrl() {
   }
 
   return url.origin;
+}
+
+function getPOSFallbackUrl() {
+  try {
+    return new URL('/dashboard/pos', `${getPOSDashboardBaseUrl()}/`).toString();
+  } catch {
+    return '/dashboard/login';
+  }
 }
 
 export default async function POSXenditReturnPage({

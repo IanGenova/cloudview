@@ -44,6 +44,7 @@ export default async function UserAccountSettingsPage() {
           select: {
             id: true,
             name: true,
+            isActive: true,
           },
           orderBy: {
             name: 'asc',
@@ -56,6 +57,7 @@ export default async function UserAccountSettingsPage() {
           select: {
             id: true,
             name: true,
+            isActive: true,
           },
           orderBy: {
             name: 'asc',
@@ -68,6 +70,9 @@ export default async function UserAccountSettingsPage() {
           ? {}
           : {
               hotelId: currentUser.hotelId!,
+              role: {
+                in: [Role.STAFF, Role.KITCHEN],
+              },
             },
       select: {
         id: true,
@@ -75,6 +80,7 @@ export default async function UserAccountSettingsPage() {
         email: true,
         role: true,
         hotelId: true,
+        isActive: true,
         hotel: {
           select: {
             id: true,
@@ -106,14 +112,24 @@ export default async function UserAccountSettingsPage() {
     email: account.email,
     role: account.role,
     hotelId: account.hotelId,
+    isActive: account.isActive,
     hotel: account.hotel,
-    dashboardPermissions: account.dashboardPermissions.map((permission) => ({
-      module: permission.module,
-      canView: permission.canView,
-      canCreate: permission.canCreate,
-      canEdit: permission.canEdit,
-      canDelete: permission.canDelete,
-    })),
+    dashboardPermissions:
+      account.role === Role.SUPER_ADMIN
+        ? Object.values(DashboardModule).map((module) => ({
+            module,
+            canView: true,
+            canCreate: true,
+            canEdit: true,
+            canDelete: true,
+          }))
+        : account.dashboardPermissions.map((permission) => ({
+            module: permission.module,
+            canView: permission.canView,
+            canCreate: permission.canCreate,
+            canEdit: permission.canEdit,
+            canDelete: permission.canDelete,
+          })),
   }));
 
   return (
@@ -128,6 +144,7 @@ export default async function UserAccountSettingsPage() {
         hotels={hotels}
         allowedRoles={allowedRoles}
         currentUserRole={currentUser.role}
+        currentUserId={currentUser.id}
       />
     </div>
   );

@@ -1,14 +1,16 @@
 'use client';
 
 import type { DashboardModule, Role } from '@prisma/client';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useFormStatus } from 'react-dom';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 
 import {
   createUserAccountAction,
   deleteUserAccountAction,
   resetUserPasswordAction,
+  setUserActiveStateAction,
   updateUserAccountAction,
   type ActionState,
 } from './actions';
@@ -16,6 +18,7 @@ import {
 type HotelOption = {
   id: string;
   name: string;
+  isActive: boolean;
 };
 
 type UserDashboardPermission = {
@@ -32,6 +35,7 @@ type UserAccount = {
   email: string;
   role: Role;
   hotelId: string | null;
+  isActive: boolean;
   hotel: {
     id: string;
     name: string;
@@ -54,6 +58,7 @@ type CreateUserDraft = {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
   role: Role;
   hotelId: string;
   permissions: PermissionDraft;
@@ -69,6 +74,13 @@ function canTargetRoleUseModule(module: DashboardModule, targetRole?: Role) {
   }
 
   if (module === ('REWARDS' as DashboardModule)) {
+    return false;
+  }
+
+  if (
+    targetRole === 'KITCHEN' &&
+    module === ('ORDERS' as DashboardModule)
+  ) {
     return false;
   }
 
@@ -129,6 +141,7 @@ function createInitialUserDraft({
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     role: defaultRole,
     hotelId:
       currentUserRole === 'SUPER_ADMIN'
@@ -316,10 +329,7 @@ function forceSafePermissionDraft(draft: PermissionDraft) {
     ...draft,
   };
 
-  nextDraft.OVERVIEW = {
-    ...(nextDraft.OVERVIEW ?? emptyPermissionValue()),
-    canView: true,
-  };
+  nextDraft.OVERVIEW = viewOnlyPermissionValue();
 
   return nextDraft;
 }
@@ -364,6 +374,14 @@ function createPermissionDraftFromSaved({
     currentUserRole,
     targetRole,
   });
+
+  if (targetRole === 'SUPER_ADMIN') {
+    for (const module of getVisibleModuleOptions(currentUserRole, targetRole)) {
+      draft[module.key] = fullPermissionValue();
+    }
+
+    return draft;
+  }
 
   const savedMap = new Map(
     (permissions ?? []).map((permission) => [permission.module, permission])
@@ -412,7 +430,6 @@ function createDefaultPermissionDraftForRole({
 
   if (role === 'KITCHEN') {
     setModule('OVERVIEW', viewOnlyPermissionValue());
-    setModule('ORDERS', viewOnlyPermissionValue());
     setModule('KITCHEN_DISPLAY', {
       canView: true,
       canCreate: false,
@@ -527,6 +544,7 @@ function PermissionMatrix({
   }, [permissions, currentUserRole, targetRole, isControlled]);
 
   const activeDraft = isControlled ? permissionDraft ?? {} : localDraft;
+  const isSuperAdminTarget = targetRole === 'SUPER_ADMIN';
 
   function getModuleValue(module: DashboardModule) {
     if (isRequiredLandingModule(module)) {
@@ -648,6 +666,10 @@ function PermissionMatrix({
   const allSelected = visibleModules.every((module) => {
     const value = getModuleValue(module.key);
 
+    if (isRequiredLandingModule(module.key)) {
+      return value.canView;
+    }
+
     return (
       value.canView &&
       value.canCreate &&
@@ -679,6 +701,7 @@ function PermissionMatrix({
           </p>
         </div>
 
+        {!isSuperAdminTarget ? (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -704,8 +727,14 @@ function PermissionMatrix({
             Clear All
           </button>
         </div>
+        ) : (
+          <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-black text-emerald-700">
+            Super Admin accounts always receive full dashboard access.
+          </p>
+        )}
       </div>
 
+      {!isSuperAdminTarget ? (
       <div className="mb-4 grid gap-2 rounded-2xl border border-neutral-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
         {permissionColumns.map((column) => (
           <button
@@ -718,6 +747,7 @@ function PermissionMatrix({
           </button>
         ))}
       </div>
+      ) : null}
 
       <div
         className={
@@ -744,6 +774,7 @@ function PermissionMatrix({
                   </p>
                 </div>
 
+                {!isSuperAdminTarget ? (
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <button
                     type="button"
@@ -776,15 +807,18 @@ function PermissionMatrix({
                     Clear
                   </button>
                 </div>
+                ) : null}
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {permissionColumns.map((column) => {
                   const isRequiredModule = isRequiredLandingModule(module.key);
-                  const checked = isRequiredModule
-                    ? column.key === 'canView'
-                    : Boolean(value[column.key]);
-                  const disabled = false;
+                  const checked = isSuperAdminTarget
+                    ? true
+                    : isRequiredModule
+                      ? column.key === 'canView'
+                      : Boolean(value[column.key]);
+                  const disabled = isRequiredModule || isSuperAdminTarget;
 
                   return (
                     <label
@@ -924,16 +958,19 @@ function SubmitButton({
   children: string;
   danger?: boolean;
 }) {
+  const { pending } = useFormStatus();
+
   return (
     <button
       type="submit"
+      disabled={pending}
       className={
         danger
-          ? 'h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white hover:bg-red-700'
-          : 'h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800'
+          ? 'h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
+          : 'h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60'
       }
     >
-      {children}
+      {pending ? 'Please wait…' : children}
     </button>
   );
 }
@@ -1150,17 +1187,35 @@ function CreateUserModal({
             </label>
             <input
               name="password"
-              type="text"
+              type="password"
               required
-              minLength={5}
+              minLength={8}
               value={draft.password}
               onChange={(event) => updateDraft('password', event.target.value)}
-              placeholder="Example: 12345 or abcde"
+              placeholder="At least 8 characters"
               className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
             <p className="mt-1 text-xs text-neutral-500">
-              Simple temporary password is allowed. Example: 12345 or abcde.
+              Use at least 8 characters and share it securely with the user.
             </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+              Confirm Password
+            </label>
+            <input
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={8}
+              value={draft.confirmPassword}
+              onChange={(event) =>
+                updateDraft('confirmPassword', event.target.value)
+              }
+              placeholder="Re-enter temporary password"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            />
           </div>
 
           <div>
@@ -1171,7 +1226,7 @@ function CreateUserModal({
               name="role"
               value={draft.role}
               onChange={(event) => updateRole(event.target.value as Role)}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
             >
               {allowedRoles.map((role) => (
                 <option key={role} value={role}>
@@ -1201,7 +1256,7 @@ function CreateUserModal({
 
               {hotels.map((hotel) => (
                 <option key={hotel.id} value={hotel.id}>
-                  {hotel.name}
+                  {hotel.name}{!hotel.isActive ? ' (Inactive)' : ''}
                 </option>
               ))}
             </select>
@@ -1243,6 +1298,7 @@ function EditUserModal({
   hotels,
   allowedRoles,
   currentUserRole,
+  isCurrentUser,
   onClose,
   onToast,
 }: {
@@ -1250,6 +1306,7 @@ function EditUserModal({
   hotels: HotelOption[];
   allowedRoles: Role[];
   currentUserRole: Role;
+  isCurrentUser: boolean;
   onClose: () => void;
   onToast: (message: ToastMessage) => void;
 }) {
@@ -1350,11 +1407,15 @@ function EditUserModal({
             <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
               User Role
             </label>
+            {isCurrentUser ? (
+              <input type="hidden" name="role" value={role} />
+            ) : null}
             <select
-              name="role"
+              name={isCurrentUser ? undefined : 'role'}
               value={role}
+              disabled={isCurrentUser}
               onChange={(event) => updateRole(event.target.value as Role)}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
             >
               {allowedRoles.map((allowedRole) => (
                 <option key={allowedRole} value={allowedRole}>
@@ -1381,7 +1442,7 @@ function EditUserModal({
 
               {hotels.map((hotel) => (
                 <option key={hotel.id} value={hotel.id}>
-                  {hotel.name}
+                  {hotel.name}{!hotel.isActive ? ' (Inactive)' : ''}
                 </option>
               ))}
             </select>
@@ -1468,10 +1529,10 @@ function ResetPasswordModal({
           </label>
           <input
             name="password"
-            type="text"
+            type="password"
             required
-            minLength={5}
-            placeholder="Example: 12345 or abcde"
+            minLength={8}
+            placeholder="At least 8 characters"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
@@ -1482,17 +1543,17 @@ function ResetPasswordModal({
           </label>
           <input
             name="confirmPassword"
-            type="text"
+            type="password"
             required
-            minLength={5}
+            minLength={8}
             placeholder="Re-enter new password"
             className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div className="rounded-2xl bg-amber-50 p-4 text-xs font-bold text-amber-700">
-          Simple temporary passwords are allowed. Use at least 5 characters,
-          such as 12345 or abcde.
+          Use at least 8 characters. Share the temporary password securely and
+          ask the user to replace it after signing in.
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -1504,6 +1565,87 @@ function ResetPasswordModal({
             Cancel
           </button>
           <SubmitButton>Reset Password</SubmitButton>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function AccountStatusModal({
+  account,
+  onClose,
+  onToast,
+}: {
+  account: UserAccount;
+  onClose: () => void;
+  onToast: (message: ToastMessage) => void;
+}) {
+  const router = useRouter();
+  const [state, formAction] = useActionState(
+    setUserActiveStateAction,
+    initialState
+  );
+  const nextIsActive = !account.isActive;
+
+  useEffect(() => {
+    if (!state.message) {
+      return;
+    }
+
+    onToast({
+      type: state.ok ? 'success' : 'error',
+      text: state.message,
+    });
+
+    if (state.ok) {
+      router.refresh();
+      onClose();
+    }
+  }, [state, router, onClose, onToast]);
+
+  return (
+    <Modal
+      title={nextIsActive ? 'Activate User Account' : 'Deactivate User Account'}
+      onClose={onClose}
+    >
+      <form action={formAction} className="space-y-4">
+        <input type="hidden" name="userId" value={account.id} />
+        <input
+          type="hidden"
+          name="isActive"
+          value={nextIsActive ? 'true' : 'false'}
+        />
+
+        <StateMessage state={state} />
+
+        <div
+          className={
+            nextIsActive
+              ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800'
+              : 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800'
+          }
+        >
+          <p className="font-black">
+            {nextIsActive
+              ? 'This user will be allowed to sign in again.'
+              : 'This user will immediately lose dashboard access.'}
+          </p>
+          <p className="mt-1">
+            <strong>{account.name}</strong> ({account.email})
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <SubmitButton danger={!nextIsActive}>
+            {nextIsActive ? 'Activate Account' : 'Deactivate Account'}
+          </SubmitButton>
         </div>
       </form>
     </Modal>
@@ -1576,22 +1718,38 @@ export function UserAccountSettingsClient({
   hotels,
   allowedRoles,
   currentUserRole,
+  currentUserId,
 }: {
   users: UserAccount[];
   hotels: HotelOption[];
   allowedRoles: Role[];
   currentUserRole: Role;
+  currentUserId: string;
 }) {
   const [toast, setToast] = useState<ToastMessage>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | Role>('ALL');
   const [hotelFilter, setHotelFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<
+    'ALL' | 'ACTIVE' | 'INACTIVE'
+  >('ALL');
 
   const [creatingUser, setCreatingUser] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [resetPasswordUser, setResetPasswordUser] =
     useState<UserAccount | null>(null);
+  const [statusUser, setStatusUser] = useState<UserAccount | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
+
+  const clearToast = useCallback(() => setToast(null), []);
+  const closeCreateUser = useCallback(() => setCreatingUser(false), []);
+  const closeEditUser = useCallback(() => setEditingUser(null), []);
+  const closeResetPassword = useCallback(
+    () => setResetPasswordUser(null),
+    []
+  );
+  const closeStatusUser = useCallback(() => setStatusUser(null), []);
+  const closeDeleteUser = useCallback(() => setDeletingUser(null), []);
 
   const filteredUsers = users.filter((account) => {
     const searchable = [
@@ -1599,6 +1757,7 @@ export function UserAccountSettingsClient({
       account.email,
       account.role,
       account.hotel?.name ?? 'No hotel assigned',
+      account.isActive ? 'active' : 'inactive',
     ]
       .join(' ')
       .toLowerCase();
@@ -1609,24 +1768,30 @@ export function UserAccountSettingsClient({
       hotelFilter === 'ALL' ||
       (hotelFilter === 'NONE' && !account.hotelId) ||
       account.hotelId === hotelFilter;
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'ACTIVE' && account.isActive) ||
+      (statusFilter === 'INACTIVE' && !account.isActive);
 
-    return matchesSearch && matchesRole && matchesHotel;
+    return matchesSearch && matchesRole && matchesHotel && matchesStatus;
   });
 
   const adminCount = users.filter(
     (account) =>
       account.role === 'SUPER_ADMIN' || account.role === 'HOTEL_ADMIN'
   ).length;
-  const staffCount = users.filter(
-    (account) => account.role === 'STAFF' || account.role === 'KITCHEN'
-  ).length;
+  const activeCount = users.filter((account) => account.isActive).length;
+  const inactiveCount = users.length - activeCount;
   const zeroAccessCount = users.filter(
-    (account) => countVisiblePermissions(account.dashboardPermissions) <= 0
+    (account) =>
+      account.isActive &&
+      account.role !== 'SUPER_ADMIN' &&
+      countVisiblePermissions(account.dashboardPermissions) <= 0
   ).length;
 
   return (
     <>
-      <Toast message={toast} onClose={() => setToast(null)} />
+      <Toast message={toast} onClose={clearToast} />
 
       <div className="space-y-5">
         <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-[#11100b] text-white shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
@@ -1676,11 +1841,11 @@ export function UserAccountSettingsClient({
 
             <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
-                Staff
+                Active
               </p>
-              <p className="mt-1 text-2xl font-black">{staffCount}</p>
+              <p className="mt-1 text-2xl font-black">{activeCount}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
-                Staff and kitchen users
+                Accounts allowed to sign in
               </p>
             </div>
 
@@ -1690,14 +1855,14 @@ export function UserAccountSettingsClient({
               </p>
               <p className="mt-1 text-2xl font-black">{zeroAccessCount}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
-                No visible module
+                Active accounts with no saved access · {inactiveCount} inactive
               </p>
             </div>
           </div>
         </section>
 
         <section className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_180px_220px]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_170px_210px_170px]">
             <label className="grid gap-1">
               <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
                 Search Users
@@ -1743,9 +1908,29 @@ export function UserAccountSettingsClient({
                 <option value="NONE">No Hotel Assigned</option>
                 {hotels.map((hotel) => (
                   <option key={hotel.id} value={hotel.id}>
-                    {hotel.name}
+                    {hotel.name}{!hotel.isActive ? ' (Inactive)' : ''}
                   </option>
                 ))}
+              </select>
+            </label>
+
+
+            <label className="grid gap-1">
+              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                Status
+              </span>
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE'
+                  )
+                }
+                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
               </select>
             </label>
           </div>
@@ -1763,7 +1948,7 @@ export function UserAccountSettingsClient({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left">
+            <table className="w-full min-w-[1080px] text-left">
               <thead className="bg-neutral-50">
                 <tr>
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
@@ -1774,6 +1959,9 @@ export function UserAccountSettingsClient({
                   </th>
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Hotel
+                  </th>
+                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                    Status
                   </th>
                   <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Access
@@ -1817,6 +2005,18 @@ export function UserAccountSettingsClient({
                       </td>
 
                       <td className="px-5 py-4">
+                        <span
+                          className={
+                            account.isActive
+                              ? 'inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700'
+                              : 'inline-flex rounded-full bg-neutral-200 px-3 py-1 text-xs font-black text-neutral-600'
+                          }
+                        >
+                          {account.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4">
                         <p className="text-sm font-black text-[#11100b]">
                           {visibleModules} visible modules
                         </p>
@@ -1851,13 +2051,29 @@ export function UserAccountSettingsClient({
                             Reset Password
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => setDeletingUser(account)}
-                            className="h-9 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-700"
-                          >
-                            Delete
-                          </button>
+                          {account.id !== currentUserId || !account.isActive ? (
+                            <button
+                              type="button"
+                              onClick={() => setStatusUser(account)}
+                              className={
+                                account.isActive
+                                  ? 'h-9 rounded-xl bg-amber-500 px-3 text-xs font-black text-black hover:bg-amber-400'
+                                  : 'h-9 rounded-xl bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700'
+                              }
+                            >
+                              {account.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          ) : null}
+
+                          {!account.isActive && account.id !== currentUserId ? (
+                            <button
+                              type="button"
+                              onClick={() => setDeletingUser(account)}
+                              className="h-9 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-700"
+                            >
+                              Delete
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1867,7 +2083,7 @@ export function UserAccountSettingsClient({
                 {!filteredUsers.length ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-5 py-10 text-center text-sm font-bold text-neutral-500"
                     >
                       No users match your current filters.
@@ -1885,7 +2101,7 @@ export function UserAccountSettingsClient({
           hotels={hotels}
           allowedRoles={allowedRoles}
           currentUserRole={currentUserRole}
-          onClose={() => setCreatingUser(false)}
+          onClose={closeCreateUser}
           onToast={setToast}
         />
       ) : null}
@@ -1896,7 +2112,8 @@ export function UserAccountSettingsClient({
           hotels={hotels}
           allowedRoles={allowedRoles}
           currentUserRole={currentUserRole}
-          onClose={() => setEditingUser(null)}
+          isCurrentUser={editingUser.id === currentUserId}
+          onClose={closeEditUser}
           onToast={setToast}
         />
       ) : null}
@@ -1904,7 +2121,15 @@ export function UserAccountSettingsClient({
       {resetPasswordUser ? (
         <ResetPasswordModal
           account={resetPasswordUser}
-          onClose={() => setResetPasswordUser(null)}
+          onClose={closeResetPassword}
+          onToast={setToast}
+        />
+      ) : null}
+
+      {statusUser ? (
+        <AccountStatusModal
+          account={statusUser}
+          onClose={closeStatusUser}
           onToast={setToast}
         />
       ) : null}
@@ -1912,7 +2137,7 @@ export function UserAccountSettingsClient({
       {deletingUser ? (
         <DeleteUserModal
           account={deletingUser}
-          onClose={() => setDeletingUser(null)}
+          onClose={closeDeleteUser}
           onToast={setToast}
         />
       ) : null}

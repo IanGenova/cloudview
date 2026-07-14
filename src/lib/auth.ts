@@ -15,6 +15,7 @@ type SessionInput = {
   role: Role;
   hotelId?: string | null;
   isActive?: boolean;
+  authVersion?: number;
 };
 
 type SessionPayload = {
@@ -23,6 +24,7 @@ type SessionPayload = {
   role: Role;
   hotelId: string | null;
   isActive: boolean;
+  authVersion: number;
 };
 
 function getAuthSecretKey() {
@@ -101,6 +103,7 @@ export async function createSession(input: SessionInput) {
     role: input.role,
     hotelId: input.hotelId ?? null,
     isActive: input.isActive ?? true,
+    authVersion: input.authVersion ?? 0,
   })
     .setProtectedHeader({
       alg: 'HS256',
@@ -153,6 +156,8 @@ export async function getSessionPayload(): Promise<SessionPayload | null> {
       role: payload.role,
       hotelId: typeof payload.hotelId === 'string' ? payload.hotelId : null,
       isActive: payload.isActive !== false,
+      authVersion:
+        typeof payload.authVersion === 'number' ? payload.authVersion : 0,
     };
   } catch {
     return null;
@@ -184,7 +189,11 @@ export async function getCurrentUser() {
     },
   });
 
-  if (!user || !user.isActive) {
+  if (
+    !user ||
+    !user.isActive ||
+    user.authVersion !== session.authVersion
+  ) {
     return null;
   }
 
