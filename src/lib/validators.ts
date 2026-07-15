@@ -40,13 +40,19 @@ export const guestCartItemSchema = z.object({
 
 export const createGuestOrderSchema = z.object({
   tagCode: z.string().trim().min(2),
-  /**
-   * Important:
-   * Guest name is optional because ROOM guests can be auto-filled from GuestStay.
-   * Public-area guests may still manually type their name.
-   */
-  guestName: optionalText(100),
+  guestName: z.string().trim().min(2, 'Guest name is required.').max(100),
+  guestPhone: z
+    .string()
+    .trim()
+    .min(7, 'Guest phone number is required.')
+    .max(40),
   notes: optionalText(1000),
+  orderType: z
+    .enum(['ROOM_SERVICE', 'DINE_IN', 'TAKE_OUT', 'PICK_UP'])
+    .optional()
+    .default('ROOM_SERVICE'),
+  roomNumber: optionalText(40),
+  roomPasscode: optionalText(20),
   paymentMethod: z.enum(['ROOM_CHARGE', 'PAY_AT_COUNTER', 'CASH', 'POS']),
   fulfillmentTiming: z.enum(['ASAP', 'SCHEDULED']).optional().default('ASAP'),
   scheduledFor: z.string().trim().max(120).optional().default(''),
@@ -62,9 +68,13 @@ export const createGuestOrderSchema = z.object({
 
 export const createServiceRequestSchema = z.object({
   tagCode: z.string().trim().min(2),
-  /**
-   * Also optional because service requests can use GuestStay guest name.
-   */
-  guestName: optionalText(100),
+  guestName: z.string().trim().min(2, 'Guest name is required.').max(100),
+  guestPhone: z.string().trim().min(7, 'Guest phone number is required.').max(40),
+  roomNumber: optionalText(40),
+  roomPasscode: optionalText(20),
+  requestDestination: z
+    .enum(['CURRENT_LOCATION', 'GUEST_ROOM'])
+    .optional()
+    .default('CURRENT_LOCATION'),
   notes: optionalText(1000),
 });

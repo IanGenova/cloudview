@@ -266,6 +266,7 @@ export default async function OrdersPage({
               ? `Room ${order.room.number}`
               : order.location?.name ?? 'Guest location',
             guestName: order.guestName ?? '',
+            guestPhone: order.guestPhone ?? '',
             notes: order.notes ?? '',
             status: order.status,
             paymentStatus: order.paymentStatus,

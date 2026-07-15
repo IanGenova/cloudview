@@ -15,9 +15,9 @@ import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 import { logActivity } from '@/lib/activity';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
-import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { resolveGuestMemberIdForCurrentNfcSession } from '@/lib/nfc-rewards';
+import { resolveGuestOrderIdentity } from '@/lib/guest-order-identity';
 import {
   buildScheduledFulfillment,
   parseFulfillmentTiming,
@@ -44,7 +44,11 @@ export type GuestFoodOrderItemInput = {
 export type GuestFoodOrderInput = {
   tagCode: string;
   guestName?: string | null;
+  guestPhone?: string | null;
   notes?: string | null;
+  orderType?: 'ROOM_SERVICE' | 'DINE_IN' | 'TAKE_OUT' | 'PICK_UP' | null;
+  roomNumber?: string | null;
+  roomPasscode?: string | null;
   paymentMethod: PaymentMethod;
   fulfillmentTiming?: string | null;
   scheduledFor?: string | null;
@@ -55,6 +59,7 @@ export type GuestFoodOrderInput = {
 export type CreateGuestFoodOrderOptions = {
   paymentStatus?: PaymentStatus;
   guestXenditSessionId?: string | null;
+  verifiedGuestStayId?: string | null;
 };
 
 function addStockRequirement(
@@ -87,38 +92,6 @@ function addStockRequirement(
     singleQuantity: input.source === 'SINGLE' ? input.quantity : 0,
     bundleQuantity: input.source === 'BUNDLE' ? input.quantity : 0,
   });
-}
-
-async function getResolvedGuestPortalIdentity(tagCode: string) {
-  const identity = await getCurrentNfcGuestIdentity(tagCode);
-
-  if (!identity.session) {
-    return null;
-  }
-
-  const resolvedGuestMemberId =
-    identity.guestMemberId ??
-    (await resolveGuestMemberIdForCurrentNfcSession(tagCode));
-
-  return {
-    session: identity.session,
-    guestStayId: identity.guestStayId,
-    guestMemberId: resolvedGuestMemberId,
-    guestName: identity.guestName ? cleanText(identity.guestName, 100) : '',
-  };
-}
-
-function getGuestNameSnapshot(input: {
-  stayGuestName?: string | null;
-  submittedGuestName?: string | null;
-}) {
-  const submittedName = cleanText(input.submittedGuestName || '', 100);
-
-  if (submittedName) {
-    return submittedName;
-  }
-
-  return cleanText(input.stayGuestName || '', 100);
 }
 
 function normalizeOrderItems(items: GuestFoodOrderItemInput[]) {
@@ -190,22 +163,33 @@ export async function createGuestFoodOrder(
     throw new Error('This NFC tag is inactive or invalid.');
   }
 
-  const guestIdentity = await getResolvedGuestPortalIdentity(tagCode);
+  const orderType = input.orderType || 'ROOM_SERVICE';
+  const isPublicLocationTag = !tag.roomId;
+  const requireRoomAssignment =
+    input.paymentMethod === PaymentMethod.ROOM_CHARGE ||
+    (isPublicLocationTag && orderType === 'ROOM_SERVICE');
 
-  if (!guestIdentity?.session) {
-    throw new Error('Guest session expired. Please tap the NFC card again.');
-  }
+  const resolvedIdentity = await resolveGuestOrderIdentity({
+    tagCode,
+    guestName: input.guestName,
+    guestPhone: input.guestPhone,
+    roomNumber: input.roomNumber,
+    roomPasscode: input.roomPasscode,
+    requireRoomAssignment,
+    verifiedGuestStayId: options.verifiedGuestStayId,
+  });
 
-  const guestSession = guestIdentity.session;
+  const guestSession = resolvedIdentity.context.session;
 
   if (guestSession.tagId !== tag.id || guestSession.hotelId !== tag.hotelId) {
     throw new Error('Invalid guest session. Please tap the NFC card again.');
   }
 
-  const orderGuestName = getGuestNameSnapshot({
-    stayGuestName: guestIdentity.guestName,
-    submittedGuestName: input.guestName,
-  });
+  const resolvedGuestMemberId =
+    resolvedIdentity.guestMemberId ??
+    (await resolveGuestMemberIdForCurrentNfcSession(tagCode));
+  const orderGuestName = resolvedIdentity.guestName;
+  const orderGuestPhone = resolvedIdentity.guestPhone;
 
   const uniqueProductIds = items.map((item) => item.productId);
 
@@ -369,6 +353,50 @@ export async function createGuestFoodOrder(
         }
       }
 
+      if (resolvedIdentity.guestStayId) {
+        const activeStay = await tx.guestStay.findFirst({
+          where: {
+            id: resolvedIdentity.guestStayId,
+            hotelId: tag.hotelId,
+            roomId: resolvedIdentity.roomId!,
+            status: 'ACTIVE',
+            OR: [
+              { expectedCheckOutAt: null },
+              { expectedCheckOutAt: { gte: new Date() } },
+            ],
+          },
+          select: { id: true },
+        });
+
+        if (!activeStay) {
+          throw new Error(
+            'The guest stay ended before the order could be submitted.'
+          );
+        }
+
+        const boundSession = await tx.nfcGuestSession.updateMany({
+          where: {
+            id: guestSession.id,
+            hotelId: tag.hotelId,
+            tagId: tag.id,
+            endedAt: null,
+          },
+          data: {
+            roomId: resolvedIdentity.roomId,
+            locationId: resolvedIdentity.locationId,
+            guestStayId: resolvedIdentity.guestStayId,
+            guestMemberId: resolvedGuestMemberId,
+            lastSeenAt: new Date(),
+          },
+        });
+
+        if (boundSession.count !== 1) {
+          throw new Error(
+            'The NFC browser session ended before the room could be verified.'
+          );
+        }
+      }
+
       const orderCode = await generateSeriesCode(tx, {
         hotelName: tag.hotel.name,
         type: SeriesCodeType.FOOD,
@@ -377,14 +405,15 @@ export async function createGuestFoodOrder(
       const createdOrder = await tx.order.create({
         data: {
           hotelId: tag.hotelId,
-          roomId: tag.roomId,
-          locationId: tag.locationId,
+          roomId: resolvedIdentity.roomId,
+          locationId: resolvedIdentity.locationId,
           tagId: tag.id,
           guestSessionId: guestSession.id,
-          guestStayId: guestIdentity.guestStayId,
-          guestMemberId: guestIdentity.guestMemberId,
+          guestStayId: resolvedIdentity.guestStayId,
+          guestMemberId: resolvedGuestMemberId,
           orderCode,
           guestName: orderGuestName,
+          guestPhone: orderGuestPhone,
           notes: cleanText(input.notes || '', 1000),
           paymentMethod: input.paymentMethod,
           paymentStatus,

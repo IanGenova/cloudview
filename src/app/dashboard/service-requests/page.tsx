@@ -464,6 +464,7 @@ function buildGroupedRequests(sourceRequests: typeof requests) {
         ? `Room ${first.room.number}`
         : first.location?.name ?? 'Guest location',
       guestName: first.guestName ?? '',
+      guestPhone: first.guestPhone ?? '',
       status: groupStatus,
       assignedToId: assignedIds.length === 1 ? assignedIds[0] : '',
       assignedToName:

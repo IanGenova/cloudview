@@ -29,7 +29,11 @@ export async function createGuestOrder(input: unknown) {
     {
       tagCode: parsed.tagCode,
       guestName: parsed.guestName,
+      guestPhone: parsed.guestPhone,
       notes: parsed.notes,
+      orderType: parsed.orderType,
+      roomNumber: parsed.roomNumber,
+      roomPasscode: parsed.roomPasscode,
       paymentMethod: parsed.paymentMethod as PaymentMethod,
       fulfillmentTiming: parsed.fulfillmentTiming,
       scheduledFor: parsed.scheduledFor,
@@ -84,6 +88,11 @@ export async function createServiceRequestAction(formData: FormData) {
   const input = {
     tagCode,
     guestName: cleanText(formData.get('guestName'), 100),
+    guestPhone: cleanText(formData.get('guestPhone'), 40),
+    roomNumber: cleanText(formData.get('roomNumber'), 40),
+    roomPasscode: cleanText(formData.get('roomPasscode'), 20),
+    requestDestination:
+      cleanText(formData.get('requestDestination'), 40) || 'CURRENT_LOCATION',
     notes: cleanText(formData.get('notes'), 1000),
     fulfillmentTiming:
       cleanText(formData.get('fulfillmentTiming'), 40) || 'ASAP',

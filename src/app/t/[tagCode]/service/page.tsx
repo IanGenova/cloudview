@@ -106,6 +106,8 @@ export default async function ServicePage({
 
   const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
   const defaultGuestName = guestIdentity.guestName || '';
+  const defaultGuestPhone = guestIdentity.guestMember?.phone || '';
+  const isPublicLocation = !tag.roomId;
 
   const guestServices = services.map((service) => ({
     id: service.id,
@@ -143,6 +145,8 @@ export default async function ServicePage({
           roomLabel={roomLabel}
           services={guestServices}
           defaultGuestName={defaultGuestName}
+          defaultGuestPhone={defaultGuestPhone}
+          isPublicLocation={isPublicLocation}
           error={query.error}
           success={query.success}
           count={query.count}

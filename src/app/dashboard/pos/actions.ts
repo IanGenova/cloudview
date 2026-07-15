@@ -11,6 +11,7 @@ import {
   ServiceBillingMode,
   ServiceRequestStatus,
   SeriesCodeType,
+  Role,
 } from '@prisma/client';
 import { generateSeriesCode } from '@/lib/series-code';
 import { revalidatePath } from 'next/cache';
@@ -23,6 +24,7 @@ import { logActivity } from '@/lib/activity';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
+import { assertXenditWebhookRecoveryToken } from '@/lib/xendit-webhook-recovery-token';
 
 
 type POSOrderInput = {
@@ -124,9 +126,18 @@ function revalidatePOSPaths() {
   revalidatePath('/t/[tagCode]/service', 'page');
 }
 
-export async function createPOSOrder(input: POSOrderInput) {
-  const user = await requireUser();
+type POSOrderActor = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  hotelId: string | null;
+};
 
+async function createPOSOrderInternal(
+  input: POSOrderInput,
+  user: POSOrderActor
+) {
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
   const hotelId = cleanText(input.hotelId);
@@ -902,4 +913,52 @@ let groupedServiceRequestCode: string | null = null;
       new Set(result.serviceRequests.map((request) => request.requestCode))
     ),
   };
+}
+
+export async function createPOSOrder(input: POSOrderInput) {
+  const user = await requireUser();
+
+  return createPOSOrderInternal(input, user);
+}
+
+/**
+ * Trusted recovery entry point used only by the verified Xendit webhook.
+ * The original cashier identity stored on the payment session is reloaded
+ * from the database so stock, audit logs, and hotel scoping remain identical
+ * to a normal authenticated POS finalization.
+ */
+export async function createPOSOrderAsUser(
+  input: POSOrderInput,
+  userIdInput: string,
+  recoveryToken: unknown
+) {
+  assertXenditWebhookRecoveryToken(recoveryToken);
+
+  const userId = cleanText(userIdInput, 120);
+
+  if (!userId) {
+    throw new Error('The POS payment session has no valid cashier identity.');
+  }
+
+  const user = await db.user.findFirst({
+    where: {
+      id: userId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      hotelId: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error(
+      'The cashier account linked to this paid POS session is unavailable.'
+    );
+  }
+
+  return createPOSOrderInternal(input, user);
 }

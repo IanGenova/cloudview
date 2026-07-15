@@ -44,6 +44,12 @@ type XenditErrorBody = {
   errors?: Array<{ message?: string; path?: string }> | string[];
 };
 
+export type XenditCheckoutSessionStatus =
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'EXPIRED'
+  | 'CANCELED';
+
 type XenditSessionResponse = {
   payment_session_id?: string;
   reference_id?: string;
@@ -53,6 +59,8 @@ type XenditSessionResponse = {
   payment_request_id?: string | null;
   business_id?: string;
   expires_at?: string;
+  amount?: number;
+  currency?: string;
 };
 
 type XenditRefundResponse = {
@@ -416,6 +424,101 @@ export async function createXenditCheckoutSession(input: {
     businessId: session.business_id ?? null,
     expiresAt: session.expires_at ?? expiresAt.toISOString(),
   };
+}
+
+
+export async function getXenditCheckoutSession(
+  checkoutSessionIdInput: string,
+  forUserId?: string | null
+) {
+  const checkoutSessionId = checkoutSessionIdInput.trim();
+
+  if (!/^ps-[A-Za-z0-9]+$/.test(checkoutSessionId)) {
+    throw new Error('A valid Xendit Payment Session ID is required.');
+  }
+
+  const result = await xenditFetch({
+    endpoint: `${XENDIT_API_BASE}/sessions/${encodeURIComponent(checkoutSessionId)}`,
+    method: 'GET',
+    forUserId,
+  });
+  const session = result.parsedBody as XenditSessionResponse | null;
+  const status = session?.status?.toUpperCase() as
+    | XenditCheckoutSessionStatus
+    | undefined;
+
+  if (
+    !session?.payment_session_id ||
+    !status ||
+    !['ACTIVE', 'COMPLETED', 'EXPIRED', 'CANCELED'].includes(status)
+  ) {
+    throw new Error('Xendit did not return a valid Payment Session status.');
+  }
+
+  return {
+    id: session.payment_session_id,
+    referenceId: session.reference_id ?? null,
+    status,
+    checkoutUrl: session.payment_link_url ?? null,
+    paymentId: session.payment_id ?? null,
+    paymentRequestId: session.payment_request_id ?? null,
+    businessId: session.business_id ?? null,
+    expiresAt: session.expires_at ?? null,
+    amountCents: xenditAmountToCents(session.amount),
+    currency: session.currency?.toUpperCase() ?? null,
+  };
+}
+
+export async function cancelXenditCheckoutSessionIfActive(
+  checkoutSessionIdInput: string,
+  forUserId?: string | null
+) {
+  const current = await getXenditCheckoutSession(
+    checkoutSessionIdInput,
+    forUserId
+  );
+
+  if (current.status !== 'ACTIVE') {
+    return {
+      ...current,
+      cancelled: current.status === 'CANCELED',
+    };
+  }
+
+  try {
+    const cancelled = await expireXenditCheckoutSession(
+      checkoutSessionIdInput,
+      forUserId
+    );
+
+    return {
+      ...current,
+      id: cancelled.id,
+      status: 'CANCELED' as const,
+      checkoutUrl: null,
+      cancelled: true,
+    };
+  } catch (cancelError) {
+    // Payment completion and cancellation can race. Re-read the session before
+    // surfacing an error so a completed payment is never marked as cancelled.
+    try {
+      const latest = await getXenditCheckoutSession(
+        checkoutSessionIdInput,
+        forUserId
+      );
+
+      if (latest.status !== 'ACTIVE') {
+        return {
+          ...latest,
+          cancelled: latest.status === 'CANCELED',
+        };
+      }
+    } catch {
+      // Preserve the original cancellation failure when re-verification fails.
+    }
+
+    throw cancelError;
+  }
 }
 
 export async function expireXenditCheckoutSession(

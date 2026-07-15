@@ -17,8 +17,13 @@ import {
 } from 'lucide-react';
 import { ServiceBillingMode } from '@prisma/client';
 import { cn } from '@/lib/utils';
+import {
+  ExistingXenditSessionGuard,
+  type ExistingXenditGuardStatus,
+} from '@/components/payment/ExistingXenditSessionGuard';
 import { createPOSOrder } from './actions';
 import {
+  cancelXenditPOSCheckout,
   createXenditPOSCheckout,
   finalizeXenditPOSCheckout,
   getXenditPOSStatus,
@@ -116,6 +121,25 @@ type ServiceAvailabilityFilter =
   | 'UNTRACKED';
 
 type POSMode = 'food' | 'services';
+
+type ActivePOSXenditSession = {
+  sessionId: string;
+  status: ExistingXenditGuardStatus;
+  checkoutUrl?: string | null;
+  errorMessage?: string | null;
+};
+
+function isExistingXenditGuardStatus(
+  status: string | null | undefined
+): status is ExistingXenditGuardStatus {
+  return (
+    status === 'PENDING' ||
+    status === 'PAID' ||
+    status === 'PROCESSING' ||
+    status === 'COMPLETED' ||
+    status === 'PAID_REVIEW_REQUIRED'
+  );
+}
 
 type POSToast =
   | {
@@ -535,6 +559,7 @@ function BundleSavings({
   );
 }
 
+
 function FloatingPOSToast({
   toast,
   onClose,
@@ -616,6 +641,9 @@ export function POSClient({
   const router = useRouter();
   const [recoveredXendit, setRecoveredXendit] =
     useState<StoredPendingPOSXendit | null>(null);
+  const [existingXenditSession, setExistingXenditSession] =
+    useState<ActivePOSXenditSession | null>(null);
+  const [xenditGuardBusy, setXenditGuardBusy] = useState(false);
 
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
   const [activeMode, setActiveMode] = useState<POSMode>('food');
@@ -670,10 +698,29 @@ export function POSClient({
   useEffect(() => {
     if (returnedXenditSessionId) {
       setRecoveredXendit(null);
+      setExistingXenditSession((current) =>
+        current?.sessionId === returnedXenditSessionId
+          ? current
+          : {
+              sessionId: returnedXenditSessionId,
+              status: 'PENDING',
+              checkoutUrl: null,
+            }
+      );
       return;
     }
 
-    setRecoveredXendit(readPendingPOSXendit(selectedHotelId));
+    const recovered = readPendingPOSXendit(selectedHotelId);
+    setRecoveredXendit(recovered);
+    setExistingXenditSession(
+      recovered
+        ? {
+            sessionId: recovered.sessionId,
+            status: 'PENDING',
+            checkoutUrl: null,
+          }
+        : null
+    );
   }, [returnedXenditSessionId, selectedHotelId]);
 
   const activeXenditSessionId =
@@ -699,11 +746,32 @@ export function POSClient({
     }
 
     if (activeXenditResult === 'cancelled') {
-      clearPendingPOSXendit();
-      setRecoveredXendit(null);
-      showError('Xendit checkout was cancelled. No sale was created.');
-      cleanXenditQuery();
-      return;
+      void (async () => {
+        const result = await cancelXenditPOSCheckout(paymentSessionId);
+
+        if (cancelled) return;
+
+        if (!result.ok) {
+          if ('paymentCompleted' in result && result.paymentCompleted) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('xendit', paymentSessionId);
+            url.searchParams.set('xenditResult', 'success');
+            router.replace(`${url.pathname}${url.search}`, { scroll: false });
+          } else {
+            showError(result.error || 'Unable to cancel the Xendit checkout.');
+          }
+          return;
+        }
+
+        clearPendingPOSXendit();
+        setRecoveredXendit(null);
+        setExistingXenditSession(null);
+        showError('Xendit checkout was cancelled. No sale was created.');
+        cleanXenditQuery();
+      })();
+      return () => {
+        cancelled = true;
+      };
     }
 
     async function waitForPaymentConfirmation(attempt = 0) {
@@ -718,6 +786,15 @@ export function POSClient({
           return;
         }
 
+        if (isExistingXenditGuardStatus(status.status)) {
+          setExistingXenditSession({
+            sessionId: paymentSessionId,
+            status: status.status,
+            checkoutUrl: status.checkoutUrl,
+            errorMessage: status.errorMessage,
+          });
+        }
+
         if (status.status === 'COMPLETED') {
           const parts = [
             status.orderCode ? `Order ${status.orderCode}` : null,
@@ -728,6 +805,7 @@ export function POSClient({
 
           clearPendingPOSXendit();
           setRecoveredXendit(null);
+          setExistingXenditSession(null);
           clearCart();
           setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
           showSuccessAfterRefresh('Xendit payment confirmed and POS sale completed.');
@@ -751,6 +829,7 @@ export function POSClient({
 
             clearPendingPOSXendit();
             setRecoveredXendit(null);
+            setExistingXenditSession(null);
             clearCart();
             setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
             showSuccessAfterRefresh(
@@ -768,15 +847,27 @@ export function POSClient({
           }
         }
 
-        if (
-          status.status === 'FAILED' ||
-          status.status === 'PAID_REVIEW_REQUIRED'
-        ) {
+        if (status.status === 'FAILED') {
           clearPendingPOSXendit();
           setRecoveredXendit(null);
+          setExistingXenditSession(null);
+          showError(
+            status.errorMessage || 'The Xendit payment attempt failed.'
+          );
+          cleanXenditQuery();
+          return;
+        }
+
+        if (status.status === 'PAID_REVIEW_REQUIRED') {
+          setExistingXenditSession({
+            sessionId: paymentSessionId,
+            status: 'PAID_REVIEW_REQUIRED',
+            checkoutUrl: status.checkoutUrl,
+            errorMessage: status.errorMessage,
+          });
           showError(
             status.errorMessage ||
-              'The Xendit payment needs manual review.'
+              'The Xendit payment was received and needs staff review.'
           );
           cleanXenditQuery();
           return;
@@ -843,6 +934,119 @@ export function POSClient({
 
     setToast(nextToast);
     queuePOSToast(nextToast);
+  }
+
+  async function refreshExistingPOSPayment() {
+    const active = existingXenditSession;
+
+    if (!active || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      let status = await getXenditPOSStatus(active.sessionId);
+
+      if (!status.ok) {
+        showError(status.error);
+        return;
+      }
+
+      if (status.status === 'PAID') {
+        await finalizeXenditPOSCheckout(active.sessionId);
+        status = await getXenditPOSStatus(active.sessionId);
+
+        if (!status.ok) {
+          showError(status.error);
+          return;
+        }
+      }
+
+      if (status.status === 'COMPLETED') {
+        const parts = [
+          status.orderCode ? `Order ${status.orderCode}` : null,
+          status.serviceRequestCodes.length
+            ? `Requests ${status.serviceRequestCodes.join(', ')}`
+            : null,
+        ].filter(Boolean);
+
+        clearPendingPOSXendit();
+        setRecoveredXendit(null);
+        setExistingXenditSession(null);
+        clearCart();
+        setLastReceiptLabel(parts.join(' · ') || 'Sale completed');
+        showSuccessAfterRefresh(
+          'Xendit payment confirmed and POS sale completed.'
+        );
+        router.refresh();
+        return;
+      }
+
+      if (isExistingXenditGuardStatus(status.status)) {
+        setExistingXenditSession({
+          sessionId: active.sessionId,
+          status: status.status,
+          checkoutUrl: status.checkoutUrl,
+          errorMessage: status.errorMessage,
+        });
+      } else {
+        clearPendingPOSXendit();
+        setRecoveredXendit(null);
+        setExistingXenditSession(null);
+      }
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  async function cancelExistingPOSPayment() {
+    const active = existingXenditSession;
+
+    if (!active || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      const result = await cancelXenditPOSCheckout(active.sessionId);
+
+      if (!result.ok) {
+        if ('paymentCompleted' in result && result.paymentCompleted) {
+          setXenditGuardBusy(false);
+          await refreshExistingPOSPayment();
+          return;
+        }
+
+        showError(result.error);
+        return;
+      }
+
+      clearPendingPOSXendit();
+      setRecoveredXendit(null);
+      setExistingXenditSession(null);
+      showError(
+        'The existing Xendit checkout was cancelled. You may now start a new sale.'
+      );
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  function continueExistingPOSPayment() {
+    const active = existingXenditSession;
+
+    if (!active) {
+      return;
+    }
+
+    if (active.status === 'PENDING' && active.checkoutUrl) {
+      window.location.assign(active.checkoutUrl);
+      return;
+    }
+
+    void refreshExistingPOSPayment();
   }
 
   const productMap = useMemo(() => {
@@ -1170,6 +1374,13 @@ export function POSClient({
   function completeSale() {
     setError(null);
 
+    if (existingXenditSession) {
+      showError(
+        'An existing Xendit checkout must be continued or cancelled before another POS payment can be created.'
+      );
+      return;
+    }
+
     if (foodCart.length === 0 && serviceCart.length === 0) {
       showError('Please add at least one food item or service item.');
       return;
@@ -1197,9 +1408,35 @@ export function POSClient({
             notes,
             items: foodCart,
             services: serviceCart,
+            existingSessionId: recoveredXendit?.sessionId || null,
           });
 
           if (!checkout.ok) {
+            if (checkout.existingSession && checkout.sessionId) {
+              if (isExistingXenditGuardStatus(checkout.status)) {
+                const pendingSession = {
+                  sessionId: checkout.sessionId,
+                  hotelId: selectedHotelId,
+                  createdAt: Date.now(),
+                };
+
+                savePendingPOSXendit(pendingSession);
+                setRecoveredXendit(pendingSession);
+                setExistingXenditSession({
+                  sessionId: checkout.sessionId,
+                  status: checkout.status,
+                  checkoutUrl: checkout.checkoutUrl,
+                  errorMessage: checkout.error,
+                });
+              } else {
+                // CANCELLED and FAILED are terminal. They must not keep the
+                // double-payment guard open or block a new checkout.
+                clearPendingPOSXendit();
+                setRecoveredXendit(null);
+                setExistingXenditSession(null);
+              }
+            }
+
             showError(checkout.error);
             return;
           }
@@ -1258,6 +1495,27 @@ export function POSClient({
 
   return (
     <div className="relative pb-20 text-[13px] lg:pb-0">
+      <ExistingXenditSessionGuard
+        open={Boolean(existingXenditSession)}
+        title={
+          existingXenditSession?.status === 'PENDING'
+            ? 'POS payment already in progress'
+            : 'POS payment received'
+        }
+        description={
+          existingXenditSession?.status === 'PENDING'
+            ? 'This cashier already has an active Xendit checkout. A second payable session is blocked.'
+            : 'CloudView is finalizing the paid POS sale automatically, even if the Xendit tab was closed.'
+        }
+        sessionReference={existingXenditSession?.sessionId || ''}
+        status={existingXenditSession?.status || 'PENDING'}
+        checkoutUrl={existingXenditSession?.checkoutUrl}
+        busy={xenditGuardBusy}
+        onContinue={continueExistingPOSPayment}
+        onRefresh={() => void refreshExistingPOSPayment()}
+        onCancel={() => void cancelExistingPOSPayment()}
+      />
+
       <FloatingPOSToast
         toast={toast}
         onClose={() => {

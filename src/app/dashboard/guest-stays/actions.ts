@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
+import { assertXenditWebhookRecoveryToken } from '@/lib/xendit-webhook-recovery-token';
 import {
   requireDashboardPermission,
   type DashboardPermissionAction,
@@ -30,14 +31,21 @@ import {
 import { awardGuestStayCheckInPoints } from '@/lib/guest-point-sync';
 import { sendGuestStayPasscodeSms } from '@/lib/sms';
 import {
+  cancelXenditCheckoutSessionIfActive,
   createXenditCheckoutSession,
   type XenditLineItem,
 } from '@/lib/xendit';
 import {
   buildXenditSplitConfiguration,
+  getXenditForUserIdFromPayload,
   type XenditSplitSnapshot,
 } from '@/lib/xendit-split';
 import { createGuestStayXenditReturnState } from '@/lib/guest-stay-xendit-return';
+import {
+  createXenditIntentFingerprint,
+  decideExistingXenditSession,
+  readXenditIntentFingerprint,
+} from '@/lib/xendit-session-policy';
 
 function cleanText(value: FormDataEntryValue | null, maxLength = 200) {
   if (typeof value !== 'string') {
@@ -117,17 +125,27 @@ async function getActionHotelId(formData: FormData) {
   };
 }
 
+type TrustedGuestStayActor = {
+  id: string;
+  role: Role;
+  hotelId: string | null;
+};
+
 async function getScopedGuestStay({
   guestStayId,
   permission = 'canView',
+  trustedActor,
 }: {
   guestStayId: string;
   permission?: DashboardPermissionAction;
+  trustedActor?: TrustedGuestStayActor;
 }) {
-  const user = await requireDashboardPermission(
-    DashboardModule.GUEST_STAYS,
-    permission
-  );
+  const user =
+    trustedActor ??
+    (await requireDashboardPermission(
+      DashboardModule.GUEST_STAYS,
+      permission
+    ));
 
   const guestStay = await db.guestStay.findFirst({
     where:
@@ -512,6 +530,8 @@ type GuestStayXenditPayload = {
   xenditFeeCents?: number;
   xenditPaymentRequestId?: string;
   xenditSplit?: XenditSplitSnapshot;
+  paymentIntentFingerprint?: string;
+  xenditExpiresAt?: string;
 };
 
 function normalizeGuestStayReturnBaseUrl(value: string, source: string) {
@@ -942,8 +962,15 @@ function revalidateGuestStayPaths() {
 }
 
 
-export async function checkoutGuestStayAction(formData: FormData) {
+export async function checkoutGuestStayAction(
+  formData: FormData,
+  trustedActor?: TrustedGuestStayActor,
+  recoveryToken?: unknown
+) {
   try {
+    if (trustedActor) {
+      assertXenditWebhookRecoveryToken(recoveryToken);
+    }
     const guestStayId = cleanText(formData.get('guestStayId'), 120);
     const manualChargeCents = parseMoneyToCents(
       formData.get('manualChargeAmount')
@@ -964,6 +991,7 @@ export async function checkoutGuestStayAction(formData: FormData) {
     const { user, guestStay } = await getScopedGuestStay({
       guestStayId,
       permission: 'canEdit',
+      trustedActor,
     });
 
     if (!guestStay) {
@@ -1528,6 +1556,75 @@ export async function checkoutGuestStayAction(formData: FormData) {
 }
 
 
+function createGuestStayPaymentIntentFingerprint(
+  payload: GuestStayXenditPayload
+) {
+  return createXenditIntentFingerprint({
+    flow: payload.flow,
+    guestStayId: payload.guestStayId,
+    hotelId: payload.hotelId,
+    createdById: payload.createdById,
+    manualChargeCents: payload.manualChargeCents,
+    manualChargeNote: payload.manualChargeNote,
+    discountCents: payload.discountCents,
+    discountNote: payload.discountNote,
+    expectedFoodTotalCents: payload.expectedFoodTotalCents,
+    expectedServiceTotalCents: payload.expectedServiceTotalCents,
+    expectedSubtotalCents: payload.expectedSubtotalCents,
+    split: payload.xenditSplit ?? null,
+  });
+}
+
+function getStoredGuestStayFingerprint(payload: Prisma.JsonValue) {
+  const stored = readXenditIntentFingerprint(payload);
+  if (stored) return stored;
+
+  try {
+    return createGuestStayPaymentIntentFingerprint(
+      parseGuestStayXenditPayload(payload)
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function cancelSupersededGuestStaySession(
+  session: {
+    id: string;
+    checkoutSessionId: string | null;
+    payload: Prisma.JsonValue;
+    createdAt: Date;
+  },
+  reason: string
+) {
+  if (!session.checkoutSessionId) {
+    if (Date.now() - session.createdAt.getTime() < 2 * 60 * 1000) {
+      throw new Error(
+        'The previous Xendit checkout is still being prepared. Please try again shortly.'
+      );
+    }
+  } else {
+    const remote = await cancelXenditCheckoutSessionIfActive(
+      session.checkoutSessionId,
+      getXenditForUserIdFromPayload(session.payload)
+    );
+
+    if (remote.status === 'COMPLETED') {
+      throw new Error(
+        'The previous Xendit checkout was already paid. Wait for confirmation before changing the guest folio.'
+      );
+    }
+  }
+
+  await db.posXenditSession.updateMany({
+    where: { id: session.id, status: POSXenditStatus.PENDING },
+    data: {
+      status: POSXenditStatus.CANCELLED,
+      errorMessage: reason.slice(0, 2000),
+    },
+  });
+}
+
 export async function createGuestStayXenditCheckoutAction(formData: FormData) {
   let draftId = '';
 
@@ -1596,7 +1693,8 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
       settings: quote.stay.hotel.settings,
     });
 
-    const payload: GuestStayXenditPayload = {
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const basePayload: GuestStayXenditPayload = {
       flow: 'GUEST_STAY_CHECKOUT',
       guestStayId: quote.stay.id,
       hotelId: quote.stay.hotelId,
@@ -1613,6 +1711,157 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
         ? { xenditSplit: splitConfiguration.snapshot }
         : {}),
     };
+    const paymentIntentFingerprint =
+      createGuestStayPaymentIntentFingerprint(basePayload);
+    const payload: GuestStayXenditPayload = {
+      ...basePayload,
+      paymentIntentFingerprint,
+      xenditExpiresAt: expiresAt.toISOString(),
+    };
+    const returnBaseUrl = getGuestStayXenditReturnBaseUrl();
+
+    const pendingSessions = await db.posXenditSession.findMany({
+      where: {
+        paymentProvider: 'XENDIT',
+        hotelId: quote.stay.hotelId,
+        createdById: user.id,
+        status: POSXenditStatus.PENDING,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        amountCents: true,
+        checkoutSessionId: true,
+        checkoutUrl: true,
+        payload: true,
+        createdAt: true,
+      },
+    });
+
+    for (const session of pendingSessions) {
+      let storedPayload: GuestStayXenditPayload;
+      try {
+        storedPayload = parseGuestStayXenditPayload(session.payload);
+      } catch {
+        continue;
+      }
+
+      if (storedPayload.guestStayId !== quote.stay.id) {
+        continue;
+      }
+
+      const sameIntent =
+        getStoredGuestStayFingerprint(session.payload) ===
+        paymentIntentFingerprint;
+      const decision = await decideExistingXenditSession({
+        checkoutSessionId: session.checkoutSessionId,
+        checkoutUrl: session.checkoutUrl,
+        expiresAt: storedPayload.xenditExpiresAt,
+        createdAt: session.createdAt,
+        forUserId: getXenditForUserIdFromPayload(session.payload),
+      });
+      const returnUrls = createGuestStayXenditReturnUrls({
+        baseUrl: returnBaseUrl,
+        sessionId: session.id,
+        hotelId: quote.stay.hotelId,
+        guestStayId: quote.stay.id,
+      });
+
+      if (decision.action === 'COMPLETED') {
+        const amountMatches =
+          decision.amountCents === null ||
+          decision.amountCents === session.amountCents;
+        const currencyMatches =
+          !decision.currency || decision.currency === 'PHP';
+        const nextStatus =
+          amountMatches && currencyMatches
+            ? POSXenditStatus.PAID
+            : POSXenditStatus.PAID_REVIEW_REQUIRED;
+
+        await db.posXenditSession.update({
+          where: { id: session.id },
+          data: {
+            status: nextStatus,
+            xenditPaymentId: decision.paymentId,
+            xenditPaymentRequestId: decision.paymentRequestId,
+            paidAmountCents: decision.amountCents ?? session.amountCents,
+            paidAt: new Date(),
+            errorMessage:
+              amountMatches && currencyMatches
+                ? null
+                : 'The completed Xendit session amount or currency did not match the stored guest checkout.',
+          },
+        });
+
+        return {
+          ok: false as const,
+          existingSession: true as const,
+          paymentCompleted: true as const,
+          sessionId: session.id,
+          checkoutUrl: returnUrls.successUrl,
+          amountCents: session.amountCents,
+          status: nextStatus,
+          error:
+            'An earlier Xendit payment was already received. CloudView is finalizing that guest checkout; a second payment is blocked.',
+        };
+      }
+
+      if (decision.action === 'CONTINUE') {
+        await db.posXenditSession.update({
+          where: { id: session.id },
+          data: {
+            checkoutSessionId: decision.checkoutSessionId,
+            checkoutUrl: decision.checkoutUrl,
+            xenditPaymentRequestId: decision.paymentRequestId ?? undefined,
+            payload: {
+              ...(session.payload as Prisma.JsonObject),
+              paymentIntentFingerprint:
+                sameIntent
+                  ? paymentIntentFingerprint
+                  : readXenditIntentFingerprint(session.payload) || '',
+              xenditExpiresAt: decision.expiresAt?.toISOString() || '',
+            } as Prisma.InputJsonValue,
+            errorMessage: null,
+          },
+        });
+
+        if (sameIntent) {
+          return {
+            ok: true as const,
+            sessionId: session.id,
+            checkoutUrl: decision.checkoutUrl,
+            amountCents: session.amountCents,
+            reusedSession: true as const,
+          };
+        }
+
+        return {
+          ok: false as const,
+          existingSession: true as const,
+          sessionId: session.id,
+          checkoutUrl: decision.checkoutUrl,
+          amountCents: session.amountCents,
+          status: POSXenditStatus.PENDING,
+          error:
+            'A Xendit checkout is already active for this guest stay. Continue or cancel it before changing the folio charges.',
+        };
+      }
+
+      if (decision.action === 'WAIT') {
+        return {
+          ok: false as const,
+          existingSession: true as const,
+          sessionId: session.id,
+          checkoutUrl: session.checkoutUrl,
+          amountCents: session.amountCents,
+          status: POSXenditStatus.PENDING,
+          error: decision.reason,
+        };
+      }
+
+      await cancelSupersededGuestStaySession(session, decision.reason);
+    }
 
     const draft = await db.posXenditSession.create({
       data: {
@@ -1631,7 +1880,6 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
 
     draftId = draft.id;
 
-    const returnBaseUrl = getGuestStayXenditReturnBaseUrl();
     const { successUrl, cancelUrl } = createGuestStayXenditReturnUrls({
       baseUrl: returnBaseUrl,
       sessionId: draft.id,
@@ -1681,8 +1929,10 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
         return_origin: returnBaseUrl,
         split_enabled: splitConfiguration ? 'true' : 'false',
         split_rule_id: splitConfiguration?.snapshot.splitRuleId || '',
+        payment_intent: paymentIntentFingerprint.slice(0, 40),
       },
       splitPayment: splitConfiguration?.splitPayment,
+      expiresAt,
     });
 
     await db.posXenditSession.update({
@@ -1693,6 +1943,10 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
         checkoutSessionId: checkout.id,
         checkoutUrl: checkout.checkoutUrl,
         xenditPaymentRequestId: checkout.paymentRequestId,
+        payload: {
+          ...payload,
+          xenditExpiresAt: checkout.expiresAt,
+        } as Prisma.InputJsonValue,
       },
     });
 
@@ -1701,6 +1955,7 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
       sessionId: draft.id,
       checkoutUrl: checkout.checkoutUrl,
       amountCents: subtotalCents,
+      reusedSession: false as const,
     };
   } catch (error) {
     const message =
@@ -1725,6 +1980,126 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
     return {
       ok: false as const,
       error: message,
+    };
+  }
+}
+
+export async function cancelGuestStayXenditCheckoutAction(
+  sessionIdInput: string
+) {
+  try {
+    const sessionId = sessionIdInput.trim();
+    if (!sessionId) {
+      return { ok: false as const, error: 'Xendit session is required.' };
+    }
+
+    const user = await requireDashboardPermission(
+      DashboardModule.GUEST_STAYS,
+      'canEdit'
+    );
+    const session = await db.posXenditSession.findFirst({
+      where: { id: sessionId, paymentProvider: 'XENDIT' },
+      select: {
+        id: true,
+        hotelId: true,
+        status: true,
+        checkoutSessionId: true,
+        payload: true,
+        amountCents: true,
+        currency: true,
+      },
+    });
+
+    if (!session) {
+      return {
+        ok: false as const,
+        error: 'Xendit guest checkout session was not found.',
+      };
+    }
+
+    if (user.role !== Role.SUPER_ADMIN && user.hotelId !== session.hotelId) {
+      return {
+        ok: false as const,
+        error: 'You are not allowed to cancel this payment session.',
+      };
+    }
+
+    const payload = parseGuestStayXenditPayload(session.payload);
+
+    if (session.status === POSXenditStatus.CANCELLED) {
+      return { ok: true as const, alreadyCancelled: true as const };
+    }
+
+    if (session.status !== POSXenditStatus.PENDING) {
+      const paymentCompleted =
+        session.status === POSXenditStatus.PAID ||
+        session.status === POSXenditStatus.PROCESSING ||
+        session.status === POSXenditStatus.COMPLETED ||
+        session.status === POSXenditStatus.PAID_REVIEW_REQUIRED;
+
+      return {
+        ok: false as const,
+        ...(paymentCompleted ? { paymentCompleted: true as const } : {}),
+        error: paymentCompleted
+          ? 'Payment was already received and can no longer be cancelled.'
+          : 'This checkout can no longer be cancelled.',
+      };
+    }
+
+    if (session.checkoutSessionId) {
+      const remote = await cancelXenditCheckoutSessionIfActive(
+        session.checkoutSessionId,
+        getXenditForUserIdFromPayload(session.payload)
+      );
+
+      if (remote.status === 'COMPLETED') {
+        const amountMatches =
+          remote.amountCents === null || remote.amountCents === session.amountCents;
+        const currencyMatches =
+          !remote.currency || remote.currency === session.currency.toUpperCase();
+
+        await db.posXenditSession.updateMany({
+          where: { id: session.id, status: POSXenditStatus.PENDING },
+          data: {
+            status:
+              amountMatches && currencyMatches
+                ? POSXenditStatus.PAID
+                : POSXenditStatus.PAID_REVIEW_REQUIRED,
+            xenditPaymentId: remote.paymentId,
+            xenditPaymentRequestId: remote.paymentRequestId,
+            paidAmountCents: remote.amountCents ?? session.amountCents,
+            paidAt: new Date(),
+            errorMessage:
+              amountMatches && currencyMatches
+                ? null
+                : 'The completed Xendit session amount or currency did not match the stored guest checkout.',
+          },
+        });
+
+        return {
+          ok: false as const,
+          paymentCompleted: true as const,
+          error: 'Payment was already completed and can no longer be cancelled.',
+        };
+      }
+    }
+
+    await db.posXenditSession.updateMany({
+      where: { id: session.id, status: POSXenditStatus.PENDING },
+      data: {
+        status: POSXenditStatus.CANCELLED,
+        errorMessage: `The Xendit checkout for guest stay ${payload.guestStayId} was cancelled.`,
+      },
+    });
+
+    return { ok: true as const, alreadyCancelled: false as const };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unable to cancel the Xendit guest checkout.',
     };
   }
 }
@@ -1797,9 +2172,15 @@ export async function getGuestStayXenditStatusAction(
   }
 }
 
-export async function finalizeGuestStayXenditCheckoutAction(
-  sessionIdInput: string
+async function finalizeGuestStayXenditCheckoutInternal(
+  sessionIdInput: string,
+  trustedWebhook = false,
+  recoveryToken?: unknown
 ) {
+  if (trustedWebhook) {
+    assertXenditWebhookRecoveryToken(recoveryToken);
+  }
+
   const sessionId = sessionIdInput.trim();
 
   if (!sessionId) {
@@ -1809,10 +2190,12 @@ export async function finalizeGuestStayXenditCheckoutAction(
     };
   }
 
-  const user = await requireDashboardPermission(
-    DashboardModule.GUEST_STAYS,
-    'canEdit'
-  );
+  const dashboardUser = trustedWebhook
+    ? null
+    : await requireDashboardPermission(
+        DashboardModule.GUEST_STAYS,
+        'canEdit'
+      );
 
   const session = await db.posXenditSession.findFirst({
     where: {
@@ -1828,7 +2211,11 @@ export async function finalizeGuestStayXenditCheckoutAction(
     };
   }
 
-  if (user.role !== Role.SUPER_ADMIN && user.hotelId !== session.hotelId) {
+  if (
+    dashboardUser &&
+    dashboardUser.role !== Role.SUPER_ADMIN &&
+    dashboardUser.hotelId !== session.hotelId
+  ) {
     return {
       ok: false as const,
       error: 'You are not allowed to finalize this payment session.',
@@ -1844,6 +2231,38 @@ export async function finalizeGuestStayXenditCheckoutAction(
       ok: false as const,
       error: error instanceof Error ? error.message : 'Invalid payment payload.',
     };
+  }
+
+  let trustedActor: TrustedGuestStayActor | undefined;
+
+  if (trustedWebhook) {
+    const actor = await db.user.findFirst({
+      where: {
+        id: payload.createdById || session.createdById,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        role: true,
+        hotelId: true,
+      },
+    });
+
+    if (
+      !actor ||
+      (actor.role !== Role.SUPER_ADMIN &&
+        actor.role !== Role.HOTEL_ADMIN &&
+        actor.role !== Role.STAFF) ||
+      (actor.role !== Role.SUPER_ADMIN && actor.hotelId !== session.hotelId)
+    ) {
+      return {
+        ok: false as const,
+        error:
+          'The staff account linked to this paid guest checkout is unavailable or no longer authorized.',
+      };
+    }
+
+    trustedActor = actor;
   }
 
   if (session.status === POSXenditStatus.COMPLETED) {
@@ -1988,7 +2407,11 @@ export async function finalizeGuestStayXenditCheckoutAction(
       }`
     );
 
-    const result = await checkoutGuestStayAction(checkoutFormData);
+    const result = await checkoutGuestStayAction(
+      checkoutFormData,
+      trustedActor,
+      recoveryToken
+    );
 
     if (!result.ok) {
       throw new Error(result.error);
@@ -2035,6 +2458,29 @@ export async function finalizeGuestStayXenditCheckoutAction(
       error: `Payment received, but checkout could not be finalized: ${message}`,
     };
   }
+}
+
+
+/**
+ * Idempotent webhook recovery for a completed guest-stay payment.
+ */
+export async function finalizeGuestStayXenditSessionById(
+  sessionId: string,
+  recoveryToken: unknown
+) {
+  assertXenditWebhookRecoveryToken(recoveryToken);
+
+  return finalizeGuestStayXenditCheckoutInternal(
+    sessionId,
+    true,
+    recoveryToken
+  );
+}
+
+export async function finalizeGuestStayXenditCheckoutAction(
+  sessionId: string
+) {
+  return finalizeGuestStayXenditCheckoutInternal(sessionId, false);
 }
 
 export async function markGuestStayReceiptPrintedAction(formData: FormData) {

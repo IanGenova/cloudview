@@ -21,6 +21,11 @@ import {
   notifyPosXenditStatus,
 } from '@/lib/xendit-dashboard-notifications';
 import { xenditAmountToCents } from '@/lib/xendit';
+import { XENDIT_WEBHOOK_RECOVERY_TOKEN } from '@/lib/xendit-webhook-recovery-token';
+import { finalizeGuestFoodXenditSessionById } from '@/app/t/[tagCode]/food-xendit-actions';
+import { finalizeGuestServiceXenditSessionById } from '@/app/t/[tagCode]/service-xendit-actions';
+import { finalizeXenditPOSSessionById } from '@/app/dashboard/pos/xendit-actions';
+import { finalizeGuestStayXenditSessionById } from '@/app/dashboard/guest-stays/actions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -203,15 +208,32 @@ export async function POST(request: Request) {
   let refundNotificationId: string | null = null;
   let automaticRefundSessionId: string | null = null;
   let automaticRefundReason: string | null = null;
+  let paidGuestSessionId: string | null = null;
+  let paidPosSessionId: string | null = null;
+  let eventAlreadyProcessed = false;
   const cleanupGuestSessionIds = new Set<string>();
 
   try {
     await db.$transaction(
       async (tx) => {
         const existing = await tx.xenditWebhookEvent.findUnique({ where: { id } });
-        if (existing) return;
+        const isPaymentCompletionEvent =
+          type === 'payment.capture' ||
+          type === 'payment.succeeded' ||
+          type === 'payment_session.completed';
 
-        if (type === 'payment.capture') {
+        if (existing) {
+          eventAlreadyProcessed = true;
+
+          // Completed-payment delivery is intentionally replayable. This
+          // repairs sessions recorded by an older deployment where the event
+          // was acknowledged before the order/folio finalizer ran.
+          if (!isPaymentCompletionEvent) {
+            return;
+          }
+        }
+
+        if (isPaymentCompletionEvent) {
           const payment = getPaymentDetails(body);
           const candidateIds = [
             payment.referenceId,
@@ -244,7 +266,10 @@ export async function POST(request: Request) {
 
           const hasPayment = validPaymentId(payment.paymentId);
           const hasRequest = validPaymentRequestId(payment.paymentRequestId);
-          const paymentSucceeded = payment.status === 'SUCCEEDED';
+          const paymentSucceeded =
+            type === 'payment_session.completed'
+              ? payment.status === 'COMPLETED'
+              : payment.status === 'SUCCEEDED';
 
           if (guestSession) {
             if (
@@ -292,6 +317,7 @@ export async function POST(request: Request) {
               });
 
               guestNotificationSessionId = guestSession.id;
+              if (valid) paidGuestSessionId = guestSession.id;
 
               if (!valid && paymentSucceeded && hasPayment && hasRequest) {
                 automaticRefundSessionId = guestSession.id;
@@ -342,6 +368,7 @@ export async function POST(request: Request) {
               });
 
               posNotificationSessionId = posSession.id;
+              if (valid) paidPosSessionId = posSession.id;
             }
           }
         } else if (type === 'payment_session.expired') {
@@ -499,12 +526,102 @@ export async function POST(request: Request) {
           refundNotificationId = updatedRefund?.id ?? null;
         }
 
-        await tx.xenditWebhookEvent.create({
-          data: { id, type, livemode },
-        });
+
       },
       { maxWait: 10_000, timeout: 30_000 }
     );
+
+    if (paidGuestSessionId) {
+      const session = await db.guestXenditSession.findUnique({
+        where: { id: paidGuestSessionId },
+        select: { id: true, flowType: true, status: true },
+      });
+
+      if (!session) {
+        throw new Error(
+          `Paid guest Xendit session ${paidGuestSessionId} disappeared before finalization.`
+        );
+      }
+
+      const result =
+        session.flowType === GuestXenditFlow.FOOD_ORDER
+          ? await finalizeGuestFoodXenditSessionById(
+              session.id,
+              XENDIT_WEBHOOK_RECOVERY_TOKEN
+            )
+          : await finalizeGuestServiceXenditSessionById(
+              session.id,
+              XENDIT_WEBHOOK_RECOVERY_TOKEN
+            );
+
+      if (!result.ok && !('waiting' in result && result.waiting)) {
+        const latest = await db.guestXenditSession.findUnique({
+          where: { id: session.id },
+          select: { status: true, errorMessage: true },
+        });
+
+        if (
+          latest?.status === GuestXenditStatus.PAID ||
+          latest?.status === GuestXenditStatus.PROCESSING
+        ) {
+          throw new Error(
+            latest.errorMessage ||
+              `Paid guest session ${session.id} did not finish finalization.`
+          );
+        }
+      }
+    }
+
+    if (paidPosSessionId) {
+      const session = await db.posXenditSession.findUnique({
+        where: { id: paidPosSessionId },
+        select: { id: true, payload: true, status: true },
+      });
+
+      if (!session) {
+        throw new Error(
+          `Paid POS Xendit session ${paidPosSessionId} disappeared before finalization.`
+        );
+      }
+
+      const payload = asRecord(session.payload);
+      const flow = (asString(payload?.flow) || '').toUpperCase();
+      const result =
+        flow === 'GUEST_STAY_CHECKOUT'
+          ? await finalizeGuestStayXenditSessionById(
+              session.id,
+              XENDIT_WEBHOOK_RECOVERY_TOKEN
+            )
+          : await finalizeXenditPOSSessionById(
+              session.id,
+              XENDIT_WEBHOOK_RECOVERY_TOKEN
+            );
+
+      if (!result.ok && !('waiting' in result && result.waiting)) {
+        const latest = await db.posXenditSession.findUnique({
+          where: { id: session.id },
+          select: { status: true, errorMessage: true },
+        });
+
+        if (
+          latest?.status === POSXenditStatus.PAID ||
+          latest?.status === POSXenditStatus.PROCESSING
+        ) {
+          throw new Error(
+            latest.errorMessage ||
+              `Paid dashboard session ${session.id} did not finish finalization.`
+          );
+        }
+      }
+    }
+
+    if (!eventAlreadyProcessed) {
+      await db.xenditWebhookEvent.upsert({
+        where: { id },
+        create: { id, type, livemode },
+        update: {},
+      });
+    }
   } catch (error) {
     console.error('[Xendit webhook] Processing failed.', {
       id,

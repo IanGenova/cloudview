@@ -15,14 +15,21 @@ import {
   ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { assertXenditWebhookRecoveryToken } from '@/lib/xendit-webhook-recovery-token';
 import { cleanText } from '@/lib/sanitize';
 import {
+  cancelXenditCheckoutSessionIfActive,
   createXenditCheckoutSession,
   expireXenditCheckoutSession,
   getXenditGuestPaymentMethods,
   type XenditLineItem,
 } from '@/lib/xendit';
 import { buildGuestXenditReturnUrl } from '@/lib/xendit-guest-return';
+import {
+  createXenditIntentFingerprint,
+  decideExistingXenditSession,
+  readXenditIntentFingerprint,
+} from '@/lib/xendit-session-policy';
 import {
   requireOwnedGuestXenditSession,
   requireGuestXenditSecurityContext,
@@ -68,6 +75,9 @@ type StoredGuestServicePayload = GuestServiceRequestInput & {
   paymentMethod: 'XENDIT';
   stagedAttachments: StagedServiceAttachment[];
   xenditSplit: XenditSplitSnapshot | null;
+  paymentIntentFingerprint?: string;
+  paymentIntentCoreFingerprint?: string;
+  xenditExpiresAt?: string;
 };
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -117,6 +127,11 @@ function parseCheckoutFormData(formData: FormData): GuestServiceRequestInput {
   return {
     tagCode,
     guestName: cleanText(formData.get('guestName'), 100),
+    guestPhone: cleanText(formData.get('guestPhone'), 40),
+    roomNumber: cleanText(formData.get('roomNumber'), 40),
+    roomPasscode: cleanText(formData.get('roomPasscode'), 20),
+    requestDestination:
+      cleanText(formData.get('requestDestination'), 40) || 'CURRENT_LOCATION',
     notes: cleanText(formData.get('notes'), 1000),
     fulfillmentTiming:
       cleanText(formData.get('fulfillmentTiming'), 40) || 'ASAP',
@@ -251,12 +266,140 @@ async function cleanupPaymentDraft(payment: {
   }
 }
 
+function createGuestServiceCoreFingerprint(input: {
+  request: GuestServiceRequestInput;
+  amountCents: number;
+  split: XenditSplitSnapshot | null;
+}) {
+  return createXenditIntentFingerprint({
+    flow: 'GUEST_SERVICE_REQUEST',
+    tagCode: input.request.tagCode,
+    guestName: input.request.guestName || '',
+    guestPhone: input.request.guestPhone || '',
+    roomNumber: input.request.roomNumber || '',
+    requestDestination: input.request.requestDestination || 'CURRENT_LOCATION',
+    notes: input.request.notes || '',
+    fulfillmentTiming: input.request.fulfillmentTiming || 'ASAP',
+    scheduledFor: input.request.scheduledFor || '',
+    scheduledNote: input.request.scheduledNote || '',
+    services: [...input.request.services]
+      .map((service) => ({
+        serviceCode: service.serviceCode,
+        quantity: service.quantity,
+      }))
+      .sort((left, right) =>
+        left.serviceCode.localeCompare(right.serviceCode)
+      ),
+    amountCents: input.amountCents,
+    split: input.split,
+  });
+}
+
+function createGuestServiceIntentFingerprint(input: {
+  coreFingerprint: string;
+  attachments: Array<{
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>;
+}) {
+  return createXenditIntentFingerprint({
+    coreFingerprint: input.coreFingerprint,
+    attachments: [...input.attachments]
+      .map((attachment) => ({
+        originalName: attachment.originalName,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+      }))
+      .sort((left, right) =>
+        `${left.originalName}:${left.sizeBytes}`.localeCompare(
+          `${right.originalName}:${right.sizeBytes}`
+        )
+      ),
+  });
+}
+
+function getStoredGuestServiceFingerprints(
+  payload: Prisma.JsonValue,
+  amountCents: number
+) {
+  try {
+    const parsed = parseStoredPayload(payload);
+    const core =
+      parsed.paymentIntentCoreFingerprint ||
+      createGuestServiceCoreFingerprint({
+        request: parsed,
+        amountCents,
+        split: parsed.xenditSplit,
+      });
+    const full =
+      readXenditIntentFingerprint(payload) ||
+      createGuestServiceIntentFingerprint({
+        coreFingerprint: core,
+        attachments: parsed.stagedAttachments,
+      });
+
+    return { core, full };
+  } catch {
+    return { core: null, full: null };
+  }
+}
+
+async function cancelSupersededGuestServiceSession(
+  session: {
+    id: string;
+    checkoutSessionId: string | null;
+    payload: Prisma.JsonValue;
+    createdAt: Date;
+  },
+  reason: string
+) {
+  if (!session.checkoutSessionId) {
+    if (Date.now() - session.createdAt.getTime() < 2 * 60 * 1000) {
+      throw new Error(
+        'The previous Xendit checkout is still being prepared. Please try again shortly.'
+      );
+    }
+  } else {
+    const remote = await cancelXenditCheckoutSessionIfActive(
+      session.checkoutSessionId,
+      getXenditForUserIdFromPayload(session.payload)
+    );
+
+    if (remote.status === 'COMPLETED') {
+      throw new Error(
+        'The previous Xendit checkout was already paid. Wait for confirmation before changing the service request.'
+      );
+    }
+  }
+
+  const updated = await db.guestXenditSession.updateMany({
+    where: {
+      id: session.id,
+      status: GuestXenditStatus.PENDING,
+    },
+    data: {
+      status: GuestXenditStatus.CANCELLED,
+      cancelledAt: new Date(),
+      cancelReason: reason,
+      errorMessage: null,
+    },
+  });
+
+  if (!updated.count) return;
+  await cleanupPaymentDraft(session);
+}
+
 export async function createGuestServiceXenditCheckout(formData: FormData) {
   let draftId: string | null = null;
   let stagedAttachments: StagedServiceAttachment[] = [];
 
   try {
     const input = parseCheckoutFormData(formData);
+    const requestedSessionId = cleanText(
+      formData.get('existingPaymentSessionId'),
+      120
+    );
     const attachmentFiles = getServiceRequestImageFiles(
       formData,
       'attachments'
@@ -309,51 +452,188 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+    const coreFingerprint = createGuestServiceCoreFingerprint({
+      request: input,
+      amountCents: quote.fixedPriceTotalCents,
+      split: splitConfiguration?.snapshot ?? null,
+    });
+    const paymentIntentFingerprint = createGuestServiceIntentFingerprint({
+      coreFingerprint,
+      attachments: attachmentFiles.map((file) => ({
+        originalName: file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+      })),
+    });
 
-    const olderSessions = await db.guestXenditSession.findMany({
+    const pendingSessions = await db.guestXenditSession.findMany({
       where: {
         paymentProvider: 'XENDIT',
         flowType: GuestXenditFlow.SERVICE_REQUEST,
         guestSessionId: quote.context.session.id,
         status: GuestXenditStatus.PENDING,
       },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
       select: {
         id: true,
+        amountCents: true,
         checkoutSessionId: true,
+        checkoutUrl: true,
         payload: true,
+        expiresAt: true,
+        createdAt: true,
       },
     });
 
-    if (olderSessions.length) {
-      await db.guestXenditSession.updateMany({
-        where: { id: { in: olderSessions.map((session) => session.id) } },
-        data: {
-          status: GuestXenditStatus.CANCELLED,
-          cancelledAt: now,
-          cancelReason: 'Replaced by a newer guest service checkout.',
-        },
+    for (const session of pendingSessions) {
+      const stored = getStoredGuestServiceFingerprints(
+        session.payload,
+        session.amountCents
+      );
+      const sameFullIntent = stored.full === paymentIntentFingerprint;
+      const explicitlyResumingSameCore =
+        Boolean(requestedSessionId) &&
+        session.id === requestedSessionId &&
+        stored.core === coreFingerprint;
+      const sameIntent = sameFullIntent || explicitlyResumingSameCore;
+      const decision = await decideExistingXenditSession({
+        checkoutSessionId: session.checkoutSessionId,
+        checkoutUrl: session.checkoutUrl,
+        expiresAt: session.expiresAt,
+        createdAt: session.createdAt,
+        forUserId: getXenditForUserIdFromPayload(session.payload),
       });
 
-      await Promise.allSettled(
-        olderSessions.map(async (session) => {
-          await cleanupPaymentDraft(session);
+      if (decision.action === 'COMPLETED') {
+        const amountMatches =
+          decision.amountCents === null ||
+          decision.amountCents === session.amountCents;
+        const currencyMatches =
+          !decision.currency || decision.currency === 'PHP';
+        const nextStatus =
+          amountMatches && currencyMatches
+            ? GuestXenditStatus.PAID
+            : GuestXenditStatus.PAID_REVIEW_REQUIRED;
 
-          if (session.checkoutSessionId) {
-            await expireXenditCheckoutSession(
-              session.checkoutSessionId,
-              getXenditForUserIdFromPayload(session.payload)
-            );
-          }
-        })
-      );
+        await db.guestXenditSession.update({
+          where: { id: session.id },
+          data: {
+            status: nextStatus,
+            xenditPaymentId: decision.paymentId,
+            xenditPaymentRequestId: decision.paymentRequestId,
+            paidAmountCents: decision.amountCents ?? session.amountCents,
+            paidAt: now,
+            errorMessage:
+              amountMatches && currencyMatches
+                ? null
+                : 'The completed Xendit session amount or currency did not match the stored service request.',
+          },
+        });
+
+        return {
+          ok: false as const,
+          existingSession: true as const,
+          paymentCompleted: true as const,
+          sessionId: session.id,
+          checkoutUrl: buildGuestXenditReturnUrl({
+            tagCode: input.tagCode,
+            sessionId: session.id,
+            flow: 'service',
+            result: 'success',
+          }),
+          status: nextStatus,
+          error:
+            'An earlier Xendit payment was already received. CloudView is finalizing that service request; a second payment is blocked.',
+        };
+      }
+
+      if (decision.action === 'CONTINUE') {
+        await db.guestXenditSession.update({
+          where: { id: session.id },
+          data: {
+            checkoutSessionId: decision.checkoutSessionId,
+            checkoutUrl: decision.checkoutUrl,
+            expiresAt: decision.expiresAt,
+            xenditPaymentRequestId:
+              decision.paymentRequestId ?? undefined,
+            errorMessage: null,
+          },
+        });
+
+        if (sameIntent) {
+          return {
+            ok: true as const,
+            sessionId: session.id,
+            checkoutUrl: decision.checkoutUrl,
+            expiresAt:
+              decision.expiresAt?.toISOString() ?? expiresAt.toISOString(),
+            reusedSession: true as const,
+          };
+        }
+
+        return {
+          ok: false as const,
+          existingSession: true as const,
+          sessionId: session.id,
+          checkoutUrl: decision.checkoutUrl,
+          status: GuestXenditStatus.PENDING,
+          error:
+            'A Xendit service checkout is already active. Continue or cancel it before changing the request.',
+        };
+      }
+
+      if (decision.action === 'WAIT') {
+        return {
+          ok: false as const,
+          existingSession: true as const,
+          sessionId: session.id,
+          checkoutUrl: session.checkoutUrl,
+          status: GuestXenditStatus.PENDING,
+          error: decision.reason,
+        };
+      }
+
+      await cancelSupersededGuestServiceSession(session, decision.reason);
     }
 
     const initialPayload: StoredGuestServicePayload = {
       ...input,
+      guestName: quote.guestName,
+      guestPhone: quote.guestPhone,
+      roomNumber: quote.roomId ? input.roomNumber : '',
+      roomPasscode: '',
       paymentMethod: 'XENDIT',
       stagedAttachments: [],
       xenditSplit: splitConfiguration?.snapshot ?? null,
+      paymentIntentFingerprint,
+      paymentIntentCoreFingerprint: coreFingerprint,
+      xenditExpiresAt: expiresAt.toISOString(),
     };
+
+    if (quote.guestStayId) {
+      const boundSession = await db.nfcGuestSession.updateMany({
+        where: {
+          id: quote.context.session.id,
+          hotelId: quote.context.tag.hotelId,
+          tagId: quote.context.tag.id,
+          endedAt: null,
+        },
+        data: {
+          roomId: quote.roomId,
+          locationId: quote.locationId,
+          guestStayId: quote.guestStayId,
+          guestMemberId: quote.guestMemberId,
+          lastSeenAt: new Date(),
+        },
+      });
+
+      if (boundSession.count !== 1) {
+        throw new Error(
+          'The NFC browser session ended before the room could be verified.'
+        );
+      }
+    }
 
     const draft = await db.guestXenditSession.create({
       data: {
@@ -362,7 +642,7 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
         hotelId: quote.context.tag.hotelId,
         tagId: quote.context.tag.id,
         guestSessionId: quote.context.session.id,
-        guestStayId: quote.context.guestStayId,
+        guestStayId: quote.guestStayId,
         amountCents: quote.fixedPriceTotalCents,
         currency: 'PHP',
         payload: initialPayload as unknown as Prisma.InputJsonValue,
@@ -391,9 +671,6 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
       },
     });
 
-    // Xendit requires public HTTPS return URLs, so send it to the ngrok
-    // bridge first. The bridge immediately redirects the browser back to
-    // NEXT_PUBLIC_APP_URL, where the original NFC access cookie exists.
     const successUrl = buildGuestXenditReturnUrl({
       tagCode: input.tagCode,
       sessionId: draft.id,
@@ -422,12 +699,14 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
         hotel_id: quote.context.tag.hotelId,
         tag_id: quote.context.tag.id,
         guest_session_id: quote.context.session.id,
-        guest_stay_id: quote.context.guestStayId || '',
+        guest_stay_id: quote.guestStayId || '',
+        payment_intent: paymentIntentFingerprint.slice(0, 40),
         split_enabled: splitConfiguration ? 'true' : 'false',
         split_fee_bearer:
           splitConfiguration?.snapshot.feeBearer ?? '',
       },
       splitPayment: splitConfiguration?.splitPayment,
+      expiresAt,
     });
 
     await db.guestXenditSession.update({
@@ -436,6 +715,11 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
         checkoutSessionId: checkout.id,
         checkoutUrl: checkout.checkoutUrl,
         xenditPaymentRequestId: checkout.paymentRequestId,
+        expiresAt: new Date(checkout.expiresAt),
+        payload: {
+          ...storedPayload,
+          xenditExpiresAt: checkout.expiresAt,
+        } as unknown as Prisma.InputJsonValue,
         errorMessage: null,
       },
     });
@@ -444,7 +728,8 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
       ok: true as const,
       sessionId: draft.id,
       checkoutUrl: checkout.checkoutUrl,
-      expiresAt: expiresAt.toISOString(),
+      expiresAt: checkout.expiresAt,
+      reusedSession: false as const,
     };
   } catch (error) {
     const message = getErrorMessage(
@@ -600,19 +885,65 @@ export async function cancelGuestServiceXenditCheckout(input: {
     }
 
     if (payment.status !== GuestXenditStatus.PENDING) {
+      const paymentCompleted =
+        payment.status === GuestXenditStatus.PAID ||
+        payment.status === GuestXenditStatus.PROCESSING ||
+        payment.status === GuestXenditStatus.COMPLETED ||
+        payment.status === GuestXenditStatus.PAID_REVIEW_REQUIRED;
+
       return {
         ok: false as const,
-        error:
-          payment.status === GuestXenditStatus.PAID ||
-          payment.status === GuestXenditStatus.PROCESSING ||
-          payment.status === GuestXenditStatus.COMPLETED
-            ? 'Payment was already received and can no longer be cancelled from checkout.'
-            : 'This checkout can no longer be cancelled.',
+        ...(paymentCompleted ? { paymentCompleted: true as const } : {}),
+        error: paymentCompleted
+          ? 'Payment was already received and can no longer be cancelled from checkout.'
+          : 'This checkout can no longer be cancelled.',
       };
     }
 
-    await db.guestXenditSession.update({
-      where: { id: payment.id },
+    if (payment.checkoutSessionId) {
+      const remote = await cancelXenditCheckoutSessionIfActive(
+        payment.checkoutSessionId,
+        getXenditForUserIdFromPayload(payment.payload)
+      );
+
+      if (remote.status === 'COMPLETED') {
+        const amountMatches =
+          remote.amountCents === null || remote.amountCents === payment.amountCents;
+        const currencyMatches =
+          !remote.currency || remote.currency === payment.currency.toUpperCase();
+
+        await db.guestXenditSession.updateMany({
+          where: { id: payment.id, status: GuestXenditStatus.PENDING },
+          data: {
+            status:
+              amountMatches && currencyMatches
+                ? GuestXenditStatus.PAID
+                : GuestXenditStatus.PAID_REVIEW_REQUIRED,
+            xenditPaymentId: remote.paymentId,
+            xenditPaymentRequestId: remote.paymentRequestId,
+            paidAmountCents: remote.amountCents ?? payment.amountCents,
+            paidAt: new Date(),
+            errorMessage:
+              amountMatches && currencyMatches
+                ? null
+                : 'The completed Xendit session amount or currency did not match the stored service request.',
+          },
+        });
+
+        await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
+          () => undefined
+        );
+
+        return {
+          ok: false as const,
+          paymentCompleted: true as const,
+          error: 'Payment was already completed and can no longer be cancelled.',
+        };
+      }
+    }
+
+    await db.guestXenditSession.updateMany({
+      where: { id: payment.id, status: GuestXenditStatus.PENDING },
       data: {
         status: GuestXenditStatus.CANCELLED,
         cancelledAt: new Date(),
@@ -620,15 +951,6 @@ export async function cancelGuestServiceXenditCheckout(input: {
         errorMessage: null,
       },
     });
-
-    if (payment.checkoutSessionId) {
-      await expireXenditCheckoutSession(
-          payment.checkoutSessionId,
-          getXenditForUserIdFromPayload(payment.payload)
-        ).catch(
-        () => undefined
-      );
-    }
 
     await cleanupPaymentDraft(payment);
 
@@ -646,6 +968,258 @@ export async function cancelGuestServiceXenditCheckout(input: {
   }
 }
 
+async function finalizeGuestServiceXenditSessionInternal(
+  paymentSessionIdInput: string
+) {
+  const paymentSessionId = cleanText(paymentSessionIdInput, 120);
+
+  if (!paymentSessionId) {
+    throw new Error('Guest Xendit session is required.');
+  }
+
+  const payment = await db.guestXenditSession.findFirst({
+    where: {
+      id: paymentSessionId,
+      paymentProvider: 'XENDIT',
+      flowType: GuestXenditFlow.SERVICE_REQUEST,
+    },
+  });
+
+  if (!payment) {
+    throw new Error('Guest Xendit service session was not found.');
+  }
+
+const alreadyCreated = await getFinalizedServiceRequestResult(payment.id);
+
+if (alreadyCreated) {
+  return {
+    ok: true as const,
+    alreadyFinalized: true as const,
+    requestCode: alreadyCreated.requestCode,
+    requestIds: alreadyCreated.requestIds,
+  };
+}
+
+const existingCodes = parseStringArray(payment.serviceRequestCodes);
+
+if (
+  payment.status === GuestXenditStatus.COMPLETED &&
+  existingCodes.length
+) {
+  return {
+    ok: true as const,
+    alreadyFinalized: true as const,
+    requestCode: existingCodes[0],
+    requestIds: parseStringArray(payment.serviceRequestIds),
+  };
+}
+
+if (
+  payment.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
+  isFalseDuplicateServiceFinalizationError(
+    payment.errorMessage || payment.refundErrorMessage
+  )
+) {
+  const recovered = await recoverFalseDuplicateServiceFinalization(
+    payment.id
+  );
+
+  if (!recovered) {
+    return {
+      ok: false as const,
+      waiting: true as const,
+      message:
+        'This payment is being reviewed. Please refresh the request status in a moment.',
+    };
+  }
+}
+
+if (payment.status === GuestXenditStatus.PROCESSING) {
+  const started = payment.processingStartedAt?.getTime() ?? 0;
+  const stale = started < Date.now() - 5 * 60 * 1000;
+
+  if (!stale) {
+    return {
+      ok: false as const,
+      waiting: true as const,
+      message: 'Your paid service request is already being finalized.',
+    };
+  }
+
+  await db.guestXenditSession.updateMany({
+    where: {
+      id: payment.id,
+      status: GuestXenditStatus.PROCESSING,
+      serviceRequests: { none: {} },
+    },
+    data: {
+      status: GuestXenditStatus.PAID,
+      processingStartedAt: null,
+      errorMessage: 'Recovered a stale service finalization attempt.',
+    },
+  });
+}
+
+let current = await db.guestXenditSession.findUnique({
+  where: { id: payment.id },
+});
+
+if (!current) throw new Error('Guest Xendit session was not found.');
+
+const finalizedAfterRefresh = await getFinalizedServiceRequestResult(
+  current.id
+);
+
+if (finalizedAfterRefresh) {
+  return {
+    ok: true as const,
+    alreadyFinalized: true as const,
+    requestCode: finalizedAfterRefresh.requestCode,
+    requestIds: finalizedAfterRefresh.requestIds,
+  };
+}
+
+if (
+  current.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
+  isFalseDuplicateServiceFinalizationError(
+    current.errorMessage || current.refundErrorMessage
+  )
+) {
+  const recovered = await recoverFalseDuplicateServiceFinalization(
+    current.id
+  );
+
+  if (recovered) {
+    current = await db.guestXenditSession.findUnique({
+      where: { id: payment.id },
+    });
+
+    if (!current) {
+      throw new Error('Guest Xendit session was not found.');
+    }
+  }
+}
+
+if (current.status !== GuestXenditStatus.PAID) {
+  if (current.status === GuestXenditStatus.PENDING) {
+    return {
+      ok: false as const,
+      waiting: true as const,
+      message: 'Waiting for Xendit payment confirmation.',
+    };
+  }
+
+  throw new Error(
+    current.errorMessage ||
+      current.refundErrorMessage ||
+      `Payment cannot be finalized while status is ${current.status}.`
+  );
+}
+
+const claimed = await db.guestXenditSession.updateMany({
+  where: {
+    id: current.id,
+    status: GuestXenditStatus.PAID,
+    serviceRequests: { none: {} },
+  },
+  data: {
+    status: GuestXenditStatus.PROCESSING,
+    processingStartedAt: new Date(),
+    errorMessage: null,
+  },
+});
+
+if (claimed.count !== 1) {
+  return {
+    ok: false as const,
+    waiting: true as const,
+    message: 'The payment is already being finalized.',
+  };
+}
+
+const payload = parseStoredPayload(current.payload);
+
+try {
+  const result = await createGuestServiceRequests(payload, {
+    paymentMethod: PaymentMethod.XENDIT,
+    paymentStatus: PaymentStatus.PAID,
+    guestXenditSessionId: current.id,
+    createRoomCharges: false,
+    stagedAttachments: payload.stagedAttachments,
+    verifiedGuestStayId: current.guestStayId,
+  });
+
+  return {
+    ok: true as const,
+    alreadyFinalized: false as const,
+    requestCode: result.requestCode,
+    requestIds: result.requestIds,
+  };
+} catch (error) {
+  const message = getErrorMessage(error, '');
+
+  if (isFalseDuplicateServiceFinalizationError(message)) {
+    await db.guestXenditSession.updateMany({
+      where: {
+        id: current.id,
+        status: GuestXenditStatus.PROCESSING,
+        serviceRequests: {
+          none: {},
+        },
+      },
+      data: {
+        status: GuestXenditStatus.PAID,
+        processingStartedAt: null,
+        errorMessage:
+          'Recovered from a false duplicate service finalization error. Please retry finalization.',
+      },
+    });
+
+    throw new Error(
+      'Payment was received, but the service request finalization hit a known duplicate-check bug. The payment was kept paid and can be retried safely.'
+    );
+  }
+
+  await markGuestPaymentFinalizationFailedAndRefund({
+    sessionId: current.id,
+    error,
+  });
+
+  await cleanupStagedGuestServiceAttachments(payload.stagedAttachments);
+
+  throw new Error(
+    `Payment was received, but the service request could not be completed. A Xendit refund was requested automatically. ${message}`.trim()
+  );
+}
+}
+
+/**
+ * Idempotent webhook recovery for a paid service request. The request is
+ * created from the immutable server-side session payload even if the guest
+ * closed or backed out of the Xendit browser page.
+ */
+export async function finalizeGuestServiceXenditSessionById(
+  paymentSessionId: string,
+  recoveryToken: unknown
+) {
+  assertXenditWebhookRecoveryToken(recoveryToken);
+
+  try {
+    return await finalizeGuestServiceXenditSessionInternal(paymentSessionId);
+  } catch (error) {
+    console.error('[Guest Service Xendit] Webhook finalization failed.', error);
+
+    return {
+      ok: false as const,
+      waiting: false as const,
+      error: getPublicError(
+        error,
+        'Unable to finalize the paid service request.'
+      ),
+    };
+  }
+}
+
 export async function finalizeGuestServiceXenditCheckout(input: {
   tagCode: string;
   paymentSessionId: string;
@@ -657,207 +1231,7 @@ export async function finalizeGuestServiceXenditCheckout(input: {
       flowType: GuestXenditFlow.SERVICE_REQUEST,
     });
 
-    const alreadyCreated = await getFinalizedServiceRequestResult(payment.id);
-
-    if (alreadyCreated) {
-      return {
-        ok: true as const,
-        alreadyFinalized: true as const,
-        requestCode: alreadyCreated.requestCode,
-        requestIds: alreadyCreated.requestIds,
-      };
-    }
-
-    const existingCodes = parseStringArray(payment.serviceRequestCodes);
-
-    if (
-      payment.status === GuestXenditStatus.COMPLETED &&
-      existingCodes.length
-    ) {
-      return {
-        ok: true as const,
-        alreadyFinalized: true as const,
-        requestCode: existingCodes[0],
-        requestIds: parseStringArray(payment.serviceRequestIds),
-      };
-    }
-
-    if (
-      payment.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
-      isFalseDuplicateServiceFinalizationError(
-        payment.errorMessage || payment.refundErrorMessage
-      )
-    ) {
-      const recovered = await recoverFalseDuplicateServiceFinalization(
-        payment.id
-      );
-
-      if (!recovered) {
-        return {
-          ok: false as const,
-          waiting: true as const,
-          message:
-            'This payment is being reviewed. Please refresh the request status in a moment.',
-        };
-      }
-    }
-
-    if (payment.status === GuestXenditStatus.PROCESSING) {
-      const started = payment.processingStartedAt?.getTime() ?? 0;
-      const stale = started < Date.now() - 5 * 60 * 1000;
-
-      if (!stale) {
-        return {
-          ok: false as const,
-          waiting: true as const,
-          message: 'Your paid service request is already being finalized.',
-        };
-      }
-
-      await db.guestXenditSession.updateMany({
-        where: {
-          id: payment.id,
-          status: GuestXenditStatus.PROCESSING,
-          serviceRequests: { none: {} },
-        },
-        data: {
-          status: GuestXenditStatus.PAID,
-          processingStartedAt: null,
-          errorMessage: 'Recovered a stale service finalization attempt.',
-        },
-      });
-    }
-
-    let current = await db.guestXenditSession.findUnique({
-      where: { id: payment.id },
-    });
-
-    if (!current) throw new Error('Guest Xendit session was not found.');
-
-    const finalizedAfterRefresh = await getFinalizedServiceRequestResult(
-      current.id
-    );
-
-    if (finalizedAfterRefresh) {
-      return {
-        ok: true as const,
-        alreadyFinalized: true as const,
-        requestCode: finalizedAfterRefresh.requestCode,
-        requestIds: finalizedAfterRefresh.requestIds,
-      };
-    }
-
-    if (
-      current.status === GuestXenditStatus.PAID_REVIEW_REQUIRED &&
-      isFalseDuplicateServiceFinalizationError(
-        current.errorMessage || current.refundErrorMessage
-      )
-    ) {
-      const recovered = await recoverFalseDuplicateServiceFinalization(
-        current.id
-      );
-
-      if (recovered) {
-        current = await db.guestXenditSession.findUnique({
-          where: { id: payment.id },
-        });
-
-        if (!current) {
-          throw new Error('Guest Xendit session was not found.');
-        }
-      }
-    }
-
-    if (current.status !== GuestXenditStatus.PAID) {
-      if (current.status === GuestXenditStatus.PENDING) {
-        return {
-          ok: false as const,
-          waiting: true as const,
-          message: 'Waiting for Xendit payment confirmation.',
-        };
-      }
-
-      throw new Error(
-        current.errorMessage ||
-          current.refundErrorMessage ||
-          `Payment cannot be finalized while status is ${current.status}.`
-      );
-    }
-
-    const claimed = await db.guestXenditSession.updateMany({
-      where: {
-        id: current.id,
-        status: GuestXenditStatus.PAID,
-        serviceRequests: { none: {} },
-      },
-      data: {
-        status: GuestXenditStatus.PROCESSING,
-        processingStartedAt: new Date(),
-        errorMessage: null,
-      },
-    });
-
-    if (claimed.count !== 1) {
-      return {
-        ok: false as const,
-        waiting: true as const,
-        message: 'The payment is already being finalized.',
-      };
-    }
-
-    const payload = parseStoredPayload(current.payload);
-
-    try {
-      const result = await createGuestServiceRequests(payload, {
-        paymentMethod: PaymentMethod.XENDIT,
-        paymentStatus: PaymentStatus.PAID,
-        guestXenditSessionId: current.id,
-        createRoomCharges: false,
-        stagedAttachments: payload.stagedAttachments,
-      });
-
-      return {
-        ok: true as const,
-        alreadyFinalized: false as const,
-        requestCode: result.requestCode,
-        requestIds: result.requestIds,
-      };
-    } catch (error) {
-      const message = getErrorMessage(error, '');
-
-      if (isFalseDuplicateServiceFinalizationError(message)) {
-        await db.guestXenditSession.updateMany({
-          where: {
-            id: current.id,
-            status: GuestXenditStatus.PROCESSING,
-            serviceRequests: {
-              none: {},
-            },
-          },
-          data: {
-            status: GuestXenditStatus.PAID,
-            processingStartedAt: null,
-            errorMessage:
-              'Recovered from a false duplicate service finalization error. Please retry finalization.',
-          },
-        });
-
-        throw new Error(
-          'Payment was received, but the service request finalization hit a known duplicate-check bug. The payment was kept paid and can be retried safely.'
-        );
-      }
-
-      await markGuestPaymentFinalizationFailedAndRefund({
-        sessionId: current.id,
-        error,
-      });
-
-      await cleanupStagedGuestServiceAttachments(payload.stagedAttachments);
-
-      throw new Error(
-        `Payment was received, but the service request could not be completed. A Xendit refund was requested automatically. ${message}`.trim()
-      );
-    }
+    return await finalizeGuestServiceXenditSessionInternal(payment.id);
   } catch (error) {
     console.error('[Guest Service Xendit] Finalization failed.', error);
 

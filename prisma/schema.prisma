@@ -652,6 +652,7 @@ model Order {
   tag                 NfcTag?       @relation(fields: [tagId], references: [id], onDelete: SetNull)
   orderCode           String        @unique
   guestName           String?
+  guestPhone          String?       @db.VarChar(40)
   notes               String?       @db.Text
   paymentMethod       PaymentMethod @default(ROOM_CHARGE)
   paymentStatus       PaymentStatus @default(UNPAID)
@@ -786,6 +787,7 @@ model ServiceRequest {
   requestCode   String
   type          String
   guestName     String?
+  guestPhone    String?              @db.VarChar(40)
   notes         String?              @db.Text
   status        ServiceRequestStatus @default(NEW)
   assignedToId  String?
@@ -1012,6 +1014,11 @@ model NfcGuestSession {
   startedAt  DateTime  @default(now())
   lastSeenAt DateTime  @default(now())
   endedAt    DateTime?
+
+  // Browser-scoped protection for public-location room/passcode verification.
+  roomVerificationFailures    Int       @default(0)
+  roomVerificationLockedUntil DateTime?
+  lastRoomVerificationAt      DateTime?
 
   hotel       Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   tag         NfcTag       @relation(fields: [tagId], references: [id], onDelete: Cascade)

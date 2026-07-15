@@ -41,6 +41,7 @@ export type NormalizedGuestPaymentResult = {
   refundStatus?: string | null;
   refundedAmountCents?: number;
   waiting?: boolean;
+  paymentCompleted?: boolean;
   message?: string;
   error?: string;
 };

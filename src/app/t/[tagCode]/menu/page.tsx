@@ -140,6 +140,8 @@ export default async function GuestMenuPage({
   const rewardsContext = await getGuestRewardsContextForTag(tagCode);
   const guestIdentity = await getCurrentNfcGuestIdentity(tagCode);
   const defaultGuestName = guestIdentity.guestName || '';
+  const defaultGuestPhone = guestIdentity.guestMember?.phone || '';
+  const isPublicLocation = !tag.roomId;
 
   if (tag.status !== 'ACTIVE') {
     return (
@@ -388,6 +390,8 @@ export default async function GuestMenuPage({
           taxRate={Number(tag.hotel.settings?.taxRate ?? 0)}
           serviceChargeRate={Number(tag.hotel.settings?.serviceChargeRate ?? 0)}
           defaultGuestName={defaultGuestName}
+          defaultGuestPhone={defaultGuestPhone}
+          isPublicLocation={isPublicLocation}
           returnedXenditSessionId={returnedXenditSessionId}
           returnedXenditResult={returnedXenditResult}
         />

@@ -13,6 +13,9 @@ import {
   ChefHat,
   ChevronRight,
   Clock3,
+  BedDouble,
+  KeyRound,
+  Phone,
   Minus,
   PackageCheck,
   Plus,
@@ -28,6 +31,10 @@ import {
 } from 'lucide-react';
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
+import {
+  ExistingXenditSessionGuard,
+  type ExistingXenditGuardStatus,
+} from '@/components/payment/ExistingXenditSessionGuard';
 import { createGuestOrder } from '@/app/t/[tagCode]/actions';
 import {
   cancelGuestFoodXenditCheckout,
@@ -77,6 +84,8 @@ type CartItem = {
 type StoredFoodCheckoutDraft = {
   cart: CartItem[];
   guestName: string;
+  guestPhone: string;
+  roomNumber: string;
   notes: string;
   orderType: OrderType;
   confirmedClause: boolean;
@@ -86,6 +95,13 @@ type StoredFoodCheckoutDraft = {
   scheduledTime: string;
   scheduledNote: string;
   xenditSessionId?: string;
+};
+
+type ActiveFoodXenditSession = {
+  sessionId: string;
+  status: ExistingXenditGuardStatus;
+  checkoutUrl?: string | null;
+  errorMessage?: string | null;
 };
 
 type OrderType = 'ROOM_SERVICE' | 'DINE_IN' | 'TAKE_OUT' | 'PICK_UP';
@@ -377,6 +393,8 @@ export function MenuClient({
   taxRate = 0,
   serviceChargeRate = 0,
   defaultGuestName = '',
+  defaultGuestPhone = '',
+  isPublicLocation = false,
   returnedXenditSessionId = null,
   returnedXenditResult = null,
 }: {
@@ -386,6 +404,8 @@ export function MenuClient({
   taxRate?: number;
   serviceChargeRate?: number;
   defaultGuestName?: string;
+  defaultGuestPhone?: string;
+  isPublicLocation?: boolean;
   returnedXenditSessionId?: string | null;
   returnedXenditResult?: 'success' | 'cancelled' | null;
 }) {
@@ -394,6 +414,9 @@ export function MenuClient({
   const [screen, setScreen] = useState<'menu' | 'cart'>('menu');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [guestName, setGuestName] = useState(defaultGuestName);
+  const [guestPhone, setGuestPhone] = useState(defaultGuestPhone);
+  const [roomNumber, setRoomNumber] = useState('');
+  const [roomPasscode, setRoomPasscode] = useState('');
   const [notes, setNotes] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('ROOM_SERVICE');
   const [confirmedClause, setConfirmedClause] = useState(false);
@@ -411,10 +434,17 @@ const [scheduledNote, setScheduledNote] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [existingXenditSession, setExistingXenditSession] =
+    useState<ActiveFoodXenditSession | null>(null);
+  const [xenditGuardBusy, setXenditGuardBusy] = useState(false);
 
   useEffect(() => {
     setGuestName(defaultGuestName);
   }, [defaultGuestName]);
+
+  useEffect(() => {
+    setGuestPhone(defaultGuestPhone);
+  }, [defaultGuestPhone]);
 
   const checkoutDraftStorageKey = `cloudview-food-checkout-draft:${tagCode}`;
 
@@ -449,7 +479,39 @@ const [scheduledNote, setScheduledNote] = useState('');
             return;
           }
 
-          if (paymentStatus.ok && paymentStatus.shouldClearCart) {
+          if (
+            paymentStatus.ok &&
+            paymentStatus.status === 'COMPLETED' &&
+            paymentStatus.orderCode
+          ) {
+            window.sessionStorage.removeItem(checkoutDraftStorageKey);
+            setCart([]);
+            setConfirmedClause(false);
+            router.push(
+              `/t/${tagCode}/confirmed/${paymentStatus.orderCode}`
+            );
+            return;
+          }
+
+          if (
+            paymentStatus.ok &&
+            paymentStatus.status &&
+            [
+              'PENDING',
+              'PAID',
+              'PROCESSING',
+              'COMPLETED',
+              'PAID_REVIEW_REQUIRED',
+            ].includes(paymentStatus.status)
+          ) {
+            setExistingXenditSession({
+              sessionId: draft.xenditSessionId,
+              status:
+                paymentStatus.status as ExistingXenditGuardStatus,
+              checkoutUrl: paymentStatus.checkoutUrl,
+              errorMessage: paymentStatus.errorMessage,
+            });
+          } else if (paymentStatus.ok && paymentStatus.shouldClearCart) {
             window.sessionStorage.removeItem(checkoutDraftStorageKey);
             setCart([]);
             setConfirmedClause(false);
@@ -474,6 +536,8 @@ const [scheduledNote, setScheduledNote] = useState('');
         setCart(restoredCart);
 
         if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
+        if (typeof draft.guestPhone === 'string') setGuestPhone(draft.guestPhone);
+        if (typeof draft.roomNumber === 'string') setRoomNumber(draft.roomNumber);
         if (typeof draft.notes === 'string') setNotes(draft.notes);
         if (draft.orderType && draft.orderType in orderTypeLabels) {
           setOrderType(draft.orderType as OrderType);
@@ -509,7 +573,7 @@ const [scheduledNote, setScheduledNote] = useState('');
     return () => {
       disposed = true;
     };
-  }, [checkoutDraftStorageKey, tagCode]);
+  }, [checkoutDraftStorageKey, router, tagCode]);
 
   useEffect(() => {
     if (screen !== 'cart') {
@@ -540,6 +604,8 @@ const [scheduledNote, setScheduledNote] = useState('');
     const draft: StoredFoodCheckoutDraft = {
       cart,
       guestName,
+      guestPhone,
+      roomNumber,
       notes,
       orderType,
       confirmedClause,
@@ -568,6 +634,162 @@ const [scheduledNote, setScheduledNote] = useState('');
       // Ignore browser storage failures.
     }
   }
+
+  async function refreshExistingFoodPayment(sessionId?: string) {
+    const activeSessionId =
+      sessionId || existingXenditSession?.sessionId || '';
+
+    if (!activeSessionId || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      let status = await getGuestFoodXenditStatus({
+        tagCode,
+        paymentSessionId: activeSessionId,
+      });
+
+      if (!status.ok) {
+        setError(status.error || 'Unable to read the Xendit payment status.');
+        return;
+      }
+
+      if (status.status === 'PAID') {
+        await finalizeGuestFoodXenditCheckout({
+          tagCode,
+          paymentSessionId: activeSessionId,
+        });
+
+        status = await getGuestFoodXenditStatus({
+          tagCode,
+          paymentSessionId: activeSessionId,
+        });
+
+        if (!status.ok) {
+          setError(
+            status.error || 'Unable to confirm the finalized food order.'
+          );
+          return;
+        }
+      }
+
+      if (status.status === 'COMPLETED' && status.orderCode) {
+        clearCheckoutDraft();
+        setExistingXenditSession(null);
+        setCart([]);
+        setConfirmedClause(false);
+        router.push(`/t/${tagCode}/confirmed/${status.orderCode}`);
+        return;
+      }
+
+      if (
+        status.status &&
+        [
+          'PENDING',
+          'PAID',
+          'PROCESSING',
+          'COMPLETED',
+          'PAID_REVIEW_REQUIRED',
+        ].includes(status.status)
+      ) {
+        setExistingXenditSession({
+          sessionId: activeSessionId,
+          status: status.status as ExistingXenditGuardStatus,
+          checkoutUrl: status.checkoutUrl,
+          errorMessage: status.errorMessage,
+        });
+        return;
+      }
+
+      setExistingXenditSession(null);
+      saveCheckoutDraft(undefined);
+      setError(
+        status.errorMessage ||
+          `Payment status: ${String(status.status || 'UNKNOWN').replaceAll(
+            '_',
+            ' '
+          )}`
+      );
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  async function cancelExistingFoodPayment() {
+    const active = existingXenditSession;
+
+    if (!active || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      const result = await cancelGuestFoodXenditCheckout({
+        tagCode,
+        paymentSessionId: active.sessionId,
+      });
+
+      if (!result.ok) {
+        if ('paymentCompleted' in result && result.paymentCompleted) {
+          setXenditGuardBusy(false);
+          await refreshExistingFoodPayment(active.sessionId);
+          return;
+        }
+
+        setError(result.error);
+        return;
+      }
+
+      setExistingXenditSession(null);
+      saveCheckoutDraft(undefined);
+      setScreen('cart');
+      setError(
+        'The existing Xendit checkout was cancelled. You may now review the cart and start a new payment.'
+      );
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  function continueExistingFoodPayment() {
+    const active = existingXenditSession;
+
+    if (!active) {
+      return;
+    }
+
+    if (active.status === 'PENDING' && active.checkoutUrl) {
+      window.location.assign(active.checkoutUrl);
+      return;
+    }
+
+    window.location.assign(
+      `/t/${tagCode}/payment?session=${encodeURIComponent(
+        active.sessionId
+      )}&flow=food`
+    );
+  }
+
+  useEffect(() => {
+    if (
+      !existingXenditSession ||
+      existingXenditSession.status === 'PENDING' ||
+      existingXenditSession.status === 'PAID_REVIEW_REQUIRED'
+    ) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshExistingFoodPayment(existingXenditSession.sessionId);
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+    // The session ID/status intentionally controls the recovery poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingXenditSession?.sessionId, existingXenditSession?.status]);
 
   useEffect(() => {
     if (!returnedXenditSessionId) {
@@ -854,8 +1076,19 @@ const [scheduledNote, setScheduledNote] = useState('');
   return date.toISOString();
 }
 
+  const requiresRoomVerification =
+    isPublicLocation &&
+    (paymentMethod === 'ROOM_CHARGE' || orderType === 'ROOM_SERVICE');
+
   function submit() {
     setError(null);
+
+    if (existingXenditSession) {
+      setError(
+        'An existing Xendit checkout must be continued or cancelled before another payment can be created.'
+      );
+      return;
+    }
 
     if (!cart.length) {
       setError('Please add at least one item before placing your order.');
@@ -880,6 +1113,28 @@ const [scheduledNote, setScheduledNote] = useState('');
           ? `${product.name} is no longer available in the selected quantity.`
           : 'One item in your cart is no longer available.'
       );
+      return;
+    }
+
+    if (guestName.trim().length < 2) {
+      setError('Please enter the guest name.');
+      return;
+    }
+
+    const phoneDigits = guestPhone.replace(/\D/g, '');
+
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      setError('Please enter a valid guest phone number.');
+      return;
+    }
+
+    if (requiresRoomVerification && !roomNumber.trim()) {
+      setError('Please enter the room number for delivery or room charging.');
+      return;
+    }
+
+    if (requiresRoomVerification && !/^\d{6}$/.test(roomPasscode.trim())) {
+      setError('Please enter the six-digit room passcode.');
       return;
     }
 
@@ -913,7 +1168,11 @@ const [scheduledNote, setScheduledNote] = useState('');
           const checkout = await createGuestFoodXenditCheckout({
             tagCode,
             guestName,
+            guestPhone,
             notes: finalNotes,
+            orderType,
+            roomNumber: requiresRoomVerification ? roomNumber : '',
+            roomPasscode: requiresRoomVerification ? roomPasscode : '',
             fulfillmentTiming,
             scheduledFor: scheduledForIso || '',
             scheduledNote,
@@ -921,6 +1180,22 @@ const [scheduledNote, setScheduledNote] = useState('');
           });
 
           if (!checkout.ok) {
+            if (
+              'existingSession' in checkout &&
+              checkout.existingSession &&
+              checkout.sessionId &&
+              checkout.status
+            ) {
+              saveCheckoutDraft(checkout.sessionId);
+              setExistingXenditSession({
+                sessionId: checkout.sessionId,
+                status:
+                  checkout.status as ExistingXenditGuardStatus,
+                checkoutUrl: checkout.checkoutUrl,
+                errorMessage: checkout.error,
+              });
+            }
+
             setError(checkout.error);
             return;
           }
@@ -933,7 +1208,11 @@ const [scheduledNote, setScheduledNote] = useState('');
         const result = await createGuestOrder({
           tagCode,
           guestName,
+          guestPhone,
           notes: finalNotes,
+          orderType,
+          roomNumber: requiresRoomVerification ? roomNumber : '',
+          roomPasscode: requiresRoomVerification ? roomPasscode : '',
           paymentMethod,
           fulfillmentTiming,
           scheduledFor: scheduledForIso || '',
@@ -970,6 +1249,27 @@ const [scheduledNote, setScheduledNote] = useState('');
   if (screen === 'cart') {
     return (
       <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#070706] px-5 pb-32 pt-3 text-white">
+        <ExistingXenditSessionGuard
+          open={Boolean(existingXenditSession)}
+          title={
+            existingXenditSession?.status === 'PENDING'
+              ? 'Payment already in progress'
+              : 'Payment received'
+          }
+          description={
+            existingXenditSession?.status === 'PENDING'
+              ? 'This food order already has an active Xendit payment link. A second checkout is blocked.'
+              : 'CloudView is recovering and finalizing the paid food order automatically.'
+          }
+          sessionReference={existingXenditSession?.sessionId || ''}
+          status={existingXenditSession?.status || 'PENDING'}
+          checkoutUrl={existingXenditSession?.checkoutUrl}
+          busy={xenditGuardBusy}
+          dark
+          onContinue={continueExistingFoodPayment}
+          onRefresh={() => void refreshExistingFoodPayment()}
+          onCancel={() => void cancelExistingFoodPayment()}
+        />
         <div className="mb-6 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -1147,6 +1447,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                   <input
                     type="text"
                     autoComplete="name"
+                    required
                     placeholder="Guest name"
                     value={guestName}
                     onChange={(event) =>
@@ -1156,7 +1457,30 @@ const [scheduledNote, setScheduledNote] = useState('');
                     style={checkoutFieldStyle}
                   />
                   <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-                    Auto-filled from the active stay. You may edit it for another guest.
+                    Auto-filled from the active stay. Confirm the name before ordering.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                    Phone number
+                  </label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      required
+                      placeholder="09XX XXX XXXX"
+                      value={guestPhone}
+                      onChange={(event) => setGuestPhone(event.currentTarget.value)}
+                      className={cn(checkoutFieldClass, 'h-14 pl-11')}
+                      style={checkoutFieldStyle}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs font-medium leading-5 text-white/40">
+                    Required so hotel staff can contact you about this order.
                   </p>
                 </div>
 
@@ -1324,6 +1648,63 @@ const [scheduledNote, setScheduledNote] = useState('');
                   ) : null}
                 </div>
 
+                {isPublicLocation ? (
+                  <div className={cn(
+                    'rounded-[1.5rem] border p-4',
+                    requiresRoomVerification
+                      ? 'border-gold/35 bg-gold/[0.08]'
+                      : 'border-white/10 bg-white/[0.03]'
+                  )}>
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
+                        <BedDouble className="size-5" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-black text-white">Secure room assignment</p>
+                        <p className="mt-1 text-xs font-medium leading-5 text-white/50">
+                          {requiresRoomVerification
+                            ? 'Room number and passcode are required for room delivery or room charging from this public NFC location.'
+                            : 'Room verification is not needed for this order type and payment method.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {requiresRoomVerification ? (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <input
+                          type="text"
+                          inputMode="text"
+                          autoComplete="off"
+                          required
+                          placeholder="Room number"
+                          value={roomNumber}
+                          onChange={(event) => setRoomNumber(event.currentTarget.value)}
+                          className={cn(checkoutFieldClass, 'h-14')}
+                          style={checkoutFieldStyle}
+                        />
+                        <div className="relative">
+                          <KeyRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                            autoComplete="one-time-code"
+                            required
+                            placeholder="6-digit passcode"
+                            value={roomPasscode}
+                            onChange={(event) =>
+                              setRoomPasscode(event.currentTarget.value.replace(/\D/g, '').slice(0, 6))
+                            }
+                            className={cn(checkoutFieldClass, 'h-14 pl-11 font-mono tracking-[0.18em]')}
+                            style={checkoutFieldStyle}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <textarea
                   rows={4}
                   placeholder="Special instructions, allergies, or requests"
@@ -1447,6 +1828,27 @@ const [scheduledNote, setScheduledNote] = useState('');
 
   return (
     <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#050505] px-5 pb-40 pt-3 text-white">
+      <ExistingXenditSessionGuard
+          open={Boolean(existingXenditSession)}
+          title={
+            existingXenditSession?.status === 'PENDING'
+              ? 'Payment already in progress'
+              : 'Payment received'
+          }
+          description={
+            existingXenditSession?.status === 'PENDING'
+              ? 'This food order already has an active Xendit payment link. A second checkout is blocked.'
+              : 'CloudView is recovering and finalizing the paid food order automatically.'
+          }
+          sessionReference={existingXenditSession?.sessionId || ''}
+          status={existingXenditSession?.status || 'PENDING'}
+          checkoutUrl={existingXenditSession?.checkoutUrl}
+          busy={xenditGuardBusy}
+          dark
+          onContinue={continueExistingFoodPayment}
+          onRefresh={() => void refreshExistingFoodPayment()}
+          onCancel={() => void cancelExistingFoodPayment()}
+        />
       <div className="mb-5 flex items-center justify-between gap-3">
         <button
           type="button"

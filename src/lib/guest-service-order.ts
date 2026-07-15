@@ -34,7 +34,10 @@ import {
   saveServiceRequestImageFiles,
   validateServiceRequestImageFile,
 } from '@/lib/service-request-attachments';
-import { requireGuestXenditSecurityContext } from '@/lib/guest-xendit-security';
+import {
+  GuestOrderIdentityError,
+  resolveGuestOrderIdentity,
+} from '@/lib/guest-order-identity';
 
 export type GuestServiceSelection = {
   serviceCode: string;
@@ -51,6 +54,10 @@ export type StagedServiceAttachment = {
 export type GuestServiceRequestInput = {
   tagCode: string;
   guestName?: string | null;
+  guestPhone?: string | null;
+  roomNumber?: string | null;
+  roomPasscode?: string | null;
+  requestDestination?: 'CURRENT_LOCATION' | 'GUEST_ROOM' | string | null;
   notes?: string | null;
   fulfillmentTiming?: string | null;
   scheduledFor?: string | null;
@@ -63,6 +70,7 @@ export type GuestServiceRequestOptions = {
   paymentStatus?: PaymentStatus;
   guestXenditSessionId?: string | null;
   createRoomCharges?: boolean;
+  verifiedGuestStayId?: string | null;
   attachmentFiles?: File[];
   stagedAttachments?: StagedServiceAttachment[];
 };
@@ -79,9 +87,15 @@ type PreparedService = {
 };
 
 type PreparedGuestServiceRequest = {
-  context: Awaited<ReturnType<typeof requireGuestXenditSecurityContext>>;
+  context: Awaited<ReturnType<typeof resolveGuestOrderIdentity>>['context'];
   hotelName: string;
   guestName: string;
+  guestPhone: string;
+  roomId: string | null;
+  locationId: string | null;
+  guestStayId: string | null;
+  guestMemberId: string | null;
+  roomAssignmentVerified: boolean;
   notes: string;
   schedule: ReturnType<typeof buildScheduledFulfillment>;
   services: PreparedService[];
@@ -96,6 +110,12 @@ export class GuestServiceRequestError extends Error {
       | 'service_stock_unavailable'
       | 'invalid_schedule'
       | 'room_required'
+      | 'guest_details_required'
+      | 'invalid_phone'
+      | 'room_passcode_required'
+      | 'invalid_room_passcode'
+      | 'room_verification_locked'
+      | 'active_stay_not_found'
       | 'request_failed',
     message: string
   ) {
@@ -139,9 +159,49 @@ function normalizeSelections(values: GuestServiceSelection[]) {
 }
 
 export async function prepareGuestServiceRequest(
-  input: GuestServiceRequestInput
+  input: GuestServiceRequestInput,
+  options: {
+    requireRoomAssignment?: boolean;
+    verifiedGuestStayId?: string | null;
+  } = {}
 ): Promise<PreparedGuestServiceRequest> {
-  const context = await requireGuestXenditSecurityContext(input.tagCode);
+  let resolvedIdentity: Awaited<ReturnType<typeof resolveGuestOrderIdentity>>;
+
+  try {
+    resolvedIdentity = await resolveGuestOrderIdentity({
+      tagCode: input.tagCode,
+      guestName: input.guestName,
+      guestPhone: input.guestPhone,
+      roomNumber: input.roomNumber,
+      roomPasscode: input.roomPasscode,
+      requireRoomAssignment:
+        options.requireRoomAssignment || input.requestDestination === 'GUEST_ROOM',
+      verifiedGuestStayId: options.verifiedGuestStayId,
+    });
+  } catch (error) {
+    if (error instanceof GuestOrderIdentityError) {
+      const code =
+        error.code === 'INVALID_GUEST_PHONE'
+          ? 'invalid_phone'
+          : error.code === 'ROOM_PASSCODE_REQUIRED' ||
+              error.code === 'ROOM_NUMBER_REQUIRED'
+            ? 'room_passcode_required'
+            : error.code === 'INVALID_ROOM_PASSCODE'
+              ? 'invalid_room_passcode'
+              : error.code === 'ROOM_VERIFICATION_LOCKED'
+                ? 'room_verification_locked'
+                : error.code === 'ACTIVE_STAY_NOT_FOUND' ||
+                    error.code === 'ACTIVE_STAY_REQUIRED'
+                  ? 'active_stay_not_found'
+                  : 'guest_details_required';
+
+      throw new GuestServiceRequestError(code, error.message);
+    }
+
+    throw error;
+  }
+
+  const context = resolvedIdentity.context;
   const selections = normalizeSelections(input.services);
   const serviceCodes = selections.map((item) => item.serviceCode);
 
@@ -264,8 +324,13 @@ export async function prepareGuestServiceRequest(
   return {
     context,
     hotelName: hotel.name,
-    guestName:
-      cleanText(input.guestName || context.guestName || '', 100) || 'Guest',
+    guestName: resolvedIdentity.guestName,
+    guestPhone: resolvedIdentity.guestPhone,
+    roomId: resolvedIdentity.roomId,
+    locationId: resolvedIdentity.locationId,
+    guestStayId: resolvedIdentity.guestStayId,
+    guestMemberId: resolvedIdentity.guestMemberId,
+    roomAssignmentVerified: resolvedIdentity.roomAssignmentVerified,
     notes: cleanText(input.notes || '', 1000) || '',
     schedule,
     services: preparedServices,
@@ -350,12 +415,15 @@ export async function createGuestServiceRequests(
   input: GuestServiceRequestInput,
   options: GuestServiceRequestOptions = {}
 ) {
-  const prepared = await prepareGuestServiceRequest(input);
+  const createRoomCharges = Boolean(options.createRoomCharges);
+  const prepared = await prepareGuestServiceRequest(input, {
+    requireRoomAssignment: createRoomCharges,
+    verifiedGuestStayId: options.verifiedGuestStayId,
+  });
   const xenditSessionId =
     cleanText(options.guestXenditSessionId || '') || null;
   const requestedPaymentMethod = options.paymentMethod ?? null;
   const paymentStatus = options.paymentStatus ?? PaymentStatus.UNPAID;
-  const createRoomCharges = Boolean(options.createRoomCharges);
   const hasPayableFixedPrice = prepared.fixedPriceTotalCents > 0;
   const paymentMethod = hasPayableFixedPrice
     ? requestedPaymentMethod
@@ -399,7 +467,7 @@ export async function createGuestServiceRequests(
   if (
     createRoomCharges &&
     hasPayableFixedPrice &&
-    !prepared.context.tag.roomId
+    !prepared.roomId
   ) {
     throw new GuestServiceRequestError(
       'room_required',
@@ -466,6 +534,52 @@ export async function createGuestServiceRequests(
         }
       }
 
+      if (prepared.guestStayId) {
+        const activeStay = await tx.guestStay.findFirst({
+          where: {
+            id: prepared.guestStayId,
+            hotelId: prepared.context.tag.hotelId,
+            roomId: prepared.roomId!,
+            status: 'ACTIVE',
+            OR: [
+              { expectedCheckOutAt: null },
+              { expectedCheckOutAt: { gte: new Date() } },
+            ],
+          },
+          select: { id: true },
+        });
+
+        if (!activeStay) {
+          throw new GuestServiceRequestError(
+            'active_stay_not_found',
+            'The guest stay ended before the request could be submitted.'
+          );
+        }
+
+        const boundSession = await tx.nfcGuestSession.updateMany({
+          where: {
+            id: prepared.context.session.id,
+            hotelId: prepared.context.tag.hotelId,
+            tagId: prepared.context.tag.id,
+            endedAt: null,
+          },
+          data: {
+            roomId: prepared.roomId,
+            locationId: prepared.locationId,
+            guestStayId: prepared.guestStayId,
+            guestMemberId: prepared.guestMemberId,
+            lastSeenAt: new Date(),
+          },
+        });
+
+        if (boundSession.count !== 1) {
+          throw new GuestServiceRequestError(
+            'active_stay_not_found',
+            'The NFC browser session ended before the room could be verified.'
+          );
+        }
+      }
+
       const requestCode = await generateSeriesCode(tx, {
         hotelName: prepared.hotelName,
         type: SeriesCodeType.SERVICE,
@@ -491,12 +605,12 @@ export async function createGuestServiceRequests(
         const request = await tx.serviceRequest.create({
           data: {
             hotelId: prepared.context.tag.hotelId,
-            roomId: prepared.context.tag.roomId,
-            locationId: prepared.context.tag.locationId,
+            roomId: prepared.roomId,
+            locationId: prepared.locationId,
             tagId: prepared.context.tag.id,
             guestSessionId: prepared.context.session.id,
-            guestStayId: prepared.context.guestStayId,
-            guestMemberId: prepared.context.guestMemberId,
+            guestStayId: prepared.guestStayId,
+            guestMemberId: prepared.guestMemberId,
             guestXenditSessionId: xenditSessionId,
             requestCode,
             type: service.name,
@@ -508,6 +622,7 @@ export async function createGuestServiceRequests(
             paymentStatus: itemPaymentStatus,
             quantity: service.quantity,
             guestName: prepared.guestName,
+            guestPhone: prepared.guestPhone,
             fulfillmentTiming: prepared.schedule.fulfillmentTiming,
             scheduledFor: prepared.schedule.scheduledFor,
             scheduledWindowStart: prepared.schedule.scheduledWindowStart,
@@ -613,7 +728,7 @@ export async function createGuestServiceRequests(
             data: {
               chargeCode: randomCode('ADD'),
               hotelId: prepared.context.tag.hotelId,
-              roomId: prepared.context.tag.roomId!,
+              roomId: prepared.roomId!,
               serviceRequestId: request.id,
               itemName: service.name,
               description: prepared.notes || service.description || null,

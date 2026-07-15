@@ -98,6 +98,7 @@ type RequestGroup = {
   hotelName: string;
   roomLabel: string;
   guestName: string;
+  guestPhone: string;
   status: RequestStatusValue;
   assignedToId: string;
   assignedToName: string;
@@ -1069,7 +1070,16 @@ function DetailsModal({
                 <div className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between gap-3">
                     <span className="text-neutral-500">Guest</span>
-                    <b>{request.guestName || 'Not provided'}</b>
+                    <div className="text-right">
+                      <b className="block">
+                        {request.guestName || 'Not provided'}
+                      </b>
+                      {request.guestPhone ? (
+                        <span className="mt-1 block text-xs font-semibold text-neutral-500">
+                          {request.guestPhone}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="flex justify-between gap-3">
@@ -1632,7 +1642,7 @@ export function ServiceRequestsClient({
 
       const matchesSearch =
         !search ||
-        `${request.requestCode} ${request.roomLabel} ${request.guestName} ${request.hotelName} ${itemText}`
+        `${request.requestCode} ${request.roomLabel} ${request.guestName} ${request.guestPhone} ${request.hotelName} ${itemText}`
           .toLowerCase()
           .includes(search);
 

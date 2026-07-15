@@ -29,6 +29,8 @@ import {
   FileImage,
   Hammer,
   ImagePlus,
+  KeyRound,
+  Phone,
   Minus,
   PackagePlus,
   Plus,
@@ -45,6 +47,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import {
+  ExistingXenditSessionGuard,
+  type ExistingXenditGuardStatus,
+} from '@/components/payment/ExistingXenditSessionGuard';
 import { createServiceRequestAction } from '../actions';
 import {
   cancelGuestServiceXenditCheckout,
@@ -87,6 +93,13 @@ type AttachmentPreview = {
 
 type FulfillmentTimingValue = 'ASAP' | 'SCHEDULED';
 type ServicePaymentMethod = 'ROOM_CHARGE' | 'XENDIT';
+
+type ActiveServiceXenditSession = {
+  sessionId: string;
+  status: ExistingXenditGuardStatus;
+  checkoutUrl?: string | null;
+  errorMessage?: string | null;
+};
 
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
@@ -197,6 +210,16 @@ function getErrorMessage(error?: string) {
       'Please use the secure Xendit checkout button for this payment.',
     xendit_cancelled:
       'Xendit checkout was cancelled. Your selected services were restored; attached photos must be selected again.',
+    guest_details_required: 'Guest name and phone number are required.',
+    invalid_phone: 'Please enter a valid guest phone number.',
+    room_passcode_required:
+      'Enter the room number and six-digit room passcode.',
+    invalid_room_passcode:
+      'The room number or passcode is incorrect, or the stay is no longer active.',
+    room_verification_locked:
+      'Too many incorrect room verification attempts. Please wait 15 minutes or contact the front desk.',
+    active_stay_not_found:
+      'The room number or passcode is incorrect, or the stay is no longer active.',
   };
 
   return messages[error] ?? 'Unable to submit the request. Please try again.';
@@ -343,6 +366,8 @@ export function GuestServiceOrderForm({
   roomLabel,
   services,
   defaultGuestName = '',
+  defaultGuestPhone = '',
+  isPublicLocation = false,
   error,
   success,
   count,
@@ -351,6 +376,8 @@ export function GuestServiceOrderForm({
   roomLabel: string;
   services: GuestServiceItem[];
   defaultGuestName?: string;
+  defaultGuestPhone?: string;
+  isPublicLocation?: boolean;
   error?: string;
   success?: string;
   count?: string;
@@ -358,9 +385,18 @@ export function GuestServiceOrderForm({
   const router = useRouter();
   const [paymentPending, startPaymentTransition] = useTransition();
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+  const [existingXenditSession, setExistingXenditSession] =
+    useState<ActiveServiceXenditSession | null>(null);
+  const [xenditGuardBusy, setXenditGuardBusy] = useState(false);
   const [screen, setScreen] = useState<'services' | 'cart'>('services');
   const [cart, setCart] = useState<ServiceCartItem[]>([]);
   const [guestName, setGuestName] = useState(defaultGuestName);
+  const [guestPhone, setGuestPhone] = useState(defaultGuestPhone);
+  const [roomNumber, setRoomNumber] = useState('');
+  const [roomPasscode, setRoomPasscode] = useState('');
+  const [requestDestination, setRequestDestination] = useState<
+    'CURRENT_LOCATION' | 'GUEST_ROOM'
+  >(isPublicLocation ? 'GUEST_ROOM' : 'CURRENT_LOCATION');
   const [notes, setNotes] = useState('');
   const [chargeConsent, setChargeConsent] = useState(false);
   const [paymentMethod, setPaymentMethod] =
@@ -389,12 +425,16 @@ export function GuestServiceOrderForm({
       const draft = JSON.parse(stored) as {
         cart?: unknown;
         guestName?: unknown;
+        guestPhone?: unknown;
+        roomNumber?: unknown;
+        requestDestination?: unknown;
         notes?: unknown;
         fulfillmentTiming?: unknown;
         scheduledDate?: unknown;
         scheduledTime?: unknown;
         scheduledNote?: unknown;
         paymentMethod?: unknown;
+        xenditSessionId?: unknown;
       };
 
       const restoredQuantities = new Map<string, number>();
@@ -455,6 +495,14 @@ export function GuestServiceOrderForm({
       setScreen('cart');
 
       if (typeof draft.guestName === 'string') setGuestName(draft.guestName);
+      if (typeof draft.guestPhone === 'string') setGuestPhone(draft.guestPhone);
+      if (typeof draft.roomNumber === 'string') setRoomNumber(draft.roomNumber);
+      if (
+        draft.requestDestination === 'CURRENT_LOCATION' ||
+        draft.requestDestination === 'GUEST_ROOM'
+      ) {
+        setRequestDestination(draft.requestDestination);
+      }
       if (typeof draft.notes === 'string') setNotes(draft.notes);
       if (
         draft.fulfillmentTiming === 'ASAP' ||
@@ -496,6 +544,10 @@ export function GuestServiceOrderForm({
   useEffect(() => {
     setGuestName(defaultGuestName);
   }, [defaultGuestName]);
+
+  useEffect(() => {
+    setGuestPhone(defaultGuestPhone);
+  }, [defaultGuestPhone]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -542,19 +594,31 @@ export function GuestServiceOrderForm({
           paymentSessionId,
         });
 
-        if (!stopped) {
+        if (stopped) return;
+
+        if (cancelled.ok) {
           restoreCheckoutDraft();
           setLocalError(
-            cancelled.ok
-              ? 'Xendit checkout was cancelled. Your selected services were restored, but photos must be attached again. No service inventory was deducted.'
-              : cancelled.error || 'Unable to cancel the payment checkout.'
+            'Xendit checkout was cancelled. Your selected services were restored, but photos must be attached again. No service inventory was deducted.'
           );
           setPaymentMessage(null);
           clearPaymentQuery();
           router.replace(`/t/${tagCode}/service?error=xendit_cancelled`);
           router.refresh();
+          return;
         }
-        return;
+
+        if (!('paymentCompleted' in cancelled) || !cancelled.paymentCompleted) {
+          setLocalError(
+            cancelled.error || 'Unable to cancel the payment checkout.'
+          );
+          setPaymentMessage(null);
+          return;
+        }
+
+        setPaymentMessage(
+          'Payment completed while the checkout was closing. Confirming it now...'
+        );
       }
 
       setPaymentMessage('Confirming your Xendit payment...');
@@ -703,6 +767,48 @@ export function GuestServiceOrderForm({
     };
   }, [defaultGuestName, tagCode]);
 
+  useEffect(() => {
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.has('xendit')) {
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(
+        sessionStorage.getItem(`cv-service-checkout-${tagCode}`) || '{}'
+      ) as { xenditSessionId?: unknown };
+
+      if (
+        typeof draft.xenditSessionId === 'string' &&
+        draft.xenditSessionId.trim()
+      ) {
+        void refreshExistingServicePayment(draft.xenditSessionId.trim());
+      }
+    } catch {
+      // Ignore malformed browser drafts.
+    }
+    // Recover once on mount/back navigation; the server remains authoritative.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tagCode]);
+
+  useEffect(() => {
+    if (
+      !existingXenditSession ||
+      existingXenditSession.status === 'PENDING' ||
+      existingXenditSession.status === 'PAID_REVIEW_REQUIRED'
+    ) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshExistingServicePayment(existingXenditSession.sessionId);
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingXenditSession?.sessionId, existingXenditSession?.status]);
+
   const serviceMap = useMemo(
     () => new Map(services.map((service) => [service.code, service])),
     [services]
@@ -780,6 +886,10 @@ export function GuestServiceOrderForm({
     : 'ROOM_CHARGE';
   const usesXendit =
     hasPayableFixedPrice && effectivePaymentMethod === 'XENDIT';
+  const requiresRoomVerification =
+    isPublicLocation &&
+    (requestDestination === 'GUEST_ROOM' ||
+      (hasPayableFixedPrice && effectivePaymentMethod === 'ROOM_CHARGE'));
 
   useEffect(() => {
     if (!hasPayableFixedPrice && paymentMethod !== 'ROOM_CHARGE') {
@@ -787,6 +897,22 @@ export function GuestServiceOrderForm({
       setChargeConsent(false);
     }
   }, [hasPayableFixedPrice, paymentMethod]);
+
+  useEffect(() => {
+    if (
+      isPublicLocation &&
+      hasPayableFixedPrice &&
+      paymentMethod === 'ROOM_CHARGE' &&
+      requestDestination !== 'GUEST_ROOM'
+    ) {
+      setRequestDestination('GUEST_ROOM');
+    }
+  }, [
+    hasPayableFixedPrice,
+    isPublicLocation,
+    paymentMethod,
+    requestDestination,
+  ]);
 
   const hasConfirmationItem = selectedServices.some(
     (item) => item.service.billingMode === 'PRICE_ON_CONFIRMATION'
@@ -876,6 +1002,173 @@ export function GuestServiceOrderForm({
     setPaymentMessage(null);
     setLocalError(null);
     clearAttachments();
+  }
+
+  function saveServicePaymentSession(sessionId?: string) {
+    const storageKey = `cv-service-checkout-${tagCode}`;
+
+    try {
+      const current = JSON.parse(
+        sessionStorage.getItem(storageKey) || '{}'
+      ) as Record<string, unknown>;
+
+      if (sessionId) {
+        current.xenditSessionId = sessionId;
+      } else {
+        delete current.xenditSessionId;
+      }
+
+      sessionStorage.setItem(storageKey, JSON.stringify(current));
+    } catch {
+      // The server-side Xendit session remains authoritative.
+    }
+  }
+
+  function openRecoveredServiceRequest(requestCode: string) {
+    sessionStorage.removeItem(`cv-service-checkout-${tagCode}`);
+    sessionStorage.setItem(`cv-service-reset-${tagCode}`, requestCode);
+    setExistingXenditSession(null);
+    clearCart();
+
+    const query = new URLSearchParams({ code: requestCode });
+    router.replace(
+      `/t/${encodeURIComponent(tagCode)}/service/thanks?${query.toString()}`
+    );
+    router.refresh();
+  }
+
+  async function refreshExistingServicePayment(sessionId?: string) {
+    const activeSessionId =
+      sessionId || existingXenditSession?.sessionId || '';
+
+    if (!activeSessionId || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      let status = await getGuestServiceXenditStatus({
+        tagCode,
+        paymentSessionId: activeSessionId,
+      });
+
+      if (!status.ok) {
+        setLocalError(status.error || 'Unable to read the Xendit payment status.');
+        return;
+      }
+
+      if (status.status === 'PAID' || status.status === 'PROCESSING') {
+        await finalizeGuestServiceXenditCheckout({
+          tagCode,
+          paymentSessionId: activeSessionId,
+        });
+
+        status = await getGuestServiceXenditStatus({
+          tagCode,
+          paymentSessionId: activeSessionId,
+        });
+
+        if (!status.ok) {
+          setLocalError(
+            status.error || 'Unable to confirm the finalized service request.'
+          );
+          return;
+        }
+      }
+
+      if (status.status === 'COMPLETED' && status.requestCode) {
+        openRecoveredServiceRequest(status.requestCode);
+        return;
+      }
+
+      if (
+        status.status &&
+        [
+          'PENDING',
+          'PAID',
+          'PROCESSING',
+          'COMPLETED',
+          'PAID_REVIEW_REQUIRED',
+        ].includes(status.status)
+      ) {
+        setExistingXenditSession({
+          sessionId: activeSessionId,
+          status: status.status as ExistingXenditGuardStatus,
+          checkoutUrl: status.checkoutUrl,
+          errorMessage: status.errorMessage,
+        });
+        return;
+      }
+
+      setExistingXenditSession(null);
+      saveServicePaymentSession(undefined);
+      setLocalError(
+        status.errorMessage ||
+          `Payment status: ${String(status.status || 'UNKNOWN').replaceAll(
+            '_',
+            ' '
+          )}`
+      );
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  async function cancelExistingServicePayment() {
+    const active = existingXenditSession;
+
+    if (!active || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      const result = await cancelGuestServiceXenditCheckout({
+        tagCode,
+        paymentSessionId: active.sessionId,
+      });
+
+      if (!result.ok) {
+        if ('paymentCompleted' in result && result.paymentCompleted) {
+          setXenditGuardBusy(false);
+          await refreshExistingServicePayment(active.sessionId);
+          return;
+        }
+
+        setLocalError(result.error);
+        return;
+      }
+
+      setExistingXenditSession(null);
+      saveServicePaymentSession(undefined);
+      restoreCheckoutDraft();
+      setLocalError(
+        'The existing Xendit checkout was cancelled. You may now update the request and start a new payment.'
+      );
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  function continueExistingServicePayment() {
+    const active = existingXenditSession;
+
+    if (!active) {
+      return;
+    }
+
+    if (active.status === 'PENDING' && active.checkoutUrl) {
+      window.location.assign(active.checkoutUrl);
+      return;
+    }
+
+    window.location.assign(
+      `/t/${tagCode}/payment?session=${encodeURIComponent(
+        active.sessionId
+      )}&flow=service`
+    );
   }
 
   function syncAttachmentInput(nextAttachments: AttachmentPreview[]) {
@@ -991,9 +1284,43 @@ export function GuestServiceOrderForm({
     setLocalError(null);
     setPaymentMessage(null);
 
+    if (existingXenditSession) {
+      event.preventDefault();
+      setLocalError(
+        'An existing Xendit checkout must be continued or cancelled before this request can be submitted again.'
+      );
+      return;
+    }
+
     if (!cart.length) {
       event.preventDefault();
       setLocalError('Please add at least one service request.');
+      return;
+    }
+
+    if (guestName.trim().length < 2) {
+      event.preventDefault();
+      setLocalError('Please enter the guest name.');
+      return;
+    }
+
+    const phoneDigits = guestPhone.replace(/\D/g, '');
+
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      event.preventDefault();
+      setLocalError('Please enter a valid guest phone number.');
+      return;
+    }
+
+    if (requiresRoomVerification && !roomNumber.trim()) {
+      event.preventDefault();
+      setLocalError('Please enter the room number.');
+      return;
+    }
+
+    if (requiresRoomVerification && !/^\d{6}$/.test(roomPasscode.trim())) {
+      event.preventDefault();
+      setLocalError('Please enter the six-digit room passcode.');
       return;
     }
 
@@ -1042,18 +1369,40 @@ export function GuestServiceOrderForm({
 
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const checkoutStorageKey = `cv-service-checkout-${tagCode}`;
+    let existingPaymentSessionId = '';
+
+    try {
+      const existingDraft = JSON.parse(
+        sessionStorage.getItem(checkoutStorageKey) || '{}'
+      ) as { xenditSessionId?: unknown };
+
+      if (typeof existingDraft.xenditSessionId === 'string') {
+        existingPaymentSessionId = existingDraft.xenditSessionId.trim();
+      }
+    } catch {
+      // A malformed browser draft should not block a new checkout.
+    }
+
+    if (existingPaymentSessionId) {
+      formData.set('existingPaymentSessionId', existingPaymentSessionId);
+    }
 
     sessionStorage.setItem(
-      `cv-service-checkout-${tagCode}`,
+      checkoutStorageKey,
       JSON.stringify({
         cart,
         guestName,
+        guestPhone,
+        roomNumber,
+        requestDestination,
         notes,
         fulfillmentTiming,
         scheduledDate,
         scheduledTime,
         scheduledNote,
         paymentMethod: effectivePaymentMethod,
+        xenditSessionId: existingPaymentSessionId || undefined,
       })
     );
 
@@ -1063,9 +1412,39 @@ export function GuestServiceOrderForm({
         const result = await createGuestServiceXenditCheckout(formData);
 
         if (!result.ok) {
+          if (
+            'existingSession' in result &&
+            result.existingSession &&
+            result.sessionId &&
+            result.status
+          ) {
+            saveServicePaymentSession(result.sessionId);
+            setExistingXenditSession({
+              sessionId: result.sessionId,
+              status: result.status as ExistingXenditGuardStatus,
+              checkoutUrl: result.checkoutUrl,
+              errorMessage: result.error,
+            });
+          }
+
           setPaymentMessage(null);
           setLocalError(result.error);
           return;
+        }
+
+        try {
+          const currentDraft = JSON.parse(
+            sessionStorage.getItem(checkoutStorageKey) || '{}'
+          ) as Record<string, unknown>;
+          sessionStorage.setItem(
+            checkoutStorageKey,
+            JSON.stringify({
+              ...currentDraft,
+              xenditSessionId: result.sessionId,
+            })
+          );
+        } catch {
+          // The server remains the authoritative source for the payment session.
         }
 
         window.location.assign(result.checkoutUrl);
@@ -1076,6 +1455,27 @@ export function GuestServiceOrderForm({
   if (screen === 'cart') {
     return (
       <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#050505] px-5 pb-32 pt-3 text-white">
+        <ExistingXenditSessionGuard
+          open={Boolean(existingXenditSession)}
+          title={
+            existingXenditSession?.status === 'PENDING'
+              ? 'Payment already in progress'
+              : 'Payment received'
+          }
+          description={
+            existingXenditSession?.status === 'PENDING'
+              ? 'This service request already has an active Xendit payment link. A second checkout is blocked.'
+              : 'CloudView is recovering and finalizing the paid service request automatically.'
+          }
+          sessionReference={existingXenditSession?.sessionId || ''}
+          status={existingXenditSession?.status || 'PENDING'}
+          checkoutUrl={existingXenditSession?.checkoutUrl}
+          busy={xenditGuardBusy}
+          dark
+          onContinue={continueExistingServicePayment}
+          onRefresh={() => void refreshExistingServicePayment()}
+          onCancel={() => void cancelExistingServicePayment()}
+        />
         <div className="mb-6 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -1157,6 +1557,11 @@ export function GuestServiceOrderForm({
               type="hidden"
               name="scheduledNote"
               value={scheduledNote}
+            />
+            <input
+              type="hidden"
+              name="requestDestination"
+              value={requestDestination}
             />
 
             {selectedServices.map((item) => (
@@ -1274,6 +1679,7 @@ export function GuestServiceOrderForm({
                     name="guestName"
                     type="text"
                     autoComplete="name"
+                    required
                     placeholder="Guest name"
                     value={guestName}
                     onChange={(event) =>
@@ -1286,10 +1692,109 @@ export function GuestServiceOrderForm({
                     }}
                   />
                   <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-                    Auto-filled from the active stay. You may edit it for another
-                    guest.
+                    Auto-filled from the active stay. Confirm the name before sending.
                   </p>
                 </div>
+
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                    Phone number
+                  </label>
+                  <div className="relative">
+                    <Phone className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
+                    <input
+                      name="guestPhone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      required
+                      placeholder="09XX XXX XXXX"
+                      value={guestPhone}
+                      onChange={(event) => setGuestPhone(event.currentTarget.value)}
+                      className={cn(darkFieldClass, 'h-14 pl-11')}
+                      style={{ WebkitTextFillColor: 'white', caretColor: '#d6a738' }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs font-medium leading-5 text-white/40">
+                    Required so hotel staff can contact you about this request.
+                  </p>
+                </div>
+
+                {isPublicLocation ? (
+                  <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+                    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+                      Request destination
+                    </label>
+                    <select
+                      value={requestDestination}
+                      onChange={(event) =>
+                        setRequestDestination(
+                          event.currentTarget.value as 'CURRENT_LOCATION' | 'GUEST_ROOM'
+                        )
+                      }
+                      disabled={hasPayableFixedPrice && paymentMethod === 'ROOM_CHARGE'}
+                      className={cn(darkFieldClass, 'h-14 appearance-auto')}
+                    >
+                      <option value="GUEST_ROOM" className="bg-[#111] text-white">
+                        Send / assign to my guest room
+                      </option>
+                      <option value="CURRENT_LOCATION" className="bg-[#111] text-white">
+                        Handle at this public location
+                      </option>
+                    </select>
+                    {hasPayableFixedPrice && paymentMethod === 'ROOM_CHARGE' ? (
+                      <p className="mt-2 text-xs font-semibold text-gold/80">
+                        Room charge requires a verified active guest room.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {requiresRoomVerification ? (
+                  <div className="rounded-[1.5rem] border border-gold/30 bg-gold/[0.08] p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
+                        <BedDouble className="size-5" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-black text-white">Verify guest room</p>
+                        <p className="mt-1 text-xs font-medium leading-5 text-white/50">
+                          The server will verify the active stay and passcode before assigning or charging this request to the room.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input
+                        name="roomNumber"
+                        type="text"
+                        required
+                        autoComplete="off"
+                        placeholder="Room number"
+                        value={roomNumber}
+                        onChange={(event) => setRoomNumber(event.currentTarget.value)}
+                        className={cn(darkFieldClass, 'h-14')}
+                      />
+                      <div className="relative">
+                        <KeyRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
+                        <input
+                          name="roomPasscode"
+                          type="password"
+                          inputMode="numeric"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          required
+                          autoComplete="one-time-code"
+                          placeholder="6-digit passcode"
+                          value={roomPasscode}
+                          onChange={(event) =>
+                            setRoomPasscode(event.currentTarget.value.replace(/\D/g, '').slice(0, 6))
+                          }
+                          className={cn(darkFieldClass, 'h-14 pl-11 font-mono tracking-[0.18em]')}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
                 <textarea
                   name="notes"
@@ -1469,6 +1974,7 @@ export function GuestServiceOrderForm({
                         type="button"
                         onClick={() => {
                           setPaymentMethod('ROOM_CHARGE');
+                          setRequestDestination('GUEST_ROOM');
                           setChargeConsent(false);
                         }}
                         className={cn(
@@ -1591,6 +2097,10 @@ export function GuestServiceOrderForm({
               <SubmitButton
                 disabled={
                   cart.length === 0 ||
+                  guestName.trim().length < 2 ||
+                  guestPhone.replace(/\D/g, '').length < 7 ||
+                  (requiresRoomVerification &&
+                    (!roomNumber.trim() || roomPasscode.length !== 6)) ||
                   (hasPayableFixedPrice && !chargeConsent)
                 }
                 clientPending={paymentPending}
@@ -1606,6 +2116,27 @@ export function GuestServiceOrderForm({
 
   return (
     <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#050505] px-5 pb-40 pt-3 text-white">
+      <ExistingXenditSessionGuard
+          open={Boolean(existingXenditSession)}
+          title={
+            existingXenditSession?.status === 'PENDING'
+              ? 'Payment already in progress'
+              : 'Payment received'
+          }
+          description={
+            existingXenditSession?.status === 'PENDING'
+              ? 'This service request already has an active Xendit payment link. A second checkout is blocked.'
+              : 'CloudView is recovering and finalizing the paid service request automatically.'
+          }
+          sessionReference={existingXenditSession?.sessionId || ''}
+          status={existingXenditSession?.status || 'PENDING'}
+          checkoutUrl={existingXenditSession?.checkoutUrl}
+          busy={xenditGuardBusy}
+          dark
+          onContinue={continueExistingServicePayment}
+          onRefresh={() => void refreshExistingServicePayment()}
+          onCancel={() => void cancelExistingServicePayment()}
+        />
       {successMessage ? (
         <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
           <div className="flex items-start gap-3">

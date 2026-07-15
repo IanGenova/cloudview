@@ -119,7 +119,11 @@ export async function createSession(input: SessionInput) {
   cookieStore.set(AUTH_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    // Xendit returns through a cross-site top-level GET redirect.
+    // `strict` suppresses this cookie on that first navigation and causes a
+    // false redirect to /dashboard/login. `lax` keeps unsafe cross-site POSTs
+    // blocked while allowing signed payment-return GET redirects.
+    sameSite: 'lax',
     path: '/',
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
@@ -170,7 +174,7 @@ export async function destroySession() {
   cookieStore.set(AUTH_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
     maxAge: 0,
   });

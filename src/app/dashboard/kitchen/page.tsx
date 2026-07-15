@@ -411,7 +411,7 @@ function getDisplayGuestNote(notes?: string | null) {
     return '';
   }
 
-  const cleanedNote = rawNote
+  const withoutSystemMessages = rawNote
     .replace(
       /Order Type:.*?Guest confirmed the selected order type before placing this order\.?/gis,
       ''
@@ -421,10 +421,37 @@ function getDisplayGuestNote(notes?: string | null) {
       /Guest confirmed the selected order type before placing this order\.?/gi,
       ''
     )
-    .replace(/^Guest note:\s*/gim, '')
-    .trim();
+    // Payment-provider references are internal metadata, not guest notes.
+    .replace(
+      /(?:^|\n)\s*(?:Xendit|PayMongo)\s+(?:checkout|payment|session|reference)\s*:[^\n]*/gim,
+      '\n'
+    )
+    .replace(
+      /\s+(?:Xendit|PayMongo)\s+(?:checkout|payment|session|reference)\s*:[^\n]*/gim,
+      ''
+    )
+    .replace(
+      /(?:^|\n)\s*(?:payment|checkout)\s+(?:session|reference)\s*:[^\n]*/gim,
+      '\n'
+    );
 
-  return cleanedNote;
+  const guestNoteLines = withoutSystemMessages
+    .split(/\r?\n/)
+    .map((line) =>
+      line
+        .replace(/^\s*(?:guest\s*)?note\s*:\s*/i, '')
+        .trim()
+    )
+    .filter(Boolean)
+    .filter(
+      (line) =>
+        !/^(?:Xendit|PayMongo)\s+(?:checkout|payment|session|reference)\s*:/i.test(
+          line
+        ) &&
+        !/^(?:payment|checkout)\s+(?:session|reference)\s*:/i.test(line)
+    );
+
+  return [...new Set(guestNoteLines)].join('\n').trim();
 }
 
 function OrderActionButton({
@@ -890,12 +917,19 @@ function KitchenOrderCard({
         {guestNote ? (
           <div
             className={cn(
-              'whitespace-pre-line rounded-xl bg-yellow-50 text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200',
+              'whitespace-pre-line rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-900 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-200',
               shouldUseRushFoodGrid ? 'col-span-3' : '',
-              isTvMode ? 'p-4 text-base' : isRushMode ? 'p-1.5 text-[11px]' : 'p-2 text-xs'
+              isTvMode
+                ? 'p-4 text-base'
+                : isRushMode
+                  ? 'p-1.5 text-[11px]'
+                  : 'p-2 text-xs'
             )}
           >
-            <b>Guest note:</b> {guestNote}
+            <p className="font-black uppercase tracking-wide">Guest note</p>
+            <p className="mt-1 font-semibold normal-case tracking-normal">
+              {guestNote}
+            </p>
           </div>
         ) : null}
       </div>

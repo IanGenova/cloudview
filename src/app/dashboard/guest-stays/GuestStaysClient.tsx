@@ -40,6 +40,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  cancelGuestStayXenditCheckoutAction,
   checkoutGuestStayAction,
   createGuestStayAction,
   createGuestStayXenditCheckoutAction,
@@ -50,12 +51,27 @@ import {
   resetGuestStayPasscodeAction,
   updateGuestStayAction,
 } from './actions';
+import {
+  ExistingXenditSessionGuard,
+  type ExistingXenditGuardStatus,
+} from '@/components/payment/ExistingXenditSessionGuard';
 
 type GuestStayStatusValue =
   | 'ACTIVE'
   | 'CHECKED_OUT'
   | 'CANCELLED'
   | 'EXPIRED';
+
+const GUEST_STAY_XENDIT_STORAGE_KEY =
+  'cloudview-guest-stay-xendit-pending';
+
+type ActiveGuestStayXenditSession = {
+  sessionId: string;
+  guestStayId?: string;
+  status: ExistingXenditGuardStatus;
+  checkoutUrl?: string | null;
+  errorMessage?: string | null;
+};
 
 type GuestStayCheckoutPaymentMethodValue =
   | 'CASH'
@@ -965,6 +981,9 @@ export function GuestStaysClient({
     sessionId: '',
     result: '',
   });
+  const [existingXenditSession, setExistingXenditSession] =
+    useState<ActiveGuestStayXenditSession | null>(null);
+  const [xenditGuardBusy, setXenditGuardBusy] = useState(false);
   const [checkoutManualChargeAmount, setCheckoutManualChargeAmount] =
     useState('0.00');
   const [checkoutDiscountAmount, setCheckoutDiscountAmount] =
@@ -1221,6 +1240,103 @@ const checkoutPreviewTotals = useMemo(() => {
   }
 
 
+  function savePendingGuestStayXendit(input: {
+    sessionId: string;
+    guestStayId?: string;
+    checkoutUrl?: string | null;
+  }) {
+    try {
+      window.sessionStorage.setItem(
+        GUEST_STAY_XENDIT_STORAGE_KEY,
+        JSON.stringify({
+          ...input,
+          createdAt: Date.now(),
+        })
+      );
+    } catch {
+      // The server-side payment session remains authoritative.
+    }
+  }
+
+  function clearPendingGuestStayXendit() {
+    try {
+      window.sessionStorage.removeItem(GUEST_STAY_XENDIT_STORAGE_KEY);
+    } catch {
+      // Ignore browser storage failures.
+    }
+  }
+
+  async function cancelExistingGuestStayPayment() {
+    const active = existingXenditSession;
+
+    if (!active || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditGuardBusy(true);
+
+    try {
+      const result = await cancelGuestStayXenditCheckoutAction(
+        active.sessionId
+      );
+
+      if (!result.ok) {
+        if ('paymentCompleted' in result && result.paymentCompleted) {
+          setXenditGuardBusy(false);
+          setXenditReturn({
+            sessionId: active.sessionId,
+            result: 'success',
+          });
+          return;
+        }
+
+        setError(result.error);
+        return;
+      }
+
+      clearPendingGuestStayXendit();
+      setExistingXenditSession(null);
+      setXenditReturn({ sessionId: '', result: '' });
+      setXenditStatusText('');
+      setMessage(
+        'The existing Xendit checkout was cancelled. You may now update the folio and create a new payment.'
+      );
+    } finally {
+      setXenditGuardBusy(false);
+    }
+  }
+
+  function continueExistingGuestStayPayment() {
+    const active = existingXenditSession;
+
+    if (!active) {
+      return;
+    }
+
+    if (active.status === 'PENDING' && active.checkoutUrl) {
+      window.location.assign(active.checkoutUrl);
+      return;
+    }
+
+    setXenditReturn({
+      sessionId: active.sessionId,
+      result: 'success',
+    });
+  }
+
+  function refreshExistingGuestStayPayment() {
+    const active = existingXenditSession;
+
+    if (!active || xenditGuardBusy) {
+      return;
+    }
+
+    setXenditReturn({
+      sessionId: active.sessionId,
+      result: 'success',
+    });
+  }
+
   function handleXenditCheckout() {
     const form = checkoutFormRef.current;
 
@@ -1239,11 +1355,42 @@ const checkoutPreviewTotals = useMemo(() => {
         const result = await createGuestStayXenditCheckoutAction(formData);
 
         if (!result.ok) {
+          if (
+            'existingSession' in result &&
+            result.existingSession &&
+            result.sessionId &&
+            result.status
+          ) {
+            savePendingGuestStayXendit({
+              sessionId: result.sessionId,
+              guestStayId: checkoutStay.id,
+              checkoutUrl: result.checkoutUrl,
+            });
+            setExistingXenditSession({
+              sessionId: result.sessionId,
+              guestStayId: checkoutStay.id,
+              status: result.status as ExistingXenditGuardStatus,
+              checkoutUrl: result.checkoutUrl,
+              errorMessage: result.error,
+            });
+          }
+
           setXenditStatusText('');
           setError(result.error);
           return;
         }
 
+        savePendingGuestStayXendit({
+          sessionId: result.sessionId,
+          guestStayId: checkoutStay.id,
+          checkoutUrl: result.checkoutUrl,
+        });
+        setExistingXenditSession({
+          sessionId: result.sessionId,
+          guestStayId: checkoutStay.id,
+          status: 'PENDING',
+          checkoutUrl: result.checkoutUrl,
+        });
         setXenditStatusText('Redirecting to Xendit...');
         window.location.assign(result.checkoutUrl);
       })();
@@ -1380,11 +1527,69 @@ function handleResetPasscode(guestStayId: string) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const returnedSessionId = params.get('xendit') || '';
+    const returnedResult = params.get('xenditResult') || '';
 
-    setXenditReturn({
-      sessionId: params.get('xendit') || '',
-      result: params.get('xenditResult') || '',
-    });
+    if (returnedSessionId) {
+      setXenditReturn({
+        sessionId: returnedSessionId,
+        result: returnedResult,
+      });
+      setExistingXenditSession({
+        sessionId: returnedSessionId,
+        status: 'PENDING',
+        checkoutUrl: null,
+      });
+      return;
+    }
+
+    try {
+      const stored = JSON.parse(
+        window.sessionStorage.getItem(GUEST_STAY_XENDIT_STORAGE_KEY) || '{}'
+      ) as {
+        sessionId?: unknown;
+        guestStayId?: unknown;
+        checkoutUrl?: unknown;
+        createdAt?: unknown;
+      };
+
+      const createdAt = Number(stored.createdAt || 0);
+      const isFresh =
+        Number.isFinite(createdAt) &&
+        Date.now() - createdAt < 2 * 60 * 60 * 1000;
+
+      if (
+        isFresh &&
+        typeof stored.sessionId === 'string' &&
+        stored.sessionId.trim()
+      ) {
+        const sessionId = stored.sessionId.trim();
+        const checkoutUrl =
+          typeof stored.checkoutUrl === 'string'
+            ? stored.checkoutUrl
+            : null;
+
+        setExistingXenditSession({
+          sessionId,
+          guestStayId:
+            typeof stored.guestStayId === 'string'
+              ? stored.guestStayId
+              : undefined,
+          status: 'PENDING',
+          checkoutUrl,
+        });
+        setXenditReturn({
+          sessionId,
+          result: 'recovered',
+        });
+      } else if (stored.sessionId) {
+        clearPendingGuestStayXendit();
+      }
+    } catch {
+      clearPendingGuestStayXendit();
+    }
+    // Recover the last checkout once after a browser-back navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1395,15 +1600,40 @@ function handleResetPasscode(guestStayId: string) {
       return;
     }
 
-    if (xenditResult === 'cancelled') {
-      setMessage('Xendit checkout was cancelled. No payment was recorded.');
-      router.replace('/dashboard/guest-stays');
-      return;
-    }
-
     let disposed = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
+
+    if (xenditResult === 'cancelled') {
+      void (async () => {
+        const cancelled = await cancelGuestStayXenditCheckoutAction(
+          xenditSessionId
+        );
+
+        if (disposed) return;
+
+        if (cancelled.ok) {
+          clearPendingGuestStayXendit();
+          setExistingXenditSession(null);
+          setMessage('Xendit checkout was cancelled. No payment was recorded.');
+          router.replace('/dashboard/guest-stays');
+          return;
+        }
+
+        if ('paymentCompleted' in cancelled && cancelled.paymentCompleted) {
+          setXenditReturn({
+            sessionId: xenditSessionId,
+            result: 'success',
+          });
+          return;
+        }
+
+        setError(cancelled.error || 'Unable to cancel the Xendit checkout.');
+      })();
+      return () => {
+        disposed = true;
+      };
+    }
 
     async function syncPayment() {
       if (disposed) {
@@ -1426,6 +1656,25 @@ function handleResetPasscode(guestStayId: string) {
         setError(statusResult.error);
         router.replace('/dashboard/guest-stays');
         return;
+      }
+
+      if (
+        ['PENDING', 'PAID', 'PROCESSING', 'COMPLETED', 'PAID_REVIEW_REQUIRED'].includes(
+          statusResult.status
+        )
+      ) {
+        setExistingXenditSession({
+          sessionId: xenditSessionId,
+          guestStayId: statusResult.guestStayId,
+          status: statusResult.status as ExistingXenditGuardStatus,
+          checkoutUrl: statusResult.checkoutUrl,
+          errorMessage: statusResult.errorMessage,
+        });
+        savePendingGuestStayXendit({
+          sessionId: xenditSessionId,
+          guestStayId: statusResult.guestStayId,
+          checkoutUrl: statusResult.checkoutUrl,
+        });
       }
 
       if (statusResult.status === 'PAID') {
@@ -1455,6 +1704,8 @@ function handleResetPasscode(guestStayId: string) {
         }
 
         setXenditStatusText('');
+        clearPendingGuestStayXendit();
+        setExistingXenditSession(null);
         setMessage(finalizeResult.message);
         setCheckoutStay(null);
         router.replace('/dashboard/guest-stays');
@@ -1464,6 +1715,8 @@ function handleResetPasscode(guestStayId: string) {
 
       if (statusResult.status === 'COMPLETED') {
         setXenditStatusText('');
+        clearPendingGuestStayXendit();
+        setExistingXenditSession(null);
         setMessage('Xendit payment and guest checkout are complete.');
         router.replace('/dashboard/guest-stays');
         router.refresh();
@@ -1472,13 +1725,31 @@ function handleResetPasscode(guestStayId: string) {
 
       if (
         statusResult.status === 'FAILED' ||
-        statusResult.status === 'CANCELLED' ||
-        statusResult.status === 'PAID_REVIEW_REQUIRED'
+        statusResult.status === 'CANCELLED'
       ) {
         setXenditStatusText('');
+        clearPendingGuestStayXendit();
+        setExistingXenditSession(null);
         setError(
           statusResult.errorMessage ||
-            'The Xendit payment requires front desk review.'
+            'The Xendit payment was cancelled or failed.'
+        );
+        router.replace('/dashboard/guest-stays');
+        return;
+      }
+
+      if (statusResult.status === 'PAID_REVIEW_REQUIRED') {
+        setXenditStatusText('');
+        setExistingXenditSession({
+          sessionId: xenditSessionId,
+          guestStayId: statusResult.guestStayId,
+          status: 'PAID_REVIEW_REQUIRED',
+          checkoutUrl: statusResult.checkoutUrl,
+          errorMessage: statusResult.errorMessage,
+        });
+        setError(
+          statusResult.errorMessage ||
+            'The Xendit payment was received and requires front desk review.'
         );
         router.replace('/dashboard/guest-stays');
         return;
@@ -1508,6 +1779,27 @@ function handleResetPasscode(guestStayId: string) {
 
   return (
     <div className="space-y-7">
+      <ExistingXenditSessionGuard
+        open={Boolean(existingXenditSession)}
+        title={
+          existingXenditSession?.status === 'PENDING'
+            ? 'Guest checkout payment in progress'
+            : 'Guest checkout payment received'
+        }
+        description={
+          existingXenditSession?.status === 'PENDING'
+            ? 'This guest stay already has an active Xendit checkout. A second payment is blocked until it is continued or cancelled.'
+            : 'CloudView is completing the paid guest checkout automatically, even if the Xendit page was closed.'
+        }
+        sessionReference={existingXenditSession?.sessionId || ''}
+        status={existingXenditSession?.status || 'PENDING'}
+        checkoutUrl={existingXenditSession?.checkoutUrl}
+        busy={xenditGuardBusy}
+        onContinue={continueExistingGuestStayPayment}
+        onRefresh={refreshExistingGuestStayPayment}
+        onCancel={() => void cancelExistingGuestStayPayment()}
+      />
+
       {message ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700">
           {message}

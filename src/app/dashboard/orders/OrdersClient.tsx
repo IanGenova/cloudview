@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Ban,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ChefHat,
   Clock,
   CreditCard,
@@ -93,6 +95,7 @@ type DashboardOrder = {
   hotelName: string;
   roomLabel: string;
   guestName: string;
+  guestPhone: string;
   notes: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
@@ -595,6 +598,11 @@ function buildPrintableReceiptHtml(order: DashboardOrder) {
           ${
             order.guestName
               ? `<div><strong>Guest:</strong> ${escapeHtml(order.guestName)}</div>`
+              : ''
+          }
+          ${
+            order.guestPhone
+              ? `<div><strong>Phone:</strong> ${escapeHtml(order.guestPhone)}</div>`
               : ''
           }
           ${
@@ -1267,11 +1275,17 @@ function OrderDetailsModal({
                 <OrderItemsList order={order} onCancelItem={setCancelItem} />
               </div>
 
-              {order.guestName || order.notes ? (
+              {order.guestName || order.guestPhone || order.notes ? (
                 <div className="rounded-2xl bg-neutral-50 p-4 text-sm">
                   {order.guestName ? (
                     <p>
                       <b>Guest:</b> {order.guestName}
+                    </p>
+                  ) : null}
+
+                  {order.guestPhone ? (
+                    <p className="mt-1">
+                      <b>Phone:</b> {order.guestPhone}
                     </p>
                   ) : null}
 
@@ -2128,6 +2142,8 @@ export function OrdersClient({
   );
   const [cancelOrder, setCancelOrder] = useState<DashboardOrder | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [ordersPerPage, setOrdersPerPage] = useState(6);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -2189,6 +2205,7 @@ export function OrdersClient({
         order.hotelName,
         order.roomLabel,
         order.guestName,
+        order.guestPhone,
         order.notes,
         order.status,
         order.paymentStatus,
@@ -2221,6 +2238,41 @@ export function OrdersClient({
     () => [...filteredOrders].sort(compareOrdersNewestFirst),
     [filteredOrders]
   );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedOrders.length / ordersPerPage)
+  );
+
+  const pageStartIndex = (currentPage - 1) * ordersPerPage;
+  const pageEndIndex = Math.min(
+    pageStartIndex + ordersPerPage,
+    sortedOrders.length
+  );
+
+  const paginatedOrders = useMemo(
+    () => sortedOrders.slice(pageStartIndex, pageEndIndex),
+    [pageEndIndex, pageStartIndex, sortedOrders]
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [ordersPerPage, paymentFilter, search, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(Math.max(page, 1), totalPages));
+  }, [totalPages]);
+
+  function changePage(page: number) {
+    const nextPage = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(nextPage);
+
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById('orders-list')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 
   const attentionCount = localOrders.filter(
     (order) =>
@@ -2532,16 +2584,37 @@ export function OrdersClient({
       </section>
 
       <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section>
+        <section id="orders-list" className="scroll-mt-24">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400">
-                Showing {sortedOrders.length} of {localOrders.length}
+                {sortedOrders.length
+                  ? `Showing ${pageStartIndex + 1}-${pageEndIndex} of ${sortedOrders.length} filtered orders`
+                  : 'Showing 0 filtered orders'}
+                {sortedOrders.length !== localOrders.length
+                  ? ` · ${localOrders.length} total`
+                  : ''}
               </p>
               <h3 className="mt-1 text-lg font-black">Orders</h3>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-black text-neutral-600">
+                Per page
+                <select
+                  value={ordersPerPage}
+                  onChange={(event) =>
+                    setOrdersPerPage(Number(event.target.value))
+                  }
+                  className="bg-transparent font-black text-neutral-950 outline-none"
+                  aria-label="Orders per page"
+                >
+                  <option value={6}>6</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </label>
+
               <span className="rounded-full bg-neutral-100 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
                 Newest first
               </span>
@@ -2572,7 +2645,7 @@ export function OrdersClient({
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-2">
-            {sortedOrders.map((order) => (
+            {paginatedOrders.map((order) => (
               <OrderCard
                 key={order.id}
                 order={order}
@@ -2594,6 +2667,58 @@ export function OrdersClient({
               </div>
             ) : null}
           </div>
+
+          {sortedOrders.length > ordersPerPage ? (
+            <nav
+              className="mt-5 flex flex-col gap-3 rounded-[1.5rem] border border-neutral-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+              aria-label="Orders pagination"
+            >
+              <p className="text-center text-xs font-bold text-neutral-500 sm:text-left">
+                Page <span className="font-black text-neutral-950">{currentPage}</span>{' '}
+                of <span className="font-black text-neutral-950">{totalPages}</span>
+              </p>
+
+              <div className="grid grid-cols-4 gap-2 sm:flex">
+                <button
+                  type="button"
+                  onClick={() => changePage(1)}
+                  disabled={currentPage === 1}
+                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  First
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => changePage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => changePage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-black px-3 text-xs font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => changePage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Last
+                </button>
+              </div>
+            </nav>
+          ) : null}
         </section>
 
         <PriorityQueue
