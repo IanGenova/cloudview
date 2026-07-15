@@ -5,7 +5,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `nfctag` ADD COLUMN `deletedAt` DATETIME(3) NULL,
+ALTER TABLE `NfcTag` ADD COLUMN `deletedAt` DATETIME(3) NULL,
     ADD COLUMN `lastScannedAt` DATETIME(3) NULL,
     ADD COLUMN `scanSecret` VARCHAR(191) NULL;
 

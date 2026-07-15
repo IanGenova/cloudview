@@ -183,6 +183,55 @@ function successMessage(success?: string) {
   return success ? messages[success] : null;
 }
 
+function getHttpBaseOrigin() {
+  if (typeof window === 'undefined') {
+    return 'http://192.168.0.130:3000';
+  }
+
+  const { hostname, port } = window.location;
+
+  return `http://${hostname}${port ? `:${port}` : ''}`;
+}
+
+function toHttpAppUrl(value: string) {
+  if (!value) {
+    return value;
+  }
+
+  try {
+    const httpBaseOrigin = getHttpBaseOrigin();
+
+    const currentHostname =
+      typeof window !== 'undefined'
+        ? window.location.hostname
+        : '192.168.0.130';
+
+    const url = new URL(value, httpBaseOrigin);
+
+    const isLocalHost =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '0.0.0.0' ||
+      url.hostname.startsWith('192.168.');
+
+    if (isLocalHost) {
+      url.protocol = 'http:';
+      url.hostname = currentHostname;
+      url.port = url.port || '3000';
+
+      return url.toString();
+    }
+
+    if (url.protocol === 'https:') {
+      url.protocol = 'http:';
+    }
+
+    return url.toString();
+  } catch {
+    return value.replace(/^https:\/\//i, 'http://');
+  }
+}
+
 function getActionErrorMessage(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -1532,8 +1581,8 @@ return (
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filteredTags.map((tag) => {
-        const secureLaunchUrl = tag.secureLaunchUrl;
-        const lockedDestinationUrl = tag.lockedDestinationUrl;
+        const secureLaunchUrl = toHttpAppUrl(tag.secureLaunchUrl);
+        const lockedDestinationUrl = toHttpAppUrl(tag.lockedDestinationUrl);
 
         const sessionMode = getSessionModeInfo({
           tagType: tag.tagType,
