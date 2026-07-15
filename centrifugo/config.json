@@ -4,7 +4,7 @@
       "hmac_secret_key": "cloudview-local-centrifugo-secret-please-change-this-2026"
     },
     "allowed_origins": [
-      "http://192.168.0.130:3000",
+      "https://careerinfoph.com/",
       "http://localhost:3000",
       "http://127.0.0.1:3000"
     ]
