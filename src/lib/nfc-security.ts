@@ -404,18 +404,16 @@ export function secureNfcLaunchUrl(
     return '';
   }
 
-  const routeSegments = normalizedHotelSlug
-    ? [normalizedHotelSlug, normalizedCode]
-    : [normalizedCode];
+  const route = normalizedHotelSlug
+    ? `/n/${encodeURIComponent(
+        normalizedHotelSlug
+      )}/${encodeURIComponent(normalizedCode)}`
+    : `/n/${encodeURIComponent(normalizedCode)}`;
 
-  const path = routeSegments
-    .map((segment) => encodeURIComponent(segment))
-    .join('/');
-
-  return `${getPublicAppUrl()}/n/${path}?k=${encodeURIComponent(
+  return `${getPublicAppUrl()}${route}?k=${encodeURIComponent(
     normalizedSecret
   )}`;
-} 
+}
 
 export function protectedGuestUrl(code: string) {
   return `${getPublicAppUrl()}/t/${encodeURIComponent(code)}`;
