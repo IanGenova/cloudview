@@ -1,19 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { GET as handleNfcLaunch } from '@/lib/nfc-launch-handler';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function normalizeSlug(value: string) {
+function normalize(value: string) {
   return decodeURIComponent(value).trim().toLowerCase();
 }
 
 function accessDeniedUrl(request: NextRequest, reason: string) {
-  const url = request.nextUrl.clone();
-
-  url.pathname = '/nfc-access-denied';
-  url.search = '';
+  const url = new URL('/nfc-access-denied', request.url);
   url.searchParams.set('reason', reason);
 
   return url;
@@ -21,11 +18,10 @@ function accessDeniedUrl(request: NextRequest, reason: string) {
 
 /**
  * Hotel-aware NFC URL:
- * /n/HOTEL-SLUG/TAGCODE?k=SECRET
  *
- * The first dynamic folder is still named [tagCode] because the existing
- * one-segment route occupies that position. In this two-segment route, that
- * first value represents the hotel slug and nfcCode is the real NFC tag code.
+ * /n/country-village/HGDYHQ85?k=SECRET
+ *
+ * "segment" represents the hotel slug at this route depth.
  */
 export async function GET(
   request: NextRequest,
@@ -33,26 +29,31 @@ export async function GET(
     params,
   }: {
     params: Promise<{
+      segment: string;
       tagCode: string;
-      nfcCode: string;
     }>;
   }
 ) {
   try {
-    const { tagCode: hotelSlugInput, nfcCode: nfcCodeInput } = await params;
-    const hotelSlug = normalizeSlug(hotelSlugInput);
-    const nfcCode = decodeURIComponent(nfcCodeInput).trim();
+    const { segment, tagCode } = await params;
 
-    if (!hotelSlug || !nfcCode) {
+    const hotelSlug = normalize(segment);
+    const normalizedTagCode = decodeURIComponent(tagCode).trim();
+
+    if (!hotelSlug || !normalizedTagCode) {
       return NextResponse.redirect(
         accessDeniedUrl(request, 'tag-not-found'),
         307
       );
     }
 
+    /*
+     * Confirm that the NFC tag belongs to the hotel slug in the URL.
+     * Do not reveal the correct hotel when the supplied slug is wrong.
+     */
     const tag = await db.nfcTag.findUnique({
       where: {
-        code: nfcCode,
+        code: normalizedTagCode,
       },
       select: {
         code: true,
@@ -70,7 +71,7 @@ export async function GET(
       !tag ||
       tag.deletedAt ||
       !tag.hotel.isActive ||
-      normalizeSlug(tag.hotel.slug) !== hotelSlug
+      normalize(tag.hotel.slug) !== hotelSlug
     ) {
       return NextResponse.redirect(
         accessDeniedUrl(request, 'tag-not-found'),
@@ -79,9 +80,15 @@ export async function GET(
     }
 
     /*
-     * Run the original secure launch handler directly. This avoids an extra
-     * redirect through /n/TAGCODE and preserves the hotel-aware URL until the
-     * secure handler sends the guest to verification or the guest portal.
+     * Reuse the original secure NFC handler.
+     *
+     * That handler remains responsible for:
+     * - validating ?k=SECRET
+     * - checking whether the NFC tag is active
+     * - validating private room access
+     * - creating the guest NFC session
+     * - setting secure cookies
+     * - redirecting to the guest portal
      */
     return handleNfcLaunch(request, {
       params: Promise.resolve({
@@ -89,7 +96,10 @@ export async function GET(
       }),
     });
   } catch (error) {
-    console.error('[Hotel-aware NFC launch] Failed to validate NFC link.', error);
+    console.error(
+      '[Hotel NFC Launch] Unable to process the hotel-aware NFC link.',
+      error
+    );
 
     return NextResponse.redirect(
       accessDeniedUrl(request, 'session-check-failed'),

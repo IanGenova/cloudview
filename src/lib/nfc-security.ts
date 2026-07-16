@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
+import { resolveConfiguredNfcPublicOrigin } from '@/lib/nfc-public-url';
 
 export const NFC_ACCESS_COOKIE = 'cv_nfc_access';
 
@@ -84,64 +85,7 @@ function shouldForceHttpsForHost(hostname: string) {
 }
 
 export function getPublicAppUrl() {
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  /*
-   * APP_URL is the canonical server-side production URL.
-   * NEXT_PUBLIC_APP_URL is primarily for browser-visible configuration.
-   */
-  const configuredUrl = isProduction
-    ? process.env.APP_URL?.trim() ||
-      process.env.NEXT_PUBLIC_APP_URL?.trim()
-    : process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-      process.env.APP_URL?.trim() ||
-      'http://localhost:3000';
-
-  if (!configuredUrl) {
-    throw new Error(
-      'APP_URL or NEXT_PUBLIC_APP_URL must be configured.'
-    );
-  }
-
-  let url: URL;
-
-  try {
-    url = new URL(configuredUrl);
-  } catch {
-    throw new Error(
-      'APP_URL or NEXT_PUBLIC_APP_URL must be a valid absolute URL.'
-    );
-  }
-
-  const forbiddenProductionHosts = new Set([
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    '::',
-    '[::]',
-  ]);
-
-  if (
-    isProduction &&
-    forbiddenProductionHosts.has(url.hostname.toLowerCase())
-  ) {
-    console.error(
-      `[NFC URL] Refusing invalid production host: ${url.hostname}`
-    );
-
-    /*
-     * CloudView's canonical public production address.
-     * This prevents production NFC cards from opening localhost.
-     */
-    return 'https://careerinfoph.com';
-  }
-
-  if (isProduction) {
-    url.protocol = 'https:';
-    url.port = '';
-  }
-
-  return url.toString().replace(/\/$/, '');
+  return resolveConfiguredNfcPublicOrigin();
 }
 
 export function isHttpsPublicAppUrl() {

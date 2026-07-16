@@ -1,8 +1,4 @@
-import { 
-
-
-
-DashboardModule, TagStatus, TagType } from '@prisma/client';
+import { DashboardModule, TagStatus, TagType } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
@@ -27,13 +23,12 @@ export default async function TagsPage({
     DashboardModule.NFC_TAGS,
     'canView'
   );
+  const nfcPublicOrigin = await resolveNfcPublicOrigin();
 
-const nfcPublicOrigin = await resolveNfcPublicOrigin();
-
-console.info('[NFC Tags] Public origin resolved.', {
-  origin: nfcPublicOrigin,
-  nodeEnv: process.env.NODE_ENV,
-});
+  console.info('[NFC Tags] Public origin resolved.', {
+    origin: nfcPublicOrigin,
+    nodeEnv: process.env.NODE_ENV,
+  });
 
   const where = user.role === 'SUPER_ADMIN' ? {} : { hotelId: user.hotelId! };
 
@@ -62,9 +57,7 @@ console.info('[NFC Tags] Public origin resolved.', {
         name: true,
         hotel: {
           select: {
-	id: true,
-    name: true,
-    slug: true,
+            name: true,
           },
         },
       },
@@ -85,8 +78,7 @@ console.info('[NFC Tags] Public origin resolved.', {
         name: true,
         hotel: {
           select: {
-    name: true,
-    slug: true,
+            name: true,
           },
         },
       },
@@ -115,7 +107,7 @@ console.info('[NFC Tags] Public origin resolved.', {
         hotel: {
           select: {
             name: true,
-	     slug: true,
+            slug: true,
           },
         },
         room: {
@@ -183,16 +175,16 @@ console.info('[NFC Tags] Public origin resolved.', {
             locationName: tag.location?.name ?? '',
             lastScannedAt: tag.lastScannedAt?.toISOString() ?? null,
             createdAt: tag.createdAt.toISOString(),
-            secureLaunchUrl:   buildSecureNfcLaunchUrl({
-  origin: nfcPublicOrigin,
-  hotelSlug: tag.hotel.slug,
-  tagCode: tag.code,
-  scanSecret: tag.scanSecret,
-}),
+            secureLaunchUrl: buildSecureNfcLaunchUrl({
+              origin: nfcPublicOrigin,
+              hotelSlug: tag.hotel.slug,
+              tagCode: tag.code,
+              scanSecret: tag.scanSecret,
+            }),
             lockedDestinationUrl: buildProtectedGuestUrl({
-  origin: nfcPublicOrigin,
-  tagCode: tag.code,
-}),
+              origin: nfcPublicOrigin,
+              tagCode: tag.code,
+            }),
           };
         })}
         tagTypes={Object.values(TagType)}
