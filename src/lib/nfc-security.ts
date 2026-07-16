@@ -389,14 +389,32 @@ export async function requireNfcGuestAccess(tagCodeInput: string) {
   return tag;
 }
 
-export function secureNfcLaunchUrl(code: string, scanSecret?: string | null) {
-  if (!scanSecret) {
+export function secureNfcLaunchUrl(
+  code: string,
+  scanSecret?: string | null,
+  hotelSlug?: string | null
+) {
+  const normalizedCode = code.trim();
+  const normalizedHotelSlug = String(hotelSlug || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedCode || !scanSecret) {
     return '';
   }
 
-  return `${getPublicAppUrl()}/n/${encodeURIComponent(
-    code
-  )}?k=${encodeURIComponent(scanSecret)}`;
+  /*
+   * Backward compatibility:
+   * Older callers that do not provide hotelSlug will continue generating
+   * /n/{tagCode}?k=...
+   */
+  const path = normalizedHotelSlug
+    ? `/n/${encodeURIComponent(normalizedHotelSlug)}/${encodeURIComponent(
+        normalizedCode
+      )}`
+    : `/n/${encodeURIComponent(normalizedCode)}`;
+
+  return `${getPublicAppUrl()}${path}?k=${encodeURIComponent(scanSecret)}`;
 }
 
 export function protectedGuestUrl(code: string) {
