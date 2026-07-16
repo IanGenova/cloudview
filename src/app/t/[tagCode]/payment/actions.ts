@@ -30,6 +30,7 @@ type GuestPaymentActionInput = {
   tagCode: string;
   paymentSessionId: string;
   flow: GuestPaymentFlow;
+  verifyRemote?: boolean;
 };
 
 export type NormalizedGuestPaymentResult = {
@@ -63,6 +64,7 @@ export async function getGuestPaymentStatusAction(
     const result = await getGuestFoodXenditStatus({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
+      verifyRemote: input.verifyRemote,
     });
 
     return {

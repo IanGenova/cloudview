@@ -334,11 +334,12 @@ export function GuestPaymentStatus({
     }
   }
 
-  async function readStatus() {
+  async function readStatus(verifyRemote = false) {
     const result = await getGuestPaymentStatusAction({
       tagCode,
       paymentSessionId,
       flow,
+      verifyRemote,
     });
 
     if (!mountedRef.current) return null;
@@ -383,11 +384,21 @@ export function GuestPaymentStatus({
     async function poll(attempt: number) {
       if (stopped) return;
 
-      const result = await readStatus();
+      const shouldVerifyRemote =
+        returnResult === 'success' && attempt % 3 === 0;
+
+      let result = await readStatus(shouldVerifyRemote);
       if (!result?.status || stopped) return;
 
       if (result.status === 'PAID') {
-        await finalizePaidPayment();
+        const finalized = await finalizePaidPayment();
+
+        if (stopped) return;
+
+        if (finalized) {
+          const refreshed = await readStatus(true);
+          if (refreshed) result = refreshed;
+        }
       }
 
       if (result.status === 'COMPLETED') {
@@ -401,7 +412,8 @@ export function GuestPaymentStatus({
         return;
       }
 
-      if (isTerminal(result.status)) {
+      const currentStatus = result.status;
+      if (!currentStatus || isTerminal(currentStatus)) {
         return;
       }
 
@@ -439,11 +451,11 @@ export function GuestPaymentStatus({
     setAutomaticPollingStopped(false);
 
     startRefreshTransition(async () => {
-      const result = await readStatus();
+      let result = await readStatus(true);
 
       if (result?.status === 'PAID') {
         await finalizePaidPayment();
-        await readStatus();
+        result = (await readStatus(true)) ?? result;
       }
 
       if (result?.status === 'COMPLETED') {
@@ -469,7 +481,7 @@ export function GuestPaymentStatus({
       }
 
       setErrorMessage(result.error || 'Unable to cancel this checkout.');
-      await readStatus();
+      await readStatus(true);
     });
   }
 

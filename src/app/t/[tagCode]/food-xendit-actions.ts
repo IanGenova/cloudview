@@ -15,6 +15,7 @@ import {
   createXenditCheckoutSession,
   cancelXenditCheckoutSessionIfActive,
   expireXenditCheckoutSession,
+  getXenditCheckoutSession,
   getXenditGuestPaymentMethods,
   type XenditLineItem,
 } from '@/lib/xendit';
@@ -715,6 +716,7 @@ export async function createGuestFoodXenditCheckout(
 export async function getGuestFoodXenditStatus(input: {
   tagCode: string;
   paymentSessionId: string;
+  verifyRemote?: boolean;
 }): Promise<GuestFoodXenditStatusResult> {
   try {
     const { payment } = await requireOwnedGuestXenditSession({
@@ -722,6 +724,142 @@ export async function getGuestFoodXenditStatus(input: {
       paymentSessionId: input.paymentSessionId,
       flowType: GuestXenditFlow.FOOD_ORDER,
     });
+
+    const readLatestStatus = async (): Promise<GuestFoodXenditStatusResult> => {
+      const latest = await db.guestXenditSession.findUnique({
+        where: { id: payment.id },
+        select: {
+          status: true,
+          orderCode: true,
+          checkoutUrl: true,
+          errorMessage: true,
+          refundErrorMessage: true,
+          refundStatus: true,
+          refundedAmountCents: true,
+        },
+      });
+
+      if (!latest) {
+        throw new Error('Guest Xendit food session was not found.');
+      }
+
+      return {
+        ok: true,
+        status: latest.status,
+        orderCode: latest.orderCode,
+        checkoutUrl: latest.checkoutUrl,
+        errorMessage: latest.errorMessage || latest.refundErrorMessage,
+        refundStatus: latest.refundStatus,
+        refundedAmountCents: latest.refundedAmountCents,
+        shouldClearCart: shouldClearCartForPaymentStatus(latest.status),
+      };
+    };
+
+    /**
+     * Xendit can redirect the guest before its webhook reaches CloudView.
+     * During a trusted recovery poll, read the Payment Session directly so a
+     * completed payment does not remain locally stuck in PENDING.
+     *
+     * The remote result is still validated against the stored amount and
+     * currency before the session is promoted to PAID.
+     */
+    if (
+      input.verifyRemote &&
+      payment.status === GuestXenditStatus.PENDING &&
+      payment.checkoutSessionId
+    ) {
+      try {
+        const remote = await getXenditCheckoutSession(
+          payment.checkoutSessionId,
+          getXenditForUserIdFromPayload(payment.payload)
+        );
+
+        if (remote.status === 'COMPLETED') {
+          const amountMatches =
+            remote.amountCents === null ||
+            remote.amountCents === payment.amountCents;
+          const currencyMatches =
+            !remote.currency ||
+            remote.currency.toUpperCase() === payment.currency.toUpperCase();
+          const nextStatus =
+            amountMatches && currencyMatches
+              ? GuestXenditStatus.PAID
+              : GuestXenditStatus.PAID_REVIEW_REQUIRED;
+
+          await db.guestXenditSession.updateMany({
+            where: {
+              id: payment.id,
+              status: GuestXenditStatus.PENDING,
+            },
+            data: {
+              status: nextStatus,
+              xenditPaymentId: remote.paymentId,
+              xenditPaymentRequestId: remote.paymentRequestId,
+              paidAmountCents: remote.amountCents ?? payment.amountCents,
+              paidAt: new Date(),
+              errorMessage:
+                amountMatches && currencyMatches
+                  ? null
+                  : 'The completed Xendit session amount or currency did not match the stored food order.',
+            },
+          });
+
+          await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
+            (error) =>
+              console.warn(
+                '[Guest Food Xendit] Unable to notify remotely verified payment.',
+                error
+              )
+          );
+
+          // A webhook may have finalized the order during the remote lookup.
+          // Re-read the row so the browser receives the newest authoritative
+          // status instead of a stale PAID result.
+          return readLatestStatus();
+        }
+
+        if (remote.status === 'EXPIRED' || remote.status === 'CANCELED') {
+          const expired = remote.status === 'EXPIRED';
+
+          await db.guestXenditSession.updateMany({
+            where: {
+              id: payment.id,
+              status: GuestXenditStatus.PENDING,
+            },
+            data: expired
+              ? {
+                  status: GuestXenditStatus.EXPIRED,
+                  checkoutExpiredAt: new Date(),
+                  errorMessage:
+                    'The Xendit checkout expired before payment.',
+                }
+              : {
+                  status: GuestXenditStatus.CANCELLED,
+                  cancelledAt: new Date(),
+                  cancelReason: 'Xendit checkout was cancelled.',
+                  errorMessage: null,
+                },
+          });
+
+          await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
+            (error) =>
+              console.warn(
+                '[Guest Food Xendit] Unable to notify remote checkout status.',
+                error
+              )
+          );
+
+          return readLatestStatus();
+        }
+      } catch (error) {
+        // The webhook remains the primary confirmation path. A temporary
+        // Xendit status-read failure must not break the guest payment page.
+        console.warn(
+          '[Guest Food Xendit] Remote payment verification failed.',
+          error
+        );
+      }
+    }
 
     if (
       payment.status === GuestXenditStatus.PENDING &&
@@ -744,26 +882,23 @@ export async function getGuestFoodXenditStatus(input: {
         await expireXenditCheckoutSession(
           payment.checkoutSessionId,
           getXenditForUserIdFromPayload(payment.payload)
-        ).catch(
-          (error) =>
-            console.warn('[Guest Food Xendit] Unable to expire checkout.', error)
+        ).catch((error) =>
+          console.warn(
+            '[Guest Food Xendit] Unable to expire checkout.',
+            error
+          )
         );
       }
 
       await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
         (error) =>
-          console.warn('[Guest Food Xendit] Unable to notify checkout expiry.', error)
+          console.warn(
+            '[Guest Food Xendit] Unable to notify checkout expiry.',
+            error
+          )
       );
 
-      return {
-        ok: true,
-        status: GuestXenditStatus.EXPIRED,
-        orderCode: payment.orderCode,
-        errorMessage: 'The Xendit checkout expired. Please create a new one.',
-        refundStatus: payment.refundStatus,
-        refundedAmountCents: payment.refundedAmountCents,
-        shouldClearCart: false,
-      };
+      return readLatestStatus();
     }
 
     return {

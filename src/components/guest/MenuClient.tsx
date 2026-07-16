@@ -473,6 +473,7 @@ const [scheduledNote, setScheduledNote] = useState('');
           const paymentStatus = await getGuestFoodXenditStatus({
             tagCode,
             paymentSessionId: draft.xenditSessionId,
+            verifyRemote: true,
           });
 
           if (disposed) {
@@ -649,6 +650,7 @@ const [scheduledNote, setScheduledNote] = useState('');
       let status = await getGuestFoodXenditStatus({
         tagCode,
         paymentSessionId: activeSessionId,
+        verifyRemote: true,
       });
 
       if (!status.ok) {
@@ -665,6 +667,7 @@ const [scheduledNote, setScheduledNote] = useState('');
         status = await getGuestFoodXenditStatus({
           tagCode,
           paymentSessionId: activeSessionId,
+          verifyRemote: true,
         });
 
         if (!status.ok) {
@@ -835,6 +838,8 @@ const [scheduledNote, setScheduledNote] = useState('');
       const status = await getGuestFoodXenditStatus({
         tagCode,
         paymentSessionId: returnedXenditSessionId!,
+        verifyRemote:
+          returnedXenditResult === 'success' && attempt % 3 === 0,
       });
 
       if (cancelled) return;
