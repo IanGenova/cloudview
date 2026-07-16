@@ -5,7 +5,7 @@
     },
     "allowed_origins": [
       "http://192.168.0.130:3000",
-      "https://careerinfoph.com/",
+      "https://cloudhotelph.com/",
       "http://localhost:3000",
       "http://127.0.0.1:3000"
     ]

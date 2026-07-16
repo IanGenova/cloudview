@@ -2,7 +2,8 @@ import 'server-only';
 
 import { headers } from 'next/headers';
 
-const CANONICAL_PRODUCTION_ORIGIN = 'https://careerinfoph.com';
+const CANONICAL_PRODUCTION_ORIGIN =
+  'https://cloudhotelph.com';
 
 const UNSAFE_BROWSER_HOSTS = new Set([
   '0.0.0.0',
@@ -109,43 +110,83 @@ function configuredOriginCandidates() {
 
 function sanitizeConfiguredOrigin(url: URL) {
   const production = process.env.NODE_ENV === 'production';
-  const lanHost = normalizeLanHost(process.env.NEXT_PUBLIC_LAN_IP);
+
+  const lanHost = normalizeLanHost(
+    process.env.NEXT_PUBLIC_LAN_IP
+  );
+
   const hostname = normalizeHostname(url.hostname);
 
+  /*
+   * NFC_PUBLIC_APP_URL is an explicit administrator override.
+   *
+   * This allows a production-style local PM2 build to generate LAN URLs such
+   * as http://192.168.0.130:3000 while the actual VPS uses the public domain.
+   */
+  const explicitNfcUrl = parseOrigin(
+    process.env.NFC_PUBLIC_APP_URL
+  );
+
+  const isExplicitNfcOrigin =
+    explicitNfcUrl?.origin === url.origin;
+
+  /*
+   * Never generate a browser URL containing 0.0.0.0.
+   */
   if (UNSAFE_BROWSER_HOSTS.has(hostname)) {
     if (production) {
       return null;
     }
 
-    url.hostname = lanHost?.split(':')[0] || 'localhost';
+    url.hostname =
+      lanHost?.split(':')[0] || 'localhost';
 
     if (lanHost?.includes(':')) {
-      url.port = lanHost.split(':').slice(1).join(':');
+      url.port = lanHost
+        .split(':')
+        .slice(1)
+        .join(':');
     }
   }
 
+  /*
+   * Replace localhost with the configured LAN address during normal local
+   * development.
+   */
   if (
     !production &&
-    LOOPBACK_HOSTS.has(normalizeHostname(url.hostname)) &&
+    LOOPBACK_HOSTS.has(
+      normalizeHostname(url.hostname)
+    ) &&
     lanHost
   ) {
     url.hostname = lanHost.split(':')[0];
 
     if (lanHost.includes(':')) {
-      url.port = lanHost.split(':').slice(1).join(':');
+      url.port = lanHost
+        .split(':')
+        .slice(1)
+        .join(':');
     }
   }
 
-  if (production) {
-    const productionHostname = normalizeHostname(url.hostname);
+  /*
+   * Regular production URLs must be public HTTPS URLs.
+   *
+   * The explicit NFC_PUBLIC_APP_URL override is allowed to use a private LAN
+   * address for local production-build testing.
+   */
+  if (production && !isExplicitNfcOrigin) {
+    const productionHostname =
+      normalizeHostname(url.hostname);
 
-    /*
-     * Production NFC links must never point to localhost, 0.0.0.0 or a LAN
-     * address, even when PM2 or an old environment file contains bad values.
-     */
     if (
-      UNSAFE_BROWSER_HOSTS.has(productionHostname) ||
-      isPrivateLanHostname(productionHostname)
+      UNSAFE_BROWSER_HOSTS.has(
+        productionHostname
+      ) ||
+      isPrivateLanHostname(
+        productionHostname
+      )
     ) {
       return null;
     }
