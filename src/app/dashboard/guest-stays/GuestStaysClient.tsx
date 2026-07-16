@@ -1644,7 +1644,8 @@ function handleResetPasscode(guestStayId: string) {
       setXenditStatusText('Confirming Xendit payment...');
 
       const statusResult = await getGuestStayXenditStatusAction(
-        xenditSessionId
+        xenditSessionId,
+        attempts % 3 === 1
       );
 
       if (disposed) {

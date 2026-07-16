@@ -21,6 +21,7 @@ import {
   cancelXenditCheckoutSessionIfActive,
   createXenditCheckoutSession,
   expireXenditCheckoutSession,
+  getXenditCheckoutSession,
   getXenditGuestPaymentMethods,
   type XenditLineItem,
 } from '@/lib/xendit';
@@ -765,13 +766,115 @@ export async function createGuestServiceXenditCheckout(formData: FormData) {
 export async function getGuestServiceXenditStatus(input: {
   tagCode: string;
   paymentSessionId: string;
+  verifyRemote?: boolean;
 }): Promise<GuestServiceXenditStatusResult> {
   try {
-    const { payment } = await requireOwnedGuestXenditSession({
+    let { payment } = await requireOwnedGuestXenditSession({
       tagCode: input.tagCode,
       paymentSessionId: input.paymentSessionId,
       flowType: GuestXenditFlow.SERVICE_REQUEST,
     });
+
+    if (
+      input.verifyRemote &&
+      payment.status === GuestXenditStatus.PENDING &&
+      payment.checkoutSessionId
+    ) {
+      try {
+        const remote = await getXenditCheckoutSession(
+          payment.checkoutSessionId,
+          getXenditForUserIdFromPayload(payment.payload)
+        );
+
+        if (remote.status === 'COMPLETED') {
+          const amountMatches =
+            remote.amountCents === null ||
+            remote.amountCents === payment.amountCents;
+          const currencyMatches =
+            !remote.currency ||
+            remote.currency.toUpperCase() === payment.currency.toUpperCase();
+
+          await db.guestXenditSession.updateMany({
+            where: {
+              id: payment.id,
+              status: GuestXenditStatus.PENDING,
+            },
+            data: {
+              status:
+                amountMatches && currencyMatches
+                  ? GuestXenditStatus.PAID
+                  : GuestXenditStatus.PAID_REVIEW_REQUIRED,
+              xenditPaymentId: remote.paymentId,
+              xenditPaymentRequestId: remote.paymentRequestId,
+              paidAmountCents: remote.amountCents ?? payment.amountCents,
+              paidAt: new Date(),
+              errorMessage:
+                amountMatches && currencyMatches
+                  ? null
+                  : 'The completed Xendit session amount or currency did not match the stored service request.',
+            },
+          });
+
+          await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
+            (error) =>
+              console.warn(
+                '[Guest Service Xendit] Unable to notify remotely verified payment.',
+                error
+              )
+          );
+        } else if (
+          remote.status === 'EXPIRED' ||
+          remote.status === 'CANCELED'
+        ) {
+          const expired = remote.status === 'EXPIRED';
+
+          await db.guestXenditSession.updateMany({
+            where: {
+              id: payment.id,
+              status: GuestXenditStatus.PENDING,
+            },
+            data: expired
+              ? {
+                  status: GuestXenditStatus.EXPIRED,
+                  checkoutExpiredAt: new Date(),
+                  errorMessage:
+                    'The Xendit checkout expired before payment.',
+                }
+              : {
+                  status: GuestXenditStatus.CANCELLED,
+                  cancelledAt: new Date(),
+                  cancelReason: 'Xendit checkout was cancelled.',
+                  errorMessage: null,
+                },
+          });
+
+          await cleanupPaymentDraft(payment);
+
+          await notifyGuestXenditStatus({ sessionId: payment.id }).catch(
+            (error) =>
+              console.warn(
+                '[Guest Service Xendit] Unable to notify remote checkout status.',
+                error
+              )
+          );
+        }
+
+        const latest = await db.guestXenditSession.findUnique({
+          where: { id: payment.id },
+        });
+
+        if (latest) {
+          payment = latest;
+        }
+      } catch (error) {
+        // The verified webhook is still authoritative. A temporary direct
+        // status-read failure must not break the guest service payment page.
+        console.warn(
+          '[Guest Service Xendit] Remote payment verification failed.',
+          error
+        );
+      }
+    }
 
     if (
       payment.status === GuestXenditStatus.PENDING &&

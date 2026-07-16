@@ -33,6 +33,7 @@ import { sendGuestStayPasscodeSms } from '@/lib/sms';
 import {
   cancelXenditCheckoutSessionIfActive,
   createXenditCheckoutSession,
+  getXenditCheckoutSession,
   type XenditLineItem,
 } from '@/lib/xendit';
 import {
@@ -2105,7 +2106,8 @@ export async function cancelGuestStayXenditCheckoutAction(
 }
 
 export async function getGuestStayXenditStatusAction(
-  sessionIdInput: string
+  sessionIdInput: string,
+  verifyRemote = false
 ) {
   try {
     const sessionId = sessionIdInput.trim();
@@ -2134,6 +2136,9 @@ export async function getGuestStayXenditStatusAction(
         payload: true,
         errorMessage: true,
         checkoutUrl: true,
+        checkoutSessionId: true,
+        amountCents: true,
+        currency: true,
       },
     });
 
@@ -2153,13 +2158,100 @@ export async function getGuestStayXenditStatusAction(
 
     const payload = parseGuestStayXenditPayload(session.payload);
 
+    if (
+      verifyRemote &&
+      session.status === POSXenditStatus.PENDING &&
+      session.checkoutSessionId
+    ) {
+      try {
+        const remote = await getXenditCheckoutSession(
+          session.checkoutSessionId,
+          getXenditForUserIdFromPayload(session.payload)
+        );
+
+        if (remote.status === 'COMPLETED') {
+          const amountMatches =
+            remote.amountCents === null ||
+            remote.amountCents === session.amountCents;
+          const currencyMatches =
+            !remote.currency ||
+            remote.currency.toUpperCase() === session.currency.toUpperCase();
+
+          await db.posXenditSession.updateMany({
+            where: {
+              id: session.id,
+              status: POSXenditStatus.PENDING,
+            },
+            data: {
+              status:
+                amountMatches && currencyMatches
+                  ? POSXenditStatus.PAID
+                  : POSXenditStatus.PAID_REVIEW_REQUIRED,
+              xenditPaymentId: remote.paymentId,
+              xenditPaymentRequestId: remote.paymentRequestId,
+              paidAmountCents: remote.amountCents ?? session.amountCents,
+              paidAt: new Date(),
+              errorMessage:
+                amountMatches && currencyMatches
+                  ? null
+                  : 'The completed Xendit session amount or currency did not match the stored guest checkout.',
+            },
+          });
+        } else if (
+          remote.status === 'EXPIRED' ||
+          remote.status === 'CANCELED'
+        ) {
+          const expired = remote.status === 'EXPIRED';
+
+          await db.posXenditSession.updateMany({
+            where: {
+              id: session.id,
+              status: POSXenditStatus.PENDING,
+            },
+            data: {
+              status: expired
+                ? POSXenditStatus.FAILED
+                : POSXenditStatus.CANCELLED,
+              errorMessage: expired
+                ? 'The Xendit guest checkout expired before payment.'
+                : 'The Xendit guest checkout was cancelled.',
+            },
+          });
+        }
+      } catch (error) {
+        // The webhook remains authoritative. Keep polling when Xendit's status
+        // endpoint is temporarily unavailable.
+        console.warn(
+          '[Guest Stay Xendit] Remote payment verification failed.',
+          error
+        );
+      }
+    }
+
+    const latest = await db.posXenditSession.findUnique({
+      where: { id: session.id },
+      select: {
+        id: true,
+        status: true,
+        errorMessage: true,
+        checkoutUrl: true,
+      },
+    });
+
+    if (!latest) {
+      return {
+        ok: false as const,
+        error: 'Xendit guest checkout session was not found.',
+      };
+    }
+
     return {
       ok: true as const,
-      id: session.id,
+      id: latest.id,
       guestStayId: payload.guestStayId,
-      status: session.status,
-      errorMessage: session.errorMessage,
-      checkoutUrl: session.checkoutUrl,
+      status: latest.status,
+      errorMessage: latest.errorMessage,
+      checkoutUrl: latest.checkoutUrl,
     };
   } catch (error) {
     return {

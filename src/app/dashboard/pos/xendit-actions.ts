@@ -13,6 +13,7 @@ import { db } from '@/lib/db';
 import {
   cancelXenditCheckoutSessionIfActive,
   createXenditCheckoutSession,
+  getXenditCheckoutSession,
   type XenditLineItem,
 } from '@/lib/xendit';
 import { cleanText } from '@/lib/sanitize';
@@ -977,7 +978,10 @@ export async function cancelXenditPOSCheckout(sessionIdInput: string) {
   }
 }
 
-async function getXenditPOSStatusInternal(sessionIdInput: string) {
+async function getXenditPOSStatusInternal(
+  sessionIdInput: string,
+  verifyRemote = false
+) {
   const user = await requireUser();
   requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
 
@@ -997,6 +1001,10 @@ async function getXenditPOSStatusInternal(sessionIdInput: string) {
       serviceRequestCodes: true,
       errorMessage: true,
       checkoutUrl: true,
+      checkoutSessionId: true,
+      payload: true,
+      amountCents: true,
+      currency: true,
     },
   });
 
@@ -1006,26 +1014,119 @@ async function getXenditPOSStatusInternal(sessionIdInput: string) {
 
   assertHotelScope(user, session.hotelId);
 
+  if (
+    verifyRemote &&
+    session.status === POSXenditStatus.PENDING &&
+    session.checkoutSessionId
+  ) {
+    try {
+      const remote = await getXenditCheckoutSession(
+        session.checkoutSessionId,
+        getXenditForUserIdFromPayload(session.payload)
+      );
+
+      if (remote.status === 'COMPLETED') {
+        const amountMatches =
+          remote.amountCents === null ||
+          remote.amountCents === session.amountCents;
+        const currencyMatches =
+          !remote.currency ||
+          remote.currency.toUpperCase() === session.currency.toUpperCase();
+
+        await db.posXenditSession.updateMany({
+          where: {
+            id: session.id,
+            status: POSXenditStatus.PENDING,
+          },
+          data: {
+            status:
+              amountMatches && currencyMatches
+                ? POSXenditStatus.PAID
+                : POSXenditStatus.PAID_REVIEW_REQUIRED,
+            xenditPaymentId: remote.paymentId,
+            xenditPaymentRequestId: remote.paymentRequestId,
+            paidAmountCents: remote.amountCents ?? session.amountCents,
+            paidAt: new Date(),
+            errorMessage:
+              amountMatches && currencyMatches
+                ? null
+                : 'The completed Xendit session amount or currency did not match the stored POS sale.',
+          },
+        });
+
+        await notifyPosXenditStatus({ sessionId: session.id }).catch(
+          (error) =>
+            console.warn(
+              '[POS Xendit] Unable to notify remotely verified payment.',
+              error
+            )
+        );
+      } else if (remote.status === 'EXPIRED' || remote.status === 'CANCELED') {
+        const expired = remote.status === 'EXPIRED';
+
+        await db.posXenditSession.updateMany({
+          where: {
+            id: session.id,
+            status: POSXenditStatus.PENDING,
+          },
+          data: {
+            status: expired
+              ? POSXenditStatus.FAILED
+              : POSXenditStatus.CANCELLED,
+            errorMessage: expired
+              ? 'The Xendit POS checkout expired before payment.'
+              : 'The Xendit POS checkout was cancelled.',
+          },
+        });
+
+        await notifyPosXenditStatus({ sessionId: session.id }).catch(
+          () => undefined
+        );
+      }
+    } catch (error) {
+      // Webhooks remain authoritative. A temporary status-read failure should
+      // not block the cashier from continuing to poll or refresh the session.
+      console.warn('[POS Xendit] Remote payment verification failed.', error);
+    }
+  }
+
+  const latest = await db.posXenditSession.findUnique({
+    where: { id: session.id },
+    select: {
+      id: true,
+      status: true,
+      orderCode: true,
+      serviceRequestCodes: true,
+      errorMessage: true,
+      checkoutUrl: true,
+    },
+  });
+
+  if (!latest) {
+    throw new Error('Xendit POS session was not found.');
+  }
+
   return {
     ok: true as const,
-    id: session.id,
-    status: session.status,
-    orderCode: session.orderCode,
-    serviceRequestCodes: Array.isArray(session.serviceRequestCodes)
-      ? session.serviceRequestCodes.filter(
+    id: latest.id,
+    status: latest.status,
+    orderCode: latest.orderCode,
+    serviceRequestCodes: Array.isArray(latest.serviceRequestCodes)
+      ? latest.serviceRequestCodes.filter(
           (value): value is string => typeof value === 'string'
         )
       : [],
-    errorMessage: session.errorMessage,
-    checkoutUrl: session.checkoutUrl,
+    errorMessage: latest.errorMessage,
+    checkoutUrl: latest.checkoutUrl,
   };
 }
 
 export async function getXenditPOSStatus(
-  sessionIdInput: string
+  sessionIdInput: string,
+  verifyRemote = false
 ): Promise<XenditPOSStatusResult> {
   try {
-    return await getXenditPOSStatusInternal(sessionIdInput);
+    return await getXenditPOSStatusInternal(sessionIdInput, verifyRemote);
   } catch (error) {
     logXenditActionError('read checkout status', error, {
       sessionId:

@@ -77,6 +77,7 @@ export async function getGuestPaymentStatusAction(
   const result = await getGuestServiceXenditStatus({
     tagCode: input.tagCode,
     paymentSessionId: input.paymentSessionId,
+    verifyRemote: input.verifyRemote,
   });
 
   return {

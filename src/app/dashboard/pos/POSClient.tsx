@@ -776,7 +776,10 @@ export function POSClient({
 
     async function waitForPaymentConfirmation(attempt = 0) {
       try {
-        const status = await getXenditPOSStatus(paymentSessionId);
+        const status = await getXenditPOSStatus(
+          paymentSessionId,
+          attempt % 3 === 0
+        );
 
         if (cancelled) return;
 
@@ -847,12 +850,18 @@ export function POSClient({
           }
         }
 
-        if (status.status === 'FAILED') {
+        if (
+          status.status === 'FAILED' ||
+          status.status === 'CANCELLED'
+        ) {
           clearPendingPOSXendit();
           setRecoveredXendit(null);
           setExistingXenditSession(null);
           showError(
-            status.errorMessage || 'The Xendit payment attempt failed.'
+            status.errorMessage ||
+              (status.status === 'CANCELLED'
+                ? 'The Xendit payment was cancelled.'
+                : 'The Xendit payment attempt failed.')
           );
           cleanXenditQuery();
           return;
@@ -946,7 +955,7 @@ export function POSClient({
     setXenditGuardBusy(true);
 
     try {
-      let status = await getXenditPOSStatus(active.sessionId);
+      let status = await getXenditPOSStatus(active.sessionId, true);
 
       if (!status.ok) {
         showError(status.error);
@@ -955,7 +964,7 @@ export function POSClient({
 
       if (status.status === 'PAID') {
         await finalizeXenditPOSCheckout(active.sessionId);
-        status = await getXenditPOSStatus(active.sessionId);
+        status = await getXenditPOSStatus(active.sessionId, true);
 
         if (!status.ok) {
           showError(status.error);

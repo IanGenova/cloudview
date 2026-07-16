@@ -560,6 +560,7 @@ export function GuestServiceOrderForm({
 
     let stopped = false;
     let timer: number | null = null;
+    let remoteVerificationAttempt = 0;
 
     const clearPaymentQuery = () => {
       const cleanUrl = new URL(window.location.href);
@@ -625,6 +626,7 @@ export function GuestServiceOrderForm({
       const status = await getGuestServiceXenditStatus({
         tagCode,
         paymentSessionId,
+        verifyRemote: remoteVerificationAttempt++ % 3 === 0,
       });
 
       if (stopped) return;
@@ -1051,6 +1053,7 @@ export function GuestServiceOrderForm({
       let status = await getGuestServiceXenditStatus({
         tagCode,
         paymentSessionId: activeSessionId,
+        verifyRemote: true,
       });
 
       if (!status.ok) {
@@ -1067,6 +1070,7 @@ export function GuestServiceOrderForm({
         status = await getGuestServiceXenditStatus({
           tagCode,
           paymentSessionId: activeSessionId,
+          verifyRemote: true,
         });
 
         if (!status.ok) {
