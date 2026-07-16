@@ -395,27 +395,27 @@ export function secureNfcLaunchUrl(
   hotelSlug?: string | null
 ) {
   const normalizedCode = code.trim();
+  const normalizedSecret = String(scanSecret || '').trim();
   const normalizedHotelSlug = String(hotelSlug || '')
     .trim()
     .toLowerCase();
 
-  if (!normalizedCode || !scanSecret) {
+  if (!normalizedCode || !normalizedSecret) {
     return '';
   }
 
-  /*
-   * Backward compatibility:
-   * Older callers that do not provide hotelSlug will continue generating
-   * /n/{tagCode}?k=...
-   */
-  const path = normalizedHotelSlug
-    ? `/n/${encodeURIComponent(normalizedHotelSlug)}/${encodeURIComponent(
-        normalizedCode
-      )}`
-    : `/n/${encodeURIComponent(normalizedCode)}`;
+  const routeSegments = normalizedHotelSlug
+    ? [normalizedHotelSlug, normalizedCode]
+    : [normalizedCode];
 
-  return `${getPublicAppUrl()}${path}?k=${encodeURIComponent(scanSecret)}`;
-}
+  const path = routeSegments
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  return `${getPublicAppUrl()}/n/${path}?k=${encodeURIComponent(
+    normalizedSecret
+  )}`;
+} 
 
 export function protectedGuestUrl(code: string) {
   return `${getPublicAppUrl()}/t/${encodeURIComponent(code)}`;
