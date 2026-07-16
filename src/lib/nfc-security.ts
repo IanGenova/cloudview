@@ -84,41 +84,61 @@ function shouldForceHttpsForHost(hostname: string) {
 }
 
 export function getPublicAppUrl() {
-  const lanIp = process.env.NEXT_PUBLIC_LAN_IP?.trim() || 'localhost';
-  // NFC links should use the guest-facing URL first.
-  // APP_URL stays reserved for server-to-server/public integrations such as
-  // Xendit webhook and checkout return URLs.
-  const rawUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.APP_URL?.trim() ||
-    `http://${lanIp}:3000`;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  /*
+   * APP_URL is the canonical server-side production URL.
+   * NEXT_PUBLIC_APP_URL is primarily for browser-visible configuration.
+   */
+  const configuredUrl = isProduction
+    ? process.env.APP_URL?.trim() ||
+      process.env.NEXT_PUBLIC_APP_URL?.trim()
+    : process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+      process.env.APP_URL?.trim() ||
+      'http://localhost:3000';
+
+  if (!configuredUrl) {
+    throw new Error(
+      'APP_URL or NEXT_PUBLIC_APP_URL must be configured.'
+    );
+  }
 
   let url: URL;
 
   try {
-    url = new URL(rawUrl);
+    url = new URL(configuredUrl);
   } catch {
-    throw new Error('NEXT_PUBLIC_APP_URL or APP_URL must be an absolute URL.');
+    throw new Error(
+      'APP_URL or NEXT_PUBLIC_APP_URL must be a valid absolute URL.'
+    );
   }
 
-  if (['0.0.0.0', 'localhost', '127.0.0.1'].includes(url.hostname) && lanIp) {
-    url.hostname = lanIp;
-  }
-
-  if (shouldForceHttpsForHost(url.hostname)) {
-    url.protocol = 'https:';
-  }
+  const forbiddenProductionHosts = new Set([
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '::',
+    '[::]',
+  ]);
 
   if (
-    process.env.NODE_ENV === 'production' &&
-    !isPrivateLanHostname(url.hostname) &&
-    url.protocol !== 'https:'
+    isProduction &&
+    forbiddenProductionHosts.has(url.hostname.toLowerCase())
   ) {
-    throw new Error('Public NFC URL must use HTTPS outside private LAN development.');
+    console.error(
+      `[NFC URL] Refusing invalid production host: ${url.hostname}`
+    );
+
+    /*
+     * CloudView's canonical public production address.
+     * This prevents production NFC cards from opening localhost.
+     */
+    return 'https://careerinfoph.com';
   }
 
-  if (!url.port && url.protocol === 'http:' && process.env.NODE_ENV !== 'production') {
-    url.port = '3000';
+  if (isProduction) {
+    url.protocol = 'https:';
+    url.port = '';
   }
 
   return url.toString().replace(/\/$/, '');
@@ -394,7 +414,7 @@ export function secureNfcLaunchUrl(
   scanSecret?: string | null,
   hotelSlug?: string | null
 ) {
-  const normalizedCode = code.trim();
+  const normalizedCode = String(code || '').trim();
   const normalizedSecret = String(scanSecret || '').trim();
   const normalizedHotelSlug = String(hotelSlug || '')
     .trim()
@@ -404,16 +424,17 @@ export function secureNfcLaunchUrl(
     return '';
   }
 
-  const route = normalizedHotelSlug
+  const path = normalizedHotelSlug
     ? `/n/${encodeURIComponent(
         normalizedHotelSlug
       )}/${encodeURIComponent(normalizedCode)}`
     : `/n/${encodeURIComponent(normalizedCode)}`;
 
-  return `${getPublicAppUrl()}${route}?k=${encodeURIComponent(
+  return `${getPublicAppUrl()}${path}?k=${encodeURIComponent(
     normalizedSecret
   )}`;
 }
+
 
 export function protectedGuestUrl(code: string) {
   return `${getPublicAppUrl()}/t/${encodeURIComponent(code)}`;

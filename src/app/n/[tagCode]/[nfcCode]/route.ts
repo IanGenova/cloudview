@@ -8,17 +8,10 @@ function normalizeSlug(value: string) {
   return value.trim().toLowerCase();
 }
 
-function sameOriginUrl(request: NextRequest, path: string) {
+function accessDeniedUrl(request: NextRequest, reason: string) {
   const url = request.nextUrl.clone();
 
-  url.pathname = path;
-
-  return url;
-}
-
-function accessDeniedUrl(request: NextRequest, reason: string) {
-  const url = sameOriginUrl(request, '/nfc-access-denied');
-
+  url.pathname = '/nfc-access-denied';
   url.search = '';
   url.searchParams.set('reason', reason);
 
@@ -28,11 +21,10 @@ function accessDeniedUrl(request: NextRequest, reason: string) {
 /**
  * Hotel-aware NFC URL:
  *
- * /n/country-village/HGDYHQ85?k=SECRET
+ * /n/cloud-view-demo/YQTWLQ5Z?k=SECRET
  *
- * Because the existing first dynamic route is named [tagCode], the first
- * parameter represents the hotel slug here. The second parameter is the
- * actual NFC code.
+ * Because the parent folder is named [tagCode], the first parameter contains
+ * the hotel slug for this two-segment route.
  */
 export async function GET(
   request: NextRequest,
@@ -67,7 +59,6 @@ export async function GET(
       },
       select: {
         code: true,
-        status: true,
         deletedAt: true,
         hotel: {
           select: {
@@ -90,27 +81,19 @@ export async function GET(
       );
     }
 
-    /*
-     * Forward to the existing secure NFC route.
+    /**
+     * Forward to the original secure NFC handler.
      *
-     * The existing route performs:
-     * - ?k=SECRET verification
-     * - active/inactive NFC checks
-     * - private-room verification
-     * - guest session creation
-     * - secure cookie creation
-     * - final guest-portal redirect
-     *
-     * request.nextUrl.clone() preserves the original ?k=SECRET.
+     * The original ?k=SECRET query parameter is preserved.
      */
-    const secureRouteUrl = request.nextUrl.clone();
+    const legacyUrl = request.nextUrl.clone();
 
-    secureRouteUrl.pathname = `/n/${encodeURIComponent(tag.code)}`;
+    legacyUrl.pathname = `/n/${encodeURIComponent(tag.code)}`;
 
-    return NextResponse.redirect(secureRouteUrl, 307);
+    return NextResponse.redirect(legacyUrl, 307);
   } catch (error) {
     console.error(
-      '[Hotel-aware NFC launch] Unable to validate the NFC link.',
+      '[Hotel-aware NFC launch] Failed to validate NFC link.',
       error
     );
 
