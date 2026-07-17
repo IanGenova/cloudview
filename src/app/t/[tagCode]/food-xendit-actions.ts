@@ -86,6 +86,22 @@ function getErrorMessage(error: unknown, fallback: string) {
     : fallback;
 }
 
+function isNextRedirectError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as {
+    message?: unknown;
+    digest?: unknown;
+  };
+
+  return (
+    String(candidate.message ?? '') === 'NEXT_REDIRECT' ||
+    String(candidate.digest ?? '').startsWith('NEXT_REDIRECT')
+  );
+}
+
 function getPublicError(error: unknown, fallback: string) {
   const message = getErrorMessage(error, fallback);
 
@@ -1165,6 +1181,44 @@ async function finalizeGuestFoodXenditSessionInternal(
       orderCode: order.orderCode,
     };
   } catch (error) {
+    /**
+     * The webhook has no NFC browser cookies. A browser-only security helper
+     * may therefore call redirect(), which Next.js represents as a
+     * NEXT_REDIRECT control-flow exception.
+     *
+     * This is not an inventory or fulfillment failure and must never trigger
+     * a refund. Restore the paid state so the authenticated guest return page
+     * can finalize the order safely.
+     */
+    if (isNextRedirectError(error)) {
+      await db.guestXenditSession.updateMany({
+        where: {
+          id: current.id,
+          status: GuestXenditStatus.PROCESSING,
+          orderId: null,
+        },
+        data: {
+          status: GuestXenditStatus.PAID,
+          processingStartedAt: null,
+          errorMessage: null,
+        },
+      });
+
+      console.warn(
+        '[Guest Food Xendit] Webhook finalization requires the authenticated guest browser.',
+        {
+          sessionId: current.id,
+        }
+      );
+
+      return {
+        ok: false as const,
+        waiting: true as const,
+        message:
+          'Payment is confirmed and is waiting for authenticated browser finalization.',
+      };
+    }
+
     await markGuestPaymentFinalizationFailedAndRefund({
       sessionId: current.id,
       error,

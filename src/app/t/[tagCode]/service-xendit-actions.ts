@@ -15,6 +15,7 @@ import {
   ServiceRequestStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { isNextRedirectError } from '@/lib/next-control-flow';
 import { assertXenditWebhookRecoveryToken } from '@/lib/xendit-webhook-recovery-token';
 import { cleanText } from '@/lib/sanitize';
 import {
@@ -1281,6 +1282,37 @@ try {
     throw new Error(
       'Payment was received, but the service request finalization hit a known duplicate-check bug. The payment was kept paid and can be retried safely.'
     );
+  }
+
+  if (isNextRedirectError(error)) {
+    await db.guestXenditSession.updateMany({
+      where: {
+        id: current.id,
+        status: GuestXenditStatus.PROCESSING,
+        serviceRequests: {
+          none: {},
+        },
+      },
+      data: {
+        status: GuestXenditStatus.PAID,
+        processingStartedAt: null,
+        errorMessage: null,
+      },
+    });
+
+    console.warn(
+      '[Guest Service Xendit] Browser-only redirect deferred finalization.',
+      {
+        sessionId: current.id,
+      }
+    );
+
+    return {
+      ok: false as const,
+      waiting: true as const,
+      message:
+        'Payment is confirmed and is waiting for the authorized guest browser to finish the service request.',
+    };
   }
 
   await markGuestPaymentFinalizationFailedAndRefund({
