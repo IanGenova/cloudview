@@ -25,6 +25,9 @@ function messageForReason(reason?: string) {
     case 'inactive-tag':
       return 'This NFC tag is inactive or no longer available. Please contact the front desk.';
 
+    case 'inactive-hotel':
+      return 'Guest NFC access for this hotel is currently paused. Please contact the front desk.';
+
     case 'tag-not-found':
       return 'This NFC tag could not be found. Please use an active hotel NFC panel.';
 
@@ -44,6 +47,9 @@ function messageForReason(reason?: string) {
 
 function titleForReason(reason?: string) {
   switch (reason) {
+    case 'inactive-hotel':
+      return 'Hotel Guest Access Paused';
+
     case 'inactive-tag':
     case 'tag-not-found':
     case 'room-required':

@@ -25,6 +25,18 @@ function publicUrl(path: string) {
   return new URL(path, getPublicAppUrl());
 }
 
+function safeDecodePathSegment(value: string) {
+  try {
+    return decodeURIComponent(value).trim();
+  } catch {
+    return value.trim();
+  }
+}
+
+function normalizeHotelSlug(value: string | null | undefined) {
+  return safeDecodePathSegment(String(value || '')).toLowerCase();
+}
+
 function shouldUseSecureCookie(request: Request) {
   const forwardedProto = request.headers
     .get('x-forwarded-proto')
@@ -259,7 +271,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ tagCode: string }> }
+  {
+    params,
+  }: {
+    params: Promise<{
+      tagCode: string;
+      expectedHotelSlug?: string | null;
+    }>;
+  }
 ) {
   const httpsRedirect = redirectHttpRequestToHttps(request);
 
@@ -267,7 +286,9 @@ export async function GET(
     return httpsRedirect;
   }
 
-  const { tagCode } = await params;
+  const { tagCode: rawTagCode, expectedHotelSlug } = await params;
+  const tagCode = safeDecodePathSegment(rawTagCode);
+  const normalizedExpectedHotelSlug = normalizeHotelSlug(expectedHotelSlug);
   const url = new URL(request.url);
   const inputSecret = url.searchParams.get('k') || '';
 
@@ -287,6 +308,8 @@ export async function GET(
       deletedAt: true,
       hotel: {
         select: {
+          slug: true,
+          isActive: true,
           settings: {
             select: {
               nfcRoomPasscodeEnabled: true,
@@ -298,8 +321,43 @@ export async function GET(
   });
 
   if (!tag || tag.deletedAt) {
+    console.warn('[NFC launch] Tag lookup failed.', {
+      requestedTagCode: tagCode,
+      expectedHotelSlug: normalizedExpectedHotelSlug || null,
+      tagExists: Boolean(tag),
+      deletedAt: tag?.deletedAt ?? null,
+    });
+
     return NextResponse.redirect(
       publicUrl('/nfc-access-denied?reason=tag-not-found')
+    );
+  }
+
+  const storedHotelSlug = normalizeHotelSlug(tag.hotel.slug);
+
+  if (
+    normalizedExpectedHotelSlug &&
+    storedHotelSlug !== normalizedExpectedHotelSlug
+  ) {
+    console.warn('[NFC launch] Hotel slug does not match the NFC tag.', {
+      requestedTagCode: tagCode,
+      expectedHotelSlug: normalizedExpectedHotelSlug,
+      storedHotelSlug,
+    });
+
+    return NextResponse.redirect(
+      publicUrl('/nfc-access-denied?reason=tag-not-found')
+    );
+  }
+
+  if (!tag.hotel.isActive) {
+    console.warn('[NFC launch] Hotel guest access is inactive.', {
+      requestedTagCode: tagCode,
+      hotelSlug: storedHotelSlug,
+    });
+
+    return NextResponse.redirect(
+      publicUrl('/nfc-access-denied?reason=inactive-hotel')
     );
   }
 
@@ -308,6 +366,13 @@ export async function GET(
     !inputSecret ||
     !verifyTagSecret(inputSecret, tag.scanSecret)
   ) {
+    console.warn('[NFC launch] Scan secret validation failed.', {
+      requestedTagCode: tagCode,
+      hotelSlug: storedHotelSlug,
+      hasStoredSecret: Boolean(tag.scanSecret),
+      hasInputSecret: Boolean(inputSecret),
+    });
+
     return NextResponse.redirect(
       publicUrl('/nfc-access-denied?reason=bad-secret')
     );
