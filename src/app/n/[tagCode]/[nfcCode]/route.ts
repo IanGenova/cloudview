@@ -1,31 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { GET as handleNfcLaunch } from '@/lib/nfc-launch-handler';
+import {
+  resolveConfiguredNfcPublicOrigin,
+} from '@/lib/nfc-public-url';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function normalizeSlug(value: string) {
-  return decodeURIComponent(value).trim().toLowerCase();
+  try {
+    return decodeURIComponent(value)
+      .trim()
+      .toLowerCase();
+  } catch {
+    return value.trim().toLowerCase();
+  }
 }
 
-function accessDeniedUrl(request: NextRequest, reason: string) {
-  const url = request.nextUrl.clone();
+/**
+ * Build redirects from CloudView's configured public origin.
+ *
+ * Do not clone request.nextUrl here. Behind Nginx, Next.js may see the
+ * internal upstream origin such as localhost:3000 or 127.0.0.1:3000.
+ */
+function accessDeniedUrl(reason: string) {
+  const publicOrigin =
+    resolveConfiguredNfcPublicOrigin();
 
-  url.pathname = '/nfc-access-denied';
-  url.search = '';
+  const url = new URL(
+    '/nfc-access-denied',
+    publicOrigin
+  );
+
   url.searchParams.set('reason', reason);
+
+  console.warn(
+    '[Hotel-aware NFC] Access denied redirect.',
+    {
+      reason,
+      redirectOrigin: url.origin,
+    }
+  );
 
   return url;
 }
 
 /**
- * Hotel-aware NFC URL:
- * /n/HOTEL-SLUG/TAGCODE?k=SECRET
+ * Hotel-aware NFC launch:
  *
- * The first dynamic folder is still named [tagCode] because the existing
- * one-segment route occupies that position. In this two-segment route, that
- * first value represents the hotel slug and nfcCode is the real NFC tag code.
+ * /n/HOTEL-SLUG/TAGCODE?k=SECRET
  */
 export async function GET(
   request: NextRequest,
@@ -39,13 +63,21 @@ export async function GET(
   }
 ) {
   try {
-    const { tagCode: hotelSlugInput, nfcCode: nfcCodeInput } = await params;
-    const hotelSlug = normalizeSlug(hotelSlugInput);
-    const nfcCode = decodeURIComponent(nfcCodeInput).trim();
+    const {
+      tagCode: hotelSlugInput,
+      nfcCode: nfcCodeInput,
+    } = await params;
+
+    const hotelSlug =
+      normalizeSlug(hotelSlugInput);
+
+    const nfcCode =
+      normalizeSlug(nfcCodeInput)
+        .toUpperCase();
 
     if (!hotelSlug || !nfcCode) {
       return NextResponse.redirect(
-        accessDeniedUrl(request, 'tag-not-found'),
+        accessDeniedUrl('tag-not-found'),
         307
       );
     }
@@ -66,22 +98,40 @@ export async function GET(
       },
     });
 
+    const storedHotelSlug =
+      tag?.hotel?.slug
+        ? normalizeSlug(tag.hotel.slug)
+        : '';
+
     if (
       !tag ||
       tag.deletedAt ||
       !tag.hotel.isActive ||
-      normalizeSlug(tag.hotel.slug) !== hotelSlug
+      storedHotelSlug !== hotelSlug
     ) {
+      console.warn(
+        '[Hotel-aware NFC] Tag validation failed.',
+        {
+          requestedTagCode: nfcCode,
+          requestedHotelSlug: hotelSlug,
+          tagExists: Boolean(tag),
+          deletedAt: tag?.deletedAt ?? null,
+          hotelActive:
+            tag?.hotel?.isActive ?? null,
+          storedHotelSlug:
+            storedHotelSlug || null,
+        }
+      );
+
       return NextResponse.redirect(
-        accessDeniedUrl(request, 'tag-not-found'),
+        accessDeniedUrl('tag-not-found'),
         307
       );
     }
 
     /*
-     * Run the original secure launch handler directly. This avoids an extra
-     * redirect through /n/TAGCODE and preserves the hotel-aware URL until the
-     * secure handler sends the guest to verification or the guest portal.
+     * Use the original secure NFC launch handler directly.
+     * This preserves all existing secret, session, room and cookie checks.
      */
     return handleNfcLaunch(request, {
       params: Promise.resolve({
@@ -89,10 +139,15 @@ export async function GET(
       }),
     });
   } catch (error) {
-    console.error('[Hotel-aware NFC launch] Failed to validate NFC link.', error);
+    console.error(
+      '[Hotel-aware NFC] Launch failed.',
+      error
+    );
 
     return NextResponse.redirect(
-      accessDeniedUrl(request, 'session-check-failed'),
+      accessDeniedUrl(
+        'session-check-failed'
+      ),
       307
     );
   }

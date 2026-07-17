@@ -4,20 +4,16 @@
 # next.js
 /.next
 /out
-
 # production
 /build
-
 # misc
 .DS_Store
 *.pem
-
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
 # local env files
 .env
 .env.local
@@ -25,18 +21,21 @@ pnpm-debug.log*
 .env.test.local
 .env.production
 .env.production.local
-
 # vercel
 .vercel
-
 # typescript
 *.tsbuildinfo
-
 # IDE
 .vscode/
 .idea/
-
 # cache
 .cache/
 certificates
 ecosystem.config.js
+# Production runtime configuration
+/.env
+/.env.local
+/.env.production
+/.env.production.local
+/centrifugo/config.json
+/centrifugo/config.json.backup-*

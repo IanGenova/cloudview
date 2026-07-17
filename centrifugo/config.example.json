@@ -1,7 +1,7 @@
 {
   "client": {
     "token": {
-      "hmac_secret_key": "replace-with-a-long-random-secret"
+      "hmac_secret_key": "CHANGE_ME"
     },
     "allowed_origins": [
       "https://cloudhotelph.com",
@@ -15,13 +15,13 @@
     }
   },
   "http_api": {
-    "key": "replace-with-a-random-api-key",
+    "key": "CHANGE_ME",
     "error_mode": "transport"
   },
   "admin": {
     "enabled": true,
-    "password": "cloudview-admin-password",
-    "secret": "cloudview-admin-secret"
+    "password": "CHANGE_ME",
+    "secret": "CHANGE_ME"
   },
   "http_server": {
     "address": "127.0.0.1",
