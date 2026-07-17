@@ -39,3 +39,14 @@ ecosystem.config.js
 /.env.production.local
 /centrifugo/config.json
 /centrifugo/config.json.backup-*
+
+# Private VPS files
+secret_api_key.csv
+.env
+.env.local
+.env.production
+.env.production.local
+.next/
+.next-before-*/
+node_modules/
+centrifugo/config.json
