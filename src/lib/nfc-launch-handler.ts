@@ -37,19 +37,59 @@ function normalizeHotelSlug(value: string | null | undefined) {
   return safeDecodePathSegment(String(value || '')).toLowerCase();
 }
 
+function normalizeTagCode(value: string | null | undefined) {
+  return safeDecodePathSegment(String(value || ''))
+    .trim()
+    .toUpperCase();
+}
+
+function databaseIdentity() {
+  const raw = String(process.env.DATABASE_URL || '').trim();
+
+  if (!raw) {
+    return { host: null, database: null };
+  }
+
+  try {
+    const url = new URL(raw);
+
+    return {
+      host: url.host || null,
+      database: url.pathname.replace(/^\//, '') || null,
+    };
+  } catch {
+    return { host: 'unparseable', database: null };
+  }
+}
+
 function shouldUseSecureCookie(request: Request) {
+  const forceHttps = process.env.NEXT_PUBLIC_FORCE_HTTPS;
+
+  /*
+   * A local PM2 build may use NODE_ENV=production while still running over
+   * plain HTTP on a LAN address. Respect the explicit HTTPS setting so the
+   * browser does not silently reject all NFC session cookies locally.
+   */
+  if (forceHttps === 'false') {
+    return false;
+  }
+
+  if (forceHttps === 'true') {
+    return true;
+  }
+
   const forwardedProto = request.headers
     .get('x-forwarded-proto')
     ?.split(',')[0]
     ?.trim()
     .toLowerCase();
 
-  if (process.env.NODE_ENV === 'production') {
+  if (forwardedProto === 'https') {
     return true;
   }
 
-  if (forwardedProto === 'https') {
-    return true;
+  if (forwardedProto === 'http') {
+    return false;
   }
 
   return new URL(request.url).protocol === 'https:';
@@ -287,14 +327,18 @@ export async function GET(
   }
 
   const { tagCode: rawTagCode, expectedHotelSlug } = await params;
-  const tagCode = safeDecodePathSegment(rawTagCode);
+  const tagCode = normalizeTagCode(rawTagCode);
   const normalizedExpectedHotelSlug = normalizeHotelSlug(expectedHotelSlug);
   const url = new URL(request.url);
   const inputSecret = url.searchParams.get('k') || '';
+  const stableTagId = String(url.searchParams.get('i') || '').trim();
 
-  const tag = await db.nfcTag.findUnique({
+  const tag = await db.nfcTag.findFirst({
     where: {
-      code: tagCode,
+      OR: [
+        ...(stableTagId ? [{ id: stableTagId }] : []),
+        { code: tagCode },
+      ],
     },
     select: {
       id: true,
@@ -323,9 +367,13 @@ export async function GET(
   if (!tag || tag.deletedAt) {
     console.warn('[NFC launch] Tag lookup failed.', {
       requestedTagCode: tagCode,
+      stableTagId: stableTagId || null,
       expectedHotelSlug: normalizedExpectedHotelSlug || null,
       tagExists: Boolean(tag),
       deletedAt: tag?.deletedAt ?? null,
+      database: databaseIdentity(),
+      nodeEnv: process.env.NODE_ENV || null,
+      cwd: process.cwd(),
     });
 
     return NextResponse.redirect(
@@ -334,20 +382,31 @@ export async function GET(
   }
 
   const storedHotelSlug = normalizeHotelSlug(tag.hotel.slug);
+  const storedTagCode = normalizeTagCode(tag.code);
+
+  if (storedTagCode !== tagCode) {
+    console.warn('[NFC launch] NFC code is stale; using the current tag code.', {
+      requestedTagCode: tagCode,
+      storedTagCode,
+      stableTagId: stableTagId || null,
+    });
+  }
 
   if (
     normalizedExpectedHotelSlug &&
     storedHotelSlug !== normalizedExpectedHotelSlug
   ) {
-    console.warn('[NFC launch] Hotel slug does not match the NFC tag.', {
+    /*
+     * The hotel slug is a readable/canonical URL segment, not a credential.
+     * Do not reject a valid tag solely because a hotel slug was renamed or an
+     * older NFC link is still in circulation. The tag code + scan secret stay
+     * authoritative and the guest is redirected using the current tag data.
+     */
+    console.warn('[NFC launch] Hotel slug is stale; continuing securely.', {
       requestedTagCode: tagCode,
       expectedHotelSlug: normalizedExpectedHotelSlug,
       storedHotelSlug,
     });
-
-    return NextResponse.redirect(
-      publicUrl('/nfc-access-denied?reason=tag-not-found')
-    );
   }
 
   if (!tag.hotel.isActive) {

@@ -313,6 +313,7 @@ export function buildSecureNfcLaunchUrl(input: {
   origin: string;
   hotelSlug: string;
   tagCode: string;
+  tagId?: string | null;
   scanSecret?: string | null;
 }) {
   const parsedOrigin = parseOrigin(input.origin);
@@ -331,17 +332,31 @@ export function buildSecureNfcLaunchUrl(input: {
     input.hotelSlug,
     'Hotel slug'
   ).toLowerCase();
-  const tagCode = normalizeRequiredValue(input.tagCode, 'NFC tag code');
+  const tagCode = normalizeRequiredValue(input.tagCode, 'NFC tag code')
+    .toUpperCase();
+  const tagId = String(input.tagId || '').trim();
   const scanSecret = String(input.scanSecret || '').trim();
 
   if (!scanSecret) {
     return '';
   }
 
+  const query = new URLSearchParams({
+    k: scanSecret,
+  });
+
+  /*
+   * The stable row reference removes ambiguity when old databases contain
+   * legacy code formatting. Older NFC links without `i` remain supported.
+   */
+  if (tagId) {
+    query.set('i', tagId);
+  }
+
   return (
     `${origin}/n/${encodeURIComponent(hotelSlug)}` +
     `/${encodeURIComponent(tagCode)}` +
-    `?k=${encodeURIComponent(scanSecret)}`
+    `?${query.toString()}`
   );
 }
 

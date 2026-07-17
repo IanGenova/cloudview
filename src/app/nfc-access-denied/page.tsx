@@ -29,7 +29,7 @@ function messageForReason(reason?: string) {
       return 'Guest NFC access for this hotel is currently paused. Please contact the front desk.';
 
     case 'tag-not-found':
-      return 'This NFC tag could not be found. Please use an active hotel NFC panel.';
+      return 'This NFC link does not match a current tag record. Refresh the NFC Tags dashboard or tap the newly programmed hotel NFC panel.';
 
     case 'room-required':
       return 'This NFC tag is not connected to a valid room. Please contact the front desk.';
@@ -50,8 +50,10 @@ function titleForReason(reason?: string) {
     case 'inactive-hotel':
       return 'Hotel Guest Access Paused';
 
-    case 'inactive-tag':
     case 'tag-not-found':
+      return 'NFC Link Needs Refresh';
+
+    case 'inactive-tag':
     case 'room-required':
     case 'no-active-stay':
       return 'NFC Access Unavailable';

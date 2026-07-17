@@ -179,6 +179,7 @@ export default async function TagsPage({
               origin: nfcPublicOrigin,
               hotelSlug: tag.hotel.slug,
               tagCode: tag.code,
+              tagId: tag.id,
               scanSecret: tag.scanSecret,
             }),
             lockedDestinationUrl: buildProtectedGuestUrl({

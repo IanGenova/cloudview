@@ -5,7 +5,8 @@
     },
     "allowed_origins": [
       "https://cloudhotelph.com",
-      "https://www.cloudhotelph.com"
+      "https://www.cloudhotelph.com",
+      "http://192.168.0.130:3000"
     ]
   },
   "channel": {
