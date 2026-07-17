@@ -1007,11 +1007,13 @@ function Modal({
   const widthClass = size === 'wide' ? 'max-w-3xl' : 'max-w-xl';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-4 py-6 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
       <div
-        className={`flex max-h-[calc(100dvh-2rem)] w-full ${widthClass} flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl`}
+        role="dialog"
+        aria-modal="true"
+        className={`flex max-h-[calc(100dvh-1.5rem)] w-full ${widthClass} flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]`}
       >
-        <div className="shrink-0 border-b border-neutral-100 bg-white px-6 py-5">
+        <div className="shrink-0 border-b border-neutral-100 bg-white px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-black">{title}</h2>
 
@@ -1026,7 +1028,7 @@ function Modal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {children}
         </div>
       </div>

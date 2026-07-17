@@ -81,8 +81,8 @@ function Modal({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-5">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[#fff8e7] text-[#b88938]">

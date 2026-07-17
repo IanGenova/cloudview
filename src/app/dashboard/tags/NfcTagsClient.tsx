@@ -129,9 +129,9 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 py-4">
-      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-white p-5">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white p-4 sm:gap-4 sm:p-5">
           <div className="min-w-0">
             <h2 className="text-2xl font-black">{title}</h2>
             {description ? (
@@ -151,7 +151,7 @@ function Modal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">{children}</div>
       </div>
     </div>
   );
@@ -413,13 +413,13 @@ function NfcActionConfirmDialog({
   const isDelete = dialog.action === 'delete';
 
   return (
-    <div className="fixed inset-0 z-[140] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
+      <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem]">
         <div
           className={
             isDelete
-              ? 'border-b border-red-100 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10'
-              : 'border-b border-amber-100 bg-amber-50 p-6 dark:border-amber-500/20 dark:bg-amber-500/10'
+              ? 'border-b border-red-100 bg-red-50 p-4 dark:border-red-500/20 sm:p-6 dark:bg-red-500/10'
+              : 'border-b border-amber-100 bg-amber-50 p-4 dark:border-amber-500/20 sm:p-6 dark:bg-amber-500/10'
           }
         >
           <div className="flex items-start gap-4">
@@ -458,7 +458,7 @@ function NfcActionConfirmDialog({
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
               NFC Tag
@@ -1299,7 +1299,7 @@ return (
 
 
      <section className="mb-6 overflow-hidden rounded-[2.25rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
-  <div className="relative p-6">
+  <div className="relative p-4 sm:p-6">
     <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-[#c99c38]/25 blur-3xl" />
     <div className="pointer-events-none absolute -bottom-24 left-10 size-64 rounded-full bg-emerald-500/10 blur-3xl" />
 
@@ -1310,7 +1310,7 @@ return (
           NFC Access Control
         </p>
 
-        <h2 className="mt-5 text-4xl font-black tracking-tight">
+        <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
           NFC Tag Management
         </h2>
 

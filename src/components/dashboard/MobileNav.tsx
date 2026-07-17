@@ -152,9 +152,9 @@ export function MobileNav({
   return (
     <nav
       aria-label="Mobile dashboard navigation"
-      className="sticky top-0 z-40 border-b border-[#2b2416] bg-[#090806]/95 p-3 shadow-[0_14px_35px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
+      className="h-16 border-b border-[#2b2416] bg-[#090806]/95 px-2 py-2 shadow-[0_14px_35px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
     >
-      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+      <div className="no-scrollbar flex h-full snap-x snap-mandatory items-center gap-2 overflow-x-auto overscroll-x-contain scroll-smooth">
         {mobileNavItems.map((item) => {
           const active = item.href === activeHref;
 
@@ -164,7 +164,7 @@ export function MobileNav({
               href={item.href}
               aria-current={active ? 'page' : undefined}
               className={cx(
-                'shrink-0 rounded-full border px-4 py-2 text-sm font-black transition',
+                'min-h-10 shrink-0 snap-start scroll-mx-2 rounded-full border px-3 py-2 text-xs font-black transition sm:px-4 sm:text-sm',
                 active
                   ? 'border-[#d6a738]/60 bg-gradient-to-r from-[#c99c38] to-[#8f6820] text-[#070604] shadow-[0_10px_24px_rgba(201,156,56,0.22)]'
                   : 'border-[#c99c38]/20 bg-[#151106] text-[#d8d2c3] hover:border-[#c99c38]/50 hover:bg-[#21190c] hover:text-[#f7e7bd]'

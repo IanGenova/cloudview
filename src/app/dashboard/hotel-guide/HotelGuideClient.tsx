@@ -197,9 +197,9 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4 py-4">
-      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-white p-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white p-4 sm:gap-4 sm:p-6">
           <div>
             <h2 className="text-xl font-black">{title}</h2>
             {description ? (
@@ -217,7 +217,7 @@ function Modal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

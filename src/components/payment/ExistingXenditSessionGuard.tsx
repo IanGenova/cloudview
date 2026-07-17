@@ -57,13 +57,13 @@ export function ExistingXenditSessionGuard({
       : ShieldCheck;
 
   return (
-    <div className="fixed inset-0 z-[10000] grid place-items-center bg-black/75 px-4 py-8 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10000] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/75 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-8">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="existing-xendit-title"
         className={cn(
-          'w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl',
+          'max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:rounded-[2rem]',
           dark
             ? 'border-white/12 bg-[#0b0b0b] text-white'
             : 'border-neutral-200 bg-white text-neutral-950'
@@ -71,7 +71,7 @@ export function ExistingXenditSessionGuard({
       >
         <div
           className={cn(
-            'border-b p-6',
+            'border-b p-4 sm:p-6',
             dark
               ? 'border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.18),transparent_48%)]'
               : 'border-neutral-100 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.20),transparent_48%)]'
@@ -117,7 +117,7 @@ export function ExistingXenditSessionGuard({
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div
             className={cn(
               'rounded-2xl border p-4 text-sm',

@@ -817,9 +817,9 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 px-3 py-4 backdrop-blur-md sm:px-6">
-      <section className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-white/50 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.38)]">
-        <div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-neutral-100 bg-white/95 px-6 py-5 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6 sm:py-6">
+      <section role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.5rem] border border-white/50 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.38)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+        <div className="sticky top-0 z-20 flex items-start justify-between gap-3 border-b border-neutral-100 bg-white/95 px-4 py-4 backdrop-blur-xl sm:gap-4 sm:px-6 sm:py-5">
           <div>
             <h2 className="text-xl font-black text-[#11100b]">{title}</h2>
             {description ? (

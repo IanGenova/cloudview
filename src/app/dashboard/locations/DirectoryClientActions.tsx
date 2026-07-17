@@ -350,9 +350,9 @@ export function DirectoryConfirmButton({
 
       {mounted && confirmOpen
         ? createPortal(
-            <div className="fixed inset-0 z-[160] grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
-              <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl">
-                <div className="border-b border-red-100 bg-red-50 p-6">
+            <div className="fixed inset-0 z-[160] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
+              <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem]">
+                <div className="border-b border-red-100 bg-red-50 p-4 sm:p-6">
                   <div className="flex items-start gap-4">
                     <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700">
                       <Trash2 className="size-5" />
@@ -380,7 +380,7 @@ export function DirectoryConfirmButton({
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
                       Selected {itemType}

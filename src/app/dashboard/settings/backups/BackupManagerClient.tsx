@@ -760,8 +760,8 @@ export function BackupManagerClient({
       </section>
 
       {preview ? (
-        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 sm:items-center sm:p-4">
+          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88938]">
@@ -823,8 +823,8 @@ export function BackupManagerClient({
       ) : null}
 
       {restoreBackup ? (
-        <div className="fixed inset-0 z-[110] grid place-items-center bg-black/65 p-4">
-          <div className="w-full max-w-xl rounded-[2rem] bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-3 py-3 sm:items-center sm:p-4">
+          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem] sm:p-6">
             <div className="flex items-start gap-4">
               <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700">
                 <AlertTriangle className="size-5" />

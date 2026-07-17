@@ -1503,7 +1503,7 @@ export function POSClient({
   }
 
   return (
-    <div className="relative pb-20 text-[13px] lg:pb-0">
+    <div className="relative pb-[calc(6rem+env(safe-area-inset-bottom))] text-[13px] lg:pb-0">
       <ExistingXenditSessionGuard
         open={Boolean(existingXenditSession)}
         title={
@@ -2324,7 +2324,7 @@ export function POSClient({
       </div>
 
       {mobileView === 'products' && itemCount > 0 ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white/95 p-3 backdrop-blur-xl lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl lg:hidden">
           <button
             type="button"
             onClick={() => setMobileView('cart')}

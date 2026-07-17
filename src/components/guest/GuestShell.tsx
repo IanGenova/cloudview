@@ -93,7 +93,7 @@ export function GuestTopBar({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 grid grid-cols-[44px_1fr_44px] items-center px-4 py-4 backdrop-blur-xl',
+        'sticky top-0 z-30 grid grid-cols-[40px_minmax(0,1fr)_40px] items-center px-3 py-3 backdrop-blur-xl sm:grid-cols-[44px_minmax(0,1fr)_44px] sm:px-4 sm:py-4',
         dark ? 'bg-black/70 text-white' : 'bg-[#f8f3ec]/85 text-ink'
       )}
     >
@@ -162,13 +162,13 @@ export function GuestShell({
   return (
     <main
       className={cn(
-        'min-h-screen',
+        'min-h-dvh overflow-x-clip',
         dark ? 'bg-neutral-950 text-white' : 'bg-[#f8f3ec] text-ink'
       )}
     >
       <div
         className={cn(
-          'mx-auto min-h-screen max-w-md shadow-soft',
+          'mx-auto min-h-dvh w-full max-w-md shadow-soft',
           dark ? 'bg-black' : 'bg-[#f8f3ec]'
         )}
       >
@@ -181,7 +181,7 @@ export function GuestShell({
           />
         ) : null}
 
-        <section className="px-5 pb-28 pt-3">{children}</section>
+        <section className="px-5 pb-[calc(7.5rem+env(safe-area-inset-bottom))] pt-3">{children}</section>
       </div>
     </main>
   );
@@ -287,12 +287,12 @@ export function GuestBottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))]"
       aria-label="Guest portal navigation"
     >
       <div
         className={cn(
-          'grid grid-cols-4 gap-1 rounded-[1.75rem] border p-2 shadow-soft backdrop-blur-xl',
+          'grid grid-cols-4 gap-1 rounded-[1.4rem] border p-1.5 shadow-soft backdrop-blur-xl sm:rounded-[1.75rem] sm:p-2',
           dark
             ? 'border-white/10 bg-neutral-950/90 text-white'
             : 'border-black/5 bg-white/95 text-neutral-500'
@@ -308,7 +308,7 @@ export function GuestBottomNav({
               href={item.href(tagCode)}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'grid min-h-14 place-items-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-bold transition active:scale-95',
+                'grid min-h-14 min-w-0 place-items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition active:scale-95 min-[360px]:text-[10px] sm:rounded-2xl sm:px-2',
                 isActive
                   ? dark
                     ? 'bg-white/[0.04] text-gold'

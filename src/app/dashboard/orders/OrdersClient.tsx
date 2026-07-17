@@ -990,8 +990,8 @@ function CancelOrderItemModal({
 }
 
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 px-4">
-      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-black">Cancel Food Item</h2>
@@ -1101,8 +1101,8 @@ function CancelOrderModal({
 }
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 px-4">
-      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-black">Cancel / Reject Order</h2>
@@ -1209,9 +1209,9 @@ function OrderDetailsModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] grid place-items-center bg-black/50 px-4">
-        <div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-[2rem] bg-white shadow-2xl">
-          <div className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-5">
+      <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+        <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl overflow-y-auto rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+          <div className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-4 sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -2435,7 +2435,7 @@ export function OrdersClient({
       <Toast message={clientMessage ?? message} />
 
       <section className="overflow-hidden rounded-[2.25rem] border border-neutral-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.06)]">
-        <div className="relative overflow-hidden bg-[#11100b] p-6 text-white">
+        <div className="relative overflow-hidden bg-[#11100b] p-4 text-white sm:p-6">
           <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#c99c38]/25 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 left-10 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
 
@@ -2446,7 +2446,7 @@ export function OrdersClient({
                 Order Command Center
               </p>
 
-              <h2 className="mt-5 text-4xl font-black tracking-tight">
+              <h2 className="mt-4 text-3xl font-black tracking-tight sm:mt-5 sm:text-4xl">
                 Order Operations Board
               </h2>
 

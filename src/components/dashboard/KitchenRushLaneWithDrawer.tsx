@@ -285,8 +285,8 @@ function KitchenRushOrderDrawer({
         aria-label="Close order drawer"
       />
 
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl dark:bg-neutral-950">
-        <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-900">
+      <aside role="dialog" aria-modal="true" className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col overflow-hidden bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl dark:bg-neutral-950">
+        <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
@@ -351,7 +351,7 @@ function KitchenRushOrderDrawer({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="grid gap-3">
             <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900">
               <div className="flex items-center gap-3">

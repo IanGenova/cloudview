@@ -845,8 +845,8 @@ function CancelServiceItemModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-4">
-      <div className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-neutral-900">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl dark:bg-neutral-900 sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-black text-neutral-950 dark:text-white">
@@ -974,8 +974,8 @@ function DetailsModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 px-4">
-        <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-neutral-900">
+      <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
+        <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl dark:bg-neutral-900 sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2">

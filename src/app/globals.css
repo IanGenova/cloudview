@@ -214,3 +214,106 @@ body {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important;
   }
 }
+
+/* Responsive UI/UX guardrails — presentation only. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    overflow-x: clip;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  img,
+  video,
+  canvas {
+    height: auto;
+    max-width: 100%;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  input,
+  select,
+  textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--cv-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .cloudview-dashboard-shell,
+  .cloudview-dashboard-shell main,
+  .cloudview-dashboard-shell main > * {
+    min-width: 0;
+  }
+
+  .cloudview-dashboard-shell [class*='overflow-x-auto'] {
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cloudview-dashboard-shell table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cloudview-dashboard-shell th,
+  .cloudview-dashboard-shell td {
+    vertical-align: middle;
+  }
+
+  @media (max-width: 767px) {
+    .cloudview-dashboard-shell input,
+    .cloudview-dashboard-shell select,
+    .cloudview-dashboard-shell textarea {
+      font-size: 16px;
+    }
+
+    .cloudview-dashboard-shell table th,
+    .cloudview-dashboard-shell table td {
+      white-space: nowrap;
+    }
+  }
+}
+

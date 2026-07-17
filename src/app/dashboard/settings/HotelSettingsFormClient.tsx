@@ -257,8 +257,8 @@ export function HotelSettingsFormClient({
       ) : null}
 
       {confirmOpen ? (
-        <div className="fixed inset-0 z-[120] grid place-items-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl dark:bg-neutral-950">
+        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
+          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl dark:bg-neutral-950 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xl font-black text-neutral-950 dark:text-white">
