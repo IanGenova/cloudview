@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import {useEffect, useState, useTransition } from 'react';
 import type { OrderStatus } from '@prisma/client';
 import {
@@ -596,7 +598,7 @@ function KitchenRushToast({
   const isSuccess = toast.type === 'success';
 
   return (
-    <div className="fixed right-6 top-6 z-[9999] w-[calc(100%-3rem)] max-w-sm">
+    <DashboardToastViewport>
       <div
         className={
           isSuccess
@@ -637,7 +639,7 @@ function KitchenRushToast({
           </button>
         </div>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import {
   useDeferredValue,
   useEffect,
@@ -1318,7 +1320,7 @@ function Toast({
   }
 
   return (
-    <div className="fixed right-6 top-24 z-[140] w-[calc(100vw-2.5rem)] max-w-md">
+    <DashboardToastViewport>
       <div
         className={
           message.type === 'success'
@@ -1356,7 +1358,7 @@ function Toast({
           <X className="size-4" />
         </button>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

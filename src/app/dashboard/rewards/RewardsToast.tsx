@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import { useEffect } from 'react';
 import {
   AlertTriangle,
@@ -89,7 +91,7 @@ export function RewardsToast({
   const classes = getToastClass(message.type);
 
   return (
-    <div className="fixed right-5 top-5 z-[100] w-[calc(100vw-2.5rem)] max-w-md">
+    <DashboardToastViewport>
       <div
         className={`flex items-start gap-3 rounded-[1.5rem] border p-4 ${classes.wrapper}`}
       >
@@ -118,6 +120,6 @@ export function RewardsToast({
           <X className="size-4" />
         </button>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }

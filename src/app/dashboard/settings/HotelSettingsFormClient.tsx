@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import {
   type FormEvent,
   type ReactNode,
@@ -300,7 +302,8 @@ export function HotelSettingsFormClient({
       ) : null}
 
       {toast ? (
-        <div className="fixed right-5 top-5 z-[130] w-[calc(100%-2.5rem)] max-w-sm rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+        <DashboardToastViewport>
+          <div className="rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
           <div className="flex gap-3">
             <div
               className={
@@ -328,6 +331,7 @@ export function HotelSettingsFormClient({
             </div>
           </div>
         </div>
+        </DashboardToastViewport>
       ) : null}
     </>
   );

@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import type { DashboardModule, Role } from '@prisma/client';
 import { useActionState, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -906,7 +908,7 @@ function Toast({
   const isSuccess = message.type === 'success';
 
   return (
-    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+    <DashboardToastViewport>
       <div
         className={
           isSuccess
@@ -947,7 +949,7 @@ function Toast({
           <X className="size-4" />
         </button>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

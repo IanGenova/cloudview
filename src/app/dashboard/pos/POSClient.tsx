@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -574,7 +576,7 @@ function FloatingPOSToast({
   const isSuccess = toast.type === 'success';
 
   return (
-    <div className="fixed right-6 top-24 z-[9999] w-[calc(100%-3rem)] max-w-sm">
+    <DashboardToastViewport>
       <div
         className={
           isSuccess
@@ -615,7 +617,7 @@ function FloatingPOSToast({
           </button>
         </div>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

@@ -1,3 +1,4 @@
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
@@ -273,7 +274,7 @@ function KitchenToast({
     : '/dashboard/kitchen';
 
   return (
-    <div className="fixed right-5 top-5 z-[9999] w-[calc(100vw-2.5rem)] max-w-md">
+    <DashboardToastViewport>
       <div
         className={
           message.type === 'success'
@@ -310,7 +311,7 @@ function KitchenToast({
           <X className="size-4" />
         </Link>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

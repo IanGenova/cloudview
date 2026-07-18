@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import {
   type ChangeEvent,
   type ReactNode,
@@ -54,7 +56,7 @@ function FloatingToast({
   const isSuccess = toast.type === 'success';
 
   return (
-    <div className="fixed right-6 top-24 z-[180] w-[calc(100%-3rem)] max-w-sm">
+    <DashboardToastViewport>
       <div
         className={
           isSuccess
@@ -94,7 +96,7 @@ function FloatingToast({
           </button>
         </div>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

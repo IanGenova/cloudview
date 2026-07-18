@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import { type ChangeEvent, type ReactNode, useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, Trash2, UploadCloud, X } from 'lucide-react';
@@ -67,7 +69,7 @@ export function MenuPageToast({
   const isSuccess = toast.type === 'success';
 
   return (
-    <div className="fixed right-6 top-24 z-[140] w-[calc(100%-3rem)] max-w-sm">
+    <DashboardToastViewport>
       <div
         className={
           isSuccess
@@ -103,7 +105,7 @@ export function MenuPageToast({
           </button>
         </div>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 
@@ -216,7 +218,7 @@ export function MenuToastListener() {
   const isSuccess = toast.type === 'success';
 
   return (
-    <div className="fixed right-6 top-24 z-[150] w-[calc(100%-3rem)] max-w-sm">
+    <DashboardToastViewport>
       <div
         className={
           isSuccess
@@ -252,7 +254,7 @@ export function MenuToastListener() {
           </button>
         </div>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

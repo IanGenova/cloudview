@@ -1,6 +1,9 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Ban,
   BellRing,
@@ -627,6 +630,7 @@ function mapPersistedDashboardNotification(
 export function RealtimeDashboardNotifications() {
   const router = useRouter();
   const notificationShellRef = useRef<HTMLDivElement | null>(null);
+  const notificationCenterRef = useRef<HTMLDivElement | null>(null);
 
   const [notifications, setNotifications] = useState<DashboardNotification[]>(
     []
@@ -669,7 +673,7 @@ const alertsEnabledRef = useRef(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const recentEventKeysRef = useRef<Set<string>>(new Set());
-  const notificationTimeoutsRef = useRef<number[]>([]);
+  const notificationTimeoutsRef = useRef<Map<string, number>>(new Map());
   const knownPersistedIdsRef = useRef<Set<string>>(new Set());
   const persistedInitialLoadRef = useRef(false);
   const refreshPersistedNotificationsRef = useRef<() => void>(() => undefined);
@@ -796,33 +800,45 @@ const alertsEnabledRef = useRef(false);
   }, []);
 
   useEffect(() => {
-  if (!notificationsLoaded) {
-    return;
-  }
+    if (!notificationsLoaded) {
+      return;
+    }
 
-  window.localStorage.setItem(
-    NOTIFICATION_STORAGE_KEY,
-    JSON.stringify(notifications.slice(0, MAX_STORED_NOTIFICATIONS))
-  );
-}, [notifications, notificationsLoaded]);
+    window.localStorage.setItem(
+      NOTIFICATION_STORAGE_KEY,
+      JSON.stringify(notifications.slice(0, MAX_STORED_NOTIFICATIONS))
+    );
+  }, [notifications, notificationsLoaded]);
 
   function scheduleToastRemoval(id: string) {
-  const timeoutId = window.setTimeout(() => {
-    dismissToast(id);
+    const existingTimeoutId = notificationTimeoutsRef.current.get(id);
 
-    notificationTimeoutsRef.current = notificationTimeoutsRef.current.filter(
-      (currentTimeoutId) => currentTimeoutId !== timeoutId
+    if (existingTimeoutId !== undefined) {
+      window.clearTimeout(existingTimeoutId);
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      notificationTimeoutsRef.current.delete(id);
+      setToastNotificationIds((current) =>
+        current.filter((notificationId) => notificationId !== id)
+      );
+    }, TOAST_VISIBLE_MS);
+
+    notificationTimeoutsRef.current.set(id, timeoutId);
+  }
+
+  function dismissToast(id: string) {
+    const timeoutId = notificationTimeoutsRef.current.get(id);
+
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      notificationTimeoutsRef.current.delete(id);
+    }
+
+    setToastNotificationIds((current) =>
+      current.filter((notificationId) => notificationId !== id)
     );
-  }, TOAST_VISIBLE_MS);
-
-  notificationTimeoutsRef.current.push(timeoutId);
-}
-
-function dismissToast(id: string) {
-  setToastNotificationIds((current) =>
-    current.filter((notificationId) => notificationId !== id)
-  );
-}
+  }
 
 async function markPersistedNotificationsRead({
   ids,
@@ -919,6 +935,11 @@ function markAllNotificationsRead() {
 }
 
 function clearNotifications() {
+  for (const timeoutId of notificationTimeoutsRef.current.values()) {
+    window.clearTimeout(timeoutId);
+  }
+
+  notificationTimeoutsRef.current.clear();
   setNotifications([]);
   setToastNotificationIds([]);
   setPersistedNotifications([]);
@@ -1204,11 +1225,14 @@ function pushTestNotification() {
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
 
-      if (
-        target instanceof Node &&
-        notificationShellRef.current?.contains(target)
-      ) {
-        return;
+      if (target instanceof Node) {
+        if (notificationShellRef.current?.contains(target)) {
+          return;
+        }
+
+        if (notificationCenterRef.current?.contains(target)) {
+          return;
+        }
       }
 
       setNotificationCenterOpen(false);
@@ -1785,11 +1809,11 @@ function pushTestNotification() {
       } catch {
         // Ignore disconnect errors.
       }
-      for (const timeoutId of notificationTimeoutsRef.current) {
-          window.clearTimeout(timeoutId);
-        }
+      for (const timeoutId of notificationTimeoutsRef.current.values()) {
+        window.clearTimeout(timeoutId);
+      }
 
-        notificationTimeoutsRef.current = [];
+      notificationTimeoutsRef.current.clear();
     };
   }, []);
 
@@ -1855,9 +1879,10 @@ function pushTestNotification() {
 
   return (
     <>
-      <div className="pointer-events-none fixed right-5 top-[5.25rem] z-[80] flex w-[calc(100vw-2.5rem)] max-w-md flex-col items-end gap-3">
-        <div className="w-full space-y-3">
-          {toastNotifications.map((notification) => {
+      {toastNotifications.length ? (
+        <DashboardToastViewport>
+          <div className="w-full space-y-3">
+            {toastNotifications.map((notification) => {
             const Icon = getNotificationIcon(notification.type);
             const style = getNotificationStyle(notification.type);
 
@@ -1901,16 +1926,19 @@ function pushTestNotification() {
                 </div>
               </div>
             );
-          })}
-        </div>
-      </div>
+            })}
+          </div>
+        </DashboardToastViewport>
+      ) : null}
 
       <div ref={notificationShellRef} className="relative z-[110]">
         <button
           type="button"
           onClick={() => setNotificationCenterOpen((current) => !current)}
           aria-expanded={notificationCenterOpen}
-          className={`relative inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-4 text-sm font-black transition ${
+          aria-controls="dashboard-notification-center"
+          aria-haspopup="dialog"
+          className={`relative inline-flex h-11 items-center justify-center gap-2 rounded-2xl border px-3 text-sm font-black transition sm:px-4 ${
             hasRealtimeError
               ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
               : 'border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
@@ -1929,9 +1957,16 @@ function pushTestNotification() {
           ) : null}
         </button>
 
-        {notificationCenterOpen ? (
-          <div className="absolute right-0 top-full z-[120] mt-3 w-[28rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
-            <div className="border-b border-neutral-100 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        {notificationCenterOpen
+          ? createPortal(
+              <div
+                ref={notificationCenterRef}
+                id="dashboard-notification-center"
+            role="dialog"
+            aria-label="Notification center"
+                className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] top-[calc(env(safe-area-inset-top)+8.5rem)] z-[10000] flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950 sm:inset-x-auto sm:right-5 sm:w-[28rem] sm:max-w-[calc(100vw-2.5rem)] lg:bottom-auto lg:right-6 lg:top-[5.25rem] lg:max-h-[calc(100dvh-6rem)] lg:rounded-[2rem]"
+          >
+            <div className="shrink-0 border-b border-neutral-100 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900 sm:p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-black text-neutral-950 dark:text-white">
@@ -1945,7 +1980,7 @@ function pushTestNotification() {
                 <button
                   type="button"
                   onClick={() => setNotificationCenterOpen(false)}
-                  className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  className="grid size-10 shrink-0 place-items-center rounded-full bg-white sm:size-8 text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
                   aria-label="Close notification center"
                 >
                   <X className="size-4" />
@@ -1957,7 +1992,7 @@ function pushTestNotification() {
                   type="button"
                   onClick={markAllNotificationsRead}
                   disabled={!unreadCount}
-                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xl bg-black px-2 text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
+                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-black sm:h-9 px-2 text-[11px] font-black text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
                 >
                   <CheckCheck className="size-3.5" />
                   Read all
@@ -1966,7 +2001,7 @@ function pushTestNotification() {
                 <button
                   type="button"
                   onClick={toggleSoundMuted}
-                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-neutral-200 sm:h-9 bg-white px-2 text-[11px] font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-800"
                 >
                   {soundMuted ? (
                     <VolumeX className="size-3.5" />
@@ -1980,7 +2015,7 @@ function pushTestNotification() {
                   type="button"
                   onClick={clearNotifications}
                   disabled={!totalNotificationCount}
-                  className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-red-200 sm:h-9 bg-red-50 px-2 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
                 >
                   <Trash2 className="size-3.5" />
                   Clear
@@ -2046,7 +2081,7 @@ function pushTestNotification() {
               ) : null}
             </div>
 
-            <div className="max-h-[min(440px,calc(100dvh-240px))] overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
               {latestNotifications.length ? (
                 <div className="space-y-2">
                   {latestNotifications.map((notification) => {
@@ -2098,7 +2133,7 @@ function pushTestNotification() {
                                   setNotificationCenterOpen(false);
                                   router.push(notification.href);
                                 }}
-                                className="h-8 rounded-xl bg-black px-3 text-[11px] font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+                                className="h-10 rounded-xl bg-black sm:h-8 px-3 text-[11px] font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
                               >
                                 View
                               </button>
@@ -2109,7 +2144,7 @@ function pushTestNotification() {
                                   onClick={() =>
                                     markNotificationRead(notification.id)
                                   }
-                                  className="h-8 rounded-xl border border-neutral-200 bg-white px-3 text-[11px] font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                                  className="h-10 rounded-xl border border-neutral-200 sm:h-8 bg-white px-3 text-[11px] font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-800"
                                 >
                                   Mark read
                                 </button>
@@ -2118,7 +2153,7 @@ function pushTestNotification() {
                               <button
                                 type="button"
                                 onClick={() => removeNotification(notification.id)}
-                                className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                                className="h-10 rounded-xl border border-red-200 sm:h-8 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
                               >
                                 Delete
                               </button>
@@ -2142,8 +2177,10 @@ function pushTestNotification() {
                 </div>
               )}
             </div>
-          </div>
-        ) : null}
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     </>
   );

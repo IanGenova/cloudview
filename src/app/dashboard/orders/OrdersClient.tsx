@@ -1,5 +1,7 @@
 'use client';
 
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
@@ -673,7 +675,7 @@ function Toast({ message }: { message?: Message }) {
   }
 
   return (
-    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+    <DashboardToastViewport>
       <div
         className={
           message.type === 'success'
@@ -711,7 +713,7 @@ function Toast({ message }: { message?: Message }) {
           <X className="size-4" />
         </button>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 

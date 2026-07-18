@@ -1,4 +1,6 @@
 'use client';
+
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
 import { useRouter } from 'next/navigation';
 import {
   type ReactNode,
@@ -1762,7 +1764,7 @@ return (
       ) : null}
 
       {toast ? (
-  <div className="fixed right-6 top-24 z-[120] w-[calc(100%-3rem)] max-w-sm">
+  <DashboardToastViewport>
     <div
       className={
         toast.type === 'success'
@@ -1788,7 +1790,7 @@ return (
         </button>
       </div>
     </div>
-  </div>
+  </DashboardToastViewport>
 ) : null}
 
     <NfcActionConfirmDialog

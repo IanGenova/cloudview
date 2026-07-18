@@ -1,3 +1,4 @@
+import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
 import { type ReactNode } from 'react';
 import { DashboardModule } from '@prisma/client';
 import Link from 'next/link';
@@ -123,7 +124,7 @@ function Toast({
   }
 
   return (
-    <div className="fixed right-5 top-5 z-[90] w-[calc(100vw-2.5rem)] max-w-md">
+    <DashboardToastViewport>
       <div
         className={
           message.type === 'success'
@@ -162,7 +163,7 @@ function Toast({
           <X className="size-4" />
         </Link>
       </div>
-    </div>
+    </DashboardToastViewport>
   );
 }
 
