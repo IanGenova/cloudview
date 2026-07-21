@@ -169,6 +169,18 @@ function parseUpdateProductForm(formData: FormData) {
   return parsed.data;
 }
 
+function getMenuUploadDirectory() {
+  const configuredDirectory = process.env.MENU_UPLOAD_DIR?.trim();
+
+  if (configuredDirectory) {
+    return path.resolve(configuredDirectory);
+  }
+
+  // Runtime storage fallback for local development.
+  // Do not store user uploads inside public/ or .next/.
+  return path.join(process.cwd(), 'storage', 'menu-images');
+}
+
 async function saveProductImage(file: File | null, productName: string) {
   if (!file || file.size === 0) {
     return null;
@@ -190,7 +202,7 @@ async function saveProductImage(file: File | null, productName: string) {
   const safeName = slugify(productName || 'menu-product');
   const fileName = `${safeName}-${Date.now()}.${extension}`;
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'menu');
+  const uploadDir = getMenuUploadDirectory();
   await mkdir(uploadDir, { recursive: true });
 
   const bytes = await file.arrayBuffer();
@@ -447,6 +459,7 @@ export async function createProductAction(formData: FormData) {
         priceCents: Math.round(parsed.price * 100),
         prepTimeMinutes: parsed.prepTimeMinutes,
         isAvailable: parsed.isAvailable,
+        imageUrl: finalImageUrl,
 
         images: finalImageUrl
           ? {
@@ -539,6 +552,11 @@ export async function updateProductAction(formData: FormData) {
         priceCents: Math.round(parsed.price * 100),
         prepTimeMinutes: parsed.prepTimeMinutes,
         isAvailable: parsed.isAvailable,
+        ...(finalImageUrl
+          ? {
+              imageUrl: finalImageUrl,
+            }
+          : {}),
       },
     });
 
@@ -1393,6 +1411,11 @@ export async function bulkImportMenuAction(formData: FormData) {
               priceCents: row.priceCents,
               prepTimeMinutes: row.prepTimeMinutes,
               isAvailable: row.isAvailable,
+              ...(row.imageUrl
+                ? {
+                    imageUrl: row.imageUrl,
+                  }
+                : {}),
             },
             include: {
               category: {
@@ -1416,6 +1439,7 @@ export async function bulkImportMenuAction(formData: FormData) {
               priceCents: row.priceCents,
               prepTimeMinutes: row.prepTimeMinutes,
               isAvailable: row.isAvailable,
+              imageUrl: row.imageUrl,
             },
             include: {
               category: {
@@ -1628,4 +1652,3 @@ export async function bulkImportMenuAction(formData: FormData) {
     summary,
   };
 }
-
