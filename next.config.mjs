@@ -1,70 +1,41 @@
-const lanHost = process.env.NEXT_PUBLIC_LAN_IP || '192.168.0.130';
+import baseConfig from './next.config.cloudview-base.mjs';
 
-const allowedDevOrigins = [
-  lanHost,
-  'localhost',
-  '127.0.0.1',
-];
+const existingRewrites = baseConfig.rewrites;
 
-const serverActionAllowedOrigins = [
-  lanHost,
-  `${lanHost}:3000`,
-  `http://${lanHost}:3000`,
-  `https://${lanHost}:3000`,
-
-  'localhost',
-  'localhost:3000',
-  `http://localhost:3000`,
-  `https://localhost:3000`,
-
-  '127.0.0.1',
-  '127.0.0.1:3000',
-  `http://127.0.0.1:3000`,
-  `https://127.0.0.1:3000`,
-];
-
-/** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins,
+  ...baseConfig,
 
-  // Important for PDFKit.
-  // This prevents Next/Turbopack from bundling pdfkit and breaking its Helvetica.afm path.
-  serverExternalPackages: ['pdfkit'],
+  async rewrites() {
+    const existing =
+      typeof existingRewrites === 'function'
+        ? await existingRewrites()
+        : [];
 
-  experimental: {
-    serverActions: {
-      allowedOrigins: serverActionAllowedOrigins,
-      bodySizeLimit: '50mb',
-    },
-  },
+    const normalized = Array.isArray(existing)
+      ? {
+          beforeFiles: [],
+          afterFiles: existing,
+          fallback: [],
+        }
+      : {
+          beforeFiles: existing?.beforeFiles ?? [],
+          afterFiles: existing?.afterFiles ?? [],
+          fallback: existing?.fallback ?? [],
+        };
 
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-      },
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-      },
-      {
-        protocol: 'http',
-        hostname: lanHost,
-      },
-      {
-        protocol: 'https',
-        hostname: lanHost,
-      },
-    ],
+    return {
+      beforeFiles: [
+        {
+          source: '/uploads/:path*',
+          destination:
+            '/api/runtime-uploads/:path*',
+        },
+        ...normalized.beforeFiles,
+      ],
+
+      afterFiles: normalized.afterFiles,
+      fallback: normalized.fallback,
+    };
   },
 };
 

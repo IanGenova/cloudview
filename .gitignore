@@ -50,3 +50,8 @@ secret_api_key.csv
 .next-before-*/
 node_modules/
 centrifugo/config.json
+.env.node-env-backup
+/public/uploads/
+/storage/uploads/
+/next.config.mjs.before-runtime-uploads-*
+*.log
