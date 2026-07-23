@@ -1,3 +1,4 @@
+import { getRuntimeMediaDirectory } from '@/lib/runtime-media-storage';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { mkdir, writeFile, unlink } from 'fs/promises';
@@ -95,11 +96,7 @@ export async function saveServiceRequestImageFile(params: {
     params.requestCode || params.requestId || 'unassigned'
   );
 
-  const uploadDir = path.join(
-    process.cwd(),
-    'public',
-    'uploads',
-    'service-requests',
+  const uploadDir = path.join(getRuntimeMediaDirectory('service-requests'),
     safeHotelId,
     safeRequestFolder
   );

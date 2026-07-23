@@ -55,3 +55,13 @@ centrifugo/config.json
 /storage/uploads/
 /next.config.mjs.before-runtime-uploads-*
 *.log
+.env.*
+public/uploads/
+storage/uploads/
+storage/menu-images/
+*.key
+*.p12
+*.pfx
+next.config.cloudview-base.mjs
+next.config.mjs.before-*
+_nfc-route-backup/

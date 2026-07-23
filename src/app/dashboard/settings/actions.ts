@@ -1,5 +1,7 @@
 'use server';
 
+
+import { getRuntimeMediaDirectory } from '@/lib/runtime-media-storage';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { mkdir, unlink, writeFile } from 'fs/promises';
@@ -16,12 +18,7 @@ import {
   normalizeXenditOrganizationId,
 } from '@/lib/xendit-split';
 
-const SETTINGS_UPLOAD_DIR = path.join(
-  process.cwd(),
-  'public',
-  'uploads',
-  'hotel-settings'
-);
+const SETTINGS_UPLOAD_DIR = getRuntimeMediaDirectory('hotel-settings');
 
 const SETTINGS_UPLOAD_PUBLIC_PATH = '/uploads/hotel-settings';
 

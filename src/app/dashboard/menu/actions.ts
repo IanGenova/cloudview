@@ -210,7 +210,7 @@ async function saveProductImage(file: File | null, productName: string) {
 
   await writeFile(path.join(uploadDir, fileName), buffer);
 
-  return `/uploads/menu/${fileName}`;
+  return `/api/menu-media/${fileName}`;
 }
 
 async function assertHotelAccess(hotelId: string) {

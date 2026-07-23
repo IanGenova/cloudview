@@ -309,7 +309,7 @@ export default async function GuestMenuPage({
       name: product.name,
       description: product.description,
       priceCents: product.priceCents,
-      imageUrl: product.images[0]?.url ?? null,
+      imageUrl: product.images[0]?.url || product.imageUrl || null,
       categoryName: product.category?.name ?? 'Uncategorized',
 
       productType: product.productType,

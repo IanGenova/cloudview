@@ -1,5 +1,10 @@
 "use server";
 
+
+import {
+  getRuntimeMediaDirectory,
+  resolveRuntimeMediaPathFromUrl,
+} from '@/lib/runtime-media-storage';
 import { DashboardModule, HotelGuideItemType } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { mkdir, unlink, writeFile } from "fs/promises";
@@ -331,11 +336,7 @@ async function saveHotelGuideImageFile(file: File) {
   }
 
   const fileName = `${randomUUID()}.${extension}`;
-  const uploadDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "hotel-guide",
+  const uploadDir = path.join(getRuntimeMediaDirectory('hotel-guide'),
   );
 
   await mkdir(uploadDir, {
@@ -355,7 +356,12 @@ async function deletePublicImageFile(imageUrl: string) {
     return;
   }
 
-  const fullPath = path.join(process.cwd(), "public", imageUrl);
+  const fullPath =
+    resolveRuntimeMediaPathFromUrl(imageUrl);
+
+  if (!fullPath) {
+    return;
+  }
 
   try {
     await unlink(fullPath);
@@ -384,11 +390,7 @@ async function saveHotelGuidePanoramaFile(file: File) {
   }
 
   const fileName = `${randomUUID()}-360.${extension}`;
-  const uploadDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "hotel-guide",
+  const uploadDir = path.join(getRuntimeMediaDirectory('hotel-guide'),
   );
 
   await mkdir(uploadDir, {
