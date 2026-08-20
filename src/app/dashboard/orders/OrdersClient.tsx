@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+import { renderNonFiscalNoticeHtml } from '@/lib/fiscal-notice';
 
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
@@ -542,7 +543,7 @@ function buildPrintableReceiptHtml(order: DashboardOrder) {
     <!doctype html>
     <html>
       <head>
-        <title>Receipt ${escapeHtml(order.orderCode)}</title>
+        <title>Order Summary ${escapeHtml(order.orderCode)}</title>
         <meta charset="utf-8" />
         <style>
           body {
@@ -585,7 +586,7 @@ function buildPrintableReceiptHtml(order: DashboardOrder) {
         </button>
 
         <div class="header">
-          <h1 style="margin:0;">CloudView Order Receipt</h1>
+          <h1 style="margin:0;">Order Summary</h1>
           <div class="muted">Order Code: ${escapeHtml(order.orderCode)}</div>
           <div class="muted">Hotel: ${escapeHtml(order.hotelName)}</div>
           <div class="muted">Room / Location: ${escapeHtml(order.roomLabel)}</div>
@@ -633,6 +634,8 @@ function buildPrintableReceiptHtml(order: DashboardOrder) {
             money(order.totalCents)
           )}</span></div>
         </div>
+
+        ${renderNonFiscalNoticeHtml()}
       </body>
     </html>
   `;
@@ -1400,7 +1403,7 @@ function OrderDetailsModal({
                 className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
               >
                 <Printer className="size-4" />
-                Print Receipt
+                Print Summary
               </button>
 
               {canManuallyMarkPaid(order) ? (

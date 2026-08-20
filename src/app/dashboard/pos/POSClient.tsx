@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+import { NON_FISCAL_DOCUMENT_NOTICE_SHORT } from '@/lib/fiscal-notice';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -2057,6 +2058,10 @@ export function POSClient({
                   <p className="font-black">Sale completed</p>
                   <p className="mt-1 text-sm font-semibold">
                     {lastReceiptLabel}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold text-green-700">
+                    {NON_FISCAL_DOCUMENT_NOTICE_SHORT} Issue the guest&apos;s
+                    official Invoice from your BIR-registered POS.
                   </p>
                 </div>
               ) : null}

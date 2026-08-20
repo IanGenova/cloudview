@@ -9,6 +9,7 @@ import {
   useTransition,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { renderNonFiscalNoticeHtml } from '@/lib/fiscal-notice';
 import {
   AlertTriangle,
   Banknote,
@@ -731,7 +732,7 @@ function buildPrintableReceiptHtml(stay: GuestStayRecord) {
   return `<!doctype html>
 <html>
 <head>
-  <title>${escapeHtml(folio?.folioNumber ?? 'Guest Stay Receipt')}</title>
+  <title>${escapeHtml(folio?.folioNumber ?? 'Guest Folio Statement')}</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; padding: 24px; font-family: Arial, sans-serif; color: #11100b; }
@@ -755,7 +756,7 @@ function buildPrintableReceiptHtml(stay: GuestStayRecord) {
   <div class="receipt">
     <div class="center">
       <h1>${escapeHtml(stay.hotelName)}</h1>
-      <h2>Guest Stay Receipt</h2>
+      <h2>Guest Folio Statement</h2>
       <p class="muted">${escapeHtml(folio?.folioNumber ?? 'Legacy Checkout')}</p>
     </div>
 
@@ -792,6 +793,8 @@ function buildPrintableReceiptHtml(stay: GuestStayRecord) {
     <div class="line"></div>
 
     <p class="center muted">Thank you for staying with us.</p>
+
+    ${renderNonFiscalNoticeHtml()}
   </div>
 
   <script>
@@ -3387,7 +3390,7 @@ function FolioSummaryCard({
           className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-4 text-sm font-black text-white"
         >
           <Printer className="size-4" />
-          Print Receipt
+          Print Folio Statement
         </button>
       </div>
 
