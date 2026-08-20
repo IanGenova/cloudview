@@ -692,7 +692,7 @@ function ReportTable({
                   isActive && direction === 'asc' ? 'desc' : 'asc';
 
                 return (
-                  <th
+                  <th scope="col"
                     key={`${column}-${columnIndex}`}
                     className="border-b border-neutral-100 px-4 py-3 text-xs font-black uppercase tracking-wide text-neutral-500"
                     aria-sort={

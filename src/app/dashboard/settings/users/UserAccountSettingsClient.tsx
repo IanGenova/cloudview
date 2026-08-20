@@ -1804,9 +1804,9 @@ export function UserAccountSettingsClient({
               <p className="inline-flex rounded-full border border-[#c99c38]/30 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#f1c66a]">
                 Access Control
               </p>
-              <h1 className="mt-3 text-2xl font-black tracking-tight">
+              <h2 className="mt-3 text-2xl font-black tracking-tight">
                 User Account Settings
-              </h1>
+              </h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/60">
                 Create accounts, assign hotel access, and control exactly which
                 dashboard modules each user can open.
@@ -1955,22 +1955,22 @@ export function UserAccountSettingsClient({
             <table className="w-full min-w-[1080px] text-left">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     User
                   </th>
-                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Role
                   </th>
-                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Hotel
                   </th>
-                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Status
                   </th>
-                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Access
                   </th>
-                  <th className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
                     Actions
                   </th>
                 </tr>

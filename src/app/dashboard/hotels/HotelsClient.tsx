@@ -178,6 +178,7 @@ function HotelFormFields({
           <Hotel className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
 
           <input
+            aria-label="Enter hotel name"
             name="name"
             defaultValue={hotel?.name ?? ''}
             placeholder="Enter hotel name"
@@ -194,6 +195,7 @@ function HotelFormFields({
           <LinkIcon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
 
           <input
+            aria-label="cloud-view-demo"
             name="slug"
             defaultValue={hotel?.slug ?? ''}
             placeholder="cloud-view-demo"
@@ -218,6 +220,7 @@ function HotelFormFields({
           />
 
           <input
+            aria-label="#111111"
             name="brandColor"
             defaultValue={hotel?.brandColor ?? ''}
             placeholder="#111111"
@@ -240,6 +243,7 @@ function HotelFormFields({
           />
 
           <input
+            aria-label="#B88938"
             name="accentColor"
             defaultValue={hotel?.accentColor ?? ''}
             placeholder="#B88938"
@@ -475,6 +479,7 @@ export function HotelsClient({
                     <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
 
                     <input
+            aria-label="Search hotels by name, slug, or admin"
                       name="q"
                       defaultValue={query}
                       placeholder="Search hotels by name, slug, or admin"
@@ -486,6 +491,7 @@ export function HotelsClient({
                     <ArrowUpDown className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
 
                     <select
+            aria-label="Sort hotels"
                       name="sort"
                       defaultValue={sort}
                       className="h-11 rounded-2xl border border-neutral-200 bg-white pl-11 pr-10 text-sm font-black text-neutral-700 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
@@ -523,13 +529,13 @@ export function HotelsClient({
               <table className="w-full min-w-[980px] text-left">
                 <thead>
                   <tr className="border-b border-neutral-100 bg-neutral-50/70 text-xs font-black uppercase tracking-wide text-neutral-500">
-                    <th className="px-6 py-4">Hotel / Property</th>
-                    <th className="px-6 py-4">Hotel Admin</th>
-                    <th className="px-6 py-4">Rooms</th>
-                    <th className="px-6 py-4">NFC Tags</th>
-                    <th className="px-6 py-4">Orders</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th scope="col" className="px-6 py-4">Hotel / Property</th>
+                    <th scope="col" className="px-6 py-4">Hotel Admin</th>
+                    <th scope="col" className="px-6 py-4">Rooms</th>
+                    <th scope="col" className="px-6 py-4">NFC Tags</th>
+                    <th scope="col" className="px-6 py-4">Orders</th>
+                    <th scope="col" className="px-6 py-4">Status</th>
+                    <th scope="col" className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
 

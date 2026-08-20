@@ -63,16 +63,24 @@ export async function verifyPassword(password: string, passwordHash: string) {
     return false;
   }
 
-  if (isBcryptHash(passwordHash)) {
-    return bcrypt.compare(normalizedPassword, passwordHash);
+  /**
+   * Only bcrypt-hashed credentials can authenticate.
+   *
+   * A non-bcrypt value in this column means the row stores a plain-text
+   * password (bad seed, manual SQL insert, partial restore). Such an account
+   * must never be able to sign in: accepting it would turn any read-only
+   * database exposure straight into working credentials. Fail closed and log
+   * it so the row can be found and reset.
+   */
+  if (!isBcryptHash(passwordHash)) {
+    console.error(
+      'Refused login: stored credential is not a bcrypt hash. Reset this account password.'
+    );
+
+    return false;
   }
 
-  /**
-   * Dev/legacy fallback:
-   * Allows login if an older seed accidentally stored passwordHash as plain text.
-   * New and reset passwords should still be stored through hashPassword().
-   */
-  return normalizedPassword === passwordHash.trim();
+  return bcrypt.compare(normalizedPassword, passwordHash);
 }
 
 export async function hashPassword(password: string) {

@@ -126,7 +126,13 @@ const DEFAULT_SECTIONS: DefaultGuideSection[] = [
       {
         title: "Wi-Fi",
         subtitle: "Guest internet access",
-        content: "Network and password are shown in the information cards.",
+        /*
+          The guest portal renders this item from live hotel settings, so the
+          network name and password shown to guests always match Settings.
+          This text is only a fallback for when Wi-Fi has not been configured.
+        */
+        content:
+          "Ask the front desk for the guest network name and password.",
         itemType: HotelGuideItemType.INFORMATION,
         iconKey: "Wifi",
         sortOrder: 1,

@@ -251,9 +251,23 @@ function FeaturedGuideCard({
               "Discover useful details thoughtfully prepared for your stay."}
           </p>
 
+          {/*
+            One word for one concept: a guide item is a "detail" everywhere in
+            the guest portal, matching the "Detail 01" labels on the section
+            page. Photo counts only appear when there are photos — advertising
+            "0 photos" tells the guest about an absence.
+          */}
           <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-            <span>{section.items.length} details</span>
-            <span>{section.galleryImages.length} photos</span>
+            <span>
+              {section.items.length} detail
+              {section.items.length === 1 ? "" : "s"}
+            </span>
+            {section.galleryImages.length ? (
+              <span>
+                {section.galleryImages.length} photo
+                {section.galleryImages.length === 1 ? "" : "s"}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -288,7 +302,7 @@ function GuideSectionCard({
       <div className="flex min-w-0 items-center gap-3 p-4">
         <div className="min-w-0 flex-1">
           <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d5ad55]/80">
-            {section.items.length} guide item
+            {section.items.length} detail
             {section.items.length === 1 ? "" : "s"}
           </p>
           <h3 className="mt-1.5 truncate font-serif text-[18px] font-normal tracking-wide text-[#f6f0e4]">
@@ -684,41 +698,14 @@ export function HotelGuideContent({
           </>
         )}
 
-        <section className="mt-9 overflow-hidden rounded-[1.9rem] border border-[#d5ad55]/25 bg-[linear-gradient(145deg,#d9b45f,#b9882e)] p-5 text-[#17130b] shadow-[0_28px_70px_rgba(163,115,31,0.25)]">
-          <div className="flex items-start gap-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl border border-black/10 bg-black/[0.08]">
-              <HelpCircle className="size-5" />
-            </span>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-black/50">
-                Personal assistance
-              </p>
-              <h2 className="mt-1.5 font-serif text-2xl font-normal leading-tight">
-                Allow us to take care of the rest.
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-black/65">
-                Our team is ready to assist with requests, dining, directions
-                and anything that makes your stay more comfortable.
-              </p>
-
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                <Link
-                  href={`/t/${tagCode}/service`}
-                  className="rounded-[1.1rem] bg-[#0d0d0b] px-3 py-3.5 text-center text-xs font-bold text-white transition active:scale-[0.98]"
-                >
-                  Request service
-                </Link>
-                <Link
-                  href={`/t/${tagCode}/contact`}
-                  className="rounded-[1.1rem] border border-black/15 bg-white/35 px-3 py-3.5 text-center text-xs font-bold text-black transition active:scale-[0.98]"
-                >
-                  Contact staff
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/*
+          The "Personal assistance" panel was removed. It offered Request
+          service and Contact staff — the same two destinations already given
+          by the "How may we assist?" cards higher on this page and by the
+          persistent bottom tab bar, which is visible at all times. Three routes
+          to the same two screens on one page pushed the actual guide content
+          further out of reach.
+        */}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { isNextRedirectError } from '@/lib/next-control-flow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -1230,6 +1231,15 @@ return new Response(bufferToArrayBuffer(buffer), {
   },
 });
   } catch (error) {
+    /*
+      requireUser() redirects unauthenticated callers by throwing Next's
+      internal redirect signal. It must pass through untouched, otherwise the
+      login redirect is reported as a server error.
+    */
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error('Report export failed:', error);
 
     return NextResponse.json(

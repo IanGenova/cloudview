@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { Role } from '@prisma/client';
 import { requireUser } from '@/lib/auth';
-import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import {
+  buildCentrifugoSubscriptionTokens,
+  createCentrifugoConnectionToken,
+} from '@/lib/realtime/centrifugo-token';
 import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
@@ -39,5 +42,10 @@ export async function GET() {
   return NextResponse.json({
     token,
     channels,
+    subscriptionTokens: buildCentrifugoSubscriptionTokens({
+      subject: `dashboard:${user.id}:inventory`,
+      channels,
+      ttlSeconds: 60 * 60,
+    }),
   });
 }

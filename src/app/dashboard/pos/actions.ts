@@ -21,6 +21,7 @@ import { db } from '@/lib/db';
 import { cleanText } from '@/lib/sanitize';
 import { randomCode } from '@/lib/utils';
 import { logActivity } from '@/lib/activity';
+import { createDashboardNotification } from '@/lib/dashboard-notifications';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
@@ -126,6 +127,41 @@ function revalidatePOSPaths() {
   revalidatePath('/t/[tagCode]/service', 'page');
 }
 
+export async function getActivePOSRooms(hotelIdInput: string) {
+  const user = await requireUser();
+
+  requireRole(user.role, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'STAFF']);
+
+  const hotelId = cleanText(hotelIdInput);
+
+  if (!hotelId) {
+    throw new Error('Hotel is required.');
+  }
+
+  assertHotelScope(user, hotelId);
+
+  return db.room.findMany({
+    where: {
+      hotelId,
+      isActive: true,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      number: true,
+      name: true,
+    },
+    orderBy: [
+      {
+        number: 'asc',
+      },
+      {
+        name: 'asc',
+      },
+    ],
+  });
+}
+
 type POSOrderActor = {
   id: string;
   name: string;
@@ -167,6 +203,26 @@ async function createPOSOrderInternal(
 
   if (!Object.values(PaymentMethod).includes(paymentMethod)) {
     throw new Error('Invalid payment method.');
+  }
+
+  if (roomId) {
+    const activeRoom = await db.room.findFirst({
+      where: {
+        id: roomId,
+        hotelId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!activeRoom) {
+      throw new Error(
+        'The selected room was deleted or is no longer active. Please select another room.'
+      );
+    }
   }
 
   const quantityByProductId = new Map<string, number>();
@@ -901,6 +957,37 @@ let groupedServiceRequestCode: string | null = null;
       productIds: affectedInventoryIds,
       source: 'POS_TERMINAL',
     });
+  }
+
+  /**
+   * Surface the sale in the dashboard notification center.
+   *
+   * POS sales previously produced activity-log entries and realtime kitchen
+   * events but no notification, so a counter sale never appeared in the bell
+   * for anyone not already watching the kitchen screen.
+   */
+  const posSaleCodes = [
+    result.order?.orderCode,
+    ...result.serviceRequests.map((request) => request.requestCode),
+  ].filter(Boolean) as string[];
+
+  if (posSaleCodes.length > 0) {
+    await Promise.allSettled([
+      createDashboardNotification({
+        hotelId,
+        type: 'POS_SALE',
+        title: 'New POS Sale',
+        message: `${posSaleCodes.join(', ')} recorded at the POS terminal.`,
+        url: result.order ? '/dashboard/orders' : '/dashboard/service-requests',
+        payload: {
+          orderCode: result.order?.orderCode ?? null,
+          serviceRequestCodes: result.serviceRequests.map(
+            (request) => request.requestCode
+          ),
+          source: 'POS_TERMINAL',
+        },
+      }),
+    ]);
   }
 
   revalidatePOSPaths();

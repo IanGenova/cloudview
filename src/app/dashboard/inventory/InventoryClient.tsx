@@ -298,7 +298,7 @@ function SortableTableHeader({
         : 'justify-start text-left';
 
   return (
-    <th
+    <th scope="col"
       className="px-4 py-3 text-xs font-black uppercase text-neutral-500"
       aria-sort={
         isActive
@@ -2146,6 +2146,7 @@ export function InventoryClient({
                     Search Menu
                   </label>
                   <Input
+            aria-label="Search inventory"
                     value={menuSearch}
                     onChange={(event) => setMenuSearch(event.target.value)}
                     placeholder="Search name, category, hotel, or component"
@@ -2157,6 +2158,7 @@ export function InventoryClient({
                     Category
                   </label>
                   <select
+            aria-label="Category filter"
                     value={menuCategoryFilter}
                     onChange={(event) =>
                       setMenuCategoryFilter(event.target.value)
@@ -2177,6 +2179,7 @@ export function InventoryClient({
                     Filter Status
                   </label>
                   <select
+            aria-label="Stock status filter"
                     value={menuFilter}
                     onChange={(event) =>
                       setMenuFilter(event.target.value as MenuFilterValue)
@@ -2249,7 +2252,7 @@ export function InventoryClient({
                   <table className="w-full min-w-[1180px] text-left">
                     <thead className="bg-neutral-50">
                       <tr>
-                        <th className="w-14 px-4 py-3 text-center">
+                        <th scope="col" className="w-14 px-4 py-3 text-center">
                           <button
                             type="button"
                             onClick={toggleCurrentMenuPageItems}
@@ -2312,7 +2315,7 @@ export function InventoryClient({
                           direction={menuSort.direction}
                           onSort={handleMenuSort}
                         />
-                        <th className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
                           Action
                         </th>
                       </tr>
@@ -2671,7 +2674,7 @@ export function InventoryClient({
                           direction={serviceSort.direction}
                           onSort={handleServiceSort}
                         />
-                        <th className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
                           Actions
                         </th>
                       </tr>

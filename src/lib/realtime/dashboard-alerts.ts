@@ -1,5 +1,37 @@
 import { publishManyToCentrifugo } from '@/lib/realtime/centrifugo-publisher';
 import { realtimeChannels } from '@/lib/realtime/channels';
+import { createDashboardNotification } from '@/lib/dashboard-notifications';
+
+/**
+ * Record the alert in the notification centre as well as publishing it.
+ *
+ * A Centrifugo publish is fire-and-forget: it only reaches dashboards that are
+ * open and connected at that instant. If realtime is down — or nobody is
+ * looking — the alert is lost with no trace. Persisting it means the bell picks
+ * it up on its next poll and it survives until someone reads it.
+ */
+async function recordAlertNotification(input: {
+  hotelId: string;
+  type: 'LOW_STOCK' | 'ORDER_UPDATED';
+  title: string;
+  message: string;
+  url: string;
+  payload: Record<string, unknown>;
+}) {
+  try {
+    await createDashboardNotification({
+      hotelId: input.hotelId,
+      type: input.type,
+      title: input.title,
+      message: input.message,
+      url: input.url,
+      payload: input.payload as never,
+    });
+  } catch (error) {
+    // Never let notification persistence break the realtime publish path.
+    console.error('Failed to persist dashboard alert notification:', error);
+  }
+}
 
 type LowStockAlertPayload = {
   event: 'inventory.low_stock';
@@ -76,6 +108,22 @@ export async function publishLowStockAlert(payload: {
 
   validateLowStockAlertPayload(data);
 
+  await recordAlertNotification({
+    hotelId: payload.hotelId,
+    type: 'LOW_STOCK',
+    title: 'Low Stock Alert',
+    message: `${payload.itemName} is down to ${payload.availableQty} ${payload.unit} (reorder level ${payload.reorderLevel}).`,
+    url: '/dashboard/inventory',
+    payload: {
+      inventoryItemId: payload.inventoryItemId,
+      itemName: payload.itemName,
+      availableQty: payload.availableQty,
+      reorderLevel: payload.reorderLevel,
+      unit: payload.unit,
+      source: payload.source ?? null,
+    },
+  });
+
   await publishManyToCentrifugo([
     {
       channel: realtimeChannels.dashboardHotelInventory(payload.hotelId),
@@ -115,6 +163,33 @@ export async function publishCancelledItemAlert(payload: {
   };
 
   validateCancelledItemAlertPayload(data);
+
+  await recordAlertNotification({
+    hotelId: payload.hotelId,
+    type: 'ORDER_UPDATED',
+    title: payload.wholeOrderCancelled
+      ? 'Order Cancelled'
+      : 'Order Item Cancelled',
+    message: payload.wholeOrderCancelled
+      ? `${payload.orderCode} was cancelled.${
+          payload.reason ? ` Reason: ${payload.reason}` : ''
+        }`
+      : `${payload.cancelledQty ?? 1}× ${
+          payload.itemName ?? 'item'
+        } cancelled on ${payload.orderCode}.${
+          payload.reason ? ` Reason: ${payload.reason}` : ''
+        }`,
+    url: '/dashboard/orders',
+    payload: {
+      orderId: payload.orderId ?? null,
+      orderCode: payload.orderCode,
+      itemName: payload.itemName ?? null,
+      cancelledQty: payload.cancelledQty ?? null,
+      reason: payload.reason ?? null,
+      wholeOrderCancelled: Boolean(payload.wholeOrderCancelled),
+      source: payload.source ?? null,
+    },
+  });
 
   await publishManyToCentrifugo([
     {

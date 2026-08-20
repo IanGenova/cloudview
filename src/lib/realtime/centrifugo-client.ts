@@ -48,11 +48,60 @@ function normalizeCentrifugoUrl(rawUrl: string) {
   }
 }
 
+/**
+ * `NEXT_PUBLIC_*` values are inlined at build time, so a bundle built for
+ * production carries the production websocket host into every other
+ * environment. Running that same build on a LAN address or on localhost then
+ * tries to reach the production Centrifugo and silently fails forever.
+ *
+ * When the configured host does not match the host actually serving the page,
+ * and the page is being served from localhost or a private LAN address, prefer
+ * the current host and keep the configured port and path. Production, where the
+ * hosts match, is unaffected.
+ */
+function adaptUrlToCurrentHost(rawUrl: string) {
+  if (typeof window === 'undefined') {
+    return rawUrl;
+  }
+
+  try {
+    const configured = new URL(rawUrl);
+    const currentHostname = window.location.hostname;
+
+    if (configured.hostname === currentHostname) {
+      return rawUrl;
+    }
+
+    const isLocalOrLan =
+      currentHostname === 'localhost' ||
+      currentHostname === '127.0.0.1' ||
+      currentHostname.startsWith('192.168.') ||
+      currentHostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(currentHostname);
+
+    if (!isLocalOrLan) {
+      return rawUrl;
+    }
+
+    configured.hostname = currentHostname;
+
+    console.info(
+      `Centrifugo host rewritten to ${currentHostname} because the build-time value (${
+        new URL(rawUrl).hostname
+      }) does not match the host serving this page.`
+    );
+
+    return configured.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 function getCentrifugoUrl() {
   const explicitUrl = process.env.NEXT_PUBLIC_CENTRIFUGO_WS_URL;
 
   if (explicitUrl) {
-    return normalizeCentrifugoUrl(explicitUrl);
+    return normalizeCentrifugoUrl(adaptUrlToCurrentHost(explicitUrl));
   }
 
   if (typeof window === 'undefined') {
@@ -114,6 +163,65 @@ async function fetchFreshRealtimeToken(tokenEndpoint: string) {
   }
 
   return payload.token;
+}
+
+/**
+ * Options for a single channel subscription.
+ *
+ * Centrifugo runs with `allow_subscribe_for_client: false`, so every
+ * subscription must carry a per-channel token minted by our token endpoint.
+ * `getToken` lets the SDK re-fetch a fresh one when the current token expires,
+ * so a long-lived dashboard does not silently stop receiving events.
+ */
+export function createSubscriptionOptions({
+  channel,
+  subscriptionTokens,
+  tokenEndpoint,
+}: {
+  channel: string;
+  subscriptionTokens?: Record<string, string>;
+  tokenEndpoint?: string;
+}) {
+  const token = subscriptionTokens?.[channel];
+
+  if (!token) {
+    return undefined;
+  }
+
+  return {
+    token,
+    ...(tokenEndpoint
+      ? {
+          getToken: async () => {
+            const response = await fetch(tokenEndpoint, {
+              method: 'GET',
+              cache: 'no-store',
+              credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                `Unable to refresh subscription token for ${channel}. ${tokenEndpoint} returned HTTP ${response.status}.`
+              );
+            }
+
+            const payload = (await response.json()) as {
+              subscriptionTokens?: Record<string, string>;
+            };
+
+            const refreshed = payload.subscriptionTokens?.[channel];
+
+            if (!refreshed) {
+              throw new Error(
+                `No subscription token returned for ${channel}. Access may have been revoked.`
+              );
+            }
+
+            return refreshed;
+          },
+        }
+      : {}),
+  };
 }
 
 export function createCentrifugoClient(

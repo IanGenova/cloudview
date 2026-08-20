@@ -13,6 +13,23 @@ function messageForReason(reason?: string) {
     case 'expired':
       return 'Your NFC access session expired because it was inactive or reached its security time limit.';
 
+    /*
+      These three are not the guest's fault and must not be worded as though
+      they were. A device-mismatch fires whenever the browser's user agent
+      changes — a browser update, switching to "Request desktop site", or an
+      in-app browser handing the page to Safari or Chrome. Falling through to
+      the default copy told the guest that copied and shared links are blocked,
+      which reads as an accusation for something they did not do.
+    */
+    case 'device-mismatch':
+      return 'For your security this session is linked to the browser you first tapped with, and your browser has changed. Nothing is wrong — just tap the panel again to continue where you left off.';
+
+    case 'network-mismatch':
+      return 'Your connection changed since you tapped, so this session was closed for your security. Tap the panel again to carry on.';
+
+    case 'idle-timeout':
+      return 'This session paused after a period of inactivity, which keeps your room details private. Tap the panel again to pick up where you left off.';
+
     case 'no-session':
       return 'This page can only be opened after tapping the official NFC panel. Direct guest portal links are not accepted.';
 
@@ -60,6 +77,17 @@ function titleForReason(reason?: string) {
 
     case 'session-check-failed':
       return 'Unable to Verify Session';
+
+    /*
+      A neutral heading for the cases the guest did not cause. "Tap NFC Again"
+      as a bare command reads as a rejection when the guest was mid-task.
+    */
+    case 'device-mismatch':
+    case 'network-mismatch':
+      return 'Let’s Reconnect You';
+
+    case 'idle-timeout':
+      return 'Session Paused';
 
     default:
       return 'Tap NFC Again';

@@ -536,19 +536,19 @@ export default async function RewardsPage({
             <table className="w-full min-w-[680px] text-left">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Guest
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Hotel
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Available
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Earned
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Redeemed
                   </th>
                 </tr>
@@ -615,22 +615,22 @@ export default async function RewardsPage({
             <table className="w-full min-w-[860px] text-left">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Guest
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Points
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Source
                   </th>
-                  <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                  <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                     Notes
                   </th>
                 </tr>
@@ -712,28 +712,28 @@ export default async function RewardsPage({
           <table className="w-full min-w-[980px] text-left">
             <thead className="bg-neutral-50">
               <tr>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Code
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Guest
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Reward
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Hotel
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Points
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Status
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Date
                 </th>
-                <th className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-4 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Action
                 </th>
               </tr>

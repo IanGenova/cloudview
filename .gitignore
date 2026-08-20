@@ -65,3 +65,10 @@ storage/menu-images/
 next.config.cloudview-base.mjs
 next.config.mjs.before-*
 _nfc-route-backup/
+
+# Centrifugo binary and live config (contains secrets — never commit)
+centrifugo/centrifugo.exe
+centrifugo/*.exe
+centrifugo/config.json
+centrifugo/config.json.backup-*
+centrifugo/config.json.bak-*

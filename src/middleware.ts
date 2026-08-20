@@ -70,6 +70,10 @@ function isServerActionRequest(request: NextRequest) {
   return request.method === 'POST' && request.headers.has('next-action');
 }
 
+function isDashboardPath(pathname: string) {
+  return pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+}
+
 async function verifyDashboardSession(
   request: NextRequest
 ): Promise<DashboardSession | null> {
@@ -235,8 +239,46 @@ function shouldForceHttps(request: NextRequest) {
   return request.nextUrl.protocol !== 'https:';
 }
 
-function applySecurityHeaders(response: NextResponse) {
+/**
+ * Is this response actually being delivered over TLS?
+ *
+ * `NODE_ENV=production` does not imply HTTPS. CloudView ships a LAN mode where
+ * a production build is served over plain HTTP on a private address so NFC
+ * phones can reach it, and the guest portal explicitly supports that via
+ * NEXT_PUBLIC_FORCE_HTTPS=false. The security policy has to follow the actual
+ * transport, not the build mode.
+ */
+function isSecureRequest(request: NextRequest) {
+  const forwardedProto = request.headers
+    .get('x-forwarded-proto')
+    ?.split(',')[0]
+    ?.trim()
+    .toLowerCase();
+
+  if (forwardedProto) {
+    return forwardedProto === 'https';
+  }
+
+  return request.nextUrl.protocol === 'https:';
+}
+
+function applySecurityHeaders(response: NextResponse, request: NextRequest) {
   const isDev = process.env.NODE_ENV !== 'production';
+  const secure = isSecureRequest(request);
+
+  /**
+   * Websocket scheme must match the page scheme.
+   *
+   * On an HTTPS page the browser only permits `wss:`, and `ws:` would be
+   * blocked as mixed content anyway. On an HTTP page the reverse is true: the
+   * realtime client connects with `ws:`, so a policy of `wss:` only silently
+   * blocks every Centrifugo connection — which is what broke realtime in LAN
+   * mode. Allowing `ws:` only while the page itself is already insecure adds
+   * no downgrade risk.
+   */
+  const connectSrc = secure
+    ? "connect-src 'self' https: wss:"
+    : "connect-src 'self' http: https: ws: wss:";
 
   const csp = [
     "default-src 'self'",
@@ -250,12 +292,15 @@ function applySecurityHeaders(response: NextResponse) {
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
       : "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
-    isDev
-      ? "connect-src 'self' ws: wss: http: https:"
-      : "connect-src 'self' https: wss:",
+    isDev ? "connect-src 'self' ws: wss: http: https:" : connectSrc,
     "media-src 'self' blob: https:",
     "worker-src 'self' blob:",
-    isDev ? '' : 'upgrade-insecure-requests',
+    /*
+      Only upgrade subresources when the page is already served over TLS.
+      Emitting this on an HTTP LAN deployment rewrites same-origin requests to
+      https:// against a host that has no certificate.
+    */
+    secure && !isDev ? 'upgrade-insecure-requests' : '',
   ]
     .filter(Boolean)
     .join('; ');
@@ -269,7 +314,12 @@ function applySecurityHeaders(response: NextResponse) {
     'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()'
   );
 
-  if (process.env.NODE_ENV === 'production') {
+  /*
+    HSTS pins the origin to HTTPS for two years. Sending it from a plain-HTTP
+    LAN host is meaningless at best and, if that host is ever reached over a
+    real domain, locks it out.
+  */
+  if (secure && !isDev) {
     response.headers.set(
       'Strict-Transport-Security',
       'max-age=63072000; includeSubDomains; preload'
@@ -286,7 +336,7 @@ export async function middleware(request: NextRequest) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = 'https:';
 
-    return applySecurityHeaders(NextResponse.redirect(httpsUrl, 308));
+    return applySecurityHeaders(NextResponse.redirect(httpsUrl, 308), request);
   }
 
   /*
@@ -294,7 +344,18 @@ export async function middleware(request: NextRequest) {
     Let each Server Action enforce requireUser() / requireRole().
   */
   if (isServerActionRequest(request)) {
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next(), request);
+  }
+
+  /*
+    Everything outside /dashboard — the guest portal, NFC launch routes, the
+    marketing page and the API — still needs the security headers, but must not
+    be pushed through dashboard session/role routing. The guest portal runs its
+    own NFC session gate (requireNfcGuestAccess) and the API routes authorize
+    themselves.
+  */
+  if (!isDashboardPath(pathname)) {
+    return applySecurityHeaders(NextResponse.next(), request);
   }
 
   const session = await verifyDashboardSession(request);
@@ -303,16 +364,18 @@ export async function middleware(request: NextRequest) {
   if (isLoginPage) {
     if (session) {
       return applySecurityHeaders(
-        NextResponse.redirect(createSafeNextRedirect(request, session.role))
+        NextResponse.redirect(createSafeNextRedirect(request, session.role)),
+        request
       );
     }
 
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(NextResponse.next(), request);
   }
 
   if (!session) {
     return applySecurityHeaders(
-      NextResponse.redirect(createLoginRedirect(request))
+      NextResponse.redirect(createLoginRedirect(request)),
+      request
     );
   }
 
@@ -321,12 +384,18 @@ export async function middleware(request: NextRequest) {
     redirectUrl.pathname = dashboardHomeForRole(session.role);
     redirectUrl.search = '';
 
-    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl), request);
   }
 
-  return applySecurityHeaders(NextResponse.next());
+  return applySecurityHeaders(NextResponse.next(), request);
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  /**
+   * Run on every route so the security headers (CSP, HSTS, frame-deny,
+   * nosniff) also cover the guest portal, the NFC launch routes and the API —
+   * not just /dashboard. Static assets and image optimizer output are excluded
+   * because they are served from disk and do not need the header pass.
+   */
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|uploads/).*)'],
 };

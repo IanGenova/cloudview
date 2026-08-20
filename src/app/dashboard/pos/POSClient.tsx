@@ -23,7 +23,10 @@ import {
   ExistingXenditSessionGuard,
   type ExistingXenditGuardStatus,
 } from '@/components/payment/ExistingXenditSessionGuard';
-import { createPOSOrder } from './actions';
+import {
+  createPOSOrder,
+  getActivePOSRooms,
+} from './actions';
 import {
   cancelXenditPOSCheckout,
   createXenditPOSCheckout,
@@ -624,7 +627,7 @@ function FloatingPOSToast({
 export function POSClient({
   selectedHotelId,
   hotels,
-  rooms,
+  rooms: _initialRooms,
   products,
   services,
   currency,
@@ -665,6 +668,8 @@ export function POSClient({
 
   const [guestName, setGuestName] = useState('');
   const [roomId, setRoomId] = useState('');
+  const [activeRooms, setActiveRooms] = useState<POSRoom[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
     'CASH' | 'POS' | 'XENDIT' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER'
@@ -696,6 +701,64 @@ export function POSClient({
 
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshActiveRooms() {
+      setRoomsLoading(true);
+
+      try {
+        const nextRooms = await getActivePOSRooms(selectedHotelId);
+
+        if (cancelled) {
+          return;
+        }
+
+        setActiveRooms(nextRooms);
+        setRoomId((currentRoomId) => {
+          if (
+            currentRoomId &&
+            !nextRooms.some((room) => room.id === currentRoomId)
+          ) {
+            return '';
+          }
+
+          return currentRoomId;
+        });
+      } catch (roomError) {
+        if (cancelled) {
+          return;
+        }
+
+        const message =
+          roomError instanceof Error
+            ? roomError.message
+            : 'Unable to refresh the active room list.';
+
+        setActiveRooms([]);
+        setRoomId('');
+        setError(message);
+        setToast({
+          type: 'error',
+          text: message,
+        });
+      } finally {
+        if (!cancelled) {
+          setRoomsLoading(false);
+        }
+      }
+    }
+
+    void refreshActiveRooms();
+
+    window.addEventListener('focus', refreshActiveRooms);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', refreshActiveRooms);
+    };
+  }, [selectedHotelId]);
 
   useEffect(() => {
     if (returnedXenditSessionId) {
@@ -1629,6 +1692,7 @@ export function POSClient({
                   Hotel
                 </label>
                 <select
+                  aria-label="Hotel"
                   value={selectedHotelId}
                   onChange={(event) => {
                     router.replace(`/dashboard/pos?hotelId=${event.target.value}`, { scroll: false });
@@ -1652,6 +1716,7 @@ export function POSClient({
                     <div className="flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3">
                       <Search className="size-4 shrink-0 text-neutral-400" />
                       <input
+                        aria-label="Search food products"
                         value={productQuery}
                         onChange={(event) => setProductQuery(event.target.value)}
                         placeholder="Search product, bundle, or component..."
@@ -1665,6 +1730,7 @@ export function POSClient({
                       Food Stock Filter
                     </label>
                     <select
+                      aria-label="Food stock filter"
                       value={productAvailabilityFilter}
                       onChange={(event) =>
                         setProductAvailabilityFilter(
@@ -1690,6 +1756,7 @@ export function POSClient({
                     <div className="flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3">
                       <Search className="size-4 shrink-0 text-neutral-400" />
                       <input
+                        aria-label="Search service items"
                         value={serviceQuery}
                         onChange={(event) => setServiceQuery(event.target.value)}
                         placeholder="Search service request item..."
@@ -1703,6 +1770,7 @@ export function POSClient({
                       Service Filter
                     </label>
                     <select
+                      aria-label="Service stock filter"
                       value={serviceAvailabilityFilter}
                       onChange={(event) =>
                         setServiceAvailabilityFilter(
@@ -2179,6 +2247,7 @@ export function POSClient({
                     Customer / Guest Name
                   </label>
                   <input
+                    aria-label="Customer or guest name"
                     value={guestName}
                     onChange={(event) => setGuestName(event.target.value)}
                     placeholder="Customer / guest name"
@@ -2191,17 +2260,30 @@ export function POSClient({
                     Room / Customer Type
                   </label>
                   <select
+                    aria-label="Room or customer type"
                     value={roomId}
                     onChange={(event) => setRoomId(event.target.value)}
+                    aria-busy={roomsLoading}
                     className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold outline-none"
                   >
-                    <option value="">No room / walk-in customer</option>
-                    {rooms.map((room) => (
+                    <option value="">
+                      {roomsLoading
+                        ? 'Loading active rooms...'
+                        : 'No room / walk-in customer'}
+                    </option>
+
+                    {activeRooms.map((room) => (
                       <option key={room.id} value={room.id}>
                         Room {room.number} {room.name ? `- ${room.name}` : ''}
                       </option>
                     ))}
                   </select>
+
+                  {!roomsLoading && activeRooms.length === 0 ? (
+                    <p className="mt-1 text-[11px] font-bold text-neutral-400">
+                      No active rooms are available for this hotel.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -2209,6 +2291,7 @@ export function POSClient({
                     Payment Method
                   </label>
                   <select
+                    aria-label="Payment method"
                     value={paymentMethod}
                     onChange={(event) =>
                       setPaymentMethod(
@@ -2233,6 +2316,7 @@ export function POSClient({
                       Cash Tendered
                     </label>
                     <input
+                      aria-label="Cash tendered"
                       value={cashTendered}
                       onChange={(event) => setCashTendered(event.target.value)}
                       placeholder="Cash tendered"
@@ -2249,6 +2333,7 @@ export function POSClient({
                     Order / Service Notes
                   </label>
                   <textarea
+                    aria-label="Order or service notes"
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                     placeholder="Order notes"

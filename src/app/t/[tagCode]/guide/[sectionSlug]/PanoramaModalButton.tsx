@@ -196,7 +196,7 @@ export function PanoramaModalButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full border border-[#e4c36f]/45 bg-[linear-gradient(135deg,#e0bb60,#b98529)] px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.17em] text-[#17130b] shadow-[0_14px_35px_rgba(181,132,40,0.28)] transition hover:brightness-110 active:scale-[0.98]"
+        className="group inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full border border-[#e4c36f]/45 bg-[linear-gradient(135deg,#e0bb60,#b98529)] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.17em] text-[#17130b] shadow-[0_14px_35px_rgba(181,132,40,0.28)] transition hover:brightness-110 active:scale-[0.98]"
       >
         <span className="grid size-7 place-items-center rounded-full bg-black/10 transition group-hover:rotate-6">
           <Eye className="size-3.5" />

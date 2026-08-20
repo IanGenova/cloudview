@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
-import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import {
+  createCentrifugoConnectionToken,
+  createCentrifugoSubscriptionToken,
+} from '@/lib/realtime/centrifugo-token';
 
+/**
+ * Build the realtime handshake payload for a caller.
+ *
+ * `channels` is the list this caller is actually entitled to, resolved
+ * server-side from their session/hotel scope. For each one we mint a
+ * per-channel subscription token so Centrifugo can enforce that scope itself
+ * — the channel list alone is only a hint the client could ignore.
+ */
 export function createRealtimeTokenResponse(params: {
   subject: string;
   channels: string[];
@@ -21,13 +32,13 @@ export function createRealtimeTokenResponse(params: {
     );
   }
 
-  if (!uniqueChannels.length) {
-    return NextResponse.json({
-      token: createCentrifugoConnectionToken({
-        subject: params.subject,
-        ttlSeconds: params.ttlSeconds,
-      }),
-      channels: [],
+  const subscriptionTokens: Record<string, string> = {};
+
+  for (const channel of uniqueChannels) {
+    subscriptionTokens[channel] = createCentrifugoSubscriptionToken({
+      subject: params.subject,
+      channel,
+      ttlSeconds: params.ttlSeconds,
     });
   }
 
@@ -37,6 +48,7 @@ export function createRealtimeTokenResponse(params: {
       ttlSeconds: params.ttlSeconds,
     }),
     channels: uniqueChannels,
+    subscriptionTokens,
   });
 }
 

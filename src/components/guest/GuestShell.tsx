@@ -101,7 +101,7 @@ export function GuestTopBar({
         <Link
           href={backHref}
           className={cn(
-            'grid size-10 place-items-center rounded-full',
+            'grid size-11 place-items-center rounded-full',
             dark ? 'hover:bg-white/10' : 'hover:bg-black/5'
           )}
           aria-label="Go back"
@@ -129,7 +129,7 @@ export function GuestTopBar({
       <button
         type="button"
         className={cn(
-          'grid size-10 place-items-center rounded-full',
+          'grid size-11 place-items-center rounded-full',
           dark ? 'hover:bg-white/10' : 'hover:bg-black/5'
         )}
         aria-label="Notifications"

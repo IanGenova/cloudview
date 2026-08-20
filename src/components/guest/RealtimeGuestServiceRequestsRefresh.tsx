@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
+import {
+  createCentrifugoClient,
+  createSubscriptionOptions,
+} from '@/lib/realtime/centrifugo-client';
 
 type RealtimeServiceRequestEvent =
   | 'service-request-created'
@@ -145,6 +148,7 @@ export function RealtimeGuestServiceRequestsRefresh({
         const payload = (await response.json()) as {
           token?: string;
           channels?: string[];
+          subscriptionTokens?: Record<string, string>;
         };
 
         if (!payload.token || !payload.channels?.length || disposed) {
@@ -161,7 +165,14 @@ export function RealtimeGuestServiceRequestsRefresh({
         }
 
         const channel = payload.channels[0];
-        subscription = centrifuge.newSubscription(channel);
+        subscription = centrifuge.newSubscription(
+          channel,
+          createSubscriptionOptions({
+            channel,
+            subscriptionTokens: payload.subscriptionTokens,
+            tokenEndpoint,
+          })
+        );
 
         subscription.on('publication', (ctx) => {
           const data = ctx.data as RealtimeServiceRequestPayload;

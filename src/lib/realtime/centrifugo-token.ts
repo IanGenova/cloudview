@@ -77,6 +77,102 @@ export function createCentrifugoConnectionToken({
   return `${signingInput}.${base64Url(signature)}`;
 }
 
+type CentrifugoSubscriptionTokenInput = {
+  subject: string;
+  channel: string;
+  ttlSeconds?: number;
+};
+
+/**
+ * Per-channel subscription token.
+ *
+ * A connection token only proves *who* is connecting. It carries no channel
+ * scope, so with `allow_subscribe_for_client: true` any valid connection could
+ * subscribe to any channel matching the namespace regex — including another
+ * hotel's `kitchen-<hotelId>`, `service-requests-<hotelId>` or
+ * `dashboard-hotel-<hotelId>-orders`.
+ *
+ * Centrifugo must therefore run with `allow_subscribe_for_client: false`, and
+ * every subscription must present one of these tokens, which binds the
+ * subscriber to exactly one channel. The channel is signed, so a client cannot
+ * widen its own access by editing the request.
+ */
+export function createCentrifugoSubscriptionToken({
+  subject,
+  channel,
+  ttlSeconds = 60 * 60,
+}: CentrifugoSubscriptionTokenInput) {
+  const safeSubject = subject?.trim();
+  const safeChannel = channel?.trim();
+
+  if (!safeSubject) {
+    throw new Error(
+      'Centrifugo subscription token subject is missing. The subject must be a non-empty user/session id.'
+    );
+  }
+
+  if (!safeChannel) {
+    throw new Error('Centrifugo subscription token channel is missing.');
+  }
+
+  if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+    throw new Error('Centrifugo token ttlSeconds must be greater than 0.');
+  }
+
+  const now = getJwtNowSeconds();
+
+  const encodedHeader = base64Url(
+    JSON.stringify({
+      typ: 'JWT',
+      alg: 'HS256',
+    })
+  );
+
+  const encodedPayload = base64Url(
+    JSON.stringify({
+      sub: safeSubject,
+      channel: safeChannel,
+      iat: now,
+      exp: now + ttlSeconds,
+    })
+  );
+
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+  const signature = signHs256(signingInput, getCentrifugoTokenSecret());
+
+  return `${signingInput}.${base64Url(signature)}`;
+}
+
+/**
+ * Mint one subscription token per channel, keyed by channel name.
+ * Shaped for direct inclusion in a realtime handshake response.
+ */
+export function buildCentrifugoSubscriptionTokens({
+  subject,
+  channels,
+  ttlSeconds,
+}: {
+  subject: string;
+  channels: string[];
+  ttlSeconds?: number;
+}) {
+  const tokens: Record<string, string> = {};
+
+  for (const channel of Array.from(new Set(channels))) {
+    if (!channel?.trim()) {
+      continue;
+    }
+
+    tokens[channel] = createCentrifugoSubscriptionToken({
+      subject,
+      channel,
+      ttlSeconds,
+    });
+  }
+
+  return tokens;
+}
+
 export function decodeCentrifugoTokenForDebug(token: string) {
   if (process.env.NODE_ENV === 'production') {
     return null;

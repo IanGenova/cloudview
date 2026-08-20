@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Role } from '@prisma/client';
 import { requireUser } from '@/lib/auth';
-import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import { isNextRedirectError } from '@/lib/next-control-flow';
+import {
+  buildCentrifugoSubscriptionTokens,
+  createCentrifugoConnectionToken,
+} from '@/lib/realtime/centrifugo-token';
 import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +55,11 @@ export async function GET() {
     return noStoreJson({
       token,
       channels,
+      subscriptionTokens: buildCentrifugoSubscriptionTokens({
+        subject,
+        channels,
+        ttlSeconds: 60 * 60,
+      }),
       debug:
         process.env.NODE_ENV === 'production'
           ? undefined
@@ -69,6 +78,16 @@ export async function GET() {
             },
     });
   } catch (error) {
+    /*
+      requireUser() enforces auth by calling redirect(), which Next implements
+      as a thrown control-flow signal. Swallowing it here would turn an
+      unauthenticated request into a misleading HTTP 500 instead of sending the
+      caller to the login page.
+    */
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error('Kitchen realtime token route failed:', error);
 
     return noStoreJson(

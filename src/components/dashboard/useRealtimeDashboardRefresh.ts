@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
+import {
+  createCentrifugoClient,
+  createSubscriptionOptions,
+} from '@/lib/realtime/centrifugo-client';
 
 type TokenEndpoint = {
   url: string;
@@ -101,6 +104,7 @@ export function useRealtimeDashboardRefresh({
         const payload = (await response.json()) as {
           token?: string;
           channels?: string[];
+          subscriptionTokens?: Record<string, string>;
         };
 
         if (
@@ -124,7 +128,14 @@ export function useRealtimeDashboardRefresh({
         clients.push(centrifuge);
 
         for (const channelName of Array.from(new Set(payload.channels))) {
-          const subscription = centrifuge.newSubscription(channelName);
+          const subscription = centrifuge.newSubscription(
+            channelName,
+            createSubscriptionOptions({
+              channel: channelName,
+              subscriptionTokens: payload.subscriptionTokens,
+              tokenEndpoint: endpoint.url,
+            })
+          );
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as unknown;

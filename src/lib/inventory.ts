@@ -21,6 +21,28 @@ export async function deductInventoryForOrder(orderId: string, userId?: string) 
     if (!order) throw new InventoryError('Order not found');
     if (order.inventoryDeductedAt) return order;
 
+    /**
+     * Claim the deduction atomically before touching stock.
+     *
+     * Reading `inventoryDeductedAt` and writing it later is a check-then-act
+     * race: two concurrent accepts of the same order could both pass the read
+     * and both deduct. This conditional update succeeds for exactly one caller,
+     * so the loser exits without double-deducting.
+     */
+    const claimed = await tx.order.updateMany({
+      where: {
+        id: order.id,
+        inventoryDeductedAt: null,
+      },
+      data: {
+        inventoryDeductedAt: new Date(),
+      },
+    });
+
+    if (claimed.count === 0) {
+      return order;
+    }
+
     const requirements = new Map<string, { name: string; unit: string; qty: number }>();
 
     for (const item of order.items) {
@@ -35,19 +57,36 @@ export async function deductInventoryForOrder(orderId: string, userId?: string) 
       }
     }
 
+    /**
+     * Deduct with the stock check built into the write.
+     *
+     * A separate "read stock, compare, then decrement" pass is a race: two
+     * concurrent orders can both read sufficient stock and both decrement,
+     * driving `stockQuantity` negative. Guarding the update on
+     * `stockQuantity >= required` makes the check and the decrement a single
+     * atomic statement, so the second caller matches zero rows and fails
+     * cleanly instead of overselling.
+     */
     for (const [itemId, required] of requirements.entries()) {
       const item = await tx.inventoryItem.findUnique({ where: { id: itemId } });
       if (!item) throw new InventoryError(`Inventory item missing: ${required.name}`);
-      if (Number(item.stockQuantity) < required.qty) {
-        throw new InventoryError(`Insufficient stock for ${required.name}. Need ${required.qty} ${required.unit}, available ${item.stockQuantity} ${required.unit}.`);
-      }
-    }
 
-    for (const [itemId, required] of requirements.entries()) {
-      await tx.inventoryItem.update({
-        where: { id: itemId },
-        data: { stockQuantity: { decrement: new Prisma.Decimal(required.qty) } }
+      const requiredQuantity = new Prisma.Decimal(required.qty);
+
+      const deducted = await tx.inventoryItem.updateMany({
+        where: {
+          id: itemId,
+          stockQuantity: { gte: requiredQuantity },
+        },
+        data: { stockQuantity: { decrement: requiredQuantity } },
       });
+
+      if (deducted.count === 0) {
+        throw new InventoryError(
+          `Insufficient stock for ${required.name}. Need ${required.qty} ${required.unit}, available ${item.stockQuantity} ${required.unit}.`
+        );
+      }
+
       await tx.inventoryMovement.create({
         data: {
           hotelId: order.hotelId,
@@ -61,9 +100,10 @@ export async function deductInventoryForOrder(orderId: string, userId?: string) 
       });
     }
 
-    return tx.order.update({
-      where: { id: order.id },
-      data: { inventoryDeductedAt: new Date() }
-    });
+    /**
+     * `inventoryDeductedAt` was already set by the atomic claim above; re-read
+     * the order so callers still receive the updated row.
+     */
+    return tx.order.findUniqueOrThrow({ where: { id: order.id } });
   });
 }

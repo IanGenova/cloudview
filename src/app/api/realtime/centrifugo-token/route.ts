@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { getCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
-import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import {
+  buildCentrifugoSubscriptionTokens,
+  createCentrifugoConnectionToken,
+} from '@/lib/realtime/centrifugo-token';
 import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
@@ -102,5 +105,10 @@ export async function GET(request: Request) {
   return NextResponse.json({
     token,
     channels,
+    subscriptionTokens: buildCentrifugoSubscriptionTokens({
+      subject: `guest:${guestSession.id}:orders`,
+      channels,
+      ttlSeconds: 60 * 60,
+    }),
   });
 }

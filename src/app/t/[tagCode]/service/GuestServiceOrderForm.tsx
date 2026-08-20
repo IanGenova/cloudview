@@ -1676,10 +1676,11 @@ export function GuestServiceOrderForm({
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="svc-requested-by" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Requested by
                   </label>
                   <input
+            id="svc-requested-by"
                     name="guestName"
                     type="text"
                     autoComplete="name"
@@ -1701,12 +1702,13 @@ export function GuestServiceOrderForm({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="svc-phone-number" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Phone number
                   </label>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
                     <input
+            id="svc-phone-number"
                       name="guestPhone"
                       type="tel"
                       inputMode="tel"
@@ -1726,10 +1728,11 @@ export function GuestServiceOrderForm({
 
                 {isPublicLocation ? (
                   <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
-                    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+                    <label htmlFor="svc-request-destination" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-gold">
                       Request destination
                     </label>
                     <select
+            id="svc-request-destination"
                       value={requestDestination}
                       onChange={(event) =>
                         setRequestDestination(
@@ -1817,10 +1820,11 @@ export function GuestServiceOrderForm({
                 />
 
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="svc-request-time" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Request time
                   </label>
                   <select
+            id="svc-request-time"
                     value={fulfillmentTiming}
                     onChange={(event) =>
                       setFulfillmentTiming(
@@ -2204,10 +2208,11 @@ export function GuestServiceOrderForm({
       </section>
 
       <section className="mb-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-4">
-        <label className="block text-[10px] font-black uppercase tracking-[0.16em] text-gold/85">
+        <label htmlFor="svc-requesting-as" className="block text-[10px] font-black uppercase tracking-[0.16em] text-gold/85">
           Requesting as
         </label>
         <input
+            id="svc-requesting-as"
           type="text"
           autoComplete="name"
           placeholder="Guest name"
@@ -2230,6 +2235,7 @@ export function GuestServiceOrderForm({
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            aria-label="Search services and add-ons"
             placeholder="Search services and add-ons"
             className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/35"
           />
@@ -2259,7 +2265,7 @@ export function GuestServiceOrderForm({
                 type="button"
                 onClick={() => setActiveCategory(category)}
                 className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-black transition active:scale-[0.98]',
+                  'flex shrink-0 items-center gap-2 rounded-full border px-4 py-3 text-xs font-black transition active:scale-[0.98]',
                   active
                     ? 'border-gold bg-gold text-black shadow-[0_8px_22px_rgba(214,167,56,0.18)]'
                     : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
@@ -2375,7 +2381,7 @@ export function GuestServiceOrderForm({
                             <button
                               type="button"
                               disabled
-                              className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-red-500/10 text-xs font-black text-red-200"
+                              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-red-500/10 text-xs font-black text-red-200"
                             >
                               Sold out
                             </button>
@@ -2394,7 +2400,7 @@ export function GuestServiceOrderForm({
                             <button
                               type="button"
                               onClick={() => addService(service.code)}
-                              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white text-xs font-black text-black transition hover:bg-gold active:scale-[0.98]"
+                              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white text-xs font-black text-black transition hover:bg-gold active:scale-[0.98]"
                             >
                               Add request
                               <Plus className="size-4" />
@@ -2443,7 +2449,7 @@ export function GuestServiceOrderForm({
           className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 rounded-[1.35rem] border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black shadow-[0_18px_45px_rgba(214,167,56,0.28)] transition hover:brightness-105 active:scale-[0.99]"
         >
           <span className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-black/12">
+            <span className="grid size-11 place-items-center rounded-xl bg-black/12">
               <ShoppingBag className="size-4.5" />
             </span>
             <span className="text-left">

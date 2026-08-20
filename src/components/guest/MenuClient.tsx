@@ -1446,10 +1446,11 @@ const [scheduledNote, setScheduledNote] = useState('');
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-ordered-by" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Ordered by
                   </label>
                   <input
+            id="menu-ordered-by"
                     type="text"
                     autoComplete="name"
                     required
@@ -1467,12 +1468,13 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-phone-number" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Phone number
                   </label>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
                     <input
+            id="menu-phone-number"
                       type="tel"
                       inputMode="tel"
                       autoComplete="tel"
@@ -1490,10 +1492,11 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-order-type" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Order type
                   </label>
                   <select
+            id="menu-order-type"
                     value={orderType}
                     onChange={(event) => {
                       setOrderType(event.currentTarget.value as OrderType);
@@ -1521,10 +1524,11 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-order-time" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Order time
                   </label>
                   <select
+            id="menu-order-time"
                     value={fulfillmentTiming}
                     onChange={(event) =>
                       setFulfillmentTiming(
@@ -1599,10 +1603,11 @@ const [scheduledNote, setScheduledNote] = useState('');
                 ) : null}
 
                 <div>
-                  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-payment-method" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
                     Payment method
                   </label>
                   <select
+            id="menu-payment-method"
                     value={paymentMethod}
                     onChange={(event) =>
                       setPaymentMethod(
@@ -1916,6 +1921,7 @@ const [scheduledNote, setScheduledNote] = useState('');
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            aria-label="Search dishes, bundles, or categories"
             placeholder="Search dishes, bundles, or categories"
             className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/35"
           />
@@ -1946,7 +1952,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 type="button"
                 onClick={() => setActiveCategory(category)}
                 className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-black transition active:scale-[0.98]',
+                  'flex shrink-0 items-center gap-2 rounded-full border px-4 py-3 text-xs font-black transition active:scale-[0.98]',
                   active
                     ? 'border-gold bg-gold text-black shadow-[0_8px_22px_rgba(214,167,56,0.18)]'
                     : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
@@ -2211,7 +2217,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                         <TapButton
                           onTap={() => add(product.id)}
                           disabled={soldOut}
-                          className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-black shadow-lg"
+                          className="grid size-11 shrink-0 place-items-center rounded-full bg-white text-black shadow-lg"
                           aria-label={`Add ${product.name}`}
                         >
                           <Plus className="size-5" />
@@ -2274,7 +2280,7 @@ const [scheduledNote, setScheduledNote] = useState('');
           className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 rounded-[1.35rem] border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black shadow-[0_18px_45px_rgba(214,167,56,0.28)] transition hover:brightness-105 active:scale-[0.99]"
         >
           <span className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-black/12">
+            <span className="grid size-11 place-items-center rounded-xl bg-black/12">
               <ShoppingBag className="size-4.5" />
             </span>
             <span className="text-left">

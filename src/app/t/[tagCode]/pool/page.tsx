@@ -175,7 +175,7 @@ function InfoStatCard({
 }) {
   return (
     <div className="rounded-[1.45rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
-      <span className="grid size-10 place-items-center rounded-2xl bg-gold/20 text-gold">
+      <span className="grid size-11 place-items-center rounded-2xl bg-gold/20 text-gold">
         <Icon className="size-5" />
       </span>
 
@@ -593,7 +593,7 @@ export default async function PoolPage({
             <div className="grid grid-cols-[40px_1fr_40px] items-center gap-2">
               <Link
                 href={`/t/${tagCode}`}
-                className="grid size-10 place-items-center rounded-full text-white transition hover:bg-white/10"
+                className="grid size-11 place-items-center rounded-full text-white transition hover:bg-white/10"
                 aria-label="Go back"
               >
                 <ArrowLeft className="size-5" />
@@ -610,7 +610,7 @@ export default async function PoolPage({
 
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="grid size-10 place-items-center rounded-full text-white transition hover:bg-white/10"
+                className="grid size-11 place-items-center rounded-full text-white transition hover:bg-white/10"
                 aria-label="Contact staff"
               >
                 <Phone className="size-5" />

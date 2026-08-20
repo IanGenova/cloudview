@@ -145,7 +145,7 @@ function MiniActionCard({
         className="group flex min-h-24 flex-col justify-between rounded-[1.5rem] border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
       >
       <div className="flex items-center justify-between">
-        <span className="grid size-10 place-items-center rounded-2xl bg-gold/20 text-gold">
+        <span className="grid size-11 place-items-center rounded-2xl bg-gold/20 text-gold">
           <Icon className="size-5" />
         </span>
 

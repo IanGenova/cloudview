@@ -10,7 +10,7 @@
   },
   "channel": {
     "without_namespace": {
-      "allow_subscribe_for_client": true,
+      "allow_subscribe_for_client": false,
       "channel_regex": "^(order-[A-Za-z0-9_-]+|kitchen-[A-Za-z0-9_-]+|inventory-[A-Za-z0-9_-]+|service-requests-[A-Za-z0-9_-]+|guest-service-requests-[A-Za-z0-9_-]+|dashboard-global-(orders|inventory)|dashboard-hotel-[A-Za-z0-9_-]+-(orders|inventory))$"
     }
   },
@@ -19,7 +19,7 @@
     "error_mode": "transport"
   },
   "admin": {
-    "enabled": true,
+    "enabled": false,
     "password": "CHANGE_ME",
     "secret": "CHANGE_ME"
   },

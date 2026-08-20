@@ -213,6 +213,131 @@ body {
   .dark .cloudview-dashboard-shell .shadow-soft {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important;
   }
+
+  /*
+    Dark-mode fixes for arbitrary (bracket) colour utilities.
+
+    The rules above only rewrite NAMED Tailwind utilities such as .bg-white and
+    .text-neutral-900. Arbitrary values like text-[#11100b] are left untouched,
+    so a card written `bg-white text-[#11100b]` renders a dark background
+    (rewritten) with near-black text (not rewritten) — contrast 1.01, i.e.
+    invisible. Near-black ink colours map to the standard light text; saturated
+    brass accents keep their hue and are lifted until they pass on #111111.
+  */
+
+  .dark .cloudview-dashboard-shell .text-\[\#070604\] { color: #fafafa !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#090806\] { color: #fafafa !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#11100b\] { color: #fafafa !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#17140f\] { color: #fafafa !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#403b34\] { color: #fafafa !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#665d50\] { color: #fafafa !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#7a5414\] { color: #a6721b !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#8a641b\] { color: #a47720 !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#8a641d\] { color: #a37622 !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#8a651f\] { color: #9f7424 !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#8b641c\] { color: #a47621 !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#8e611e\] { color: #a77223 !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#976318\] { color: #ad711b !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#9a6b18\] { color: #a7741a !important; }
+  .dark .cloudview-dashboard-shell .text-\[\#9d741f\] { color: #a17720 !important; }
+
+  .dark .cloudview-dashboard-shell .bg-\[\#f3eee5\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#f4ecde\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#f7e4ad\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#f7f1e5\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fbfaf7\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff1c7\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff2c9\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff4d6\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff5dc\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff7dd\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff8e4\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff8e5\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fff8e7\] { background-color: #1c1813 !important; }
+  .dark .cloudview-dashboard-shell .bg-\[\#fffaf0\] { background-color: #1c1813 !important; }
+
+
+  /*
+    Opacity variants of light surfaces.
+
+    Tailwind compiles bg-white/70 to a different class than bg-white, so the
+    override above never matched it. The surface stayed light while
+    .text-neutral-950 was correctly flipped to near-white — giving white text on
+    a white panel. Only high-opacity variants are remapped; low-opacity ones
+    (bg-white/10 and similar) are deliberate subtle overlays that already read
+    correctly on a dark ground.
+  */
+
+  .dark .cloudview-dashboard-shell .bg-neutral-100\/80 { background-color: #262626 !important; }
+  .dark .cloudview-dashboard-shell .bg-neutral-50\/60 { background-color: #171717 !important; }
+  .dark .cloudview-dashboard-shell .bg-neutral-50\/70 { background-color: #171717 !important; }
+  .dark .cloudview-dashboard-shell .bg-neutral-50\/80 { background-color: #171717 !important; }
+  .dark .cloudview-dashboard-shell .bg-neutral-50\/95 { background-color: #171717 !important; }
+  .dark .cloudview-dashboard-shell .bg-white\/70 { background-color: #111111 !important; }
+  .dark .cloudview-dashboard-shell .bg-white\/75 { background-color: #111111 !important; }
+  .dark .cloudview-dashboard-shell .bg-white\/80 { background-color: #111111 !important; }
+  .dark .cloudview-dashboard-shell .bg-white\/90 { background-color: #111111 !important; }
+  .dark .cloudview-dashboard-shell .bg-white\/95 { background-color: #111111 !important; }
+
+  /*
+    Semantic tint utilities in dark mode.
+
+    Status cards use pale tints (bg-emerald-50, bg-red-50, bg-amber-50) with
+    dark tinted text. Those utilities are outside the neutral scale the
+    overrides above handle, so in dark mode they stayed bright — readable, but
+    rendering as glaring light panels on a near-black page. Each pale tint maps
+    to the darkest shade of the same hue and each dark tinted text to a light
+    shade, so the semantic meaning (green = good, red = attention) survives.
+  */
+
+  .dark .cloudview-dashboard-shell .bg-amber-50 { background-color: #451a03 !important; }
+  .dark .cloudview-dashboard-shell .bg-amber-100 { background-color: #78350f !important; }
+  .dark .cloudview-dashboard-shell .bg-blue-50 { background-color: #172554 !important; }
+  .dark .cloudview-dashboard-shell .bg-blue-100 { background-color: #1e3a8a !important; }
+  .dark .cloudview-dashboard-shell .bg-emerald-50 { background-color: #022c22 !important; }
+  .dark .cloudview-dashboard-shell .bg-emerald-100 { background-color: #064e3b !important; }
+  .dark .cloudview-dashboard-shell .bg-green-50 { background-color: #052e16 !important; }
+  .dark .cloudview-dashboard-shell .bg-indigo-100 { background-color: #312e81 !important; }
+  .dark .cloudview-dashboard-shell .bg-orange-50 { background-color: #431407 !important; }
+  .dark .cloudview-dashboard-shell .bg-orange-100 { background-color: #7c2d12 !important; }
+  .dark .cloudview-dashboard-shell .bg-red-50 { background-color: #450a0a !important; }
+  .dark .cloudview-dashboard-shell .bg-red-100 { background-color: #7f1d1d !important; }
+  .dark .cloudview-dashboard-shell .bg-sky-50 { background-color: #082f49 !important; }
+  .dark .cloudview-dashboard-shell .bg-yellow-50 { background-color: #422006 !important; }
+  .dark .cloudview-dashboard-shell .border-amber-100 { border-color: #92400e !important; }
+  .dark .cloudview-dashboard-shell .border-amber-200 { border-color: #92400e !important; }
+  .dark .cloudview-dashboard-shell .border-amber-300 { border-color: #92400e !important; }
+  .dark .cloudview-dashboard-shell .border-blue-100 { border-color: #1e40af !important; }
+  .dark .cloudview-dashboard-shell .border-blue-200 { border-color: #1e40af !important; }
+  .dark .cloudview-dashboard-shell .border-emerald-100 { border-color: #065f46 !important; }
+  .dark .cloudview-dashboard-shell .border-emerald-200 { border-color: #065f46 !important; }
+  .dark .cloudview-dashboard-shell .border-green-200 { border-color: #166534 !important; }
+  .dark .cloudview-dashboard-shell .border-indigo-200 { border-color: #3730a3 !important; }
+  .dark .cloudview-dashboard-shell .border-orange-100 { border-color: #9a3412 !important; }
+  .dark .cloudview-dashboard-shell .border-orange-200 { border-color: #9a3412 !important; }
+  .dark .cloudview-dashboard-shell .border-red-100 { border-color: #991b1b !important; }
+  .dark .cloudview-dashboard-shell .border-red-200 { border-color: #991b1b !important; }
+  .dark .cloudview-dashboard-shell .border-sky-200 { border-color: #075985 !important; }
+  .dark .cloudview-dashboard-shell .border-yellow-200 { border-color: #854d0e !important; }
+  .dark .cloudview-dashboard-shell .text-amber-700 { color: #fcd34d !important; }
+  .dark .cloudview-dashboard-shell .text-amber-800 { color: #fcd34d !important; }
+  .dark .cloudview-dashboard-shell .text-amber-900 { color: #fcd34d !important; }
+  .dark .cloudview-dashboard-shell .text-blue-600 { color: #93c5fd !important; }
+  .dark .cloudview-dashboard-shell .text-blue-700 { color: #93c5fd !important; }
+  .dark .cloudview-dashboard-shell .text-blue-900 { color: #93c5fd !important; }
+  .dark .cloudview-dashboard-shell .text-emerald-600 { color: #6ee7b7 !important; }
+  .dark .cloudview-dashboard-shell .text-emerald-700 { color: #6ee7b7 !important; }
+  .dark .cloudview-dashboard-shell .text-emerald-800 { color: #6ee7b7 !important; }
+  .dark .cloudview-dashboard-shell .text-emerald-900 { color: #6ee7b7 !important; }
+  .dark .cloudview-dashboard-shell .text-green-800 { color: #86efac !important; }
+  .dark .cloudview-dashboard-shell .text-indigo-700 { color: #a5b4fc !important; }
+  .dark .cloudview-dashboard-shell .text-orange-700 { color: #fdba74 !important; }
+  .dark .cloudview-dashboard-shell .text-red-600 { color: #fca5a5 !important; }
+  .dark .cloudview-dashboard-shell .text-red-700 { color: #fca5a5 !important; }
+  .dark .cloudview-dashboard-shell .text-red-800 { color: #fca5a5 !important; }
+  .dark .cloudview-dashboard-shell .text-red-900 { color: #fca5a5 !important; }
+  .dark .cloudview-dashboard-shell .text-sky-900 { color: #7dd3fc !important; }
+  .dark .cloudview-dashboard-shell .text-yellow-900 { color: #fde047 !important; }
 }
 
 /* Responsive UI/UX guardrails — presentation only. */

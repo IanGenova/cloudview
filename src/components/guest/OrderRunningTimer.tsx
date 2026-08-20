@@ -5,11 +5,16 @@ import { useEffect, useMemo, useState } from 'react';
 function formatDuration(totalSeconds: number) {
   const safeSeconds = Math.max(0, totalSeconds);
 
+  const days = Math.floor(safeSeconds / 86400);
   const hours = Math.floor(safeSeconds / 3600);
   const minutes = Math.floor((safeSeconds % 3600) / 60);
   const seconds = safeSeconds % 60;
 
   if (hours > 0) {
+    if (days > 0) {
+      return `${days}d ${hours % 24}h`;
+    }
+
     return `${hours}h ${minutes}m ${seconds}s`;
   }
 

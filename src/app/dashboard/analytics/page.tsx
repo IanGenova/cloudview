@@ -35,6 +35,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
+import { AnalyticsStickySummary } from './AnalyticsStickySummary';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { money } from '@/lib/money';
@@ -1616,8 +1617,7 @@ export default async function AnalyticsPage({
 
           <label className="grid gap-2">
             <span className="text-[11px] font-black uppercase tracking-[0.12em] text-neutral-500">
-              Analysis Period
-            </span>
+              Analysis Period           </span>
             <select
               name="days"
               defaultValue={String(rangeDays)}
@@ -1652,9 +1652,9 @@ export default async function AnalyticsPage({
               CloudView Analytics
             </div>
 
-            <h1 className="mt-5 max-w-2xl text-4xl font-black tracking-tight md:text-5xl">
+            <h2 className="mt-5 max-w-2xl text-4xl font-black tracking-tight md:text-5xl">
               A clearer pulse of hotel performance.
-            </h1>
+            </h2>
 
             <p className="mt-4 max-w-xl text-sm font-semibold leading-7 text-white/60">
               {selectedHotelName} · {shortDateFormatter.format(startDate)} to{' '}
@@ -1696,6 +1696,32 @@ export default async function AnalyticsPage({
           </div>
         </div>
       </section>
+
+      {/*
+        Keeps the headline figures reachable through a report that runs to
+        roughly thirteen screens on a phone. Appears only after the hero has
+        scrolled past, so the top of the page is unchanged.
+      */}
+      <AnalyticsStickySummary
+        stats={[
+          {
+            label: 'Revenue',
+            value: formatMoneyFromCents(totalSalesCents),
+          },
+          {
+            label: 'Orders',
+            value: formatNumber(currentOrderCount),
+          },
+          {
+            label: 'Avg. order',
+            value: formatMoneyFromCents(averageOrderValueCents),
+          },
+          {
+            label: 'Requests',
+            value: formatNumber(requestCount),
+          },
+        ]}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <InsightMetric
@@ -2065,6 +2091,7 @@ export default async function AnalyticsPage({
             </label>
 
             <select
+            aria-label="Rows per page"
               name="stockPageSize"
               defaultValue={String(stockPageSize)}
               className="h-11 rounded-2xl border border-neutral-200 bg-white px-3 text-sm font-black outline-none focus:border-gold"
@@ -2086,7 +2113,7 @@ export default async function AnalyticsPage({
               <table className="min-w-[900px] w-full border-collapse">
                 <thead>
                   <tr className="bg-neutral-50 text-[11px] uppercase tracking-wide">
-                    <th className="px-4 py-3 text-left">
+                    <th scope="col" className="px-4 py-3 text-left">
                       <SortHeader
                         label="Menu Item"
                         sortKey="name"
@@ -2095,7 +2122,7 @@ export default async function AnalyticsPage({
                         searchParams={navigationParams}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left">
+                    <th scope="col" className="px-4 py-3 text-left">
                       <SortHeader
                         label="Hotel"
                         sortKey="hotel"
@@ -2104,7 +2131,7 @@ export default async function AnalyticsPage({
                         searchParams={navigationParams}
                       />
                     </th>
-                    <th className="px-4 py-3 text-right">
+                    <th scope="col" className="px-4 py-3 text-right">
                       <SortHeader
                         label="Available"
                         sortKey="available"
@@ -2114,7 +2141,7 @@ export default async function AnalyticsPage({
                         align="right"
                       />
                     </th>
-                    <th className="px-4 py-3 text-right">
+                    <th scope="col" className="px-4 py-3 text-right">
                       <SortHeader
                         label="Sold"
                         sortKey="sold"
@@ -2124,7 +2151,7 @@ export default async function AnalyticsPage({
                         align="right"
                       />
                     </th>
-                    <th className="px-4 py-3 text-right">
+                    <th scope="col" className="px-4 py-3 text-right">
                       <SortHeader
                         label="Status"
                         sortKey="status"
@@ -2134,7 +2161,7 @@ export default async function AnalyticsPage({
                         align="right"
                       />
                     </th>
-                    <th className="px-4 py-3 text-right">
+                    <th scope="col" className="px-4 py-3 text-right">
                       <SortHeader
                         label="Updated"
                         sortKey="updated"

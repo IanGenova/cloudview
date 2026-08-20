@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
+import { createDashboardNotification } from '@/lib/dashboard-notifications';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
 
@@ -221,6 +222,27 @@ async function releaseScheduledOrders(now: Date): Promise<ReleaseResult> {
         source: 'GUEST_PORTAL',
       });
 
+      /**
+       * A scheduled order reaching its release time is exactly the moment
+       * staff need to be told, and it happens with nobody driving the UI.
+       * Persist it so the notification centre shows it even if no dashboard
+       * was connected when the worker ran.
+       */
+      await Promise.allSettled([
+        createDashboardNotification({
+          hotelId: releasedOrder.hotelId,
+          type: 'SCHEDULED_RELEASED',
+          title: 'Scheduled Order Released',
+          message: `${releasedOrder.orderCode} reached its scheduled time and is now with the kitchen.`,
+          url: '/dashboard/kitchen',
+          payload: {
+            orderId: releasedOrder.id,
+            orderCode: releasedOrder.orderCode,
+            status: releasedOrder.status,
+          },
+        }),
+      ]);
+
       released.push(releasedOrder.orderCode);
     } catch (error) {
       failed.push({
@@ -323,6 +345,21 @@ async function releaseScheduledServiceRequests(
         requestCode: releasedRequest.requestCode,
         status: releasedRequest.status,
       });
+
+      await Promise.allSettled([
+        createDashboardNotification({
+          hotelId: releasedRequest.hotelId,
+          type: 'SCHEDULED_RELEASED',
+          title: 'Scheduled Service Request Released',
+          message: `${releasedRequest.requestCode} reached its scheduled time and is now with the service team.`,
+          url: '/dashboard/service-requests',
+          payload: {
+            requestId: releasedRequest.id,
+            requestCode: releasedRequest.requestCode,
+            status: releasedRequest.status,
+          },
+        }),
+      ]);
 
       released.push(releasedRequest.requestCode);
     } catch (error) {

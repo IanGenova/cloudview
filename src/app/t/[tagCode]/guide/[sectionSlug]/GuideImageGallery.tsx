@@ -419,7 +419,7 @@ export function GuideImageGallery({
                       <Images className="size-3.5 text-[#d5ad55]" />
                       {images.length} photographs
                     </span>
-                    <span className="absolute right-4 top-4 grid size-10 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur">
+                    <span className="absolute right-4 top-4 grid size-11 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur">
                       <Maximize2 className="size-4" />
                     </span>
                     <span className="absolute inset-x-4 bottom-4">

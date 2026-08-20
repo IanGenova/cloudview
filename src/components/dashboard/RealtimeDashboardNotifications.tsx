@@ -21,7 +21,10 @@ import {
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
+import {
+  createCentrifugoClient,
+  createSubscriptionOptions,
+} from '@/lib/realtime/centrifugo-client';
 
 const REALTIME_ENDPOINTS = {
   kitchen: '/api/realtime/kitchen-token',
@@ -1363,6 +1366,7 @@ function pushTestNotification() {
       return (await response.json()) as {
         token?: string;
         channels?: string[];
+        subscriptionTokens?: Record<string, string>;
       };
     }
 
@@ -1420,7 +1424,14 @@ function pushTestNotification() {
         kitchenCentrifuge.on('error', handleKitchenClientError);
 
         for (const channelName of Array.from(new Set(payload.channels))) {
-          const subscription = kitchenCentrifuge.newSubscription(channelName);
+          const subscription = kitchenCentrifuge.newSubscription(
+            channelName,
+            createSubscriptionOptions({
+              channel: channelName,
+              subscriptionTokens: payload.subscriptionTokens,
+              tokenEndpoint: REALTIME_ENDPOINTS.kitchen,
+            })
+          );
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as KitchenPayload;
@@ -1551,7 +1562,14 @@ function pushTestNotification() {
         serviceCentrifuge.on('error', handleServiceClientError);
 
         for (const channelName of Array.from(new Set(payload.channels))) {
-          const subscription = serviceCentrifuge.newSubscription(channelName);
+          const subscription = serviceCentrifuge.newSubscription(
+            channelName,
+            createSubscriptionOptions({
+              channel: channelName,
+              subscriptionTokens: payload.subscriptionTokens,
+              tokenEndpoint: REALTIME_ENDPOINTS.service,
+            })
+          );
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as ServiceRequestPayload;
@@ -1672,7 +1690,14 @@ function pushTestNotification() {
 
         for (const channelName of Array.from(new Set(payload.channels))) {
           const subscription =
-            operationsCentrifuge.newSubscription(channelName);
+            operationsCentrifuge.newSubscription(
+              channelName,
+              createSubscriptionOptions({
+                channel: channelName,
+                subscriptionTokens: payload.subscriptionTokens,
+                tokenEndpoint: REALTIME_ENDPOINTS.operations,
+              })
+            );
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as OperationsPayload;

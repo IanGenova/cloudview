@@ -495,25 +495,25 @@ export function RewardCatalogManager({
           <table className="w-full min-w-[1080px] text-left">
             <thead className="bg-white">
               <tr>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Reward
                 </th>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Value / Type
                 </th>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Cost
                 </th>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Hotels
                 </th>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Redemptions
                 </th>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Status
                 </th>
-                <th className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
                   Actions
                 </th>
               </tr>

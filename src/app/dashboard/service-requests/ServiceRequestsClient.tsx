@@ -1217,6 +1217,7 @@ function DetailsModal({
 
                             <div className="grid gap-2 md:grid-cols-3">
                               <input
+            aria-label="Item name"
                                 name={`chargeItemName_${item.id}`}
                                 defaultValue={
                                   item.charge?.itemName ?? item.type
@@ -1226,6 +1227,7 @@ function DetailsModal({
                               />
 
                               <input
+            aria-label="Qty"
                                 name={`chargeQuantity_${item.id}`}
                                 type="number"
                                 min="1"
@@ -1235,6 +1237,7 @@ function DetailsModal({
                               />
 
                               <input
+            aria-label="Unit price"
                                 name={`chargeUnitPrice_${item.id}`}
                                 type="number"
                                 min="0.01"
@@ -1246,6 +1249,7 @@ function DetailsModal({
                             </div>
 
                             <input
+            aria-label="Description"
                               name={`chargeDescription_${item.id}`}
                               defaultValue={
                                 item.charge?.description ?? item.notes
@@ -1724,6 +1728,7 @@ export function ServiceRequestsClient({
             </div>
 
             <Select
+            aria-label="Status filter"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
             >

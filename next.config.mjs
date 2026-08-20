@@ -39,14 +39,17 @@ const nextConfig = {
   },
 
   images: {
+    /**
+     * Only hosts we actually serve images from.
+     *
+     * A `hostname: '**'` wildcard turns /_next/image into an open proxy for the
+     * whole public internet: any URL can be fetched by the server and re-served
+     * from our own domain.
+     */
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**',
       },
       {
         protocol: 'http',

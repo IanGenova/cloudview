@@ -364,6 +364,7 @@ function CoverPhotoField({
               Or Paste Cover Image URL
             </label>
             <input
+            aria-label="https://..."
               name="imageUrl"
               defaultValue={imageUrl ?? ""}
               placeholder="https://..."
@@ -501,6 +502,7 @@ function PanoramaField({
               Or Paste 360° Panorama URL
             </label>
             <input
+            aria-label="https://yourdomain.com/pool-360.jpg"
               name="panoramaImageUrl"
               defaultValue={panoramaImageUrl ?? ""}
               placeholder="https://yourdomain.com/pool-360.jpg"
@@ -548,9 +550,9 @@ function SectionFormFields({
       <div className="grid gap-3 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Section Title
-          </label>
+            Section Title      </label>
           <input
+            aria-label="Dining"
             name="title"
             required
             defaultValue={section?.title ?? ""}
@@ -564,6 +566,7 @@ function SectionFormFields({
             Subtitle
           </label>
           <input
+            aria-label="Explore our restaurants and bars"
             name="subtitle"
             defaultValue={section?.subtitle ?? ""}
             placeholder="Explore our restaurants and bars"
@@ -577,6 +580,7 @@ function SectionFormFields({
           Description
         </label>
         <textarea
+            aria-label="Short description for this guide section."
           name="description"
           rows={3}
           defaultValue={section?.description ?? ""}
@@ -611,8 +615,7 @@ function SectionFormFields({
 
         <div>
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Sort Order
-          </label>
+            Sort Order   </label>
           <input
             name="sortOrder"
             type="number"
@@ -669,9 +672,9 @@ function ItemFormFields({
       <div className="grid gap-3 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Item Title
-          </label>
+            Item Title   </label>
           <input
+            aria-label="Wi-Fi"
             name="title"
             required
             defaultValue={item?.title ?? ""}
@@ -685,6 +688,7 @@ function ItemFormFields({
             Subtitle
           </label>
           <input
+            aria-label="Guest internet access"
             name="subtitle"
             defaultValue={item?.subtitle ?? ""}
             placeholder="Guest internet access"
@@ -698,6 +702,7 @@ function ItemFormFields({
           Content
         </label>
         <textarea
+            aria-label="Write the guide information here."
           name="content"
           rows={5}
           defaultValue={item?.content ?? ""}
@@ -738,8 +743,7 @@ function ItemFormFields({
 
         <div>
           <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
-            Sort Order
-          </label>
+            Sort Order   </label>
           <input
             name="sortOrder"
             type="number"
@@ -756,6 +760,7 @@ function ItemFormFields({
             Hours
           </label>
           <input
+            aria-label="e.g. 7:00 AM - 9:00 PM"
             name="hours"
             defaultValue={item?.hours ?? ""}
             placeholder="e.g. 7:00 AM - 9:00 PM"
@@ -768,6 +773,7 @@ function ItemFormFields({
             Location
           </label>
           <input
+            aria-label="e.g. Pool Deck, Ground Floor, Lobby"
             name="location"
             defaultValue={item?.location ?? ""}
             placeholder="e.g. Pool Deck, Ground Floor, Lobby"
@@ -780,6 +786,7 @@ function ItemFormFields({
             Contact / Extension
           </label>
           <input
+            aria-label="e.g. Front Desk 0, Housekeeping 102"
             name="contact"
             defaultValue={item?.contact ?? ""}
             placeholder="e.g. Front Desk 0, Housekeeping 102"
@@ -792,6 +799,7 @@ function ItemFormFields({
             Map URL
           </label>
           <input
+            aria-label="Paste Google Maps or internal location link"
             name="mapUrl"
             defaultValue={item?.mapUrl ?? ""}
             placeholder="Paste Google Maps or internal location link"
@@ -804,6 +812,7 @@ function ItemFormFields({
             Button Label
           </label>
           <input
+            aria-label="e.g. View Menu, Request Service, Open Pool Page"
             name="buttonLabel"
             defaultValue={item?.buttonLabel ?? ""}
             placeholder="e.g. View Menu, Request Service, Open Pool Page"
@@ -816,6 +825,7 @@ function ItemFormFields({
             Button Link
           </label>
           <input
+            aria-label="e.g. menu, service, pool, https://..."
             name="buttonHref"
             defaultValue={item?.buttonHref ?? ""}
             placeholder="e.g. menu, service, pool, https://..."
@@ -1216,6 +1226,7 @@ function UploadImageModal({
               Base Image Title
             </label>
             <input
+            aria-label="Pool Area"
               name="title"
               placeholder="Pool Area"
               className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
@@ -1247,6 +1258,7 @@ function UploadImageModal({
             Caption
           </label>
           <textarea
+            aria-label="Short caption for these images"
             name="caption"
             rows={3}
             placeholder="Short caption for these images"
@@ -1664,11 +1676,32 @@ function statusMatches(isActive: boolean, status: StatusFilter) {
   return true;
 }
 
+/**
+ * Count each photo once.
+ *
+ * A HotelGuideImage attached to an item carries BOTH `sectionId` and `itemId`,
+ * so it is returned by the section's `galleryImages` relation *and* by the
+ * item's. Naively adding the two lengths counted every item photo twice — a
+ * section with 3 real photos reported 6. De-duplicate on image id.
+ */
 function getSectionImageCount(section: GuideSection) {
-  return (
-    section.galleryImages.length +
-    section.items.reduce((sum, item) => sum + item.galleryImages.length, 0)
-  );
+  return collectSectionImageIds(section).size;
+}
+
+function collectSectionImageIds(section: GuideSection) {
+  const imageIds = new Set<string>();
+
+  for (const image of section.galleryImages) {
+    imageIds.add(image.id);
+  }
+
+  for (const item of section.items) {
+    for (const image of item.galleryImages) {
+      imageIds.add(image.id);
+    }
+  }
+
+  return imageIds;
 }
 
 function sortSections(sections: GuideSection[], sortMode: SortMode) {
@@ -2054,20 +2087,22 @@ export function HotelGuideClient({
     [sections],
   );
 
-  const totalImages = useMemo(
-    () =>
-      sections.reduce(
-        (sum, section) =>
-          sum +
-          section.galleryImages.length +
-          section.items.reduce(
-            (itemSum, item) => itemSum + item.galleryImages.length,
-            0,
-          ),
-        0,
-      ),
-    [sections],
-  );
+  /**
+   * Deduplicate across the whole guide: an item photo appears under both its
+   * item and its parent section, and the same image id must not inflate the
+   * headline count.
+   */
+  const totalImages = useMemo(() => {
+    const imageIds = new Set<string>();
+
+    for (const section of sections) {
+      for (const imageId of collectSectionImageIds(section)) {
+        imageIds.add(imageId);
+      }
+    }
+
+    return imageIds.size;
+  }, [sections]);
 
   const publishedSections = useMemo(
     () => sections.filter((section) => section.isActive).length,
@@ -2197,9 +2232,9 @@ export function HotelGuideClient({
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#b88938]">
                 Hotel setup · Guest experience
               </p>
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-[#11100b]">
+              <h2 className="mt-1 text-3xl font-black tracking-tight text-[#11100b]">
                 Hotel Guide
-              </h1>
+              </h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-neutral-500">
                 Organize the guest guide by section, then add the information
                 cards guests should see inside each section.
@@ -2294,6 +2329,7 @@ export function HotelGuideClient({
             </div>
 
             <select
+            aria-label="Status filter"
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(event.target.value as StatusFilter)
@@ -2306,6 +2342,7 @@ export function HotelGuideClient({
             </select>
 
             <select
+            aria-label="Sort order"
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
               className="h-11 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-black outline-none focus:border-[#c99c38]"
@@ -2408,49 +2445,63 @@ export function HotelGuideClient({
                 </div>
               ) : null}
 
-              <div className="mt-3 grid gap-2 border-t border-neutral-100 pt-3">
-                <form
-                  action={seedDefaultHotelGuideAction}
-                  onSubmit={(event) => {
-                    if (
-                      !window.confirm(
-                        "Add the default hotel guide sections and items?",
-                      )
-                    ) {
-                      event.preventDefault();
-                    }
-                  }}
-                >
-                  <input type="hidden" name="hotelId" value={defaultHotelId} />
-                  <button
-                    type="submit"
-                    className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black hover:bg-neutral-50"
-                  >
-                    Add Starter Guide
-                  </button>
-                </form>
+              {/*
+                Starter content is a setup task, not daily work: two permanent
+                buttons sat in the sidebar on every visit for actions most
+                properties run once. Collapsed behind a disclosure so the
+                sidebar shows the guide's structure, with both actions still one
+                click away and confirmations that say what happens to content
+                that already exists.
+              */}
+              <details className="mt-3 border-t border-neutral-100 pt-3">
+                <summary className="cursor-pointer list-none rounded-xl px-3 py-2 text-xs font-black text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c99c38]">
+                  Starter content
+                </summary>
 
-                <form
-                  action={seedPoolGuideContentAction}
-                  onSubmit={(event) => {
-                    if (
-                      !window.confirm(
-                        "Add or update the dynamic Pool & Amenities content?",
-                      )
-                    ) {
-                      event.preventDefault();
-                    }
-                  }}
-                >
-                  <input type="hidden" name="hotelId" value={defaultHotelId} />
-                  <button
-                    type="submit"
-                    className="h-10 w-full rounded-xl border border-[#c99c38]/40 bg-[#fffaf0] px-3 text-xs font-black text-[#9d741f] hover:bg-[#f7f1e5]"
+                <div className="mt-2 grid gap-2">
+                  <form
+                    action={seedDefaultHotelGuideAction}
+                    onSubmit={(event) => {
+                      if (
+                        !window.confirm(
+                          "Add the default guide sections and items? Sections you already created are left unchanged.",
+                        )
+                      ) {
+                        event.preventDefault();
+                      }
+                    }}
                   >
-                    Add / Update Pool Guide
-                  </button>
-                </form>
-              </div>
+                    <input type="hidden" name="hotelId" value={defaultHotelId} />
+                    <button
+                      type="submit"
+                      className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black hover:bg-neutral-50"
+                    >
+                      Load starter guide
+                    </button>
+                  </form>
+
+                  <form
+                    action={seedPoolGuideContentAction}
+                    onSubmit={(event) => {
+                      if (
+                        !window.confirm(
+                          "Add or replace the Pool & Amenities content? Existing pool items will be overwritten.",
+                        )
+                      ) {
+                        event.preventDefault();
+                      }
+                    }}
+                  >
+                    <input type="hidden" name="hotelId" value={defaultHotelId} />
+                    <button
+                      type="submit"
+                      className="h-10 w-full rounded-xl border border-[#c99c38]/40 bg-[#fffaf0] px-3 text-xs font-black text-[#9d741f] hover:bg-[#f7f1e5]"
+                    >
+                      Load pool content
+                    </button>
+                  </form>
+                </div>
+              </details>
             </aside>
 
             {selectedSection ? (

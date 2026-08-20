@@ -4,6 +4,11 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { createSession, dashboardHomeForRole, verifyPassword } from '@/lib/auth';
 import {
+  checkLoginThrottle,
+  clearLoginAttempts,
+  recordFailedLogin,
+} from '@/lib/login-rate-limit';
+import {
   getFirstVisibleDashboardHref,
   getVisibleDashboardNavItems,
 } from '@/lib/dashboard-permissions';
@@ -22,6 +27,11 @@ const DEMO_ACCOUNT_EMAILS = new Set([
   'staff@cloudview.test',
   'kitchen@cloudview.test',
 ]);
+
+/**
+ * Kept in sync with prisma/seed.ts. Only ever used outside production.
+ */
+const DEMO_ACCOUNT_PASSWORD = 'Password123!';
 
 function cleanText(value: FormDataEntryValue | null, maxLength = 300) {
   if (typeof value !== 'string') {
@@ -120,8 +130,18 @@ type LoginResult =
 async function authenticateDashboardLogin(
   formData: FormData
 ): Promise<LoginResult> {
-  const demoAccount = cleanText(formData.get('demoAccount'), 180).toLowerCase();
-  const isDemoLogin = DEMO_ACCOUNT_EMAILS.has(demoAccount);
+  /**
+   * The one-click demo accounts exist for local development only.
+   *
+   * In production this branch must never run: it substitutes a hard-coded
+   * password for a set of well-known seeded addresses (including a
+   * SUPER_ADMIN), and the field can be posted directly without the UI.
+   */
+  const demoLoginAllowed = process.env.NODE_ENV !== 'production';
+  const demoAccount = demoLoginAllowed
+    ? cleanText(formData.get('demoAccount'), 180).toLowerCase()
+    : '';
+  const isDemoLogin = demoLoginAllowed && DEMO_ACCOUNT_EMAILS.has(demoAccount);
 
   const email = (isDemoLogin
     ? demoAccount
@@ -129,13 +149,24 @@ async function authenticateDashboardLogin(
   ).toLowerCase();
 
   const password = isDemoLogin
-    ? '12345'
+    ? DEMO_ACCOUNT_PASSWORD
     : cleanText(formData.get('password'), 300);
 
   if (!email || !isValidEmail(email) || !password) {
     return {
       ok: false,
       error: 'Enter a valid email and password.',
+    };
+  }
+
+  const throttle = await checkLoginThrottle(email);
+
+  if (throttle.blocked) {
+    return {
+      ok: false,
+      error: `Too many failed sign-in attempts. Try again in ${
+        throttle.retryAfterMinutes
+      } minute${throttle.retryAfterMinutes === 1 ? '' : 's'}.`,
     };
   }
 
@@ -158,6 +189,8 @@ async function authenticateDashboardLogin(
   }
 
   if (!user || !user.isActive) {
+    await recordFailedLogin(email);
+
     return {
       ok: false,
       error: 'Invalid login credentials.',
@@ -167,11 +200,15 @@ async function authenticateDashboardLogin(
   const valid = await verifyPassword(password, user.passwordHash);
 
   if (!valid) {
+    await recordFailedLogin(email);
+
     return {
       ok: false,
       error: 'Invalid login credentials.',
     };
   }
+
+  await clearLoginAttempts(email);
 
   return {
     ok: true,

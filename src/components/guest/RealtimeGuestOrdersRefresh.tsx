@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { createCentrifugoClient } from '@/lib/realtime/centrifugo-client';
+import {
+  createCentrifugoClient,
+  createSubscriptionOptions,
+} from '@/lib/realtime/centrifugo-client';
 
 type RealtimeOrderEvent =
   | 'order-status-updated'
@@ -156,6 +159,7 @@ export function RealtimeGuestOrdersRefresh({
         const payload = (await response.json()) as {
           token?: string;
           channels?: string[];
+          subscriptionTokens?: Record<string, string>;
         };
 
         if (!payload.token || !payload.channels?.length || disposed) {
@@ -172,7 +176,14 @@ export function RealtimeGuestOrdersRefresh({
         }
 
         for (const channel of payload.channels) {
-          const subscription = centrifuge.newSubscription(channel);
+          const subscription = centrifuge.newSubscription(
+            channel,
+            createSubscriptionOptions({
+              channel,
+              subscriptionTokens: payload.subscriptionTokens,
+              tokenEndpoint,
+            })
+          );
 
           subscription.on('publication', (ctx) => {
             const data = ctx.data as RealtimeOrderPayload;

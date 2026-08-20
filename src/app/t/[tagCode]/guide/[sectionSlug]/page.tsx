@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { GuideImageGallery } from "./GuideImageGallery";
+import { GuideWifiCard } from "./GuideWifiCard";
 import { PanoramaModalButton } from "./PanoramaModalButton";
 import { GuestShell } from "@/components/guest/GuestShell";
 import { db } from "@/lib/db";
@@ -383,14 +384,29 @@ export default async function GuideSectionDetailPage({
 
   if (!tag || tag.status !== "ACTIVE") notFound();
 
+  /*
+    Live Wi-Fi credentials for the guide's Wi-Fi item. Read from settings so a
+    password change in the dashboard is reflected here immediately.
+  */
+  const wifiName = tag.hotel.settings?.wifiName ?? "";
+  const wifiPassword = tag.hotel.settings?.wifiPassword ?? "";
+
   const sections = await db.hotelGuideSection.findMany({
     where: {
       hotelId: tag.hotelId,
       isActive: true,
     },
     include: {
+      /**
+       * Section-level photos only.
+       *
+       * An image attached to an item carries both `sectionId` and `itemId`, so
+       * without the `itemId: null` filter it is returned here *and* under its
+       * item — and the page renders both galleries, showing the guest every
+       * item photo twice.
+       */
       galleryImages: {
-        where: { isActive: true },
+        where: { isActive: true, itemId: null },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       },
       items: {
@@ -431,97 +447,54 @@ export default async function GuideSectionDetailPage({
         <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#9f7425]/10 blur-[110px]" />
 
         <div className="relative mx-auto max-w-xl">
-          <section className="relative mb-5 min-h-[440px] overflow-hidden rounded-[2.1rem] border border-white/10 bg-[#11110e] shadow-[0_34px_90px_rgba(0,0,0,0.48)]">
+          {/*
+            Compact banner instead of a full-height hero.
+
+            The guest arrived here by tapping this section's card, and the
+            shell header above already shows the title and subtitle. Repeating
+            both over a 440px photo — plus counts of the very facts they are
+            about to read — pushed the actual answer below three screens.
+            The photograph stays, at a size that sets tone without displacing
+            content.
+          */}
+          <section className="relative mb-5 h-[168px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#11110e] shadow-[0_20px_50px_rgba(0,0,0,0.38)]">
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${heroImage})` }}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.28)_38%,rgba(5,5,4,0.98)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.15)_0%,rgba(0,0,0,0.45)_55%,rgba(5,5,4,0.95)_100%)]" />
             <div className="absolute inset-0 ring-1 ring-inset ring-white/[0.06]" />
 
-            <div className="relative z-10 flex min-h-[440px] flex-col justify-between p-5">
-              <div className="flex items-start justify-between gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-[9px] font-bold uppercase tracking-[0.22em] text-[#e8c66f] backdrop-blur-xl">
-                  <SectionIcon className="size-3.5" />
-                  Hotel collection
-                </span>
+            <div className="relative z-10 flex h-full flex-col justify-end p-4">
+              <h1 className="font-serif text-[1.9rem] font-light leading-[1.02] tracking-[-0.02em] text-[#fbf7ee]">
+                {section.title}
+              </h1>
 
-                <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/42">
-                  CloudView
-                </span>
-              </div>
-
-              <div>
-                <Eyebrow>Curated guest guide</Eyebrow>
-                <h1 className="mt-3 max-w-sm font-serif text-[2.7rem] font-light leading-[0.98] tracking-[-0.02em] text-[#fbf7ee]">
-                  {section.title}
-                </h1>
-
-                {section.subtitle ? (
-                  <p className="mt-4 max-w-md text-sm leading-6 text-white/62">
-                    {section.subtitle}
-                  </p>
-                ) : null}
-
-                <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                  {section.panoramaEnabled && section.panoramaImageUrl ? (
-                    <PanoramaModalButton
-                      title={section.title}
-                      subtitle={section.subtitle}
-                      panoramaImageUrl={section.panoramaImageUrl}
-                    />
-                  ) : null}
-
-                  <span className="rounded-full border border-white/10 bg-black/35 px-3.5 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/58 backdrop-blur">
-                    {section.items.length} detail
-                    {section.items.length === 1 ? "" : "s"}
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-black/35 px-3.5 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/58 backdrop-blur">
-                    {section.galleryImages.length} photo
-                    {section.galleryImages.length === 1 ? "" : "s"}
-                  </span>
+              {section.panoramaEnabled && section.panoramaImageUrl ? (
+                <div className="mt-3">
+                  <PanoramaModalButton
+                    title={section.title}
+                    subtitle={section.subtitle}
+                    panoramaImageUrl={section.panoramaImageUrl}
+                  />
                 </div>
-              </div>
+              ) : null}
             </div>
           </section>
 
-          <div className="mb-6 grid grid-cols-2 gap-2.5">
-            <AtAGlanceCard
-              icon={Sparkles}
-              label="Guide details"
-              value={`${section.items.length} available`}
-            />
-            <AtAGlanceCard
-              icon={ImageIcon}
-              label="Photo collection"
-              value={`${section.galleryImages.length} images`}
-            />
-          </div>
-
           {section.description ? (
-            <section className="mb-7 rounded-[1.7rem] border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-5 shadow-[0_20px_55px_rgba(0,0,0,0.24)]">
-              <Eyebrow>About this collection</Eyebrow>
-              <p className="mt-4 whitespace-pre-line font-serif text-[1.15rem] font-light leading-8 text-white/72">
-                {section.description}
-              </p>
-            </section>
+            <p className="mb-7 whitespace-pre-line font-serif text-[1.1rem] font-light leading-8 text-white/72">
+              {section.description}
+            </p>
           ) : null}
 
+          {/*
+            Content leads. The gallery and the guide items are the payload, so
+            they start immediately rather than behind a heading, a restated
+            heading and a sentence explaining how to scroll.
+          */}
           {section.galleryImages.length ? (
             <section className="mb-8">
-              <Eyebrow>Visual journey</Eyebrow>
-              <div className="mt-2 flex items-end justify-between gap-4">
-                <div>
-                  <h2 className="font-serif text-[1.9rem] font-light text-[#f7f2e8]">
-                    A glimpse inside
-                  </h2>
-                  <p className="mt-1 text-xs leading-5 text-white/38">
-                    Tap any photograph to enter the full-screen gallery.
-                  </p>
-                </div>
-                <ImageIcon className="mb-1 size-5 text-[#d5ad55]" />
-              </div>
-
               <GuideImageGallery
                 images={section.galleryImages}
                 variant="section"
@@ -530,25 +503,32 @@ export default async function GuideSectionDetailPage({
           ) : null}
 
           {section.items.length ? (
-            <section className="mt-8">
-              <Eyebrow>Essential details</Eyebrow>
-              <h2 className="mt-2 font-serif text-[1.9rem] font-light leading-tight text-[#f7f2e8]">
-                Everything you need to know
-              </h2>
-              <p className="mt-2 max-w-md text-sm leading-6 text-white/42">
-                Hours, locations, services and useful information, arranged for
-                effortless browsing.
-              </p>
-
-              <div className="mt-5 space-y-4">
-                {section.items.map((item, index) => (
-                  <GuideItemCard
-                    key={item.id}
-                    item={item}
-                    tagCode={tagCode}
-                    index={index}
-                  />
-                ))}
+            <section>
+              <div className="space-y-4">
+                {section.items.map((item, index) =>
+                  /*
+                    A Wi-Fi item shows the hotel's real credentials from
+                    settings rather than its stored text, which was a pointer to
+                    another screen. Keyed on the existing iconKey so it does not
+                    depend on matching the title string.
+                  */
+                  item.iconKey === "Wifi" && wifiName ? (
+                    <GuideWifiCard
+                      key={item.id}
+                      title={item.title}
+                      subtitle={item.subtitle}
+                      wifiName={wifiName}
+                      wifiPassword={wifiPassword}
+                    />
+                  ) : (
+                    <GuideItemCard
+                      key={item.id}
+                      item={item}
+                      tagCode={tagCode}
+                      index={index}
+                    />
+                  )
+                )}
               </div>
             </section>
           ) : (
@@ -564,27 +544,13 @@ export default async function GuideSectionDetailPage({
             </section>
           )}
 
-          {section.items.length ? (
-            <section className="mt-7 overflow-hidden rounded-[1.7rem] border border-[#d5ad55]/25 bg-[linear-gradient(145deg,#d9b45f,#b9882e)] p-5 text-[#17130b] shadow-[0_25px_65px_rgba(163,115,31,0.22)]">
-              <div className="flex items-start gap-4">
-                <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-black/10 bg-black/[0.08]">
-                  <Star className="size-5" />
-                </span>
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-black/48">
-                    Guest note
-                  </p>
-                  <p className="mt-1.5 font-serif text-xl leading-tight">
-                    Keep this guide close during your stay.
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-black/65">
-                    It contains the most useful information for{" "}
-                    {section.title.toLowerCase()}.
-                  </p>
-                </div>
-              </div>
-            </section>
-          ) : null}
+          {/*
+            The "Guest note" panel was removed: it told the guest to keep the
+            guide close and that it contained information about the section
+            they were already reading, with the section title interpolated into
+            the sentence. It carried no information and occupied a full screen
+            band directly after the content that does.
+          */}
 
           {otherSections.length ? (
             <section className="mt-9">
@@ -605,40 +571,13 @@ export default async function GuideSectionDetailPage({
             </section>
           ) : null}
 
-          <section className="mt-9 rounded-[1.8rem] border border-white/[0.08] bg-white/[0.045] p-5">
-            <div className="flex items-start gap-4">
-              <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
-                <HelpCircle className="size-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#d5ad55]">
-                  Personal assistance
-                </p>
-                <h2 className="mt-1.5 font-serif text-xl text-[#f7f2e8]">
-                  May we assist you?
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-white/45">
-                  Our team can help with dining, directions, service requests
-                  and hotel information.
-                </p>
-
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <Link
-                    href={`/t/${tagCode}/service`}
-                    className="rounded-full bg-[#d5ad55] px-3 py-3 text-center text-xs font-bold text-black transition active:scale-[0.98]"
-                  >
-                    Request service
-                  </Link>
-                  <Link
-                    href={`/t/${tagCode}/contact`}
-                    className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-3 text-center text-xs font-bold text-white/75 transition active:scale-[0.98]"
-                  >
-                    Contact staff
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
+          {/*
+            The "Personal assistance" panel was removed here for the same
+            reason as on the guide index: Request service and Contact staff are
+            already reachable from the persistent bottom tab bar on every
+            screen, so repeating them at the foot of each section pushed the
+            section's own content further from the top.
+          */}
         </div>
       </div>
     </GuestShell>

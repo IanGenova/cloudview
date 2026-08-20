@@ -345,7 +345,7 @@ export default async function ContactPage({
               className="mt-6 flex min-h-14 items-center justify-between rounded-[1.5rem] border border-gold/25 bg-gold/10 px-5 text-sm font-black text-gold transition hover:bg-gold/15 active:scale-[0.99]"
             >
               <span className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-xl bg-gold text-black">
+                <span className="grid size-11 place-items-center rounded-xl bg-gold text-black">
                   <ShieldCheck className="size-5" />
                 </span>
                 Return to Guest Home

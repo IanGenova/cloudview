@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Role } from '@prisma/client';
 import { requireUser } from '@/lib/auth';
-import { createCentrifugoConnectionToken } from '@/lib/realtime/centrifugo-token';
+import { isNextRedirectError } from '@/lib/next-control-flow';
+import {
+  buildCentrifugoSubscriptionTokens,
+  createCentrifugoConnectionToken,
+} from '@/lib/realtime/centrifugo-token';
 import { realtimeChannels } from '@/lib/realtime/channels';
 
 export const dynamic = 'force-dynamic';
@@ -51,6 +55,11 @@ export async function GET() {
     return noStoreJson({
       token,
       channels: Array.from(new Set(channels)),
+      subscriptionTokens: buildCentrifugoSubscriptionTokens({
+        subject,
+        channels,
+        ttlSeconds: 60 * 60,
+      }),
       debug:
         process.env.NODE_ENV === 'production'
           ? undefined
@@ -69,6 +78,11 @@ export async function GET() {
             },
     });
   } catch (error) {
+    // Let requireUser()'s redirect signal through instead of masking it as a 500.
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error('Service requests realtime token route failed:', error);
 
     return noStoreJson(

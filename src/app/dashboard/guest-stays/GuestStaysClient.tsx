@@ -1933,31 +1933,31 @@ function handleResetPasscode(guestStayId: string) {
           <table className="w-full min-w-[1240px] text-left">
             <thead className="sticky top-0 z-10 bg-neutral-50/95 backdrop-blur">
               <tr>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Guest
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Hotel / Room
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Devices
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Orders / Requests
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Points
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Check-in
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Expected Checkout
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Status
                 </th>
-                <th className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
                   Actions
                 </th>
               </tr>

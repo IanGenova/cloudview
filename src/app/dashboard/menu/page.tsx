@@ -829,7 +829,7 @@ return (
             <ProductTypeField helper="Choose Single Item or Bundle / Combo." />
 
             <FormField label="Product Name">
-              <Input name="name" defaultValue={product.name} required />
+              <Input aria-label="Product name" name="name" defaultValue={product.name} required />
             </FormField>
 
             <FormField label="Price" helper="Example: 280 means ₱280.00.">
@@ -930,7 +930,7 @@ return (
               <ProductTypeField helper="Choose Single Item or Bundle / Combo." />
 
               <FormField label="Product Name">
-                <Input name="name" placeholder="Club Sandwich" required />
+                <Input aria-label="New product name" name="name" placeholder="Club Sandwich" required />
               </FormField>
 
               <FormField label="Price" helper="Example: 280 means ₱280.00.">
@@ -1053,7 +1053,7 @@ return (
                   label="Category Name"
                   helper="Example: Breakfast, Mains, Dinner, Drinks."
                 >
-                  <Input name="name" placeholder="Breakfast" required />
+                  <Input aria-label="New category name" name="name" placeholder="Breakfast" required />
                 </FormField>
 
                 <FormField
@@ -1061,6 +1061,7 @@ return (
                   helper="Lower numbers appear first. Use 0 if unsure."
                 >
                   <Input
+                    aria-label="New category sort order"
                     name="sortOrder"
                     type="number"
                     min="0"
@@ -1146,6 +1147,7 @@ return (
 
                             <div>
                               <Input
+                                aria-label="Category name"
                                 name="name"
                                 defaultValue={category.name}
                                 required
@@ -1154,6 +1156,7 @@ return (
 
                             <div>
                               <Input
+                                aria-label="Category sort order"
                                 name="sortOrder"
                                 type="number"
                                 min="0"

@@ -705,12 +705,12 @@ export function BackupManagerClient({
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-xs uppercase text-neutral-400">
-                <th className="px-3 py-3">Backup</th>
-                <th className="px-3 py-3">Mode</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3">Phase</th>
-                <th className="px-3 py-3">Started By</th>
-                <th className="px-3 py-3">Date</th>
+                <th scope="col" className="px-3 py-3">Backup</th>
+                <th scope="col" className="px-3 py-3">Mode</th>
+                <th scope="col" className="px-3 py-3">Status</th>
+                <th scope="col" className="px-3 py-3">Phase</th>
+                <th scope="col" className="px-3 py-3">Started By</th>
+                <th scope="col" className="px-3 py-3">Date</th>
               </tr>
             </thead>
             <tbody>
@@ -787,10 +787,10 @@ export function BackupManagerClient({
               <table className="min-w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-xs uppercase text-neutral-400">
-                    <th className="px-3 py-3">Dataset</th>
-                    <th className="px-3 py-3">Current</th>
-                    <th className="px-3 py-3">Backup</th>
-                    <th className="px-3 py-3">Difference</th>
+                    <th scope="col" className="px-3 py-3">Dataset</th>
+                    <th scope="col" className="px-3 py-3">Current</th>
+                    <th scope="col" className="px-3 py-3">Backup</th>
+                    <th scope="col" className="px-3 py-3">Difference</th>
                   </tr>
                 </thead>
                 <tbody>
