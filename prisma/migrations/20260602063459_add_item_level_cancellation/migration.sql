@@ -1,12 +1,12 @@
 -- AlterTable
-ALTER TABLE `orderitem` ADD COLUMN `cancelReason` VARCHAR(191) NULL,
+ALTER TABLE `OrderItem` ADD COLUMN `cancelReason` VARCHAR(191) NULL,
     ADD COLUMN `cancelledAt` DATETIME(3) NULL,
     ADD COLUMN `cancelledById` VARCHAR(191) NULL,
     ADD COLUMN `cancelledQty` INTEGER NOT NULL DEFAULT 0,
     ADD COLUMN `status` ENUM('ACTIVE', 'PARTIALLY_CANCELLED', 'CANCELLED') NOT NULL DEFAULT 'ACTIVE';
 
 -- AlterTable
-ALTER TABLE `servicerequest` ADD COLUMN `cancelReason` VARCHAR(191) NULL,
+ALTER TABLE `ServiceRequest` ADD COLUMN `cancelReason` VARCHAR(191) NULL,
     ADD COLUMN `cancelledAt` DATETIME(3) NULL,
     ADD COLUMN `cancelledById` VARCHAR(191) NULL,
     ADD COLUMN `cancelledQty` INTEGER NOT NULL DEFAULT 0,

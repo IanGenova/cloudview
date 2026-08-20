@@ -1,8 +1,8 @@
 -- AlterTable
-ALTER TABLE `hotelguideitem` MODIFY `imageUrl` TEXT NULL;
+ALTER TABLE `HotelGuideItem` MODIFY `imageUrl` TEXT NULL;
 
 -- AlterTable
-ALTER TABLE `hotelguidesection` MODIFY `imageUrl` TEXT NULL;
+ALTER TABLE `HotelGuideSection` MODIFY `imageUrl` TEXT NULL;
 
 -- CreateTable
 CREATE TABLE `HotelGuideImage` (

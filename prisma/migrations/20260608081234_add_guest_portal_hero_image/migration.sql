@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `hotelsettings` ADD COLUMN `guestPortalHeroImageUrl` TEXT NULL;
+ALTER TABLE `HotelSettings` ADD COLUMN `guestPortalHeroImageUrl` TEXT NULL;

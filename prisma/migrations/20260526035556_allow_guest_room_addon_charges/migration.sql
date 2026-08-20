@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `roomaddoncharge` MODIFY `postedById` VARCHAR(191) NULL;
+ALTER TABLE `RoomAddOnCharge` MODIFY `postedById` VARCHAR(191) NULL;

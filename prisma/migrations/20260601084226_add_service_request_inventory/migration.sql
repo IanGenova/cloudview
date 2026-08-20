@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `servicecatalogitem` ADD COLUMN `inventoryTracked` BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE `ServiceCatalogItem` ADD COLUMN `inventoryTracked` BOOLEAN NOT NULL DEFAULT false;
 
 -- CreateTable
 CREATE TABLE `ServiceAvailabilityStock` (

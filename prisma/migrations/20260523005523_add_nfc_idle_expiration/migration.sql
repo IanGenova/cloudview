@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `nfcaccesssession` ADD COLUMN `idleExpiresAt` DATETIME(3) NULL,
+ALTER TABLE `NfcAccessSession` ADD COLUMN `idleExpiresAt` DATETIME(3) NULL,
     ADD COLUMN `lastSeenAt` DATETIME(3) NULL;
 
 -- CreateIndex

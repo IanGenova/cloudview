@@ -1,5 +1,5 @@
 -- DropIndex
-DROP INDEX `ServiceRequest_requestCode_key` ON `servicerequest`;
+DROP INDEX `ServiceRequest_requestCode_key` ON `ServiceRequest`;
 
 -- CreateIndex
 CREATE INDEX `ServiceRequest_requestCode_idx` ON `ServiceRequest`(`requestCode`);

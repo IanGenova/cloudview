@@ -1,8 +1,8 @@
 -- AlterTable
-ALTER TABLE `order` ADD COLUMN `guestSessionId` VARCHAR(191) NULL;
+ALTER TABLE `Order` ADD COLUMN `guestSessionId` VARCHAR(191) NULL;
 
 -- AlterTable
-ALTER TABLE `servicerequest` ADD COLUMN `guestSessionId` VARCHAR(191) NULL;
+ALTER TABLE `ServiceRequest` ADD COLUMN `guestSessionId` VARCHAR(191) NULL;
 
 -- CreateTable
 CREATE TABLE `NfcGuestSession` (

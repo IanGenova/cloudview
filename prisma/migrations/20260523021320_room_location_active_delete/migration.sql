@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `location` ADD COLUMN `deletedAt` DATETIME(3) NULL;
+ALTER TABLE `Location` ADD COLUMN `deletedAt` DATETIME(3) NULL;
 
 -- AlterTable
-ALTER TABLE `room` ADD COLUMN `deletedAt` DATETIME(3) NULL;
+ALTER TABLE `Room` ADD COLUMN `deletedAt` DATETIME(3) NULL;
