@@ -723,6 +723,7 @@ let groupedServiceRequestCode: string | null = null;
             reason: createdOrder
               ? `POS order ${createdOrder.orderCode}`
               : 'POS food deduction',
+            orderId: createdOrder?.id ?? null,
             userId: user.id,
           },
         });
@@ -740,6 +741,7 @@ let groupedServiceRequestCode: string | null = null;
             reason: createdOrder
               ? `POS bundle order ${createdOrder.orderCode}`
               : 'POS bundle food deduction',
+            orderId: createdOrder?.id ?? null,
             userId: user.id,
           },
         });

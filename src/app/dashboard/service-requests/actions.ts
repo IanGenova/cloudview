@@ -27,6 +27,62 @@ import {
   isTerminalServiceRequestStatus,
 } from '@/lib/staff-processing-policy';
 
+/**
+ * Return `quantity` units of a service from used back to available, atomically.
+ *
+ * The guarded `updateMany` folds the "is there enough in usedQty?" check into
+ * the write, so nothing can change the row between checking and updating.
+ * Returns the amount actually moved, which is what the ledger should record.
+ */
+async function restoreServiceStockQuantity({
+  tx,
+  stockId,
+  requestedQuantity,
+}: {
+  tx: Prisma.TransactionClient;
+  stockId: string;
+  requestedQuantity: number;
+}) {
+  if (requestedQuantity <= 0) {
+    return 0;
+  }
+
+  const exact = await tx.serviceAvailabilityStock.updateMany({
+    where: { id: stockId, usedQty: { gte: requestedQuantity } },
+    data: {
+      availableQty: { increment: requestedQuantity },
+      usedQty: { decrement: requestedQuantity },
+      isSoldOut: false,
+    },
+  });
+
+  if (exact.count === 1) {
+    return requestedQuantity;
+  }
+
+  const current = await tx.serviceAvailabilityStock.findUnique({
+    where: { id: stockId },
+    select: { usedQty: true },
+  });
+
+  const clamped = Math.max(0, Math.min(requestedQuantity, current?.usedQty ?? 0));
+
+  if (clamped <= 0) {
+    return 0;
+  }
+
+  const partial = await tx.serviceAvailabilityStock.updateMany({
+    where: { id: stockId, usedQty: { gte: clamped } },
+    data: {
+      availableQty: { increment: clamped },
+      usedQty: { decrement: clamped },
+      isSoldOut: false,
+    },
+  });
+
+  return partial.count === 1 ? clamped : 0;
+}
+
 function generateChargeCode() {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -187,18 +243,31 @@ async function restoreServiceInventoryForCancelledRequests({
         continue;
       }
 
-      const updatedStock = await tx.serviceAvailabilityStock.update({
+      /**
+       * Move the units back from used to available in one guarded write.
+       *
+       * The clamp used to be computed from `stock.usedQty`, read earlier in the
+       * transaction — a value another transaction could have changed by the
+       * time this ran. Worse, `availableQty` was incremented in full while
+       * `usedQty` was clamped, so the two counters could drift apart and
+       * availability could exceed what ever existed.
+       *
+       * Folding the check into the `where` clause makes it atomic, and moving
+       * both counters by the same amount keeps `availableQty + usedQty` stable.
+       */
+      const appliedRestoreQuantity = await restoreServiceStockQuantity({
+        tx,
+        stockId: stock.id,
+        requestedQuantity: restoreQuantity,
+      });
+
+      if (appliedRestoreQuantity <= 0) {
+        continue;
+      }
+
+      const updatedStock = await tx.serviceAvailabilityStock.findUniqueOrThrow({
         where: {
           id: stock.id,
-        },
-        data: {
-          availableQty: {
-            increment: restoreQuantity,
-          },
-          usedQty: {
-            decrement: Math.min(stock.usedQty, restoreQuantity),
-          },
-          isSoldOut: false,
         },
         select: {
           availableQty: true,
@@ -211,7 +280,8 @@ async function restoreServiceInventoryForCancelledRequests({
           serviceId,
           stockId: stock.id,
           type: ServiceAvailabilityMovementType.CANCEL_RESTORE,
-          quantity: restoreQuantity,
+          // Record what actually moved, not what was requested.
+          quantity: appliedRestoreQuantity,
           balanceAfter: updatedStock.availableQty,
           reason: `Cancelled service item ${request.type} from request order ${request.requestCode} stock restored`,
           userId,

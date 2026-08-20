@@ -1327,6 +1327,16 @@ model MenuAvailabilityMovement {
   reason       String?
   userId       String?
 
+  /// Order this movement belongs to.
+  ///
+  /// Stock reconciliation used to identify related movements by substring
+  /// matching the free-text `reason` column, which silently broke whenever that
+  /// wording changed. These columns give the deduction/restore guards a real
+  /// key to match on. Nullable because movements created before this column
+  /// existed cannot be backfilled, and manual stock adjustments have no order.
+  orderId     String?
+  orderItemId String?
+
   createdAt DateTime @default(now())
 
   hotel   Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
@@ -1337,6 +1347,8 @@ model MenuAvailabilityMovement {
   @@index([productId])
   @@index([stockId])
   @@index([type])
+  @@index([orderId])
+  @@index([orderItemId])
 }
 
 model ServiceAvailabilityStock {

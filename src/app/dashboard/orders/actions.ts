@@ -60,7 +60,14 @@ type RestoreRequirement = {
   deductionType: MenuAvailabilityMovementType;
   restoreType: MenuAvailabilityMovementType;
   reason: string;
+  /**
+   * Legacy fallback. Movements written before `orderId` existed can only be
+   * identified by their reason text, so the guards still consult this when
+   * `orderId` is absent. New movements should always carry `orderId`.
+   */
   duplicateGuardText: string;
+  orderId?: string;
+  orderItemId?: string;
 };
 
 
@@ -326,6 +333,89 @@ function getOrderStatusSuccessCode(status: OrderStatus) {
   return 'order-updated';
 }
 
+/**
+ * Return `quantity` units from sold back to available, atomically.
+ *
+ * The guarded `updateMany` folds the "is there enough in soldQty?" check into
+ * the write itself, so no other transaction can change the row between the
+ * check and the update. Returns how much was actually moved, which is what the
+ * movement ledger should record.
+ *
+ * If `soldQty` is lower than requested — a manual stock correction, or drift
+ * from an earlier bug — only the amount genuinely recorded as sold is returned,
+ * rather than inventing the difference.
+ */
+async function restoreMenuStockQuantity({
+  tx,
+  stockId,
+  requestedQuantity,
+}: {
+  tx: Prisma.TransactionClient;
+  stockId: string;
+  requestedQuantity: number;
+}) {
+  if (requestedQuantity <= 0) {
+    return 0;
+  }
+
+  const exact = await tx.menuAvailabilityStock.updateMany({
+    where: {
+      id: stockId,
+      soldQty: {
+        gte: requestedQuantity,
+      },
+    },
+    data: {
+      availableQty: {
+        increment: requestedQuantity,
+      },
+      soldQty: {
+        decrement: requestedQuantity,
+      },
+      isSoldOut: false,
+    },
+  });
+
+  if (exact.count === 1) {
+    return requestedQuantity;
+  }
+
+  const current = await tx.menuAvailabilityStock.findUnique({
+    where: {
+      id: stockId,
+    },
+    select: {
+      soldQty: true,
+    },
+  });
+
+  const clamped = Math.max(0, Math.min(requestedQuantity, current?.soldQty ?? 0));
+
+  if (clamped <= 0) {
+    return 0;
+  }
+
+  const partial = await tx.menuAvailabilityStock.updateMany({
+    where: {
+      id: stockId,
+      soldQty: {
+        gte: clamped,
+      },
+    },
+    data: {
+      availableQty: {
+        increment: clamped,
+      },
+      soldQty: {
+        decrement: clamped,
+      },
+      isSoldOut: false,
+    },
+  });
+
+  return partial.count === 1 ? clamped : 0;
+}
+
 async function applyRestoreRequirements({
   tx,
   hotelId,
@@ -347,14 +437,36 @@ async function applyRestoreRequirements({
     /**
      * Prevent double restoration for the same order/item/product/restore type.
      */
+    /**
+     * Has this exact restore already been recorded?
+     *
+     * Prefer the real key. Fall back to the legacy reason match only for
+     * movements written before `orderId` existed, so historical orders still
+     * reconcile correctly.
+     */
     const existingRestore = await tx.menuAvailabilityMovement.findFirst({
       where: {
         hotelId,
         productId: requirement.productId,
         type: requirement.restoreType,
-        reason: {
-          contains: requirement.duplicateGuardText,
-        },
+        ...(requirement.orderId
+          ? {
+              OR: [
+                {
+                  orderId: requirement.orderId,
+                  ...(requirement.orderItemId
+                    ? { orderItemId: requirement.orderItemId }
+                    : {}),
+                },
+                {
+                  orderId: null,
+                  reason: { contains: requirement.duplicateGuardText },
+                },
+              ],
+            }
+          : {
+              reason: { contains: requirement.duplicateGuardText },
+            }),
       },
       select: {
         id: true,
@@ -373,9 +485,23 @@ async function applyRestoreRequirements({
         hotelId,
         productId: requirement.productId,
         type: requirement.deductionType,
-        reason: {
-          contains: requirement.duplicateGuardText.split(':')[0],
-        },
+        ...(requirement.orderId
+          ? {
+              OR: [
+                { orderId: requirement.orderId },
+                {
+                  orderId: null,
+                  reason: {
+                    contains: requirement.duplicateGuardText.split(':')[0],
+                  },
+                },
+              ],
+            }
+          : {
+              reason: {
+                contains: requirement.duplicateGuardText.split(':')[0],
+              },
+            }),
       },
       select: {
         quantity: true,
@@ -415,17 +541,33 @@ async function applyRestoreRequirements({
       continue;
     }
 
-    const nextAvailableQty = stock.availableQty + restoreQuantity;
-    const nextSoldQty = Math.max(stock.soldQty - restoreQuantity, 0);
+    /**
+     * Move stock back from sold to available atomically.
+     *
+     * The previous version read the row, computed both totals in JavaScript and
+     * wrote them back as absolute values. Two cancellations processed at the
+     * same time both read the same `availableQty`, and the second write
+     * overwrote the first — one restore was silently lost. Letting the database
+     * apply the delta removes the race.
+     *
+     * Both counters move by the same amount so `availableQty + soldQty` stays
+     * constant. Previously `availableQty` was incremented in full while
+     * `soldQty` was clamped at zero, which invented stock whenever the two had
+     * already drifted apart.
+     */
+    const appliedRestoreQuantity = await restoreMenuStockQuantity({
+      tx,
+      stockId: stock.id,
+      requestedQuantity: restoreQuantity,
+    });
 
-    const updatedStock = await tx.menuAvailabilityStock.update({
+    if (appliedRestoreQuantity <= 0) {
+      continue;
+    }
+
+    const updatedStock = await tx.menuAvailabilityStock.findUniqueOrThrow({
       where: {
         id: stock.id,
-      },
-      data: {
-        availableQty: nextAvailableQty,
-        soldQty: nextSoldQty,
-        isSoldOut: false,
       },
       select: {
         availableQty: true,
@@ -438,9 +580,13 @@ async function applyRestoreRequirements({
         productId: requirement.productId,
         stockId: stock.id,
         type: requirement.restoreType,
-        quantity: restoreQuantity,
+        // Record what was actually moved, which can be less than requested if
+        // soldQty had already drifted. The ledger must match the stock change.
+        quantity: appliedRestoreQuantity,
         balanceAfter: updatedStock.availableQty,
         reason: requirement.reason,
+        orderId: requirement.orderId ?? null,
+        orderItemId: requirement.orderItemId ?? null,
         userId,
       },
     });
@@ -459,6 +605,7 @@ async function buildRestoreRequirementsForOrderItem({
 }: {
   tx: Prisma.TransactionClient;
   order: {
+    id: string;
     hotelId: string;
     orderCode: string;
   };
@@ -497,6 +644,8 @@ async function buildRestoreRequirementsForOrderItem({
           restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
           reason: `Cancelled bundle item ${item.productNameSnapshot} (${item.id}) from order ${order.orderCode} stock restored`,
           duplicateGuardText: itemGuard,
+          orderId: order.id,
+          orderItemId: item.id,
         });
       }
 
@@ -530,6 +679,8 @@ async function buildRestoreRequirementsForOrderItem({
           restoreType: MenuAvailabilityMovementType.BUNDLE_CANCEL_RESTORE,
           reason: `Cancelled bundle item ${item.productNameSnapshot} (${item.id}) from order ${order.orderCode} stock restored`,
           duplicateGuardText: itemGuard,
+          orderId: order.id,
+          orderItemId: item.id,
         });
       }
     }
@@ -552,6 +703,8 @@ async function buildRestoreRequirementsForOrderItem({
     restoreType: MenuAvailabilityMovementType.CANCEL_RESTORE,
     reason: `Cancelled item ${item.productNameSnapshot} (${item.id}) from order ${order.orderCode} stock restored`,
     duplicateGuardText: itemGuard,
+    orderId: order.id,
+    orderItemId: item.id,
   });
 
   return restoreRequirements;
@@ -595,6 +748,9 @@ async function restoreMenuStockForCancelledOrder({
          * does not conflict with item-level cancellation guards.
          */
         duplicateGuardText: `${order.orderCode}:whole-order:${requirement.productId}:${requirement.restoreType}`,
+        orderId: order.id,
+        // Whole-order cancellation spans every item, so no single item key.
+        orderItemId: undefined,
         reason: item.isBundleSnapshot
           ? `Cancelled bundle order ${order.orderCode} stock restored`
           : `Cancelled order ${order.orderCode} stock restored`,

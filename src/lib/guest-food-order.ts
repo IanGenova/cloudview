@@ -519,6 +519,8 @@ export async function createGuestFoodOrder(
               quantity: requirement.singleQuantity,
               balanceAfter: Math.max(updatedStock.availableQty, 0),
               reason: `Guest portal order ${createdOrder.orderCode}`,
+              // Real key for reconciliation; the reason text is for humans.
+              orderId: createdOrder.id,
               userId: null,
             },
           });
@@ -534,6 +536,7 @@ export async function createGuestFoodOrder(
               quantity: requirement.bundleQuantity,
               balanceAfter: Math.max(updatedStock.availableQty, 0),
               reason: `Guest portal bundle order ${createdOrder.orderCode}`,
+              orderId: createdOrder.id,
               userId: null,
             },
           });
