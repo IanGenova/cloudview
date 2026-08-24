@@ -125,8 +125,24 @@ function shouldBindNfcSessionToIp() {
   return process.env.NFC_BIND_IP === 'true';
 }
 
+/**
+ * Scan secret for a physical NFC tag.
+ *
+ * 16 random bytes rendered as base64url is 22 characters, against 64 for the
+ * previous 32-byte hex. That matters because the whole launch URL has to fit
+ * an NTAG213, whose usable NDEF capacity is 144 bytes; the old format did not
+ * fit at all (see buildSecureNfcLaunchUrl for the budget).
+ *
+ * 128 bits is far beyond brute-force reach, and for ROOM tags the secret is
+ * only the first of three gates — an active stay and the room passcode still
+ * apply. base64url needs no percent-encoding, so 22 characters on the wire is
+ * also 22 bytes on the chip.
+ *
+ * Secrets already stored in hex keep working: verifyTagSecret() hashes both
+ * sides, so it never depended on the format or the length.
+ */
 export function randomSecret() {
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(16).toString('base64url');
 }
 
 export function hashValue(value: string) {

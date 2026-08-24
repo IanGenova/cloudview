@@ -311,10 +311,14 @@ function normalizeRequiredValue(
 
 export function buildSecureNfcLaunchUrl(input: {
   origin: string;
-  hotelSlug: string;
   tagCode: string;
-  tagId?: string | null;
   scanSecret?: string | null;
+  /**
+   * Accepted so existing callers keep compiling, but no longer written into
+   * the URL. See the NTAG213 budget note below before reinstating either.
+   */
+  hotelSlug?: string;
+  tagId?: string | null;
 }) {
   const parsedOrigin = parseOrigin(input.origin);
 
@@ -328,13 +332,8 @@ export function buildSecureNfcLaunchUrl(input: {
     throw new Error('The NFC public origin is not safe for browser links.');
   }
 
-  const hotelSlug = normalizeRequiredValue(
-    input.hotelSlug,
-    'Hotel slug'
-  ).toLowerCase();
   const tagCode = normalizeRequiredValue(input.tagCode, 'NFC tag code')
     .toUpperCase();
-  const tagId = String(input.tagId || '').trim();
   const scanSecret = String(input.scanSecret || '').trim();
 
   if (!scanSecret) {
@@ -346,18 +345,34 @@ export function buildSecureNfcLaunchUrl(input: {
   });
 
   /*
-   * The stable row reference removes ambiguity when old databases contain
-   * legacy code formatting. Older NFC links without `i` remain supported.
+   * Everything omitted here is omitted to fit an NTAG213.
+   *
+   * That chip has 144 bytes of usable NDEF. A single URI record costs 8 bytes
+   * of overhead (3 TLV + 4 record header + 1 abbreviated-scheme byte), leaving
+   * 136 for the URL after "https://" is folded into its one-byte prefix code.
+   *
+   * The previous form spent that budget like this, and overran it:
+   *
+   *     /n/<hotelSlug>/<CODE>?k=<64 hex>&i=<25-char cuid>   -> 146 bytes
+   *
+   * Two segments were redundant rather than load-bearing:
+   *
+   *   - `hotelSlug` is a readable path segment, not a credential. The launch
+   *     handler already treats a stale slug as a warning and proceeds on the
+   *     tag code, and /n/<CODE> has always been a supported route.
+   *   - `i` was only ever a fallback in an OR lookup. NfcTag.code is @unique,
+   *     so the code alone resolves the row.
+   *
+   * Both are still ACCEPTED on the way in, so tags already programmed in the
+   * field keep working untouched. They are simply no longer emitted.
+   *
+   *     /n/<CODE>?k=<22 base64url>                          ->  60 bytes
+   *
+   * That leaves headroom for a longer domain than cloudhotelph.com without
+   * revisiting this. Anything added back here spends it — check the arithmetic
+   * against 136 characters before extending the URL.
    */
-  if (tagId) {
-    query.set('i', tagId);
-  }
-
-  return (
-    `${origin}/n/${encodeURIComponent(hotelSlug)}` +
-    `/${encodeURIComponent(tagCode)}` +
-    `?${query.toString()}`
-  );
+  return `${origin}/n/${encodeURIComponent(tagCode)}?${query.toString()}`;
 }
 
 export function buildProtectedGuestUrl(input: {
