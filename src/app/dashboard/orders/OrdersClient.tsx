@@ -2457,7 +2457,7 @@ export function OrdersClient({
 
               <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-white/60">
                 Prioritize pending approvals, kitchen movement, ready-for-delivery
-                orders, unpaid balances, and receipts from one cleaner workflow.
+                orders, unpaid balances, and order summaries from one cleaner workflow.
               </p>
             </div>
 

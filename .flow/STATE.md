@@ -18,9 +18,9 @@ Done = each fix demonstrated against the running app, tsc clean, pushed.
       public/uploads outside production; production path unchanged.
 - [x] BT-07 dead Place Order button — validation now speaks.
 - [x] BT-08 "All 5" over a list of 4 — grid says "4 more items".
-- [ ] BT-09 redundant hotel/category rows in the dashboard menu query (~42 KB).
-      DEFERRED: low value, and narrowing the select risks breaking consumers for
-      a payload win that only shows on an admin page.
+- [x] BT-09 redundant rows in the dashboard menu query - relations narrowed to
+      the columns actually read, and the unused recipes/inventoryItem join
+      removed outright. 86.2 KB -> 45.4 KB, a 47% cut.
 - [x] BT-10 tag scanSecret stored in plaintext - now stored as an unsalted
       SHA-256 for verification plus an AES-256-GCM copy for re-display.
       No tag rotation was needed: the secret on the chip never changed, only

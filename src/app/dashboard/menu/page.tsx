@@ -404,21 +404,47 @@ const productWhere: Prisma.MenuProductWhereInput = {
 
   db.menuProduct.findMany({
     where: productWhere,
+    /*
+     * Relations are narrowed to the columns this page reads. The sibling
+     * menuProduct query below already did this; leaving `hotel: true` and
+     * `category: true` here meant every one of these rows carried a full
+     * hotel and category row for the sake of two names.
+     *
+     * `recipes` and its nested inventoryItem are gone outright: nothing in
+     * this module ever read them, so the join was pure cost.
+     */
     include: {
-      hotel: true,
-      category: true,
+      hotel: {
+        select: {
+          name: true,
+        },
+      },
+      category: {
+        select: {
+          name: true,
+        },
+      },
       images: {
+        select: {
+          url: true,
+        },
         orderBy: { sortOrder: 'asc' },
         take: 1,
       },
-      recipes: {
-        include: {
-          inventoryItem: true,
-        },
-      },
       bundleComponents: {
-        include: {
-          componentProduct: true,
+        select: {
+          id: true,
+          quantity: true,
+          sortOrder: true,
+          componentProductId: true,
+          componentProduct: {
+            select: {
+              id: true,
+              name: true,
+              priceCents: true,
+              productType: true,
+            },
+          },
         },
         orderBy: {
           sortOrder: 'asc',

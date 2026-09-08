@@ -11,6 +11,7 @@ import {
   ArrowDownRight,
   ArrowUpDown,
   ArrowUpRight,
+  Minus,
   BarChart3,
   CalendarDays,
   CheckCircle2,
@@ -34,6 +35,7 @@ import {
   Utensils,
   WalletCards,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { AnalyticsStickySummary } from './AnalyticsStickySummary';
 import { db } from '@/lib/db';
@@ -343,7 +345,9 @@ function AnalyticsCard({
 }
 
 function DeltaBadge({ value }: { value: number }) {
-  const positive = value >= 0;
+  // Zero is neither a rise nor a fall; it should not wear a green up arrow.
+  const positive = value > 0;
+  const unchanged = value === 0;
 
   /*
    * The arrow and the colour were the only things carrying direction, so a
@@ -366,13 +370,18 @@ function DeltaBadge({ value }: { value: number }) {
     <span
       aria-label={deltaLabel}
       title={deltaLabel}
-      className={
-        positive
-          ? 'inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-black text-emerald-300'
-          : 'inline-flex items-center gap-1 rounded-full bg-red-400/15 px-2 py-1 text-[10px] font-black text-red-300'
-      }
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black',
+        unchanged
+          ? 'bg-white/10 text-white/60'
+          : positive
+            ? 'bg-emerald-400/15 text-emerald-300'
+            : 'bg-red-400/15 text-red-300'
+      )}
     >
-      {positive ? (
+      {unchanged ? (
+        <Minus className="size-3" />
+      ) : positive ? (
         <ArrowUpRight className="size-3" />
       ) : (
         <ArrowDownRight className="size-3" />
