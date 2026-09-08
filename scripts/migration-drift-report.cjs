@@ -80,11 +80,11 @@ function extractObjects(rawSql) {
        * marking it applied would skip the rest for good.
        */
       const residual = body
-        .replace(/ADD COLUMNs+`[^`]+`[^,]*/gi, '')
-        .replace(/ADD CONSTRAINT[sS]*/gi, '');
+        .replace(/ADD COLUMN\s+`[^`]+`[^,]*/gi, '')
+        .replace(/ADD CONSTRAINT[\s\S]*/gi, '');
 
-      if (/(MODIFY|DROP|CHANGE|RENAME)/i.test(residual) || !matched) {
-        unclassified.push(statement.slice(0, 90).replace(/s+/g, ' '));
+      if (/\b(MODIFY|DROP|CHANGE|RENAME)\b/i.test(residual) || !matched) {
+        unclassified.push(statement.slice(0, 90).replace(/\s+/g, ' '));
       }
       continue;
     }
