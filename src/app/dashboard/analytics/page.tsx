@@ -345,8 +345,27 @@ function AnalyticsCard({
 function DeltaBadge({ value }: { value: number }) {
   const positive = value >= 0;
 
+  /*
+   * The arrow and the colour were the only things carrying direction, so a
+   * 100% collapse and a 100% jump both rendered as the bare text "100%" -
+   * and a screen reader announced revenue falling to zero as a rise. Put the
+   * direction into the accessible name, and show the sign to everyone else.
+   */
+  const deltaDirection =
+    value > 0 ? 'Up' : value < 0 ? 'Down' : 'No change';
+
+  const deltaLabel =
+    value === 0
+      ? 'No change from the previous period'
+      : deltaDirection +
+        ' ' +
+        Math.abs(value) +
+        ' percent from the previous period';
+
   return (
     <span
+      aria-label={deltaLabel}
+      title={deltaLabel}
       className={
         positive
           ? 'inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-black text-emerald-300'
@@ -359,7 +378,10 @@ function DeltaBadge({ value }: { value: number }) {
         <ArrowDownRight className="size-3" />
       )}
 
-      {Math.abs(value)}%
+      <span aria-hidden="true">
+        {value > 0 ? '+' : value < 0 ? '−' : ''}
+        {Math.abs(value)}%
+      </span>
     </span>
   );
 }

@@ -25,6 +25,48 @@ function publicUrl(path: string) {
   return new URL(path, getPublicAppUrl());
 }
 
+/*
+ * Where to send the guest once their tag has been accepted.
+ *
+ * The NFC access cookie is set on whichever origin the request actually
+ * arrived on. Redirecting to a different configured origin therefore drops
+ * it, and the guest lands on "Tap NFC Again" - where tapping again
+ * reproduces the mismatch exactly, so there is no way out of it. Keeping the
+ * redirect on the origin the request came in on keeps it together with the
+ * cookie that was just set.
+ *
+ * The configured origin stays as the fallback for hosts a browser cannot
+ * use, which is the case this indirection existed for to begin with.
+ */
+const UNUSABLE_REDIRECT_HOSTS = new Set([
+  '0.0.0.0',
+  '::',
+  '[::]',
+]);
+
+function guestUrlForRequest(
+  request: Request,
+  path: string
+) {
+  try {
+    const requestUrl = new URL(request.url);
+    const hostname = requestUrl.hostname
+      .trim()
+      .toLowerCase();
+
+    if (
+      hostname &&
+      !UNUSABLE_REDIRECT_HOSTS.has(hostname)
+    ) {
+      return new URL(path, requestUrl.origin);
+    }
+  } catch {
+    // Fall through to the configured origin.
+  }
+
+  return publicUrl(path);
+}
+
 function safeDecodePathSegment(value: string) {
   try {
     return decodeURIComponent(value).trim();
@@ -686,8 +728,14 @@ export async function GET(
 
   const redirectUrl =
     tag.status === 'ACTIVE'
-      ? publicUrl(`/t/${tag.code}?nfcSession=1`)
-      : publicUrl(`/t/${tag.code}?nfcSession=1&tagStatus=inactive`);
+      ? guestUrlForRequest(
+          request,
+          `/t/${tag.code}?nfcSession=1`
+        )
+      : guestUrlForRequest(
+          request,
+          `/t/${tag.code}?nfcSession=1&tagStatus=inactive`
+        );
 
   const response = NextResponse.redirect(redirectUrl);
 

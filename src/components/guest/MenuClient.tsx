@@ -1686,6 +1686,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                           inputMode="text"
                           autoComplete="off"
                           required
+                          aria-label="Room number"
                           placeholder="Room number"
                           value={roomNumber}
                           onChange={(event) => setRoomNumber(event.currentTarget.value)}
@@ -1701,6 +1702,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                             maxLength={6}
                             autoComplete="one-time-code"
                             required
+                            aria-label="Six-digit room passcode"
                             placeholder="6-digit passcode"
                             value={roomPasscode}
                             onChange={(event) =>
@@ -1717,6 +1719,7 @@ const [scheduledNote, setScheduledNote] = useState('');
 
                 <textarea
                   rows={4}
+                  aria-label="Special instructions, allergies, or requests"
                   placeholder="Special instructions, allergies, or requests"
                   value={notes}
                   onChange={(event) => setNotes(event.currentTarget.value)}
@@ -1809,7 +1812,16 @@ const [scheduledNote, setScheduledNote] = useState('');
               <button
                 type="button"
                 onClick={submit}
-                disabled={pending || !confirmedClause}
+                /*
+                 * Only pending disables this now. Gating it on
+                 * confirmedClause as well made the button silently dead:
+                 * the guest fills in the whole form, taps, and nothing
+                 * happens - while the explanation written for exactly this
+                 * case ("Please confirm the order type before placing your
+                 * order") could never fire, because submit never ran. Let
+                 * the handler reject the order and say why.
+                 */
+                disabled={pending}
                 className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-[15px] font-black text-black shadow-[0_14px_34px_rgba(214,167,56,0.24)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {pending ? (
@@ -2116,7 +2128,15 @@ const [scheduledNote, setScheduledNote] = useState('');
             </h3>
           </div>
           <p className="text-xs font-bold text-white/35">
-            {remainingProducts.length} item{remainingProducts.length === 1 ? '' : 's'}
+            {/*
+             * The category chips count every dish, but this grid excludes
+             * the one promoted into Chef's selection above it - so "All 5"
+             * sat above a list of 4 and read as though a dish had gone
+             * missing. Say "more" when one has been lifted out.
+             */}
+            {remainingProducts.length}
+            {featured ? ' more' : ''} item
+            {remainingProducts.length === 1 ? '' : 's'}
           </p>
         </div>
 

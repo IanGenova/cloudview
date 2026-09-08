@@ -17,10 +17,33 @@ const allowedFolders = new Set<string>(
 );
 
 export function getRuntimeMediaRoot() {
-  return path.resolve(
-    process.env.CLOUDVIEW_MEDIA_ROOT?.trim() ||
-      '/var/www/cloudview-media'
-  );
+  const configured =
+    process.env.CLOUDVIEW_MEDIA_ROOT?.trim();
+
+  if (configured) {
+    return path.resolve(configured);
+  }
+
+  /*
+   * The default is a Linux deployment path. On a developer machine it
+   * resolves to something like D:arwwwcloudview-media, which does not
+   * exist, so every uploaded image 404s and the portal renders dishes with
+   * no photo. Outside production, fall back to the repository own
+   * public/uploads directory.
+   *
+   * Production keeps the deployment path deliberately: a server missing its
+   * media root should fail visibly rather than quietly serve whatever image
+   * happens to be baked into the build.
+   */
+  if (process.env.NODE_ENV !== 'production') {
+    return path.resolve(
+      process.cwd(),
+      'public',
+      'uploads'
+    );
+  }
+
+  return path.resolve('/var/www/cloudview-media');
 }
 
 export function getRuntimeMediaDirectory(

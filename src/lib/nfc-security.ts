@@ -290,7 +290,38 @@ export async function requireNfcGuestAccess(tagCodeInput: string) {
     include: {
       hotel: {
         include: {
-          settings: true,
+          /*
+           * An explicit field list, not a blanket include.
+           *
+           * Guest pages hand tag.hotel straight to client components, so every
+           * column selected here is serialized into HTML that anyone holding
+           * the tag can read. The xendit* columns - linked account id, split
+           * rule id and signature, commission type, commission value and fee
+           * bearer - are merchant financial configuration and have no business
+           * crossing that boundary. Add a column here only after deciding a
+           * guest may read it.
+           */
+          settings: {
+            select: {
+              id: true,
+              hotelId: true,
+              currency: true,
+              taxRate: true,
+              serviceChargeRate: true,
+              wifiName: true,
+              wifiPassword: true,
+              checkInTime: true,
+              checkOutTime: true,
+              poolHours: true,
+              poolRules: true,
+              policies: true,
+              guideText: true,
+              contactPhone: true,
+              contactEmail: true,
+              guestPortalHeroImageUrl: true,
+              nfcRoomPasscodeEnabled: true,
+            },
+          },
         },
       },
       room: true,
@@ -366,7 +397,28 @@ export async function requireNfcGuestAccess(tagCodeInput: string) {
     },
   });
 
-  return tag;
+  /*
+   * taxRate and serviceChargeRate are Prisma Decimal instances, and guest
+   * pages pass tag.hotel into client components. React cannot serialize a
+   * Decimal across that boundary: it logs "Only plain objects can be passed to
+   * Client Components" and the value can arrive malformed. Convert once here
+   * rather than trusting every call site to remember Number().
+   */
+  return {
+    ...tag,
+    hotel: {
+      ...tag.hotel,
+      settings: tag.hotel.settings
+        ? {
+            ...tag.hotel.settings,
+            taxRate: Number(tag.hotel.settings.taxRate),
+            serviceChargeRate: Number(
+              tag.hotel.settings.serviceChargeRate
+            ),
+          }
+        : null,
+    },
+  };
 }
 
 export function secureNfcLaunchUrl(
