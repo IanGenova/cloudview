@@ -331,9 +331,27 @@ export default async function RoomsAndLocationsPage({
         hotelId: selectedHotelId,
         deletedAt: null,
       },
+      /*
+       * Only the columns this page reads.
+       *
+       * `nfcTags: true` selected every NfcTag column, so adding two columns
+       * to that table took this page down with a P2022 before the migration
+       * reached production -- a page that shows a tag code, a label and a
+       * count has no business breaking when NfcTag grows a column.
+       */
       include: {
-        hotel: true,
-        nfcTags: true,
+        hotel: {
+          select: {
+            name: true,
+          },
+        },
+        nfcTags: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+          },
+        },
       },
       orderBy: {
         number: 'asc',
@@ -345,9 +363,27 @@ export default async function RoomsAndLocationsPage({
         hotelId: selectedHotelId,
         deletedAt: null,
       },
+      /*
+       * Only the columns this page reads.
+       *
+       * `nfcTags: true` selected every NfcTag column, so adding two columns
+       * to that table took this page down with a P2022 before the migration
+       * reached production -- a page that shows a tag code, a label and a
+       * count has no business breaking when NfcTag grows a column.
+       */
       include: {
-        hotel: true,
-        nfcTags: true,
+        hotel: {
+          select: {
+            name: true,
+          },
+        },
+        nfcTags: {
+          select: {
+            id: true,
+            code: true,
+            label: true,
+          },
+        },
       },
       orderBy: {
         name: 'asc',
