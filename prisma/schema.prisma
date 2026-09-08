@@ -478,6 +478,17 @@ model NfcTag {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   scanSecret    String?   @unique
+
+  /// SHA-256 of the scan secret, unsalted. This is what verification compares
+  /// against. Unsalted on purpose: the secret is 128 bits of CSPRNG output so
+  /// there is no dictionary to defend against, and peppering it would weld
+  /// every mounted tag to AUTH_SECRET and break them all on a key rotation.
+  scanSecretHash   String? @unique
+
+  /// AES-256-GCM copy of the scan secret, kept only so staff can re-print a
+  /// URL, program a duplicate chip, or finish a bulk rollout. The key lives in
+  /// the environment, never in this table.
+  scanSecretCipher String? @db.Text
   lastScannedAt DateTime?
   deletedAt     DateTime?
 

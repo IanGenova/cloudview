@@ -80,6 +80,8 @@ export function moduleFilename(module: BackupModule) {
 export const SANITIZED_FIELDS = [
   'User.passwordHash',
   'NfcTag.scanSecret',
+  'NfcTag.scanSecretHash',
+  'NfcTag.scanSecretCipher',
   'NfcAccessSession.*',
   'NfcGuestSession.sessionKey',
   'GuestStay.passcodeHash',

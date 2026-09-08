@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { KeyRound, Lock, ShieldCheck } from 'lucide-react';
 import { db } from '@/lib/db';
-import { verifyTagSecret } from '@/lib/nfc-security';
+import { verifyTagScanSecret } from '@/lib/nfc-security';
 import { getActiveGuestStayForRoom } from '@/lib/guest-stay-device-auth';
 import { verifyGuestStayPasscodeAction } from './actions';
 
@@ -52,6 +52,7 @@ export default async function VerifyGuestStayPage({
       label: true,
       status: true,
       scanSecret: true,
+      scanSecretHash: true,
       deletedAt: true,
       hotel: {
         select: {
@@ -82,9 +83,8 @@ export default async function VerifyGuestStayPage({
   }
 
   if (
-    !tag.scanSecret ||
     !scanSecret ||
-    !verifyTagSecret(scanSecret, tag.scanSecret)
+    !verifyTagScanSecret(scanSecret, tag)
   ) {
     redirect('/nfc-access-denied?reason=bad-secret');
   }

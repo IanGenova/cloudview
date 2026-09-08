@@ -5,7 +5,7 @@ import {
   getPublicAppUrl,
   hashValue,
   NFC_ACCESS_COOKIE,
-  verifyTagSecret,
+  verifyTagScanSecret,
 } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
 import {
@@ -391,6 +391,7 @@ export async function GET(
       tagType: true,
       status: true,
       scanSecret: true,
+      scanSecretHash: true,
       deletedAt: true,
       hotel: {
         select: {
@@ -463,14 +464,15 @@ export async function GET(
   }
 
   if (
-    !tag.scanSecret ||
     !inputSecret ||
-    !verifyTagSecret(inputSecret, tag.scanSecret)
+    !verifyTagScanSecret(inputSecret, tag)
   ) {
     console.warn('[NFC launch] Scan secret validation failed.', {
       requestedTagCode: tagCode,
       hotelSlug: storedHotelSlug,
-      hasStoredSecret: Boolean(tag.scanSecret),
+      hasStoredSecret: Boolean(
+        tag.scanSecretHash || tag.scanSecret
+      ),
       hasInputSecret: Boolean(inputSecret),
     });
 

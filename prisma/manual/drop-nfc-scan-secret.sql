@@ -1,0 +1,20 @@
+-- Drop the plaintext NFC scan secret column.
+--
+-- DO NOT move this into prisma/migrations until the backfill has completed on
+-- the target database. `migrate deploy` applies migrations in order without
+-- asking, so filing this as a migration would drop the column on the next
+-- deploy -- possibly before the backfill ran -- and every tag secret would be
+-- gone irrecoverably, taking every physical tag in the estate with it.
+--
+-- Precondition, which must return 0:
+--
+--   SELECT COUNT(*) FROM `NfcTag` WHERE `scanSecret` IS NOT NULL;
+--
+-- The backfill prints the same number and says when it is safe:
+--
+--   npx tsx scripts/backfill-tag-secret-storage.ts --apply
+--
+-- Once that reads 0, apply this, then delete the legacy `scanSecret` branch
+-- from verifyTagScanSecret() and readableTagSecret() and remove the field from
+-- prisma/schema.prisma.
+ALTER TABLE `NfcTag` DROP COLUMN `scanSecret`;

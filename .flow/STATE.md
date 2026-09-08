@@ -21,9 +21,13 @@ Done = each fix demonstrated against the running app, tsc clean, pushed.
 - [ ] BT-09 redundant hotel/category rows in the dashboard menu query (~42 KB).
       DEFERRED: low value, and narrowing the select risks breaking consumers for
       a payload win that only shows on an admin page.
-- [ ] BT-10 tag scanSecret stored in plaintext; verifyTagSecret hashes both
-      sides so the hashing protects nothing against a database leak.
-      DEFERRED: needs a migration plus a rotation of every live tag.
+- [x] BT-10 tag scanSecret stored in plaintext - now stored as an unsalted
+      SHA-256 for verification plus an AES-256-GCM copy for re-display.
+      No tag rotation was needed: the secret on the chip never changed, only
+      how the database holds it. Verified end to end against a live chip URL.
+      Plaintext column still exists but is empty; drop SQL is parked in
+      prisma/manual/ deliberately, NOT in prisma/migrations/, so migrate deploy
+      cannot drop it before the backfill runs.
 
 ## Decisions
 - Guest-facing severity beat admin-facing severity throughout; BT-09 is the only

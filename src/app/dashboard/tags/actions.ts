@@ -6,7 +6,29 @@ import { DashboardModule, Role, TagStatus, TagType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { randomSecret } from '@/lib/nfc-security';
+import { buildTagSecretRecord } from '@/lib/nfc-secret-storage';
 import { cleanText } from '@/lib/sanitize';
+
+/**
+ * Columns for a freshly minted scan secret.
+ *
+ * scanSecret is explicitly null: nothing writes the plaintext any more. The
+ * hash is what verification compares against, and the cipher is what the
+ * dashboard decrypts when staff need the URL again.
+ *
+ * Archiving and deletion mint one too. They never show it to anyone; the
+ * point is that whatever was written on the physical chip stops matching.
+ */
+function newTagSecretColumns() {
+  const { scanSecretHash, scanSecretCipher } =
+    buildTagSecretRecord(randomSecret());
+
+  return {
+    scanSecret: null,
+    scanSecretHash,
+    scanSecretCipher,
+  };
+}
 
 const TAG_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TAG_CODE_LENGTH = 8;
@@ -198,7 +220,7 @@ export async function createTagAction(formData: FormData) {
         locationId: parsed.locationId || null,
         status: TagStatus.ACTIVE,
         deletedAt: null,
-        scanSecret: randomSecret(),
+        ...newTagSecretColumns(),
         lastScannedAt: null,
       },
     });
@@ -215,7 +237,7 @@ export async function createTagAction(formData: FormData) {
       roomId: parsed.roomId || null,
       locationId: parsed.locationId || null,
       status: parsed.status,
-      scanSecret: randomSecret(),
+      ...newTagSecretColumns(),
     },
   });
 
@@ -274,7 +296,7 @@ export async function updateTagAction(formData: FormData) {
         },
         data: {
           code: archivedCode,
-          scanSecret: randomSecret(),
+          ...newTagSecretColumns(),
         },
       });
     } else {
@@ -342,7 +364,7 @@ export async function deleteTagAction(formData: FormData) {
         code: archivedCode,
         status: TagStatus.INACTIVE,
         deletedAt: new Date(),
-        scanSecret: randomSecret(),
+        ...newTagSecretColumns(),
       },
     }),
   ]);
@@ -385,7 +407,7 @@ export async function rotateTagSecretAction(formData: FormData) {
         id: tagId,
       },
       data: {
-        scanSecret: randomSecret(),
+        ...newTagSecretColumns(),
       },
     }),
   ]);

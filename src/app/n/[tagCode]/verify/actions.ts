@@ -7,7 +7,7 @@ import { db } from '@/lib/db';
 import {
   createNfcAccessSession,
   shouldUseSecureNfcCookies,
-  verifyTagSecret,
+  verifyTagScanSecret,
 } from '@/lib/nfc-security';
 import { getActiveGuestStayForRoom } from '@/lib/guest-stay-device-auth';
 import {
@@ -60,6 +60,7 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
       tagType: true,
       status: true,
       scanSecret: true,
+      scanSecretHash: true,
       deletedAt: true,
       hotel: {
         select: {
@@ -82,9 +83,8 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
   }
 
   if (
-    !tag.scanSecret ||
     !scanSecret ||
-    !verifyTagSecret(scanSecret, tag.scanSecret)
+    !verifyTagScanSecret(scanSecret, tag)
   ) {
     redirect('/nfc-access-denied?reason=bad-secret');
   }

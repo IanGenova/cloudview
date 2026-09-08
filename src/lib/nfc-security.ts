@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { resolveConfiguredNfcPublicOrigin } from '@/lib/nfc-public-url';
+import { hashTagSecret } from '@/lib/nfc-secret-storage';
 
 export const NFC_ACCESS_COOKIE = 'cv_nfc_access';
 
@@ -163,8 +164,46 @@ function safeEqual(a: string, b: string) {
   return crypto.timingSafeEqual(left, right);
 }
 
+/**
+ * Legacy comparison, kept only for rows the backfill has not reached yet.
+ *
+ * Hashing both sides is exactly equivalent to comparing the plaintext, so
+ * this never protected anything. verifyTagScanSecret below is what does.
+ */
 export function verifyTagSecret(inputSecret: string, storedSecret: string) {
   return safeEqual(hashValue(inputSecret), hashValue(storedSecret));
+}
+
+/**
+ * Checks a scan secret against what is stored for a tag.
+ *
+ * Prefers scanSecretHash, which is all a database should ever hold. Falls
+ * back to the legacy plaintext column so mounted tags keep working in the
+ * window between deploying this and running the backfill; that branch goes
+ * away when the column is dropped.
+ */
+export function verifyTagScanSecret(
+  inputSecret: string,
+  tag: {
+    scanSecretHash?: string | null;
+    scanSecret?: string | null;
+  }
+) {
+  const input = String(inputSecret || '').trim();
+
+  if (!input) {
+    return false;
+  }
+
+  if (tag.scanSecretHash) {
+    return safeEqual(hashTagSecret(input), tag.scanSecretHash);
+  }
+
+  if (tag.scanSecret) {
+    return verifyTagSecret(input, tag.scanSecret);
+  }
+
+  return false;
 }
 
 function addMinutes(date: Date, minutes: number) {

@@ -2,6 +2,7 @@ import { DashboardModule, TagStatus, TagType } from '@prisma/client';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
+import { readableTagSecret } from '@/lib/nfc-secret-storage';
 import {
   buildProtectedGuestUrl,
   buildSecureNfcLaunchUrl,
@@ -102,6 +103,7 @@ export default async function TagsPage({
         tagType: true,
         status: true,
         scanSecret: true,
+        scanSecretCipher: true,
         lastScannedAt: true,
         createdAt: true,
         hotel: {
@@ -180,7 +182,12 @@ export default async function TagsPage({
               hotelSlug: tag.hotel.slug,
               tagCode: tag.code,
               tagId: tag.id,
-              scanSecret: tag.scanSecret,
+              /*
+               * Decrypted for display only, so staff can re-print a URL or
+               * program a duplicate chip. Falls back to the legacy plaintext
+               * column until the backfill has run.
+               */
+              scanSecret: readableTagSecret(tag),
             }),
             lockedDestinationUrl: buildProtectedGuestUrl({
               origin: nfcPublicOrigin,

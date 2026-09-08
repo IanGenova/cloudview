@@ -176,7 +176,11 @@ async function exportNfcTagsModule(hotelId: string) {
 
   return {
     tags: tags.map((tag) =>
-      withoutKeys(tag as unknown as Record<string, unknown>, ['scanSecret'])
+      withoutKeys(tag as unknown as Record<string, unknown>, [
+        'scanSecret',
+        'scanSecretHash',
+        'scanSecretCipher',
+      ])
     ),
   };
 }
