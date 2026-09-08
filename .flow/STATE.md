@@ -29,6 +29,25 @@ Done = each fix demonstrated against the running app, tsc clean, pushed.
       prisma/manual/ deliberately, NOT in prisma/migrations/, so migrate deploy
       cannot drop it before the backfill runs.
 
+## Post-audit regressions (mine, found in production)
+- BT-01 fix broke guest access behind nginx: it redirected to the origin the
+  request arrived on, which behind a proxy is 127.0.0.1:3000, so every tag tap
+  sent guests to localhost. Fixed to honour X-Forwarded-Host.
+- Re-running migrate deploy re-applied 20260525081653, whose enum drops ROOM.
+  MySQL blanked every ROOM value in Location.type and NfcTag.tagType, breaking
+  /dashboard/locations and /dashboard/tags. I had called MODIFY COLUMN
+  idempotent; it is not when a sequence narrows an enum and then re-widens it.
+  Repair SQL is with the user; both migrations are now recorded so it cannot
+  recur.
+
+## Hardening added after those
+- nfc-redirect-origin.ts extracted from the launch handler and pinned with 15
+  tests. Both origin bugs are cases in that file.
+- deploy/deploy.sh resolves DATABASE_URL with Next's own env precedence, always
+  runs migrate deploy, aborts before build/reload on failure, health-checks.
+- scripts/migration-drift-report.cjs and migration-modify-check.cjs recover a
+  migration history that drifted from hand-applied fixes.
+
 ## Decisions
 - Guest-facing severity beat admin-facing severity throughout; BT-09 is the only
   finding skipped on cost/benefit rather than risk.

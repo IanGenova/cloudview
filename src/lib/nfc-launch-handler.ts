@@ -16,6 +16,7 @@ import {
   getNfcGuestSessionPendingCounts,
 } from '@/lib/nfc-guest-session';
 import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
+import { resolveGuestRedirectOrigin } from '@/lib/nfc-redirect-origin';
 import {
   getActiveGuestStayForRoom,
   getAuthorizedGuestStayDeviceFromRequest,
@@ -38,91 +39,32 @@ function publicUrl(path: string) {
  * The configured origin stays as the fallback for hosts a browser cannot
  * use, which is the case this indirection existed for to begin with.
  */
-/* Hosts that can never be an address a browser used to reach us. */
-const UNUSABLE_REDIRECT_HOSTS = new Set([
-  '0.0.0.0',
-  '::',
-  '[::]',
-]);
-
 /*
- * Loopback is a legitimate browser address in local development, and never a
- * legitimate one behind a proxy, where it is our own internal bind address.
+ * Where to send the guest once their tag has been accepted.
+ *
+ * The decision lives in nfc-redirect-origin.ts, which is free of environment
+ * and I/O so it can be tested directly. It has broken twice, both times
+ * taking guest access down completely; the cases are pinned there.
+ *
+ * A null result means no usable origin could be derived from the request, so
+ * the configured public origin is the fallback.
  */
-const LOOPBACK_HOSTS = new Set([
-  'localhost',
-  '127.0.0.1',
-  '::1',
-]);
-
-function firstHeader(value: string | null) {
-  return value?.split(',')[0]?.trim() || '';
-}
-
-function bareHostname(hostWithPort: string) {
-  return hostWithPort
-    .split(':')[0]
-    .trim()
-    .toLowerCase()
-    .replace(/^[|]$/g, '');
-}
-
 function guestUrlForRequest(request: Request, path: string) {
-  const forwardedHost = firstHeader(
-    request.headers.get('x-forwarded-host')
-  );
+  const origin = resolveGuestRedirectOrigin({
+    requestUrl: request.url,
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+  });
 
-  if (forwardedHost) {
-    /*
-     * We are behind a proxy. request.url is the internal address nginx
-     * dialled (127.0.0.1:3000), so using it here sends the guest to their own
-     * machine. Only the forwarded host is where their browser actually is.
-     */
-    const hostname = bareHostname(forwardedHost);
-
-    if (
-      hostname &&
-      !UNUSABLE_REDIRECT_HOSTS.has(hostname) &&
-      !LOOPBACK_HOSTS.has(hostname)
-    ) {
-      const forwardedProto =
-        firstHeader(request.headers.get('x-forwarded-proto'))
-          .toLowerCase() === 'https'
-          ? 'https'
-          : 'http';
-
-      try {
-        return new URL(path, `${forwardedProto}://${forwardedHost}`);
-      } catch {
-        // Fall through to the configured origin.
-      }
-    }
-
-    /*
-     * A proxy forwarding a loopback or unusable host is misconfigured. The
-     * configured public origin is a better answer than a redirect the guest
-     * cannot possibly follow.
-     */
+  if (!origin) {
     return publicUrl(path);
   }
 
-  /*
-   * Nothing in front of us, so request.url IS the address the browser used,
-   * localhost included during local development. Staying on it is what keeps
-   * the access cookie and the redirect on a single origin.
-   */
   try {
-    const requestUrl = new URL(request.url);
-    const hostname = requestUrl.hostname.trim().toLowerCase();
-
-    if (hostname && !UNUSABLE_REDIRECT_HOSTS.has(hostname)) {
-      return new URL(path, requestUrl.origin);
-    }
+    return new URL(path, origin);
   } catch {
-    // Fall through to the configured origin.
+    return publicUrl(path);
   }
-
-  return publicUrl(path);
 }
 
 function safeDecodePathSegment(value: string) {
