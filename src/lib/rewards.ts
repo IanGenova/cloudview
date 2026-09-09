@@ -6,6 +6,7 @@ import {
   PaymentStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { calculateEarnedPoints } from '@/lib/guest-points-accrual';
 
 export async function getOrCreatePointSettings(hotelId: string) {
   return db.guestPointSettings.upsert({
@@ -101,21 +102,6 @@ export async function findOrCreateGuestMember(params: {
   return guest;
 }
 
-export function calculateEarnedPoints(params: {
-  totalCents: number;
-  spendCentsPerPoint: number;
-  minimumSpendCents: number;
-}) {
-  if (params.totalCents < params.minimumSpendCents) {
-    return 0;
-  }
-
-  if (params.spendCentsPerPoint <= 0) {
-    return 0;
-  }
-
-  return Math.floor(params.totalCents / params.spendCentsPerPoint);
-}
 
 export async function awardOrderPointsIfEligible(orderId: string) {
   const order = await db.order.findUnique({
@@ -126,7 +112,7 @@ export async function awardOrderPointsIfEligible(orderId: string) {
       id: true,
       orderCode: true,
       hotelId: true,
-      totalCents: true,
+      subtotalCents: true,
       status: true,
       paymentStatus: true,
       guestMemberId: true,
@@ -170,8 +156,8 @@ export async function awardOrderPointsIfEligible(orderId: string) {
     };
   }
 
-  const points = calculateEarnedPoints({
-    totalCents: order.totalCents,
+  const { points } = calculateEarnedPoints({
+    qualifyingSpendCents: order.subtotalCents,
     spendCentsPerPoint: settings.spendCentsPerPoint,
     minimumSpendCents: settings.minimumSpendCents,
   });

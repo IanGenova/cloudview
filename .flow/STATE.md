@@ -48,6 +48,19 @@ Done = each fix demonstrated against the running app, tsc clean, pushed.
 - scripts/migration-drift-report.cjs and migration-modify-check.cjs recover a
   migration history that drifted from hand-applied fixes.
 
+## Loyalty accrual (9 Sep 2026)
+- [x] Points now accrue on order.subtotalCents, not totalCents. The hotel was
+      paying loyalty on the 12% VAT it remits to the BIR and on the 10%
+      service charge. On the local data: 37 -> 28 points across 8 taxed
+      orders, 24% less liability. Guest decision, made by the user.
+- [x] The rule had two implementations - rewards.ts and an inline copy in
+      guest-point-sync.ts that never called it. Extracted to
+      guest-points-accrual.ts, pinned with 10 tests, both paths now call it.
+      The shared function returns a skipReason because that is what the
+      duplicate existed for: guest-point-sync reports why it declined.
+- [ ] Math.floor still drops the per-order remainder. Left alone: it is a
+      product decision, not a defect, and was not part of the ask.
+
 ## Decisions
 - Guest-facing severity beat admin-facing severity throughout; BT-09 is the only
   finding skipped on cost/benefit rather than risk.

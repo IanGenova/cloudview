@@ -7,6 +7,7 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { calculateEarnedPoints } from '@/lib/guest-points-accrual';
 
 type Tx = Prisma.TransactionClient;
 
@@ -283,7 +284,7 @@ export async function syncOrderPoints(orderId: string) {
       guestStayId: true,
       status: true,
       paymentStatus: true,
-      totalCents: true,
+      subtotalCents: true,
     },
   });
 
@@ -343,25 +344,28 @@ export async function syncOrderPoints(orderId: string) {
     };
   }
 
-  if (order.totalCents < settings.minimumSpendCents) {
+  /*
+   * The rule lives in guest-points-accrual.ts. It used to be reimplemented
+   * here, which is how two paths could award different points for the same
+   * order. The skip reasons come back from it so this path can still say
+   * why it declined.
+   */
+  const accrual = calculateEarnedPoints({
+    qualifyingSpendCents: order.subtotalCents,
+    spendCentsPerPoint: settings.spendCentsPerPoint,
+    minimumSpendCents: settings.minimumSpendCents,
+  });
+
+  if (accrual.skipReason) {
     return {
       awarded: false as const,
       skipped: true as const,
-      reason: 'below_minimum_spend',
+      reason: accrual.skipReason,
       pointsAwarded: 0,
     };
   }
 
-  if (settings.spendCentsPerPoint <= 0) {
-    return {
-      awarded: false as const,
-      skipped: true as const,
-      reason: 'invalid_spend_rate',
-      pointsAwarded: 0,
-    };
-  }
-
-  const points = Math.floor(order.totalCents / settings.spendCentsPerPoint);
+  const points = accrual.points;
 
   return awardGuestPointsOnce({
     hotelId: order.hotelId,
