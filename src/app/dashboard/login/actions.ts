@@ -253,21 +253,14 @@ export async function loginAction(
  * Use this directly from page.tsx to avoid Turbopack client chunk errors
  * on the login page.
  */
-export async function loginDirectAction(formData: FormData) {
-  const result = await authenticateDashboardLogin(formData);
-
-  if (!result.ok) {
-    redirect(loginErrorUrl(result.error));
-  }
-
-  await createSession({
-    sub: result.user.id,
-    email: result.user.email,
-    role: result.user.role,
-    hotelId: result.user.hotelId,
-    isActive: result.user.isActive,
-    authVersion: result.user.authVersion,
-  });
-
-  redirect(result.redirectTo);
-}
+/*
+ * loginDirectAction lived here and was referenced by nothing.
+ *
+ * LoginForm uses loginAction through useActionState, and login/page.tsx has
+ * no action= or formAction= at all. But this file is 'use server', so Next
+ * gave the export a stable server-action id and it stayed callable over the
+ * network by anyone who read it out of the bundle -- an unreferenced,
+ * unmonitored second door to session creation. It went through the same
+ * throttle, so it was not a rate-limit bypass; it was simply a door nobody
+ * was watching.
+ */

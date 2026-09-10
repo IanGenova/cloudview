@@ -145,6 +145,30 @@ if (existingReservedRedemption) {
         availablePoints: {
           gte: reward.pointsCost,
         },
+        /*
+          The no-duplicate-reservation rule, folded into the deduction.
+
+          The findFirst above is a check-then-act with no @@unique behind it,
+          so a double-tap could pass it twice and mint two RESERVED codes for
+          one reward -- two independently redeemable codes at the front desk,
+          which lines above explicitly forbid. Points were deducted correctly
+          both times, so the damage was the broken invariant, not the balance.
+
+          Evaluated as a subquery inside this locking UPDATE, it is a current
+          read rather than a snapshot one, so the second caller sees the first
+          caller's committed redemption and matches zero rows.
+
+          The complete fix is a unique index on the reserved slot, which needs
+          a migration; this closes the window without one.
+        */
+        guestMember: {
+          redemptions: {
+            none: {
+              rewardId: reward.id,
+              status: RewardRedemptionStatus.RESERVED,
+            },
+          },
+        },
       },
       data: {
         availablePoints: {
@@ -157,6 +181,28 @@ if (existingReservedRedemption) {
     });
 
     if (deduction.count !== 1) {
+      /*
+        Zero rows means either too few points or a redemption that another
+        request reserved in between. Re-read to say which, rather than
+        reporting a points problem to a guest who has plenty.
+      */
+      const reservedNow = await tx.rewardRedemption.findFirst({
+        where: {
+          hotelId: params.hotelId,
+          guestMemberId: params.guestMemberId,
+          rewardId: reward.id,
+          status: RewardRedemptionStatus.RESERVED,
+        },
+        select: { id: true },
+      });
+
+      if (reservedNow) {
+        throw new RewardRedemptionError(
+          'REWARD_ALREADY_RESERVED',
+          'Guest already has an unused redemption code for this reward.'
+        );
+      }
+
       throw new RewardRedemptionError(
         'INSUFFICIENT_POINTS',
         'Guest does not have enough points.'

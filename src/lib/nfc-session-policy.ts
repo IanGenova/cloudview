@@ -2,6 +2,18 @@ import { TagType } from '@prisma/client';
 
 export type NfcSessionMode = 'PRIVATE_ROOM' | 'PUBLIC_LOCATION';
 
+/*
+ * allowMultipleDevices and keepUnresolvedPaymentsAlive used to be returned here
+ * and were read by nothing. The first stated that a private room tag allows one
+ * device -- a rule nothing enforced, and one the real device limit already
+ * covers: guest-stay-device-auth counts active GuestStayDevice rows against
+ * GuestStay.maxDevices. The second was true in both branches, so it decided
+ * nothing even if something had read it.
+ *
+ * A policy object that returns flags nobody consults reads as a set of
+ * guarantees the system does not actually make.
+ */
+
 export function getNfcSessionPolicy(tag: {
   tagType: TagType;
   roomId?: string | null;
@@ -13,10 +25,8 @@ export function getNfcSessionPolicy(tag: {
   if (isPrivateRoomTag) {
     return {
       mode: 'PRIVATE_ROOM' as NfcSessionMode,
-      allowMultipleDevices: false,
       reusePendingSession: true,
       requireStrictBrowserSession: true,
-      keepUnresolvedPaymentsAlive: true,
       paymentRequiresActiveStay: true,
       paymentRequiresAuthorizedDevice: true,
       description:
@@ -26,10 +36,8 @@ export function getNfcSessionPolicy(tag: {
 
   return {
     mode: 'PUBLIC_LOCATION' as NfcSessionMode,
-    allowMultipleDevices: true,
     reusePendingSession: false,
     requireStrictBrowserSession: false,
-    keepUnresolvedPaymentsAlive: true,
     paymentRequiresActiveStay: false,
     paymentRequiresAuthorizedDevice: false,
     description:

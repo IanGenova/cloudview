@@ -460,33 +460,15 @@ export async function requireNfcGuestAccess(tagCodeInput: string) {
   };
 }
 
-export function secureNfcLaunchUrl(
-  code: string,
-  scanSecret?: string | null,
-  hotelSlug?: string | null
-) {
-  const normalizedCode = String(code || '').trim();
-  const normalizedSecret = String(scanSecret || '').trim();
-  const normalizedHotelSlug = String(hotelSlug || '')
-    .trim()
-    .toLowerCase();
-
-  if (!normalizedCode || !normalizedSecret) {
-    return '';
-  }
-
-  const path = normalizedHotelSlug
-    ? `/n/${encodeURIComponent(
-        normalizedHotelSlug
-      )}/${encodeURIComponent(normalizedCode)}`
-    : `/n/${encodeURIComponent(normalizedCode)}`;
-
-  return `${getPublicAppUrl()}${path}?k=${encodeURIComponent(
-    normalizedSecret
-  )}`;
-}
+/*
+ * secureNfcLaunchUrl and protectedGuestUrl lived here and had no callers.
+ *
+ * The live builders are buildSecureNfcLaunchUrl and buildProtectedGuestUrl in
+ * nfc-public-url.ts. Worse than merely dead: secureNfcLaunchUrl still emitted
+ * /n/<hotelSlug>/<CODE>?k=<secret>, the form that file documents as 146 bytes
+ * against an NTAG213's 136-byte budget -- it does not fit the chip, which is
+ * why the live builder drops the slug. Anyone reaching for the
+ * obvious-looking name here would have reintroduced a fixed bug.
+ */
 
 
-export function protectedGuestUrl(code: string) {
-  return `${getPublicAppUrl()}/t/${encodeURIComponent(code)}`;
-}

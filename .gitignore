@@ -72,3 +72,15 @@ centrifugo/*.exe
 centrifugo/config.json
 centrifugo/config.json.backup-*
 centrifugo/config.json.bak-*
+
+# Stale in-place backups.
+#
+# Seven of these were committed, including two divergent copies of
+# src/middleware.ts -- the file that enforces the dashboard auth boundary.
+# _nfc-route-backup/ was worse than inert: tsconfig includes **/*.ts and
+# excludes only node_modules, so both of its route files were type-checked on
+# every production build while serving nobody. Git history is the backup.
+*.backup
+*.backup-*
+*.before-*
+_nfc-route-backup/

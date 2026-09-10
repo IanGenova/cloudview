@@ -19,11 +19,27 @@ const contentTypes: Record<string, string> = {
   '.webp': 'image/webp',
 };
 
+/*
+ * The same fallback the writer uses.
+ *
+ * The writer fell back to <cwd>/storage/menu-images and this fell back to
+ * /var/www/cloudview-media/menu -- two different places -- so with
+ * MENU_UPLOAD_DIR unset an upload succeeded and every dish photo then 404d.
+ * cloudview-uploads is what the nginx alias serves and what
+ * fix-cloudview-uploads.sh writes into .env.
+ */
 function getMenuMediaDirectory() {
-  return path.resolve(
-    process.env.MENU_UPLOAD_DIR?.trim() ||
-      '/var/www/cloudview-media/menu'
-  );
+  const configured = process.env.MENU_UPLOAD_DIR?.trim();
+
+  if (configured) {
+    return path.resolve(configured);
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    return path.join(process.cwd(), 'storage', 'menu-images');
+  }
+
+  return path.resolve('/var/www/cloudview-uploads/menu');
 }
 
 function resolveSafeFile(rawFileName: string) {

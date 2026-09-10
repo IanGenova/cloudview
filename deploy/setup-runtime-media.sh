@@ -2,7 +2,14 @@
 
 set -Eeuo pipefail
 
-MEDIA_ROOT="${CLOUDVIEW_MEDIA_ROOT:-/var/www/cloudview-media}"
+# /var/www/cloudview-uploads, matching the nginx alias in
+# nginx-cloudview.conf and what fix-cloudview-uploads.sh writes into .env.
+#
+# This defaulted to /var/www/cloudview-media while the other script and nginx
+# used cloudview-uploads. With MENU_UPLOAD_DIR unset the writer fell back to
+# <cwd>/storage/menu-images and the reader to /var/www/cloudview-media/menu,
+# so uploads succeeded and every dish photo then 404d.
+MEDIA_ROOT="${CLOUDVIEW_MEDIA_ROOT:-/var/www/cloudview-uploads}"
 APP_USER="${APP_USER:-root}"
 
 FOLDERS=(

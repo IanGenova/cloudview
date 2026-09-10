@@ -841,6 +841,61 @@ async function buildReportData(request: NextRequest): Promise<ReportData> {
       'Cancelled At',
     ];
 
+    /*
+      One basis for financial impact, on both kinds of row.
+
+      Order rows reported order.totalCents while item rows reported
+      cancelledQty x unitPriceCents -- a subtotal with no service charge and no
+      tax. So the same 12.20 order refunded in full read as 0.00 plus two 5.00
+      item rows when it was cancelled item-by-item (totalCents having been
+      zeroed), and as 12.20 with no item rows when it was cancelled whole
+      (totalCents untouched, and the item filter matching neither). Same money,
+      two totals 2.20 apart, depending only on which button was pressed.
+
+      What was actually refunded is the honest figure, and it is on the order's
+      payment sessions. Where nothing was refunded -- a room charge cancelled
+      before payment -- the impact is the value that stopped being owed, priced
+      the same way for both row kinds.
+    */
+    const cancelledValueCents = (order: {
+      totalCents: number;
+      serviceChargeCents: number;
+      taxCents: number;
+      subtotalCents: number;
+      guestXenditSessions?: Array<{ refundedAmountCents: number }>;
+      items: Array<{
+        quantity: number;
+        cancelledQty: number;
+        unitPriceCents: number;
+      }>;
+    }) => {
+      const refunded = refundedCentsFor(order);
+
+      if (refunded > 0) {
+        return refunded;
+      }
+
+      /* Nothing refunded: the goods value plus this order's own charges. */
+      const goods = order.items.reduce(
+        (sum, item) =>
+          sum + (item.cancelledQty || item.quantity) * item.unitPriceCents,
+        0
+      );
+
+      const originalGoods = order.items.reduce(
+        (sum, item) => sum + item.quantity * item.unitPriceCents,
+        0
+      );
+
+      if (originalGoods <= 0) {
+        return order.totalCents;
+      }
+
+      const charges = order.serviceChargeCents + order.taxCents;
+
+      return goods + Math.round((charges * goods) / originalGoods);
+    };
+
     const orderRows = cancelledOrders.map((order) => [
       order.orderCode,
       'Order',
@@ -848,7 +903,7 @@ async function buildReportData(request: NextRequest): Promise<ReportData> {
       `${order.items.length} item${order.items.length === 1 ? '' : 's'}`,
       '—',
       order.notes || 'Cancelled order',
-      formatCurrency(order.totalCents),
+      formatCurrency(cancelledValueCents(order)),
       formatDateTime(order.updatedAt),
     ]);
 
@@ -859,7 +914,25 @@ async function buildReportData(request: NextRequest): Promise<ReportData> {
       item.productNameSnapshot,
       formatNumber(item.cancelledQty ?? item.quantity),
       item.cancelReason || 'Cancelled item',
-      formatCurrency((item.cancelledQty ?? item.quantity) * item.unitPriceCents),
+      formatCurrency(
+        /* The line's goods value plus its share of the order's charges. */
+        (() => {
+          const qty = item.cancelledQty ?? item.quantity;
+          const goods = qty * item.unitPriceCents;
+          const originalGoods = order.items.reduce(
+            (sum, line) => sum + line.quantity * line.unitPriceCents,
+            0
+          );
+
+          if (originalGoods <= 0) {
+            return goods;
+          }
+
+          const charges = order.serviceChargeCents + order.taxCents;
+
+          return goods + Math.round((charges * goods) / originalGoods);
+        })()
+      ),
       formatDateTime(item.cancelledAt || order.updatedAt),
     ]);
 

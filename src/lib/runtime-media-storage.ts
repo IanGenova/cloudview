@@ -43,7 +43,8 @@ export function getRuntimeMediaRoot() {
     );
   }
 
-  return path.resolve('/var/www/cloudview-media');
+  /* cloudview-uploads: what the nginx alias serves. */
+  return path.resolve('/var/www/cloudview-uploads');
 }
 
 export function getRuntimeMediaDirectory(

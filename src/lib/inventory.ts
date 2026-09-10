@@ -71,8 +71,21 @@ export async function deductInventoryForOrder(orderId: string, userId?: string) 
       });
 
       if (deducted.count === 0) {
+        /*
+          Re-read before reporting. `item` was loaded before the guarded
+          decrement, so quoting it produced "Need 2 pcs, available 3 pcs" --
+          a message that reads as a broken check rather than a lost race,
+          and sends staff hunting the wrong thing.
+        */
+        const current = await tx.inventoryItem.findUnique({
+          where: { id: itemId },
+          select: { stockQuantity: true },
+        });
+
+        const availableNow = current?.stockQuantity ?? item.stockQuantity;
+
         throw new InventoryError(
-          `Insufficient stock for ${required.name}. Need ${required.qty} ${required.unit}, available ${item.stockQuantity} ${required.unit}.`
+          `Insufficient stock for ${required.name}. Need ${required.qty} ${required.unit}, available ${availableNow} ${required.unit}.`
         );
       }
 

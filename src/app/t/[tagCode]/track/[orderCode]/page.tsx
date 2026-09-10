@@ -36,6 +36,7 @@ import { triggerKitchenOrderUpdated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { requestGuestFoodOrderRefund } from '@/lib/guest-xendit-refund';
 import { voidSyncedOrderPoints } from '@/lib/guest-point-sync';
+import { recalculateOrderTotals } from '@/lib/order-charge-totals';
 
 export const dynamic = 'force-dynamic';
 
@@ -604,14 +605,21 @@ async function buildRestoreRequirementsForOrderItem({
   return restoreRequirements;
 }
 
+/*
+ * Delegates to lib/order-charge-totals.ts, the same rule the dashboard uses.
+ *
+ * Both copies used to derive the rates by dividing the order's stored cents,
+ * which are themselves rewritten on every cancellation -- so each step took
+ * its rate from the previous step's rounding error and rounded again. On a 12%
+ * hotel the stored tax stayed pinned at 12 down to a subtotal of 23, charging
+ * the guest an effective 52.2% VAT, and every refund was short by the drift.
+ */
 function recalculateOrderTotalsAfterItemCancellation({
   order,
   cancelledItemId,
 }: {
   order: {
-    subtotalCents: number;
-    serviceChargeCents: number;
-    taxCents: number;
+    hotel?: { settings?: { taxRate: unknown; serviceChargeRate: unknown } | null } | null;
     items: {
       id: string;
       quantity: number;
@@ -621,35 +629,12 @@ function recalculateOrderTotalsAfterItemCancellation({
   };
   cancelledItemId: string;
 }) {
-  const serviceChargeRate =
-    order.subtotalCents > 0
-      ? order.serviceChargeCents / order.subtotalCents
-      : 0;
-
-  const taxRate =
-    order.subtotalCents > 0 ? order.taxCents / order.subtotalCents : 0;
-
-  const nextSubtotalCents = order.items.reduce((sum, item) => {
-    const cancelledQty =
-      item.id === cancelledItemId ? item.quantity : item.cancelledQty;
-
-    const activeQty = Math.max(item.quantity - cancelledQty, 0);
-
-    return sum + activeQty * item.unitPriceCents;
-  }, 0);
-
-  const nextServiceChargeCents = Math.round(
-    nextSubtotalCents * serviceChargeRate
-  );
-  const nextTaxCents = Math.round(nextSubtotalCents * taxRate);
-
-  return {
-    subtotalCents: nextSubtotalCents,
-    serviceChargeCents: nextServiceChargeCents,
-    taxCents: nextTaxCents,
-    totalCents:
-      nextSubtotalCents + nextServiceChargeCents + nextTaxCents,
-  };
+  return recalculateOrderTotals({
+    items: order.items,
+    cancelledItemId,
+    serviceChargeRate: Number(order.hotel?.settings?.serviceChargeRate ?? 0),
+    taxRate: Number(order.hotel?.settings?.taxRate ?? 0),
+  });
 }
 
 async function cancelGuestOrderItemAction(formData: FormData) {
@@ -692,6 +677,21 @@ async function cancelGuestOrderItemAction(formData: FormData) {
       hotelId: true,
       status: true,
       orderCode: true,
+      /*
+        Rates for the recalculation. Explicit select, and this action renders
+        nothing -- unlike the page query above, where a blanket include of
+        settings shipped the merchant account and Wi-Fi password to guests.
+      */
+      hotel: {
+        select: {
+          settings: {
+            select: {
+              taxRate: true,
+              serviceChargeRate: true,
+            },
+          },
+        },
+      },
       subtotalCents: true,
       serviceChargeCents: true,
       taxCents: true,

@@ -74,3 +74,62 @@ Done = each fix demonstrated against the running app, tsc clean, pushed.
 - BT-05 was verified by rendering the real component source in isolation, not
   through the analytics page: the dashboard session expired mid-run and logging
   in would mean entering a password.
+
+## Ultra inspection and repair (10 Sep 2026)
+
+Full report sealed at `.flow/ULTRA-2026-09-10.md`: 54 findings — 9 BLOCKER,
+31 MAJOR, 14 MINOR — from a clean checkout, a disposable MySQL 8.4.7, and six
+independent readers. Repaired on branch `ultra/blocker-repairs-20260910`,
+local commits only, nothing pushed.
+
+- [x] BLOCKER 1 backup restore let a hotel admin write their own role from an
+      unsigned archive, and matched users across every tenant. Scoped, clamped,
+      authVersion bumped. `3958a72`
+- [x] BLOCKER 3 next was pinned "latest" and had resolved to 16.2.6 — two
+      unauthenticated RCE advisories. Pinned to 16.3.4; audit reports no
+      critical. `3958a72`
+- [x] BLOCKER 4 the guest order page shipped every HotelSettings column in its
+      RSC payload: Xendit merchant id, commission rate, fee bearer, wifi
+      password. Proven with canaries, then proven gone. This is BT-02 again on
+      a surface that ran its own query. `3958a72`
+- [x] BLOCKER 5 ingredient stock only ever went down. restoreInventoryForOrder
+      added; verified live 100→98→100. `3958a72`
+- [x] BLOCKER 6 a replayed payment webhook overwrote the finalizer's claim,
+      rolled back the order and auto-refunded a good payment. `3958a72`
+- [x] BLOCKER 7/8 the folio double-charged partially-refunded orders and
+      under-billed room charges by discounting an already-discounted total.
+      One tested rule now, in `guest-stay-folio-charges.ts`. `3958a72`
+- [x] All 31 MAJORs except 6, 16, 28, 30. `71b16cc` `e0de608` `7d8c805`
+      `1478fbf` `757c055` `fecdaec`
+- [x] All 14 MINORs. `fecdaec` + this commit
+- [ ] BLOCKER 2 the migration chain does not apply to an empty database and 12
+      tables are created by no migration at all. Needs migrations written and a
+      baseline decision — ultra does not write them.
+- [ ] BLOCKER 9 `GuestPointSettings` has no screen, so a hotel cannot change
+      its earn rate or switch loyalty off without SQL.
+- [ ] MAJOR 6 POS sales charge no VAT or service charge; the guest portal
+      charges both. Fixing it changes what customers pay at the till — a
+      pricing decision, not a defect to correct quietly.
+- [ ] MAJOR 16 a PAY_LATER folio balance can never be collected. Needs a
+      post-checkout folio payment action and screen.
+- [ ] MAJOR 28 POS integration cannot be turned on. Needs settings screens, or
+      drop the model, `src/lib/pos.ts` and `/api/pos/mock`.
+- [ ] MAJOR 30 the backup/restore audit trail is write-only. Matters more than
+      it looks given BLOCKER 1.
+
+### Carried, needs a migration
+MAJOR 10 (`@@unique` on the stock-restore key), MAJOR 14 (split
+`xenditCommissionValue` into percentage and fixed columns), MINOR 2 (unique
+reserved-redemption key), MINOR 14 (drop `MenuDailyStock`,
+`SubscriptionPackage`, `HotelSubscription` and their unreachable enum values).
+Each has a code-level guard in place; each sits behind BLOCKER 2, so adding to
+the chain now would compound it.
+
+### Notes
+- Ingredient restore is real on the demo seed but a no-op in production until
+  something can create a `ProductInventoryRecipe` — nothing can today.
+- Tests went 45 → 140. Ten new test files, all written RED first.
+- `.flow/tdd-exempt` lists the config/ops/fixture paths outside TDD scope.
+- Corrects the earlier decision recorded above: the launch handler's denial
+  redirects were **not** harmless. They carry `?k=<scan secret>` in the query
+  string, so a tag credential crossed to another origin. Fixed in `71b16cc`.

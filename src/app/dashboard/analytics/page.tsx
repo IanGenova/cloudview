@@ -289,9 +289,18 @@ function getStockOrderBy(
       return [{ soldQty: direction }, { product: { name: 'asc' } }];
 
     case 'status':
+      /*
+        Both keys are low-cardinality -- a boolean and an int that is very
+        often 0 -- and unlike every sibling branch this one had no unique
+        tiebreak. Pages are separate findMany calls, so rows tied on both
+        columns could order differently per query: a row shown on page 1
+        appearing again on page 2 while another was never rendered at all.
+      */
       return [
         { isSoldOut: direction },
         { availableQty: direction === 'asc' ? 'desc' : 'asc' },
+        { product: { name: 'asc' } },
+        { id: 'asc' },
       ];
 
     case 'updated':

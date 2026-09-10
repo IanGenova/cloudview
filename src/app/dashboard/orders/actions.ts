@@ -29,6 +29,7 @@ import {
   isXenditKitchenReady,
 } from '@/lib/staff-processing-policy';
 import { sendOrderToPos } from '@/lib/pos';
+import { recalculateOrderTotals } from '@/lib/order-charge-totals';
 import { cleanText } from '@/lib/sanitize';
 import {
   triggerOrderPaidUpdate,
@@ -744,14 +745,22 @@ async function restoreMenuStockForCancelledOrder({
   });
 }
 
+/*
+ * Delegates to lib/order-charge-totals.ts.
+ *
+ * This used to derive the rates by dividing the order's stored cents --
+ * taxCents / subtotalCents -- and both of those are rewritten on every
+ * cancellation, so each step took its rate from the previous step's rounding
+ * error and rounded again. On a 12% hotel the stored tax stayed at 12 down to
+ * a subtotal of 23, an effective 52.2% VAT, and every refund along the way was
+ * short by the drift.
+ */
 function recalculateOrderTotalsAfterItemCancellation({
   order,
   cancelledItemId,
 }: {
   order: {
-    subtotalCents: number;
-    serviceChargeCents: number;
-    taxCents: number;
+    hotel?: { settings?: { taxRate: unknown; serviceChargeRate: unknown } | null } | null;
     items: {
       id: string;
       quantity: number;
@@ -761,34 +770,12 @@ function recalculateOrderTotalsAfterItemCancellation({
   };
   cancelledItemId: string;
 }) {
-  const serviceChargeRate =
-    order.subtotalCents > 0
-      ? order.serviceChargeCents / order.subtotalCents
-      : 0;
-
-  const taxRate =
-    order.subtotalCents > 0 ? order.taxCents / order.subtotalCents : 0;
-
-  const nextSubtotalCents = order.items.reduce((sum, item) => {
-    const cancelledQty =
-      item.id === cancelledItemId ? item.quantity : item.cancelledQty;
-
-    const activeQty = Math.max(item.quantity - cancelledQty, 0);
-
-    return sum + activeQty * item.unitPriceCents;
-  }, 0);
-
-  const nextServiceChargeCents = Math.round(
-    nextSubtotalCents * serviceChargeRate
-  );
-  const nextTaxCents = Math.round(nextSubtotalCents * taxRate);
-
-  return {
-    subtotalCents: nextSubtotalCents,
-    serviceChargeCents: nextServiceChargeCents,
-    taxCents: nextTaxCents,
-    totalCents: nextSubtotalCents + nextServiceChargeCents + nextTaxCents,
-  };
+  return recalculateOrderTotals({
+    items: order.items,
+    cancelledItemId,
+    serviceChargeRate: Number(order.hotel?.settings?.serviceChargeRate ?? 0),
+    taxRate: Number(order.hotel?.settings?.taxRate ?? 0),
+  });
 }
 
 export async function cancelOrderItemAction(formData: FormData) {
@@ -820,6 +807,23 @@ if (!orderId || !orderItemId) {
       tag: {
         select: {
           code: true,
+        },
+      },
+      /*
+        The hotel's configured rates, so the recalculation uses them rather
+        than reverse-engineering a rate from cents that have already been
+        rounded and rewritten. An explicit select: this is a server action, but
+        the same blanket include on the guest tracking page shipped every
+        HotelSettings column to guests.
+      */
+      hotel: {
+        select: {
+          settings: {
+            select: {
+              taxRate: true,
+              serviceChargeRate: true,
+            },
+          },
         },
       },
       items: {
