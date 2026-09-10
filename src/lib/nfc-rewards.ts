@@ -4,6 +4,7 @@ import {
   GuestPointLedgerType,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { businessDayBounds, businessDayKey } from '@/lib/business-day';
 import {
   findOrCreateGuestMember,
   getOrCreatePointAccount,
@@ -20,16 +21,23 @@ export function getGuestRewardsCookieName(hotelId: string) {
   return `cv_rewards_member_${safeHotelId}`;
 }
 
+/*
+ * Both the dedupe key and the cap window come from the same Manila day.
+ *
+ * They used to come from two different clocks: the key from toISOString()
+ * (UTC) and the window from setHours() (server-local). On a UTC host those
+ * roll over eight hours apart, so a guest tapping three tags at 05:00 Manila
+ * consumed the previous day's allowance and three more at 09:00 consumed the
+ * next -- six points against a configured maximum of three, and the same tag
+ * claimable twice inside one Manila day. The mirror of that bug denied a
+ * legitimate new-day reward to anyone tapping before 08:00.
+ */
 function getTodayKey(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  return businessDayKey(date);
 }
 
 function getDayBounds(date = new Date()) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const { start, end } = businessDayBounds(date);
 
   return {
     start,
@@ -171,7 +179,7 @@ export async function awardNfcTapPointsIfEligible(params: {
       status: GuestPointLedgerStatus.CONFIRMED,
       createdAt: {
         gte: start,
-        lt: end,
+        lte: end,
       },
     },
     _sum: {
@@ -440,7 +448,7 @@ export async function awardServiceRequestPointsIfEligible(serviceRequestId: stri
       status: GuestPointLedgerStatus.CONFIRMED,
       createdAt: {
         gte: start,
-        lt: end,
+        lte: end,
       },
     },
     _sum: {

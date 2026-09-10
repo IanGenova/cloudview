@@ -26,7 +26,13 @@ import {
   Role,
   ServiceRequestStatus,
 } from '@prisma/client';
-import { db } from '@/lib/db';
+import { db } from '@/lib/db';
+import {
+  BUSINESS_TIME_ZONE,
+  endOfBusinessDay,
+  parseBusinessDate,
+  startOfBusinessDay,
+} from '@/lib/business-day';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 
 export const dynamic = 'force-dynamic';
@@ -117,32 +123,15 @@ function isReportKey(value: string | undefined): value is ReportKey {
   return reportTabs.some((tab) => tab.key === value);
 }
 
+/*
+ * Parsed as a Manila calendar date.
+ *
+ * new Date(year, month - 1, day) builds server-local midnight, which on a
+ * UTC host is 08:00 Manila -- so a report asked for the 11th actually
+ * covered 08:00 on the 11th to 07:59 on the 12th.
+ */
 function parseDate(value: string | undefined, fallback: Date) {
-  if (!value) {
-    return fallback;
-  }
-
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-
-  if (!match) {
-    return fallback;
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsed = new Date(year, month - 1, day);
-
-  if (
-    Number.isNaN(parsed.getTime()) ||
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day
-  ) {
-    return fallback;
-  }
-
-  return parsed;
+  return parseBusinessDate(value) ?? fallback;
 }
 
 function toInputDate(date: Date) {
@@ -153,16 +142,20 @@ function toInputDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+/*
+ * Manila, not server-local.
+ *
+ * On a UTC host these bounded the daily sales report from 08:00 on the day
+ * to 07:59 the next, so a bar or late room service booked everything before
+ * 8am onto the previous day and the till never reconciled. Analytics
+ * bucketed the same createdAt by Manila, so the two screens disagreed.
+ */
 function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
+  return startOfBusinessDay(date);
 }
 
 function endOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
+  return endOfBusinessDay(date);
 }
 
 function formatCurrency(cents: number) {
@@ -182,6 +175,7 @@ function formatDateTime(date: Date | string | null | undefined) {
   }
 
   return new Intl.DateTimeFormat('en-PH', {
+    timeZone: BUSINESS_TIME_ZONE,
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(date));

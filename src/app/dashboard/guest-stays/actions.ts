@@ -44,6 +44,7 @@ import {
 } from '@/lib/xendit-split';
 import { createGuestStayXenditReturnState } from '@/lib/guest-stay-xendit-return';
 import { getOrderOutstandingCents } from '@/lib/guest-stay-folio-charges';
+import { parseBusinessDateTime } from '@/lib/business-day';
 import {
   createXenditIntentFingerprint,
   decideExistingXenditSession,
@@ -75,13 +76,14 @@ function parseDateTime(value: FormDataEntryValue | null) {
     return null;
   }
 
-  const date = new Date(raw);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
+  /*
+    A datetime-local field submits a bare wall-clock string with no zone,
+    and new Date() reads that as server-local. On a UTC host a front desk
+    setting checkout to noon stored 20:00 Manila -- and because the edit
+    form rendered it back in the browser's zone, saving any unrelated field
+    pushed checkout another eight hours out, every time.
+  */
+  return parseBusinessDateTime(raw);
 }
 
 function parseGuestStayStatus(value: FormDataEntryValue | null) {

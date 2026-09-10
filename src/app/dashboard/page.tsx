@@ -31,6 +31,7 @@ import {
 
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { money } from '@/lib/money';
+import { endOfBusinessDay, startOfBusinessDay } from '@/lib/business-day';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import {
@@ -1105,9 +1106,16 @@ db.guestStay.count({
   where: {
     ...hotelWhere,
     status: GuestStayStatus.ACTIVE,
+    /*
+      Manila, matching the guest-stays screen.
+
+      This tile used a server-local day while GuestStaysClient counted the
+      same stays by Manila date, so one stay could be Checking Out Today on
+      one screen and not on the other, every time.
+    */
     expectedCheckOutAt: {
-      gte: startOfDay(new Date()),
-      lt: addDays(startOfDay(new Date()), 1),
+      gte: startOfBusinessDay(new Date()),
+      lte: endOfBusinessDay(new Date()),
     },
   },
 }),

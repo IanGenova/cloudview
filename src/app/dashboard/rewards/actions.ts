@@ -42,7 +42,16 @@ function getDate(formData: FormData, key: string, endOfDay = false) {
     return null;
   }
 
-  const date = new Date(`${value}T${endOfDay ? '23:59:59' : '00:00:00'}`);
+  /*
+    Anchored to Manila, not to the server clock.
+
+    Without the offset this built server-local midnight, so on a UTC host a
+    reward valid "the 11th only" was refused until 08:00 on the 11th and
+    still redeemable until 07:59 on the 12th.
+  */
+  const date = new Date(
+    `${value}T${endOfDay ? '23:59:59.999' : '00:00:00'}+08:00`
+  );
 
   if (Number.isNaN(date.getTime())) {
     return null;

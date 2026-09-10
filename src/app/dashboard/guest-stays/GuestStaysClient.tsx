@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { renderNonFiscalNoticeHtml } from '@/lib/fiscal-notice';
+import { toBusinessDateTimeInputValue } from '@/lib/business-day';
 import {
   AlertTriangle,
   Banknote,
@@ -458,10 +459,15 @@ function toDateTimeLocalValue(value?: string | null) {
     return '';
   }
 
-  const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
-  const localDate = new Date(date.getTime() - timezoneOffsetMs);
+  /*
+    Rendered in the hotel's zone, not the viewer's.
 
-  return localDate.toISOString().slice(0, 16);
+    Using the browser offset meant a stored instant came back as a different
+    wall-clock time than the one the front desk typed, and saving it again
+    moved the stored value. Pairing this with parseBusinessDateTime on the
+    server makes the round trip exact.
+  */
+  return toBusinessDateTimeInputValue(date);
 }
 type FrontDeskStatusTone = 'green' | 'amber' | 'red' | 'neutral';
 

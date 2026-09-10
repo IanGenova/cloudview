@@ -35,7 +35,8 @@ import {
   Utensils,
   WalletCards,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { startOfBusinessDay } from '@/lib/business-day';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { AnalyticsStickySummary } from './AnalyticsStickySummary';
 import { db } from '@/lib/db';
@@ -119,7 +120,7 @@ function getManilaDateKey(date: Date) {
 }
 
 function getManilaStartOfDay(date: Date) {
-  return new Date(`${getManilaDateKey(date)}T00:00:00+08:00`);
+  return startOfBusinessDay(date);
 }
 
 function getLastNDays(days: number) {
@@ -950,9 +951,20 @@ export default async function AnalyticsPage({
   const days = getLastNDays(rangeDays);
   const now = new Date();
   const startDate = getManilaStartOfDay(days[0]?.date ?? now);
-  const previousStartDate = new Date(startDate);
-  previousStartDate.setDate(previousStartDate.getDate() - rangeDays);
+
+  /*
+    The previous window is the same elapsed span as the current one.
+
+    It used to be rangeDays of *whole* days compared against rangeDays - 1
+    whole days plus however much of today had elapsed, so the two were never
+    the same length. A hotel taking exactly the same money every day read as
+    declining: on the 7-day range at noon, 6.5 days against 7 is -7%, and the
+    figure moved with the clock -- about -13% at 08:00, about -1% at 22:00.
+    Every KPI delta on this page carried that bias.
+  */
+  const elapsedMs = Math.max(now.getTime() - startDate.getTime(), 0);
   const previousEndDate = new Date(startDate.getTime() - 1);
+  const previousStartDate = new Date(previousEndDate.getTime() - elapsedMs);
 
   const orderScope: Prisma.OrderWhereInput =
     user.role === 'SUPER_ADMIN'
