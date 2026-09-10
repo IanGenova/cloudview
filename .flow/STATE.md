@@ -162,15 +162,24 @@ content was discarded.
 ### Remaining, in this order
 1. ~~Test suite~~ — done 11 Sep, 140 pass.
 2. ~~`git push origin main`~~ — done 11 Sep.
-3. SSH to 187.77.129.233 and run `node scripts/migration-drift-report.cjs`.
-   **Stop and read it.** The local database has **no `_prisma_migrations` table
-   at all** (verified against information_schema, 61 tables, zero migration
-   history). If production is the same, `deploy.sh`'s unconditional
-   `prisma migrate deploy` will attempt all thirty migrations against live data,
-   and `20260525081653`/`20260525081904` are the enum pair that already blanked
-   every ROOM value in `Location.type` and `NfcTag.tagType`. The drift tool
-   flags both as needing a human.
-4. Only then decide on `./deploy/deploy.sh`. Take a mysqldump first.
+3. ~~Drift report on the VPS~~ — done 11 Sep. **Clean.** Production is
+   `u610581005_cloudviewdb` at `srv2093.hstgr.io:3306`; `prisma migrate status`
+   says "Database schema is up to date!", 30/30 applied. So `migrate deploy` is
+   a no-op on this deploy. (The local dev database was the one with no
+   `_prisma_migrations` table — a `db push` build, not a proxy for production.)
+   BLOCKER 2 still stands for any *new* environment.
+4. ~~mysqldump~~ — done 11 Sep:
+   `/var/www/cloudview-backups/pre-ultra-deploy-20260910-234414.sql.gz`
+   (60 tables, 62K, `--single-transaction --column-statistics=0`; the first
+   attempt without `--column-statistics=0` produced a 1-table stub — the client
+   is mysqldump 8 against an older server).
+   Pre-deploy checks on the box: `MENU_UPLOAD_DIR` set in
+   `.env.production.local`, `CLOUDVIEW_MEDIA_ROOT` set in `.env`, so both are
+   live and the changed fallbacks never engage. `NFC_PUBLIC_APP_URL` already
+   set. Only an untracked `storage/` in the tree, so `--ff-only` is clear. Both
+   `/var/www/cloudview-uploads/menu` (51 files) and `cloudview-media/menu` (59)
+   exist — MINOR 13's history on disk, pre-existing, untouched by this deploy.
+   Server clock is UTC.
 5. After deploying: `pm2 start ecosystem.production.cjs` — the deploy script
    only does `pm2 reload cloudview-nextjs`, so the new `cloudview-refund-retry`
    worker will not start on its own.
