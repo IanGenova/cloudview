@@ -2,6 +2,12 @@ import crypto from 'crypto';
 import { cookies, headers } from 'next/headers';
 import { GuestStayStatus } from '@prisma/client';
 import { db } from '@/lib/db';
+import {
+  buildPasscodeThrottleKeys,
+  checkPasscodeAttempts,
+  clearPasscodeAttempts,
+  recordFailedPasscodeAttempt,
+} from '@/lib/guest-passcode-rate-limit';
 import { hashValue, shouldUseSecureNfcCookies } from '@/lib/nfc-security';
 import { verifyGuestStayPasscode } from '@/lib/guest-stays';
 
@@ -12,6 +18,7 @@ export class GuestStayDeviceAuthError extends Error {
     public code:
       | 'STAY_NOT_FOUND'
       | 'INVALID_PASSCODE'
+      | 'PASSCODE_LOCKED'
       | 'DEVICE_LIMIT_REACHED'
       | 'DEVICE_NOT_AUTHORIZED',
     message: string
@@ -248,12 +255,41 @@ export async function authorizeGuestStayDeviceWithPasscode({
     );
   }
 
+  /*
+    Throttle before verifying, and count every miss.
+
+    The passcode is six digits and this path had no counter, no lockout and no
+    delay -- so a former guest of the room, whose launch URL still works
+    because scan secrets survive checkout, could walk the whole keyspace
+    against the current occupant and come away with an authorized device and a
+    guest session on that stay. The sibling path for public tags has had a
+    lockout all along; this one did not.
+
+    Keyed on the stay and on the caller's address, so one address cannot lock
+    every room out and a distributed guess against one room still counts.
+  */
+  const throttleKeys = await buildPasscodeThrottleKeys(stay.id);
+  const throttleState = checkPasscodeAttempts(throttleKeys);
+
+  if (throttleState.blocked) {
+    throw new GuestStayDeviceAuthError(
+      'PASSCODE_LOCKED',
+      `Too many incorrect passcode attempts. Try again in ${throttleState.retryAfterMinutes} minute${
+        throttleState.retryAfterMinutes === 1 ? '' : 's'
+      } or contact the front desk.`
+    );
+  }
+
   if (!verifyGuestStayPasscode(passcode, stay.passcodeHash)) {
+    recordFailedPasscodeAttempt(throttleKeys);
+
     throw new GuestStayDeviceAuthError(
       'INVALID_PASSCODE',
       'Invalid room passcode.'
     );
   }
+
+  clearPasscodeAttempts(throttleKeys);
 
   const cookieStore = await cookies();
   const cookieName = getGuestStayDeviceCookieName(stay.id);

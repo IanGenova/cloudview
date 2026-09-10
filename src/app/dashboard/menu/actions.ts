@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { DashboardModule, MenuProductType, type Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { db } from '@/lib/db';
+import { imageExtensionForUploadType } from '@/lib/upload-file-type';
 import { requireUser } from '@/lib/auth';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 
@@ -186,9 +187,17 @@ async function saveProductImage(file: File | null, productName: string) {
     return null;
   }
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  /*
+    The extension is derived from the type, never from file.name.
 
-  if (!allowedTypes.includes(file.type)) {
+    Both are client-supplied, but only one of them is checked -- so taking the
+    extension from the name let a part declaring Content-Type: image/png and
+    filename="x.html" land as .html under /uploads/, which is served with no
+    Content-Security-Policy and executed on our own origin.
+  */
+  const extension = imageExtensionForUploadType(file.type);
+
+  if (!extension) {
     throwMenuError('invalid-image-type');
   }
 
@@ -198,7 +207,6 @@ async function saveProductImage(file: File | null, productName: string) {
     throwMenuError('image-too-large');
   }
 
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
   const safeName = slugify(productName || 'menu-product');
   const fileName = `${safeName}-${Date.now()}.${extension}`;
 

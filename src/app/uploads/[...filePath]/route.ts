@@ -23,6 +23,14 @@ const allowedFolders = new Set<string>(
   RUNTIME_MEDIA_FOLDERS
 );
 
+/*
+ * .svg is deliberately absent.
+ *
+ * This prefix is excluded from the middleware's Content-Security-Policy and
+ * nginx serves it directly with only nosniff, so an SVG served from here runs
+ * its own script on the application's origin with nothing to contain it.
+ * Anything not listed falls through to a generic type and does not execute.
+ */
 const contentTypes: Record<string, string> = {
   '.avif': 'image/avif',
   '.gif': 'image/gif',
@@ -30,7 +38,6 @@ const contentTypes: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.pdf': 'application/pdf',
   '.png': 'image/png',
-  '.svg': 'image/svg+xml',
   '.webp': 'image/webp',
 };
 

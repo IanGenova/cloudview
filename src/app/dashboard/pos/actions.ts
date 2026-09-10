@@ -1,6 +1,7 @@
 'use server';
 import type { Prisma } from '@prisma/client';
 import {
+  DashboardModule,
   MenuAvailabilityMovementType,
   MenuProductType,
   OrderStatus,
@@ -13,7 +14,8 @@ import {
   SeriesCodeType,
   Role,
 } from '@prisma/client';
-import { generateSeriesCode } from '@/lib/series-code';
+import { generateSeriesCode } from '@/lib/series-code';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { revalidatePath } from 'next/cache';
 import { requireRole, requireUser } from '@/lib/auth';
 import { assertHotelScope } from '@/lib/access';
@@ -1005,7 +1007,20 @@ let groupedServiceRequestCode: string | null = null;
 }
 
 export async function createPOSOrder(input: POSOrderInput) {
-  const user = await requireUser();
+  /*
+    The POS_TERMINAL permission, not merely a role.
+
+    createPOSOrderInternal checks role and hotel scope, which is why this was
+    never cross-tenant -- but every other module's actions also check their
+    module permission, and this one did not. An admin who unchecked POS
+    Terminal for a STAFF account removed the page from them and nothing else:
+    the action was still callable directly, and still created paid orders,
+    deducted stock and posted room charges.
+  */
+  const user = await requireDashboardPermission(
+    DashboardModule.POS_TERMINAL,
+    'canCreate'
+  );
 
   return createPOSOrderInternal(input, user);
 }

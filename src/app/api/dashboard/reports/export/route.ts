@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import {
+  DashboardModule,
   OrderItemStatus,
   OrderStatus,
   PaymentStatus,
@@ -9,6 +10,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { isNextRedirectError } from '@/lib/next-control-flow';
 
 export const runtime = 'nodejs';
@@ -234,7 +236,20 @@ function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
 }
 
 async function buildReportData(request: NextRequest): Promise<ReportData> {
-  const user = await requireUser();
+  /*
+    The REPORTS module permission, not merely "is signed in".
+
+    /dashboard/reports checks this; the export route checked only requireUser,
+    and middleware does not help because /api/... fails isDashboardPath. So a
+    KITCHEN user redirected away from the reports page could still GET
+    ?report=audit and receive the hotel's entire audit trail, or ?report=orders
+    and receive its revenue history. Hotel scoping below was always correct;
+    this was the missing half.
+  */
+  const user = await requireDashboardPermission(
+    DashboardModule.REPORTS,
+    'canView'
+  );
   const searchParams = request.nextUrl.searchParams;
 
   const reportKey = getReportKey(searchParams.get('report'));
