@@ -322,6 +322,21 @@ async function buildReportData(request: NextRequest): Promise<ReportData> {
           createdAt: dateRangeFilter,
         },
         include: {
+          /*
+            Refunds, so revenue can be reported net of them.
+
+            totalSales summed totalCents over every non-cancelled order and
+            paidSales counted only PAID, so a partially refunded order
+            contributed its full value to one and nothing to the other -- both
+            wrong, in opposite directions, on the same order. A fully refunded
+            order that was never cancelled booked its whole value as revenue
+            forever.
+          */
+          guestXenditSessions: {
+            select: {
+              refundedAmountCents: true,
+            },
+          },
           hotel: {
             select: {
               name: true,
@@ -509,14 +524,40 @@ async function buildReportData(request: NextRequest): Promise<ReportData> {
       order.status !== OrderStatus.DELIVERED
   );
 
+  /* What was actually refunded against an order, from its payment sessions. */
+  const refundedCentsFor = (order: {
+    guestXenditSessions?: Array<{ refundedAmountCents: number }>;
+  }) =>
+    (order.guestXenditSessions ?? []).reduce(
+      (sum, session) => sum + (session.refundedAmountCents || 0),
+      0
+    );
+
+  const netCentsFor = (order: {
+    totalCents: number;
+    guestXenditSessions?: Array<{ refundedAmountCents: number }>;
+  }) => Math.max(order.totalCents - refundedCentsFor(order), 0);
+
   const totalSalesCents = nonCancelledOrders.reduce(
-    (sum, order) => sum + order.totalCents,
+    (sum, order) => sum + netCentsFor(order),
     0
   );
 
+  /*
+    Settled money, net of refunds. PARTIALLY_REFUNDED and the refund-in-flight
+    statuses are settled -- the guest paid -- so counting only PAID reported
+    zero for an order whose money is in the bank.
+  */
+  const SETTLED_PAYMENT_STATUSES: PaymentStatus[] = [
+    PaymentStatus.PAID,
+    PaymentStatus.PARTIALLY_REFUNDED,
+    PaymentStatus.REFUND_PENDING,
+    PaymentStatus.REFUND_FAILED,
+  ];
+
   const paidSalesCents = nonCancelledOrders
-    .filter((order) => order.paymentStatus === PaymentStatus.PAID)
-    .reduce((sum, order) => sum + order.totalCents, 0);
+    .filter((order) => SETTLED_PAYMENT_STATUSES.includes(order.paymentStatus))
+    .reduce((sum, order) => sum + netCentsFor(order), 0);
 
   const averageOrderCents = nonCancelledOrders.length
     ? Math.round(totalSalesCents / nonCancelledOrders.length)

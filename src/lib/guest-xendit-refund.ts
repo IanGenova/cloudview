@@ -123,6 +123,13 @@ function isManualRefundRequiredError(value?: string | null) {
   return String(value ?? '').startsWith(MANUAL_REFUND_REQUIRED_PREFIX);
 }
 
+/*
+ * Raised when a concurrent refund has already committed the balance this one
+ * was about to claim. Caught by the caller and reported as a skip, not a
+ * failure -- nothing went wrong, the money was simply already going back.
+ */
+class GuestRefundOverCommitError extends Error {}
+
 export function isAutomaticGuestRefundEnabled() {
   return process.env.XENDIT_AUTO_REFUND_ON_FULFILLMENT_FAILURE !== 'false';
 }
@@ -521,51 +528,114 @@ export async function requestGuestXenditRefund(input: {
     };
   }
 
-  const refundRecord = await db.$transaction(async (tx) => {
-    const refund = await tx.guestXenditRefund.create({
-      data: {
-        guestPaymentSessionId: session.id,
-        orderId: input.orderId ?? session.orderId,
-        orderItemId: input.orderItemId ?? null,
-        serviceRequestId: input.serviceRequestId ?? null,
-        kind: input.kind ?? GuestXenditRefundKind.FULL,
-        status: GuestXenditRefundStatus.PENDING,
-        amountCents,
-        currency: session.currency,
-        idempotencyKey,
-        reason: input.reason.slice(0, 191),
-        notes: (input.notes || input.reason).slice(0, 2000),
-      },
-    });
+  let refundRecord;
 
-    await tx.guestXenditSession.update({
-      where: { id: session.id },
-      data: {
-        status: GuestXenditStatus.REFUND_PENDING,
-        refundStatus: GuestXenditRefundStatus.PENDING,
-        refundRequestedAt: new Date(),
-        refundReason: input.reason.slice(0, 191),
-        refundNotes: (input.notes || input.reason).slice(0, 2000),
-        refundErrorMessage: null,
-      },
-    });
+  try {
+    refundRecord = await db.$transaction(async (tx) => {
+      /*
+        Re-check the committed total inside the transaction.
 
-    if (refund.orderId) {
-      await tx.order.updateMany({
-        where: { id: refund.orderId },
-        data: { paymentStatus: PaymentStatus.REFUND_PENDING },
+        remainingRefundable above was computed from refunds read outside any
+        transaction, and the idempotencyKey unique constraint only deduplicates
+        *identical* requests. Two different cancellations of the same order --
+        the guest cancelling on the tracking page while staff cancel from the
+        dashboard -- generate different suffixes, so nothing serialised them:
+        both read zero committed and both dispatched a full refund against the
+        same payment.
+
+        No constraint bounds sum(refunds) <= paidAmountCents, so this read is
+        the only thing standing between a PHP 12.20 payment and PHP 24.40 of
+        refunds. Inside the transaction it sees the other caller's committed
+        row.
+      */
+      const liveRefunds = await tx.guestXenditRefund.findMany({
+        where: {
+          guestPaymentSessionId: session.id,
+          status: {
+            in: [
+              GuestXenditRefundStatus.PENDING,
+              GuestXenditRefundStatus.PROCESSING,
+              GuestXenditRefundStatus.SUCCEEDED,
+            ],
+          },
+        },
+        select: { amountCents: true },
       });
+
+      const liveCommitted = liveRefunds.reduce(
+        (sum, refund) => sum + refund.amountCents,
+        0
+      );
+
+      if (liveCommitted + amountCents > paidAmount) {
+        throw new GuestRefundOverCommitError(
+          `Refund of ${amountCents} would exceed the ${paidAmount} paid on this session; ${liveCommitted} is already committed.`
+        );
+      }
+
+      const refund = await tx.guestXenditRefund.create({
+        data: {
+          guestPaymentSessionId: session.id,
+          orderId: input.orderId ?? session.orderId,
+          orderItemId: input.orderItemId ?? null,
+          serviceRequestId: input.serviceRequestId ?? null,
+          kind: input.kind ?? GuestXenditRefundKind.FULL,
+          status: GuestXenditRefundStatus.PENDING,
+          amountCents,
+          currency: session.currency,
+          idempotencyKey,
+          reason: input.reason.slice(0, 191),
+          notes: (input.notes || input.reason).slice(0, 2000),
+        },
+      });
+
+      await tx.guestXenditSession.update({
+        where: { id: session.id },
+        data: {
+          status: GuestXenditStatus.REFUND_PENDING,
+          refundStatus: GuestXenditRefundStatus.PENDING,
+          refundRequestedAt: new Date(),
+          refundReason: input.reason.slice(0, 191),
+          refundNotes: (input.notes || input.reason).slice(0, 2000),
+          refundErrorMessage: null,
+        },
+      });
+
+      if (refund.orderId) {
+        await tx.order.updateMany({
+          where: { id: refund.orderId },
+          data: { paymentStatus: PaymentStatus.REFUND_PENDING },
+        });
+      }
+
+      if (refund.serviceRequestId) {
+        await tx.serviceRequest.updateMany({
+          where: { id: refund.serviceRequestId },
+          data: { paymentStatus: PaymentStatus.REFUND_PENDING },
+        });
+      }
+
+      return refund;
+    });
+  } catch (error) {
+    /*
+      Another cancellation committed the balance first. Nothing is wrong -- the
+      money is already going back -- so this reports as a skip rather than
+      surfacing an error to whoever clicked cancel second.
+    */
+    if (error instanceof GuestRefundOverCommitError) {
+      await refreshGuestRefundState(session.id);
+
+      return {
+        ok: true as const,
+        skipped: true as const,
+        alreadyRefunded: true as const,
+        message: 'A refund for this payment was already requested.',
+      };
     }
 
-    if (refund.serviceRequestId) {
-      await tx.serviceRequest.updateMany({
-        where: { id: refund.serviceRequestId },
-        data: { paymentStatus: PaymentStatus.REFUND_PENDING },
-      });
-    }
-
-    return refund;
-  });
+    throw error;
+  }
 
   await safelyNotifyGuestRefund(refundRecord.id);
 

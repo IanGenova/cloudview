@@ -345,6 +345,29 @@ export default async function SettingsPage({
                   />
                 </FormField>
 
+                {/*
+                  What this field was rendered with, so the action can tell a
+                  deliberate new value from the previous one left in place
+                  after a type change. The column stores basis points for
+                  percentage and centavos for fixed, and nothing converts
+                  between them -- so switching the dropdown and saving the
+                  pre-filled number silently reinterprets 10% as PHP 10.00.
+                */}
+                <input
+                  type="hidden"
+                  name="xenditCommissionRenderedType"
+                  value={String(
+                    hotel?.settings?.xenditCommissionType ?? 'PERCENTAGE_NET'
+                  )}
+                />
+                <input
+                  type="hidden"
+                  name="xenditCommissionRenderedValue"
+                  value={String(
+                    Number(hotel?.settings?.xenditCommissionValue ?? 1000) / 100
+                  )}
+                />
+
                 <FormField
                   label="Processing Fee Bearer"
                   helper="Hotel means the payment is created on the hotel sub-account and CloudView receives the commission route. CloudView means the payment is created on the master account and the hotel receives its routed share. For fixed commission, leave enough value on the source account to cover Xendit fees and tax."

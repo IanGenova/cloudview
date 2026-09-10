@@ -1067,6 +1067,8 @@ export default async function AnalyticsPage({
   const [
     currentSales,
     previousSales,
+    currentRefunds,
+    previousRefunds,
     currentOrderCount,
     previousOrderCount,
     previousFinancialOrderCount,
@@ -1100,6 +1102,28 @@ export default async function AnalyticsPage({
       where: previousFinancialOrderWhere,
       _sum: {
         totalCents: true,
+      },
+    }),
+
+    /*
+      Refunds for the same two windows, so revenue can be reported net.
+
+      totalCents is what the order was billed at; refundedAmountCents is what
+      went back. Summing only the former meant a fully refunded order that was
+      never cancelled counted as revenue forever, and a partially refunded one
+      was overstated by the refunded half.
+    */
+    db.guestXenditSession.aggregate({
+      where: { order: { is: financialOrderWhere } },
+      _sum: {
+        refundedAmountCents: true,
+      },
+    }),
+
+    db.guestXenditSession.aggregate({
+      where: { order: { is: previousFinancialOrderWhere } },
+      _sum: {
+        refundedAmountCents: true,
       },
     }),
 
@@ -1402,8 +1426,17 @@ export default async function AnalyticsPage({
     movementProducts.map((product) => [product.id, product])
   );
 
-  const totalSalesCents = currentSales._sum.totalCents ?? 0;
-  const previousSalesCents = previousSales._sum.totalCents ?? 0;
+  const totalSalesCents = Math.max(
+    (currentSales._sum.totalCents ?? 0) -
+      (currentRefunds._sum.refundedAmountCents ?? 0),
+    0
+  );
+
+  const previousSalesCents = Math.max(
+    (previousSales._sum.totalCents ?? 0) -
+      (previousRefunds._sum.refundedAmountCents ?? 0),
+    0
+  );
 
   const financialOrderCount = recentOrders.filter(
     (order) => order.status !== OrderStatus.CANCELLED

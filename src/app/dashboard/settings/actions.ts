@@ -71,12 +71,55 @@ function parseXenditSplitSettings(formData: FormData) {
     throw new Error('Xendit commission must be zero or greater.');
   }
 
+  /*
+    One column, two units: basis points when the type is PERCENTAGE_NET,
+    centavos when it is FIXED. Both are written as displayValue * 100 and both
+    render back as value / 100, and nothing converted between them when the
+    type changed.
+
+    So an admin on 10% (stored 1000) who switched the dropdown to "Fixed
+    amount" and saved the pre-filled 10 kept the stored 1000, now meaning
+    PHP 10.00 -- and the page still displayed "10". On a PHP 2,000 order the
+    platform then collected PHP 10.00 instead of PHP 200.00, with nothing on
+    screen to distinguish the two states.
+
+    Separating the columns needs a migration, which is not this change. What
+    is here instead is the guard that catches the actual mistake: a type
+    change carrying an unchanged value is refused, so the operator has to
+    state the new number in its new unit.
+  */
+  const previousType = cleanText(
+    formData.get('xenditCommissionRenderedType'),
+    32
+  );
+
+  const previousDisplayValue = Number(
+    formData.get('xenditCommissionRenderedValue')
+  );
+
+  if (
+    previousType &&
+    previousType !== xenditCommissionType &&
+    Number.isFinite(previousDisplayValue) &&
+    previousDisplayValue === displayValue
+  ) {
+    throw new Error(
+      xenditCommissionType === 'FIXED'
+        ? 'Enter the fixed commission in pesos. The current value is a percentage, and it does not carry over.'
+        : 'Enter the commission as a percentage. The current value is a peso amount, and it does not carry over.'
+    );
+  }
+
   // The settings UI uses percentage points or pesos. Store the API-ready
   // representation: basis points for percentage and centavos for fixed.
   const xenditCommissionValue = Math.round(displayValue * 100);
 
   if (xenditCommissionType === 'PERCENTAGE_NET' && displayValue >= 100) {
     throw new Error('Xendit percentage commission must be below 100%.');
+  }
+
+  if (xenditCommissionType === 'FIXED' && xenditSplitEnabled && displayValue <= 0) {
+    throw new Error('A fixed Xendit commission must be greater than zero.');
   }
 
   const xenditLinkedAccountId = rawXenditLinkedAccountId

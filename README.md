@@ -26,7 +26,7 @@ This is a production-ready MVP starter for an NFC-powered hotel guest portal and
 - Inventory items and stock movement history
 - Product recipe/stock deduction mapping
 - Order workflow and kitchen display
-- Inventory auto-deduction when an order is accepted
+- Inventory auto-deduction when an order is released to the kitchen
 - Mock POS integration and POS sync logs
 - Analytics dashboard
 - Hotel settings for branding, Wi-Fi, rules, policies, tax, service charge
@@ -130,8 +130,19 @@ npx prisma generate
 ### 6. Run migration
 
 ```bash
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 ```
+
+> **`migrate dev` will not work with the grant above.** It creates a temporary
+> shadow database, and `GRANT ALL PRIVILEGES ON cloudview.*` does not permit
+> creating databases -- you get `P3014`. Either use `migrate deploy` as shown,
+> or grant `CREATE` on `*.*` to the user first.
+
+> **Known issue:** the committed migration chain does not currently apply to an
+> empty database, and several tables the application uses are created by no
+> migration at all. See `.flow/ULTRA-2026-09-10.md`, BLOCKER 2. Until that is
+> reconciled, `npx prisma db push` is the way to get a working development
+> database from `schema.prisma`.
 
 ### 7. Seed demo data
 
@@ -154,13 +165,23 @@ Kitchen: kitchen@cloudview.test / Password123!
 npm run dev
 ```
 
-Open:
+Open the dashboard:
 
 ```txt
-Dashboard: http://localhost:3000/dashboard/login
-Guest demo: http://localhost:3000/t/room-305-main-panel
-Pool demo: http://localhost:3000/t/pool-deck-main-panel
+http://localhost:3000/dashboard/login
 ```
+
+For the guest portal, use the launch URLs the seed prints. They carry the tag's
+scan secret, which is what creates the guest session:
+
+```txt
+/n/pool-deck-main-panel?k=<secret printed by npm run db:seed>
+```
+
+`/t/<code>` on its own is not a way in -- it is gated by an NFC session and
+redirects to `/nfc-access-denied`. The room tag additionally needs an active
+guest stay with a room passcode; the pool tag does not, so it is the quicker
+demo.
 
 ## MVP test flow
 
@@ -170,8 +191,10 @@ Pool demo: http://localhost:3000/t/pool-deck-main-panel
 4. Open `/t/room-305-main-panel` as a guest.
 5. Order food from the digital menu.
 6. Open **Orders** or **Kitchen Display**.
-7. Click **ACCEPTED** on the order.
-8. Inventory is deducted based on product recipes.
+7. Click **Accept & Prepare** on the order, which moves it to PREPARING.
+8. Inventory is deducted based on product recipes. (Deduction fires on the move
+   to PREPARING/READY/DELIVERED, not on ACCEPTED -- moving an order to ACCEPTED
+   deducts nothing.)
 9. POS sync is logged as pending if POS is disabled, or sent if enabled.
 10. Open the guest order tracking URL to see status changes.
 
@@ -200,7 +223,14 @@ The MVP includes a reusable POS adapter in:
 src/lib/pos.ts
 ```
 
-To test mock POS:
+> **There is no POS Integration screen.** Nothing in the dashboard reads or
+> writes the `PosIntegration` row, so `enabled` cannot be turned on and
+> `apiEndpoint` cannot be set without editing MySQL directly. Every order
+> therefore logs a PENDING `PosSyncLog` with "POS integration disabled", and
+> the mock endpoint below is unreachable. The adapter and the log rows are
+> real; the screens are not. See `.flow/ULTRA-2026-09-10.md`, MAJOR 28.
+
+Once those screens exist, testing the mock POS would be:
 
 1. Go to **Dashboard → POS Integration**.
 2. Enable POS sync.
@@ -231,7 +261,7 @@ Signature Burger uses:
 - 1 Beef Patty
 ```
 
-When staff accepts an order, `deductInventoryForOrder()` checks inventory, prevents deduction if stock is insufficient, deducts stock, creates `InventoryMovement` records, and marks `inventoryDeductedAt` so the same order is not deducted twice.
+When staff release an order to the kitchen, `deductInventoryForOrder()` checks inventory, prevents deduction if stock is insufficient, deducts stock, creates `InventoryMovement` records, and marks `inventoryDeductedAt` so the same order is not deducted twice.
 
 ## Security notes
 
@@ -261,16 +291,28 @@ npx prisma generate
 npx prisma migrate deploy
 npm run db:seed
 npm run build
-npm run start
+pm2 start ecosystem.production.cjs
 ```
+
+> Do **not** use `npm run start` on a server. It runs `next start` on port
+> **3001** behind `local-ssl-proxy --hostname 192.168.0.130`, which is a
+> developer's LAN-HTTPS harness -- the VPS does not hold that address, and
+> `concurrently` and `local-ssl-proxy` are devDependencies a production install
+> omits. `ecosystem.production.cjs` runs `next start -H 127.0.0.1 -p 3000`,
+> which is what `deploy/deploy.sh` and the nginx config expect.
 
 For a VPS, run the app with PM2:
 
 ```bash
 npm install -g pm2
-pm2 start npm --name cloud-view -- start
+pm2 start ecosystem.production.cjs
 pm2 save
 ```
+
+That starts three processes: the Next.js server, the scheduled-release worker,
+and the refund-retry worker. The last one drives
+`/api/xendit/refunds/retry`; without it a guest refund that fails once is never
+retried.
 
 Then use Nginx or Hostinger's reverse proxy setup to point your domain to the Node.js app port.
 

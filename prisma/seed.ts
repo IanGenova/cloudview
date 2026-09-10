@@ -1,7 +1,18 @@
 import { PrismaClient, Role, TagType, TagStatus, Prisma } from '@prisma/client';
+import crypto from 'crypto';
+import { buildTagSecretRecord } from '../src/lib/nfc-secret-storage';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+/*
+ * The same 128 bits of CSPRNG as nfc-security.randomSecret. Inlined rather
+ * than imported because that module pulls in next/headers at module scope,
+ * which does not belong in a script run by tsx outside a request.
+ */
+function randomSecret() {
+  return crypto.randomBytes(16).toString('base64url');
+}
 
 async function main() {
   const passwordHash = await bcrypt.hash('Password123!', 12);
@@ -62,16 +73,54 @@ async function main() {
     (await prisma.location.findFirst({ where: { hotelId: hotel.id, name: 'Pool Deck' } })) ??
     (await prisma.location.create({ data: { hotelId: hotel.id, name: 'Pool Deck', type: TagType.POOL, description: 'Poolside NFC panel for food, towels, and pool info.' } }));
 
-  await prisma.nfcTag.upsert({
-    where: { code: 'room-305-main-panel' },
-    update: {},
-    create: { hotelId: hotel.id, code: 'room-305-main-panel', label: 'Room 305 Main Panel', tagType: TagType.ROOM, status: TagStatus.ACTIVE, roomId: room.id }
-  });
-  await prisma.nfcTag.upsert({
-    where: { code: 'pool-deck-main-panel' },
-    update: {},
-    create: { hotelId: hotel.id, code: 'pool-deck-main-panel', label: 'Pool Deck Main Panel', tagType: TagType.POOL, status: TagStatus.ACTIVE, locationId: pool.id }
-  });
+  /*
+   * Seeded tags need a scan secret, or they cannot be opened at all.
+   *
+   * They used to be created without one. verifyTagScanSecret fails closed, so
+   * every launch was denied and there was no `k=` value that would have
+   * helped -- the demo URL the README tells you to open, and the URL it tells
+   * you to write onto a physical chip, both dead on a fresh install.
+   */
+  async function demoTag(
+    code: string,
+    label: string,
+    tagType: TagType,
+    placement: { roomId?: string; locationId?: string }
+  ) {
+    const secret = randomSecret();
+    const { scanSecretHash, scanSecretCipher } = buildTagSecretRecord(secret);
+
+    await prisma.nfcTag.upsert({
+      where: { code },
+      update: { scanSecretHash, scanSecretCipher, scanSecret: null },
+      create: {
+        hotelId: hotel.id,
+        code,
+        label,
+        tagType,
+        status: TagStatus.ACTIVE,
+        scanSecretHash,
+        scanSecretCipher,
+        ...placement,
+      },
+    });
+
+    return secret;
+  }
+
+  const roomTagSecret = await demoTag(
+    'room-305-main-panel',
+    'Room 305 Main Panel',
+    TagType.ROOM,
+    { roomId: room.id }
+  );
+
+  const poolTagSecret = await demoTag(
+    'pool-deck-main-panel',
+    'Pool Deck Main Panel',
+    TagType.POOL,
+    { locationId: pool.id }
+  );
 
   async function category(name: string, sortOrder: number) {
     return (await prisma.menuCategory.findFirst({ where: { hotelId: hotel.id, name } })) ??
@@ -124,13 +173,44 @@ async function main() {
   await recipe(tea.id, teaStock.id, 300);
   await recipe(pancakes.id, bread.id, 1);
 
+  /*
+   * Opening menu stock.
+   *
+   * The guest menu treats a missing MenuAvailabilityStock row as sold out
+   * (menu/page.tsx), and the seed created none -- so on a fresh install every
+   * dish rendered SOLD OUT and the demo could not take a single order.
+   */
+  for (const item of [club, burger, pancakes, tea]) {
+    await prisma.menuAvailabilityStock.upsert({
+      where: { hotelId_productId: { hotelId: hotel.id, productId: item.id } },
+      update: {},
+      create: {
+        hotelId: hotel.id,
+        productId: item.id,
+        availableQty: 25,
+        soldQty: 0,
+        isSoldOut: false,
+      },
+    });
+  }
+
   await prisma.posIntegration.upsert({
     where: { hotelId: hotel.id },
     update: {},
     create: { hotelId: hotel.id, providerName: 'Cloud View Mock POS', enabled: false }
   });
 
-  console.log('Seed complete. Demo URL: /t/room-305-main-panel');
+  /*
+   * The launch URL, not the portal URL. /t/<code> is gated by an NFC session
+   * and redirects to nfc-access-denied on its own; /n/<code>?k=<secret> is
+   * what a chip carries and what creates that session.
+   */
+  console.log('Seed complete.');
+  console.log(`Room 305 tag:  /n/room-305-main-panel?k=${roomTagSecret}`);
+  console.log(`Pool deck tag: /n/pool-deck-main-panel?k=${poolTagSecret}`);
+  console.log(
+    'The room tag also needs an active guest stay with a passcode; the pool tag does not.'
+  );
 }
 
 main()
