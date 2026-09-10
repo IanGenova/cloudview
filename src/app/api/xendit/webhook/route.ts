@@ -7,6 +7,7 @@ import {
   POSXenditStatus,
 } from '@prisma/client';
 import { db } from '@/lib/db';
+import { WEBHOOK_OVERWRITABLE_SESSION_STATUSES } from '@/lib/xendit-session-claim';
 import {
   applyGuestRefundWebhookUpdateTx,
   requestAutomaticGuestRefund,
@@ -294,8 +295,26 @@ export async function POST(request: Request) {
                 ? null
                 : `Xendit validation failed. Expected ${guestSession.amountCents} ${guestSession.currency}; received ${payment.amountCents ?? 'unknown'} ${payment.currency || 'unknown'}, payment=${payment.paymentId || 'missing'}, request=${payment.paymentRequestId || 'missing'}.`;
 
-              await tx.guestXenditSession.update({
-                where: { id: guestSession.id },
+              /*
+                Conditional claim, not an unconditional write by id.
+
+                Completion deliveries are replayable on purpose (see the
+                fall-through above), so two of them can be in flight at once.
+                The finalizer holds this session at PROCESSING for the length
+                of an order-creation transaction; a second delivery writing
+                over that claim made the finalizer match zero rows, roll the
+                whole order back, and auto-refund a good payment.
+
+                Matching zero rows here means another delivery owns the
+                session. That is a normal outcome, not an error.
+              */
+              const claimed = await tx.guestXenditSession.updateMany({
+                where: {
+                  id: guestSession.id,
+                  status: {
+                    in: WEBHOOK_OVERWRITABLE_SESSION_STATUSES as unknown as GuestXenditStatus[],
+                  },
+                },
                 data: {
                   status: valid
                     ? GuestXenditStatus.PAID
@@ -316,13 +335,21 @@ export async function POST(request: Request) {
                 },
               });
 
-              guestNotificationSessionId = guestSession.id;
-              if (valid) paidGuestSessionId = guestSession.id;
+              /*
+                Only the delivery that won the claim owns the consequences.
+                The loser must not notify the guest, must not mark the session
+                paid for the finalizer, and above all must not queue a refund
+                for work another delivery is in the middle of doing.
+              */
+              if (claimed.count > 0) {
+                guestNotificationSessionId = guestSession.id;
+                if (valid) paidGuestSessionId = guestSession.id;
 
-              if (!valid && paymentSucceeded && hasPayment && hasRequest) {
-                automaticRefundSessionId = guestSession.id;
-                automaticRefundReason = message;
-                cleanupGuestSessionIds.add(guestSession.id);
+                if (!valid && paymentSucceeded && hasPayment && hasRequest) {
+                  automaticRefundSessionId = guestSession.id;
+                  automaticRefundReason = message;
+                  cleanupGuestSessionIds.add(guestSession.id);
+                }
               }
             }
           } else if (posSession) {

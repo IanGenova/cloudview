@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import type { BackupArchiveContent, BackupModule } from './types';
+import { resolveRestoredUserRole } from './restore-user-policy';
 
 type JsonRow = Record<string, any>;
 type UserIdMap = Map<string, string>;
@@ -172,11 +173,24 @@ async function prepareUserContext(
   const userData = moduleData(archive, 'USERS_PERMISSIONS');
   const backupUsers = rows(userData, 'users');
 
+  /*
+   * Scoped to the hotel being restored, deliberately.
+   *
+   * This used to load every user in the database. Restore then matched archive
+   * rows by email against that global index, so an archive naming another
+   * tenant's administrator could move them into the uploader's hotel, disable
+   * them, or rewrite their role. A hotel-scoped restore has no business seeing
+   * accounts outside its own hotel.
+   */
   const existingUsers = await db.user.findMany({
+    where: {
+      hotelId,
+    },
     select: {
       id: true,
       email: true,
       hotelId: true,
+      role: true,
     },
   });
 
@@ -412,7 +426,10 @@ async function restoreUsersAndPermissions(
     const existing =
       context.existingByEmail.get(email) ??
       (context.existingUserIds.has(backupId)
-        ? await db.user.findUnique({ where: { id: backupId } })
+        ? await db.user.findFirst({
+            where: { id: backupId, hotelId },
+            select: { id: true, email: true, hotelId: true, role: true },
+          })
         : null);
 
     if (existing) {
@@ -420,9 +437,19 @@ async function restoreUsersAndPermissions(
         where: { id: existing.id },
         data: {
           name: String(backupUser.name || 'Restored User'),
-          role: backupUser.role,
+          role: resolveRestoredUserRole({
+            existingRole: existing.role ?? null,
+            archiveRole: backupUser.role,
+          }),
           hotelId,
           isActive: Boolean(backupUser.isActive),
+          /*
+           * Any restore that touches an account invalidates its live sessions.
+           * Without this, a role or isActive change only takes effect at the
+           * next sign-in, so a session minted before the restore keeps whatever
+           * it was minted with.
+           */
+          authVersion: { increment: 1 },
         } as Prisma.UserUpdateInput,
       });
 
@@ -437,7 +464,10 @@ async function restoreUsersAndPermissions(
         name: String(backupUser.name || 'Restored User'),
         email,
         passwordHash: placeholderPasswordHash,
-        role: backupUser.role,
+        role: resolveRestoredUserRole({
+          existingRole: null,
+          archiveRole: backupUser.role,
+        }),
         hotelId,
         isActive: false,
         createdAt: backupUser.createdAt,

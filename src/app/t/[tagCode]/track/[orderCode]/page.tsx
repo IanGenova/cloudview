@@ -1306,9 +1306,20 @@ export default async function OrderTrackingPage({
       guestSessionId: guestSession.id,
     },
     include: {
+      /*
+        Explicit select, not an include of settings.
+
+        order.hotel is handed to <GuestLogo>, a Client Component, so whatever
+        this query loads is serialized into the RSC flight payload embedded in
+        the page HTML. The GuestHotel prop type narrows nothing at runtime, so
+        the include shipped every HotelSettings column to the guest: the Xendit
+        linked account id, the commission type, value and fee bearer, and the
+        Wi-Fi password. Name and logo are all this page renders.
+      */
       hotel: {
-        include: {
-          settings: true,
+        select: {
+          name: true,
+          logoUrl: true,
         },
       },
       room: true,

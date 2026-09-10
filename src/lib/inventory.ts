@@ -1,5 +1,6 @@
 import { InventoryMovementType, Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
+import { buildRecipeRequirements } from '@/lib/inventory-requirements';
 
 export class InventoryError extends Error {}
 
@@ -43,19 +44,7 @@ export async function deductInventoryForOrder(orderId: string, userId?: string) 
       return order;
     }
 
-    const requirements = new Map<string, { name: string; unit: string; qty: number }>();
-
-    for (const item of order.items) {
-      for (const recipe of item.product?.recipes ?? []) {
-        const needed = Number(recipe.quantity) * item.quantity;
-        const existing = requirements.get(recipe.inventoryItemId);
-        requirements.set(recipe.inventoryItemId, {
-          name: recipe.inventoryItem.name,
-          unit: recipe.inventoryItem.unit,
-          qty: (existing?.qty ?? 0) + needed
-        });
-      }
-    }
+    const requirements = buildRecipeRequirements(order.items);
 
     /**
      * Deduct with the stock check built into the write.
@@ -104,6 +93,115 @@ export async function deductInventoryForOrder(orderId: string, userId?: string) 
      * `inventoryDeductedAt` was already set by the atomic claim above; re-read
      * the order so callers still receive the updated row.
      */
+    return tx.order.findUniqueOrThrow({ where: { id: order.id } });
+  });
+}
+
+/**
+ * Give an order's ingredients back.
+ *
+ * The mirror of `deductInventoryForOrder`, and it did not exist. Ingredient
+ * stock had exactly one writer in the whole codebase -- the decrement above --
+ * so cancelling an order that had already been released to the kitchen
+ * consumed ingredients that were never cooked, and `inventoryDeductedAt` was
+ * never cleared. Repeated, a hotel's counters walk to zero and every order
+ * containing that ingredient fails with "Insufficient stock" forever.
+ *
+ * Three things make this safe to call from a cancellation path:
+ *
+ *   The claim is conditional, the same way the deduction's is. Only the caller
+ *   that flips `inventoryDeductedAt` from set to null does the restoring, so a
+ *   double-cancel or two staff clicking at once cannot return the stock twice.
+ *
+ *   The amounts come from the shared requirement maths, so what goes back is
+ *   exactly what came out -- the full ordered quantity, not the quantity net
+ *   of cancellations, because that is what the deduction took.
+ *
+ *   The movement is written as STOCK_IN with the order's code in the reason, so
+ *   the movement history reads as a pair rather than as a mystery increase.
+ */
+export async function restoreInventoryForOrder(
+  orderId: string,
+  userId?: string
+) {
+  return db.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: { recipes: { include: { inventoryItem: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) throw new InventoryError('Order not found');
+
+    /*
+     * Nothing was ever deducted for this order, so there is nothing to give
+     * back. This is the common case -- an order cancelled before it reached
+     * the kitchen -- and it is not an error.
+     */
+    if (!order.inventoryDeductedAt) return order;
+
+    /*
+     * Release the deduction atomically before touching stock, mirroring the
+     * claim in deductInventoryForOrder. Exactly one caller sees count === 1.
+     */
+    const released = await tx.order.updateMany({
+      where: {
+        id: order.id,
+        inventoryDeductedAt: { not: null },
+      },
+      data: {
+        inventoryDeductedAt: null,
+      },
+    });
+
+    if (released.count === 0) {
+      return order;
+    }
+
+    const requirements = buildRecipeRequirements(order.items);
+
+    for (const [itemId, required] of requirements.entries()) {
+      const restoredQuantity = new Prisma.Decimal(required.qty);
+
+      /*
+       * Unconditional increment, deliberately. The deduction has to guard on
+       * available stock because it can oversell; giving stock back has no such
+       * limit, and a guard here could only ever refuse a legitimate return.
+       */
+      const restored = await tx.inventoryItem.updateMany({
+        where: { id: itemId },
+        data: { stockQuantity: { increment: restoredQuantity } },
+      });
+
+      /*
+       * The item was deleted between the deduction and the cancellation. The
+       * stock is gone with it, so there is nothing to return -- but the rest
+       * of the order's ingredients still should be.
+       */
+      if (restored.count === 0) {
+        continue;
+      }
+
+      await tx.inventoryMovement.create({
+        data: {
+          hotelId: order.hotelId,
+          itemId,
+          type: InventoryMovementType.STOCK_IN,
+          quantity: restoredQuantity,
+          reason: `Cancelled order ${order.orderCode} stock restored`,
+          orderId: order.id,
+          userId,
+        },
+      });
+    }
+
     return tx.order.findUniqueOrThrow({ where: { id: order.id } });
   });
 }

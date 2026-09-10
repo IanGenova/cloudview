@@ -18,7 +18,11 @@ import {
 } from '@/lib/dashboard-permissions';
 import { db } from '@/lib/db';
 import { assertHotelScope } from '@/lib/access';
-import { deductInventoryForOrder, InventoryError } from '@/lib/inventory';
+import {
+  deductInventoryForOrder,
+  InventoryError,
+  restoreInventoryForOrder,
+} from '@/lib/inventory';
 import { sendOrderToPos } from '@/lib/pos';
 import { cleanText } from '@/lib/sanitize';
 import {
@@ -1198,6 +1202,23 @@ export async function updateOrderStatusAction(formData: FormData) {
     if (shouldReleaseToKitchen) {
       await deductInventoryForOrder(order.id, user.id);
       await sendOrderToPos(order.id);
+    }
+
+    /*
+      Give the ingredients back when a released order is cancelled.
+
+      restoreMenuStockForCancelledOrder below restores MenuAvailabilityStock,
+      which is a different subsystem: the count of dishes the menu will offer,
+      not the raw ingredients a recipe consumes. Nothing returned the latter,
+      so an order that reached the kitchen and was then cancelled ate its
+      ingredients permanently -- and since the deduction was the only writer
+      of InventoryItem.stockQuantity anywhere, the counter could only fall.
+
+      A no-op unless inventoryDeductedAt is set, so the ordinary case --
+      cancelling before the kitchen ever saw it -- costs one indexed read.
+    */
+    if (shouldRestoreStock && order.inventoryDeductedAt) {
+      await restoreInventoryForOrder(order.id, user.id);
     }
 
     const history = await db.$transaction(async (tx) => {

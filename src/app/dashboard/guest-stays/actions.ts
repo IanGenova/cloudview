@@ -42,6 +42,7 @@ import {
   type XenditSplitSnapshot,
 } from '@/lib/xendit-split';
 import { createGuestStayXenditReturnState } from '@/lib/guest-stay-xendit-return';
+import { getOrderOutstandingCents } from '@/lib/guest-stay-folio-charges';
 import {
   createXenditIntentFingerprint,
   decideExistingXenditSession,
@@ -905,54 +906,6 @@ function decimalToCents(value: unknown) {
   return Math.round(amount * 100);
 }
 
-function getOrderOutstandingCents(order: {
-  totalCents: number;
-  paymentStatus: PaymentStatus;
-  status: OrderStatus;
-  items: Array<{
-    quantity: number;
-    unitPriceCents: number;
-    cancelledQty: number;
-    status: string;
-  }>;
-}) {
-  if (order.paymentStatus === PaymentStatus.PAID) {
-    return 0;
-  }
-
-  if (order.status === OrderStatus.CANCELLED) {
-    return 0;
-  }
-
-  if (order.status !== OrderStatus.READY && order.status !== OrderStatus.DELIVERED) {
-    return 0;
-  }
-
-  const originalItemSubtotal = order.items.reduce(
-    (sum, item) => sum + item.quantity * item.unitPriceCents,
-    0
-  );
-
-  const activeItemSubtotal = order.items.reduce((sum, item) => {
-    if (item.status === 'CANCELLED') {
-      return sum;
-    }
-
-    const activeQuantity = Math.max(item.quantity - item.cancelledQty, 0);
-
-    return sum + activeQuantity * item.unitPriceCents;
-  }, 0);
-
-  if (activeItemSubtotal <= 0) {
-    return 0;
-  }
-
-  if (originalItemSubtotal <= 0) {
-    return order.totalCents;
-  }
-
-  return Math.round(order.totalCents * (activeItemSubtotal / originalItemSubtotal));
-}
 
 function revalidateGuestStayPaths() {
   revalidatePath('/dashboard/guest-stays');
