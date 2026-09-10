@@ -133,3 +133,49 @@ the chain now would compound it.
 - Corrects the earlier decision recorded above: the launch handler's denial
   redirects were **not** harmless. They carry `?k=<scan secret>` in the query
   string, so a tag credential crossed to another origin. Fixed in `71b16cc`.
+
+## Deploy in progress — paused 10 Sep, resumed 11 Sep 2026
+
+**Nothing has been deployed yet. Production is still serving `6ed55fe`.**
+
+### Where the code is
+- `ultra/blocker-repairs-20260910` — pushed to origin, 10 commits.
+- `main` — fast-forwarded to `65d11a7` and **pushed** (this commit). The
+  server's `git pull --ff-only` will now pick the work up.
+- Re-verified on 11 Sep before pushing: `tsc --noEmit` clean, **140 tests
+  pass**. The previous session's run was cut off by a tool outage, not a
+  failure.
+
+### Local config changed
+`git config core.fileMode false` was set on this checkout. The three
+`deploy/*.sh` files showed as modified with a zero-line diff — mode 755 vs 644,
+an artifact of the Windows backup copy — and that blocked the merge. No file
+content was discarded.
+
+### The three decisions already taken (do not re-litigate)
+1. Merge to `main`, then deploy — chosen over checking the branch out on the VPS.
+2. Run `node scripts/migration-drift-report.cjs` on the VPS **before** anything
+   writes. It is read-only: parameterised `SELECT COUNT(*)` against
+   `information_schema` only.
+3. App server is **187.77.129.233**.
+
+### Remaining, in this order
+1. ~~Test suite~~ — done 11 Sep, 140 pass.
+2. ~~`git push origin main`~~ — done 11 Sep.
+3. SSH to 187.77.129.233 and run `node scripts/migration-drift-report.cjs`.
+   **Stop and read it.** The local database has **no `_prisma_migrations` table
+   at all** (verified against information_schema, 61 tables, zero migration
+   history). If production is the same, `deploy.sh`'s unconditional
+   `prisma migrate deploy` will attempt all thirty migrations against live data,
+   and `20260525081653`/`20260525081904` are the enum pair that already blanked
+   every ROOM value in `Location.type` and `NfcTag.tagType`. The drift tool
+   flags both as needing a human.
+4. Only then decide on `./deploy/deploy.sh`. Take a mysqldump first.
+5. After deploying: `pm2 start ecosystem.production.cjs` — the deploy script
+   only does `pm2 reload cloudview-nextjs`, so the new `cloudview-refund-retry`
+   worker will not start on its own.
+6. Check the production `.env` for `MENU_UPLOAD_DIR` / `CLOUDVIEW_MEDIA_ROOT`.
+   The production media-root fallback moved from `/var/www/cloudview-media` to
+   `/var/www/cloudview-uploads` to match the nginx alias. If those are set,
+   nothing changes; if they are not, image paths move.
+   Add `NFC_PUBLIC_APP_URL` if that host is not `cloudhotelph.com`.
