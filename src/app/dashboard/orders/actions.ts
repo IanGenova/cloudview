@@ -878,24 +878,14 @@ if (order.status !== OrderStatus.PENDING) {
   let finalOrderStatus: OrderStatus = order.status;
   let statusUpdatedAt = new Date();
 
-  const totals = recalculateOrderTotalsAfterItemCancellation({
-    order,
-    cancelledItemId: item.id,
-  });
 
-  const allItemsCancelled = order.items.every((orderItem) => {
-    if (orderItem.id === item.id) {
-      return true;
-    }
-
-    return (
-      orderItem.status === OrderItemStatus.CANCELLED ||
-      getRemainingOrderItemQuantity(orderItem) <= 0
-    );
-  });
-
-  const nextTotalCents = allItemsCancelled ? 0 : totals.totalCents;
-  const refundAmountCents = Math.max(order.totalCents - nextTotalCents, 0);
+  /*
+    Filled in by the transaction from rows read after this item was claimed,
+    so the refund is computed against what actually happened rather than
+    against the snapshot this action opened with.
+  */
+  let allItemsCancelled = false;
+  let refundAmountCents = 0;
 
   await db.$transaction(async (tx) => {
     const restoreRequirements = await buildRestoreRequirementsForOrderItem({
@@ -912,9 +902,23 @@ if (order.status !== OrderStatus.PENDING) {
       userId: user.id,
     });
 
-    await tx.orderItem.update({
+    /*
+      Claim this item, then recompute from what is actually in the database.
+
+      The order and its items were read outside this transaction, and the new
+      totals were computed from that snapshot and written back as absolute
+      values. Two staff cancelling different items of the same order both
+      computed from the same starting state: an order of 300 + 200 + 100 ended
+      with both A and B cancelled and totalCents reading 400, which is what
+      checkout then billed. The same stale snapshot made each caller see the
+      other's item as still active, so neither set the order to CANCELLED,
+      neither voided the points, and it sat in the kitchen queue with every
+      line cancelled.
+    */
+    const claimedItem = await tx.orderItem.updateMany({
       where: {
         id: item.id,
+        status: { not: OrderItemStatus.CANCELLED },
       },
       data: {
         status: OrderItemStatus.CANCELLED,
@@ -925,7 +929,40 @@ if (order.status !== OrderStatus.PENDING) {
       },
     });
 
-    if (allItemsCancelled) {
+    if (claimedItem.count === 0) {
+      throw new OrderStatusConflictError();
+    }
+
+    /* Fresh, post-claim state: this sees the other caller's committed work. */
+    const currentItems = await tx.orderItem.findMany({
+      where: { orderId: order.id },
+      select: {
+        id: true,
+        quantity: true,
+        unitPriceCents: true,
+        cancelledQty: true,
+        status: true,
+      },
+    });
+
+    const liveTotals = recalculateOrderTotalsAfterItemCancellation({
+      order: { ...order, items: currentItems },
+      cancelledItemId: item.id,
+    });
+
+    const everyItemCancelled = currentItems.every(
+      (orderItem) =>
+        orderItem.status === OrderItemStatus.CANCELLED ||
+        getRemainingOrderItemQuantity(orderItem) <= 0
+    );
+
+    allItemsCancelled = everyItemCancelled;
+
+    const nextTotalCents = everyItemCancelled ? 0 : liveTotals.totalCents;
+
+    refundAmountCents = Math.max(order.totalCents - nextTotalCents, 0);
+
+    if (everyItemCancelled) {
       finalOrderStatus = OrderStatus.CANCELLED;
 
       await tx.order.update({
@@ -964,10 +1001,10 @@ if (order.status !== OrderStatus.PENDING) {
         id: order.id,
       },
       data: {
-        subtotalCents: totals.subtotalCents,
-        serviceChargeCents: totals.serviceChargeCents,
-        taxCents: totals.taxCents,
-        totalCents: totals.totalCents,
+        subtotalCents: liveTotals.subtotalCents,
+        serviceChargeCents: liveTotals.serviceChargeCents,
+        taxCents: liveTotals.taxCents,
+        totalCents: liveTotals.totalCents,
       },
     });
 
@@ -1065,6 +1102,9 @@ if (order.status !== OrderStatus.PENDING) {
         allItemsCancelled ? 'order-cancelled' : 'item-cancelled'
       );
 }
+
+/* Raised when another caller moved the order between our read and our write. */
+class OrderStatusConflictError extends Error {}
 
 export async function updateOrderStatusAction(formData: FormData) {
   const user = await requireUser();
@@ -1196,6 +1236,34 @@ export async function updateOrderStatusAction(formData: FormData) {
     }
 
     const history = await db.$transaction(async (tx) => {
+      /*
+        Claim the transition before restoring anything.
+
+        The restore guarded itself with a findFirst on the movement ledger and
+        a `continue` -- a check-then-act with no @@unique behind it. Under
+        MySQL's default REPEATABLE READ two callers (two staff, or one
+        double-click: server actions do not dedupe) both saw no restore
+        movement and both restored, inflating availableQty by stock that was
+        never returned and leaving the hotel overselling.
+
+        A compare-and-set on the status column serialises them without needing
+        a schema change: exactly one caller moves the order out of the status
+        it was read in, and only that caller restores.
+      */
+      const claimed = await tx.order.updateMany({
+        where: {
+          id: order.id,
+          status: order.status,
+        },
+        data: {
+          status,
+        },
+      });
+
+      if (claimed.count === 0) {
+        throw new OrderStatusConflictError();
+      }
+
       if (shouldRestoreStock) {
         restoredProductIds = await restoreMenuStockForCancelledOrder({
           tx,
@@ -1204,14 +1272,8 @@ export async function updateOrderStatusAction(formData: FormData) {
         });
       }
 
-      await tx.order.update({
-        where: {
-          id: order.id,
-        },
-        data: {
-          status,
-        },
-      });
+      /* The status was already written by the claim above. */
+
 
       return tx.orderStatusHistory.create({
         data: {
@@ -1236,6 +1298,12 @@ export async function updateOrderStatusAction(formData: FormData) {
   } catch (error) {
     if (error instanceof InventoryError) {
       throw new Error(error.message);
+    }
+
+    if (error instanceof OrderStatusConflictError) {
+      throw new Error(
+        'This order was just updated by someone else. Refresh and try again.'
+      );
     }
 
     throw error;

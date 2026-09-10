@@ -535,7 +535,18 @@ export async function createGuestServiceRequests(
       }
 
       if (prepared.guestStayId) {
-        const activeStay = await tx.guestStay.findFirst({
+        /*
+          A claiming write, not a read.
+
+          findFirst is a non-locking consistent read under REPEATABLE READ,
+          so a checkout committing in the gap was invisible here and the
+          resulting ROOM_CHARGE landed on a stay whose folio had already
+          closed -- money that could never be billed. Touching the row
+          under a status guard takes the lock that makes the two orderings
+          exclusive; the block below already uses this pattern for the NFC
+          session, one statement later.
+        */
+        const claimedStay = await tx.guestStay.updateMany({
           where: {
             id: prepared.guestStayId,
             hotelId: prepared.context.tag.hotelId,
@@ -546,8 +557,12 @@ export async function createGuestServiceRequests(
               { expectedCheckOutAt: { gte: new Date() } },
             ],
           },
-          select: { id: true },
+          data: {
+            updatedAt: new Date(),
+          },
         });
+
+        const activeStay = claimedStay.count === 1 ? true : null;
 
         if (!activeStay) {
           throw new GuestServiceRequestError(

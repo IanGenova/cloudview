@@ -1407,12 +1407,38 @@ export async function checkoutGuestStayAction(
         },
       });
 
+      /*
+        Claim the stay, do not simply flip it.
+
+        The orders, service requests and add-on charges that make up this
+        folio were read outside this transaction. An order or service
+        request created in the gap saw the stay as ACTIVE, attached a
+        ROOM_CHARGE to it, and then found itself on a stay whose folio was
+        already CLOSED -- and nothing reopens a closed folio, so the charge
+        was never billed. Claiming ACTIVE here, and claiming it on the
+        creation side too, makes the two orderings exclusive.
+      */
+      const claimedStay = await tx.guestStay.updateMany({
+        where: {
+          id: checkoutStay.id,
+          status: GuestStayStatus.ACTIVE,
+        },
+        data: {
+          status: GuestStayStatus.CHECKED_OUT,
+        },
+      });
+
+      if (claimedStay.count === 0) {
+        throw new Error(
+          'This guest stay was updated while checking out. Refresh and try again.'
+        );
+      }
+
       await tx.guestStay.update({
         where: {
           id: checkoutStay.id,
         },
         data: {
-          status: GuestStayStatus.CHECKED_OUT,
           checkedOutAt: now,
           checkoutFoodTotalCents: foodTotalCents,
           checkoutServiceTotalCents: serviceTotalCents,

@@ -354,7 +354,15 @@ export async function createGuestFoodOrder(
       }
 
       if (resolvedIdentity.guestStayId) {
-        const activeStay = await tx.guestStay.findFirst({
+        /*
+          A claiming write, not a read -- the same hole the service-request
+          path had. findFirst is a non-locking consistent read under
+          REPEATABLE READ, so a checkout committing in the gap stayed
+          invisible and the ROOM_CHARGE landed on a stay whose folio had
+          already closed. Nothing reopens a closed folio, so it was never
+          billed.
+        */
+        const claimedStay = await tx.guestStay.updateMany({
           where: {
             id: resolvedIdentity.guestStayId,
             hotelId: tag.hotelId,
@@ -365,8 +373,12 @@ export async function createGuestFoodOrder(
               { expectedCheckOutAt: { gte: new Date() } },
             ],
           },
-          select: { id: true },
+          data: {
+            updatedAt: new Date(),
+          },
         });
+
+        const activeStay = claimedStay.count === 1 ? true : null;
 
         if (!activeStay) {
           throw new Error(

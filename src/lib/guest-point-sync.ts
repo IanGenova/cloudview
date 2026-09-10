@@ -646,21 +646,52 @@ export async function voidSyncedOrderPoints(orderId: string) {
       },
     });
 
-    await tx.guestPointAccount.update({
+    /*
+      Atomic decrements, not absolute values from a stale read.
+
+      These were the only two writers in the codebase that computed a balance
+      in JavaScript and wrote the answer back; every other one uses increment
+      or decrement. So a void that read availablePoints = 100 and wrote 70
+      silently erased a redemption that had committed -70 in between, and the
+      guest kept both the reward and the points the ledger said they spent.
+
+      The floor is enforced by the guard rather than by Math.max: a decrement
+      that would go negative matches no row, and the ledger stays the record
+      of what was actually applied.
+    */
+    const decremented = await tx.guestPointAccount.updateMany({
       where: {
         guestMemberId,
+        availablePoints: { gte: earnedLedger.points },
+        lifetimeEarnedPoints: { gte: earnedLedger.points },
       },
       data: {
-        availablePoints: Math.max(
-          account.availablePoints - earnedLedger.points,
-          0
-        ),
-        lifetimeEarnedPoints: Math.max(
-          account.lifetimeEarnedPoints - earnedLedger.points,
-          0
-        ),
+        availablePoints: { decrement: earnedLedger.points },
+        lifetimeEarnedPoints: { decrement: earnedLedger.points },
       },
     });
+
+    /*
+      A balance too small to absorb the void floors at zero, which is what the
+      old Math.max did. Doing it as a second guarded write keeps the whole
+      thing atomic: this matches only while the balance really is short, so a
+      decrement that committed in between wins and this becomes a no-op.
+    */
+    if (decremented.count === 0) {
+      await tx.guestPointAccount.updateMany({
+        where: {
+          guestMemberId,
+          OR: [
+            { availablePoints: { lt: earnedLedger.points } },
+            { lifetimeEarnedPoints: { lt: earnedLedger.points } },
+          ],
+        },
+        data: {
+          availablePoints: 0,
+          lifetimeEarnedPoints: 0,
+        },
+      });
+    }
 
     return {
       voided: true as const,
@@ -796,21 +827,52 @@ export async function voidSyncedServiceRequestPoints(serviceRequestId: string) {
       },
     });
 
-    await tx.guestPointAccount.update({
+    /*
+      Atomic decrements, not absolute values from a stale read.
+
+      These were the only two writers in the codebase that computed a balance
+      in JavaScript and wrote the answer back; every other one uses increment
+      or decrement. So a void that read availablePoints = 100 and wrote 70
+      silently erased a redemption that had committed -70 in between, and the
+      guest kept both the reward and the points the ledger said they spent.
+
+      The floor is enforced by the guard rather than by Math.max: a decrement
+      that would go negative matches no row, and the ledger stays the record
+      of what was actually applied.
+    */
+    const decremented = await tx.guestPointAccount.updateMany({
       where: {
         guestMemberId,
+        availablePoints: { gte: earnedLedger.points },
+        lifetimeEarnedPoints: { gte: earnedLedger.points },
       },
       data: {
-        availablePoints: Math.max(
-          account.availablePoints - earnedLedger.points,
-          0
-        ),
-        lifetimeEarnedPoints: Math.max(
-          account.lifetimeEarnedPoints - earnedLedger.points,
-          0
-        ),
+        availablePoints: { decrement: earnedLedger.points },
+        lifetimeEarnedPoints: { decrement: earnedLedger.points },
       },
     });
+
+    /*
+      A balance too small to absorb the void floors at zero, which is what the
+      old Math.max did. Doing it as a second guarded write keeps the whole
+      thing atomic: this matches only while the balance really is short, so a
+      decrement that committed in between wins and this becomes a no-op.
+    */
+    if (decremented.count === 0) {
+      await tx.guestPointAccount.updateMany({
+        where: {
+          guestMemberId,
+          OR: [
+            { availablePoints: { lt: earnedLedger.points } },
+            { lifetimeEarnedPoints: { lt: earnedLedger.points } },
+          ],
+        },
+        data: {
+          availablePoints: 0,
+          lifetimeEarnedPoints: 0,
+        },
+      });
+    }
 
     return {
       voided: true as const,

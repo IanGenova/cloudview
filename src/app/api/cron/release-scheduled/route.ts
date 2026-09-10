@@ -188,6 +188,36 @@ async function releaseScheduledOrders(now: Date): Promise<ReleaseResult> {
 
   for (const order of dueOrders) {
     try {
+      /*
+        Claim the release before doing anything visible.
+
+        This update was unconditional by id, and the loop is serial with a
+        Centrifugo publish and a notification insert per order -- so a batch
+        stays in flight for many seconds. The worker's isRunning guard is
+        per-process and does not survive the pm2 restart that autorestart and
+        max_memory_restart make routine: the abandoned handler keeps running
+        server-side while a fresh worker fires a second pass over rows the
+        first has not reached. The kitchen got the same order as two tickets.
+
+        Matching zero rows means another pass already released it, and the
+        publish and the notification below are skipped.
+      */
+      const claimed = await db.order.updateMany({
+        where: {
+          id: order.id,
+          scheduledReleaseStatus: ScheduledReleaseStatus.SCHEDULED,
+          releasedAt: null,
+        },
+        data: {
+          releasedAt: now,
+          scheduledReleaseStatus: ScheduledReleaseStatus.RELEASED,
+        },
+      });
+
+      if (claimed.count === 0) {
+        continue;
+      }
+
       const releasedOrder = await db.order.update({
         where: {
           id: order.id,
@@ -312,6 +342,23 @@ async function releaseScheduledServiceRequests(
 
   for (const request of dueRequests) {
     try {
+      /* Same claim as the order path above, for the same reason. */
+      const claimedRequest = await db.serviceRequest.updateMany({
+        where: {
+          id: request.id,
+          scheduledReleaseStatus: ScheduledReleaseStatus.SCHEDULED,
+          releasedAt: null,
+        },
+        data: {
+          releasedAt: now,
+          scheduledReleaseStatus: ScheduledReleaseStatus.RELEASED,
+        },
+      });
+
+      if (claimedRequest.count === 0) {
+        continue;
+      }
+
       const releasedRequest = await db.serviceRequest.update({
         where: {
           id: request.id,
