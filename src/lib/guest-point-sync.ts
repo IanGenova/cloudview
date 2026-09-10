@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { calculateEarnedPoints } from '@/lib/guest-points-accrual';
+import { businessDayBounds } from '@/lib/business-day';
 
 type Tx = Prisma.TransactionClient;
 
@@ -436,11 +437,61 @@ export async function syncServiceRequestPoints(serviceRequestId: string) {
     };
   }
 
+  /*
+    Enforce the daily cap here, where the award actually happens.
+
+    serviceRequestDailyMaxPoints was read only by
+    awardServiceRequestPointsIfEligible in nfc-rewards.ts, which has no
+    callers. This path -- the live one -- checked that points were enabled and
+    non-zero and then awarded unconditionally, so with the schema defaults of
+    1 point per completion and a 3/day maximum, a guest with ten completed
+    requests in a day was credited ten. The column was inert.
+
+    The window is the Manila business day, matching the NFC tap cap.
+  */
+  const { start, end } = businessDayBounds(new Date());
+
+  const awardedToday = await db.guestPointLedger.aggregate({
+    where: {
+      hotelId: request.hotelId,
+      guestMemberId: request.guestMemberId,
+      source: 'SERVICE_REQUEST_COMPLETED',
+      status: GuestPointLedgerStatus.CONFIRMED,
+      createdAt: {
+        gte: start,
+        lte: end,
+      },
+    },
+    _sum: {
+      points: true,
+    },
+  });
+
+  const usedToday = Math.max(awardedToday._sum.points ?? 0, 0);
+  const remainingToday = Math.max(
+    settings.serviceRequestDailyMaxPoints - usedToday,
+    0
+  );
+
+  if (settings.serviceRequestDailyMaxPoints > 0 && remainingToday <= 0) {
+    return {
+      awarded: false as const,
+      skipped: true as const,
+      reason: 'daily_limit_reached',
+      pointsAwarded: 0,
+    };
+  }
+
+  const pointsToAward =
+    settings.serviceRequestDailyMaxPoints > 0
+      ? Math.min(settings.serviceRequestCompletionPoints, remainingToday)
+      : settings.serviceRequestCompletionPoints;
+
   return awardGuestPointsOnce({
     hotelId: request.hotelId,
     guestMemberId: request.guestMemberId,
     guestStayId: request.guestStayId,
-    points: settings.serviceRequestCompletionPoints,
+    points: pointsToAward,
     type: GuestPointLedgerType.EARNED,
     status: GuestPointLedgerStatus.CONFIRMED,
     source: 'SERVICE_REQUEST_COMPLETED',

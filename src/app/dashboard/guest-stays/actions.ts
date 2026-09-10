@@ -46,6 +46,10 @@ import { createGuestStayXenditReturnState } from '@/lib/guest-stay-xendit-return
 import { getOrderOutstandingCents } from '@/lib/guest-stay-folio-charges';
 import { parseBusinessDateTime } from '@/lib/business-day';
 import {
+  assertGuestStayStatusTransition,
+  parseGuestStayStatusStrict,
+} from '@/lib/guest-stay-transitions';
+import {
   createXenditIntentFingerprint,
   decideExistingXenditSession,
   readXenditIntentFingerprint,
@@ -86,19 +90,16 @@ function parseDateTime(value: FormDataEntryValue | null) {
   return parseBusinessDateTime(raw);
 }
 
+/*
+ * Returns null for anything unrecognised.
+ *
+ * This used to fall back to ACTIVE, so a malformed or missing status field
+ * did not fail -- it reactivated the stay.
+ */
 function parseGuestStayStatus(value: FormDataEntryValue | null) {
-  const raw = cleanText(value, 40);
-
-  if (
-    raw === GuestStayStatus.ACTIVE ||
-    raw === GuestStayStatus.CHECKED_OUT ||
-    raw === GuestStayStatus.CANCELLED ||
-    raw === GuestStayStatus.EXPIRED
-  ) {
-    return raw;
-  }
-
-  return GuestStayStatus.ACTIVE;
+  return parseGuestStayStatusStrict(
+    cleanText(value, 40)
+  ) as GuestStayStatus | null;
 }
 
 async function getActionHotelId(formData: FormData) {
@@ -357,17 +358,30 @@ export async function updateGuestStayAction(formData: FormData) {
       };
     }
 
-    if (guestStay.status === GuestStayStatus.CHECKED_OUT) {
+    if (!status) {
       return {
         ok: false as const,
-        error: 'This guest stay is already checked out and can no longer be edited.',
+        error: 'Please choose a valid guest stay status.',
       };
     }
 
-    if (status === GuestStayStatus.CHECKED_OUT) {
+    /*
+      The full transition table, not the two cases that happened to be
+      noticed. Without it a CANCELLED stay could be set back to Active --
+      resetting checkedOutAt and restoring portal access -- and an ACTIVE stay
+      could be cancelled through this form, skipping checkoutGuestStayAction,
+      which is the only code that creates the folio. Its unpaid charges were
+      then stranded with no folio and no way to check out.
+    */
+    try {
+      assertGuestStayStatusTransition(guestStay.status, status);
+    } catch (error) {
       return {
         ok: false as const,
-        error: 'Please use the checkout flow to check out this guest stay.',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'This guest stay status change is not allowed.',
       };
     }
 

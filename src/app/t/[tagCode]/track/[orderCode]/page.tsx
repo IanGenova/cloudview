@@ -35,6 +35,7 @@ import { triggerOrderStatusUpdate } from '@/lib/realtime/order-events';
 import { triggerKitchenOrderUpdated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { requestGuestFoodOrderRefund } from '@/lib/guest-xendit-refund';
+import { voidSyncedOrderPoints } from '@/lib/guest-point-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -882,6 +883,27 @@ async function cancelGuestOrderItemAction(formData: FormData) {
         refundAmountCents,
         refundResult,
       });
+    }
+  }
+
+  /*
+    Give the points back when the guest cancels the whole order.
+
+    updateOrderStatusAction and cancelOrderItemAction both void points on the
+    staff side; this page did not import them at all. So the same business
+    event produced two different balances depending on who clicked cancel --
+    and since markOrderPaidAction awards on paymentStatus alone while the
+    order is still PENDING, a guest could be credited for a 1,000 peso order,
+    cancel it to zero, and keep the points against no spend at all.
+  */
+  if (allItemsCancelled) {
+    try {
+      await voidSyncedOrderPoints(order.id);
+    } catch (error) {
+      console.warn(
+        '[Guest food cancellation] Failed to void reward points.',
+        error
+      );
     }
   }
 
