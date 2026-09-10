@@ -134,9 +134,40 @@ the chain now would compound it.
   redirects were **not** harmless. They carry `?k=<scan secret>` in the query
   string, so a tag credential crossed to another origin. Fixed in `71b16cc`.
 
-## Deploy in progress — paused 10 Sep, resumed 11 Sep 2026
+## DEPLOYED — 11 Sep 2026
 
-**Nothing has been deployed yet. Production is still serving `6ed55fe`.**
+**Production (`srv1830788`, 187.77.129.233) is serving `d165453`.** Health
+check 200; `/api/qr` answers 401 where the old code served a PNG to anyone,
+which is the proof the new build is live. `cloudview-refund-retry` is running
+on Node 22, saved to the pm2 dump, and its first poll returned "Nothing to
+retry" against the real endpoint. Backup taken beforehand:
+`/var/www/cloudview-backups/pre-ultra-deploy-20260910-234414.sql.gz`.
+
+### Three things the deploy surfaced that will bite the next one
+- **The server's `~/.ssh/config` points `github.com` at `id_ed25519`, which
+  GitHub now rejects.** `cloudview_github` authenticates as
+  `IanGenova/cloudview` and is the right key. This deploy used
+  `GIT_SSH_COMMAND="ssh -i ~/.ssh/cloudview_github -o IdentitiesOnly=yes"` for
+  the pull; nothing on the server was changed. Fix the `IdentityFile` line or
+  every future `deploy.sh` fails at the pull, as this one did first time.
+- **`deploy.sh` must run with nvm loaded.** The system Node is 18.19.1; the app
+  runs on nvm's 22.23.1. A non-interactive shell does not source nvm, so
+  `next build` refused with "Node.js >=20.9.0 is required" — after `git pull`
+  and `npm ci` had already run, leaving the tree ahead of the running process
+  until the build was redone under 22. Either source `~/.nvm/nvm.sh` at the top
+  of `deploy.sh`, or always run it from a login shell.
+- **`pm2 start ecosystem.production.cjs` does not work on pm2 7.** It runs the
+  file as a script and creates a process named `ecosystem.production`. pm2
+  only treats `*.config.{js,cjs,json}` as ecosystem files. Rename it to
+  `ecosystem.production.config.cjs` (and update the README), or keep starting
+  apps by path with `--name` as this deploy did.
+
+### Observed, not part of the audit
+`cloudview-nextjs` had restarted 28 times in 46 hours before this deploy —
+roughly every 100 minutes, consistent with hitting `max_memory_restart: 700M`.
+Worth a look; it is why the half-deployed state above was time-sensitive.
+
+### Earlier state, kept for the record
 
 ### Where the code is
 - `ultra/blocker-repairs-20260910` — pushed to origin, 10 commits.
