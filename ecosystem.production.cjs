@@ -29,5 +29,27 @@ module.exports = {
         NODE_ENV: "production",
       },
     },
+    /*
+     * Drives /api/xendit/refunds/retry.
+     *
+     * That endpoint and the retry logic behind it already existed and were
+     * correct, and nothing anywhere called them -- no cron, no timer, no nginx
+     * location, no PM2 app. A guest refund that failed once stayed FAILED
+     * forever, with no automated recovery and no dashboard surface to retry it.
+     */
+    {
+      name: "cloudview-refund-retry",
+      cwd: "/var/www/cloudview",
+      script: "./scripts/refund-retry-worker.mjs",
+      interpreter: "node",
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "200M",
+      restart_delay: 5000,
+      time: true,
+      env: {
+        NODE_ENV: "production",
+      },
+    },
   ],
 };

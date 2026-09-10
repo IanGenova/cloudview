@@ -1,0 +1,26 @@
+# Paths outside the TDD scope: config, ops glue, fixtures and markup.
+#
+# Not "code we would rather not test yet". Everything here is either declarative
+# configuration whose only meaningful test is that the process boots, or an ops
+# script that exists to call one HTTP endpoint on a timer. Application logic
+# does not belong on this list -- when a fix needed a rule, the rule was pulled
+# into src/lib and pinned with tests instead.
+
+# PM2 process definitions. Declarative; verified by pm2 starting them.
+ecosystem.
+
+# Next.js build configuration. Verified by the production build.
+next.config.mjs
+
+# Documented environment template. Markup.
+.env.example
+
+# Documentation.
+README.md
+
+# Demo/seed fixtures. Scaffolding for a database, not shipped behaviour.
+prisma/seed.ts
+
+# Operational workers and maintenance scripts. Each polls one endpoint or
+# performs a one-off repair; they are not imported by the application.
+scripts/

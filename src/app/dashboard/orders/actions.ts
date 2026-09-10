@@ -22,7 +22,12 @@ import {
   deductInventoryForOrder,
   InventoryError,
   restoreInventoryForOrder,
-} from '@/lib/inventory';
+} from '@/lib/inventory';
+import {
+  assertFoodOrderStatusTransition,
+  isRefundEligiblePaymentStatus,
+  isXenditKitchenReady,
+} from '@/lib/staff-processing-policy';
 import { sendOrderToPos } from '@/lib/pos';
 import { cleanText } from '@/lib/sanitize';
 import {
@@ -82,48 +87,17 @@ const KITCHEN_STATUS_ACTIONS = new Set<OrderStatus>([
   OrderStatus.CANCELLED,
 ]);
 
-const REFUND_ELIGIBLE_PAYMENT_STATUSES: readonly PaymentStatus[] = [
-  PaymentStatus.PAID,
-  PaymentStatus.PARTIALLY_REFUNDED,
-  PaymentStatus.REFUND_FAILED,
-];
-
-function isRefundEligiblePaymentStatus(status: PaymentStatus) {
-  return REFUND_ELIGIBLE_PAYMENT_STATUSES.includes(status);
-}
-
-const PROCESSABLE_XENDIT_PAYMENT_STATUSES: readonly PaymentStatus[] = [
-  PaymentStatus.PAID,
-  PaymentStatus.PARTIALLY_REFUNDED,
-];
-
-const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
-  [OrderStatus.PENDING]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-  [OrderStatus.ACCEPTED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-  [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
-  [OrderStatus.READY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-  [OrderStatus.DELIVERED]: [],
-  [OrderStatus.CANCELLED]: [],
-};
-
-function isProcessableXenditPaymentStatus(status: PaymentStatus) {
-  return PROCESSABLE_XENDIT_PAYMENT_STATUSES.includes(status);
-}
-
-function assertValidOrderStatusTransition(
-  currentStatus: OrderStatus,
-  nextStatus: OrderStatus
-) {
-  if (currentStatus === nextStatus) {
-    return;
-  }
-
-  if (!ORDER_STATUS_TRANSITIONS[currentStatus].includes(nextStatus)) {
-    throw new Error(
-      `Order cannot move from ${currentStatus.replaceAll('_', ' ')} to ${nextStatus.replaceAll('_', ' ')}.`
-    );
-  }
-}
+/*
+ * These four rules live in lib/staff-processing-policy.ts, which is where the
+ * service-request half of this module already read them from.
+ *
+ * Private copies used to sit here instead. They agreed with the shared module
+ * byte for byte, which is what made it dangerous: half the module was
+ * authoritative and half was orphaned, so a fix to the order state machine or
+ * to the "do not cook an unpaid Xendit order" rule, applied in the shared
+ * file, would have changed nothing at all -- the shipped behaviour came from
+ * here.
+ */
 
 async function getDashboardPermissionsForUser(user: {
   id: string;
@@ -1163,14 +1137,14 @@ export async function updateOrderStatusAction(formData: FormData) {
   assertHotelScope(user, order.hotelId);
   await assertOrderStatusUpdateAccess({ user, status });
 
-  assertValidOrderStatusTransition(order.status, status);
+  assertFoodOrderStatusTransition(order.status, status);
 
   if (
     order.paymentMethod === PaymentMethod.XENDIT &&
     (status === OrderStatus.PREPARING ||
       status === OrderStatus.READY ||
       status === OrderStatus.DELIVERED) &&
-    !isProcessableXenditPaymentStatus(order.paymentStatus)
+    !isXenditKitchenReady(order.paymentStatus)
   ) {
     throw new Error(
       'Wait for the verified Xendit payment before preparing this order.'

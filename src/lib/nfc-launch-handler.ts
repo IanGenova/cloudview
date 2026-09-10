@@ -22,6 +22,16 @@ import {
   getAuthorizedGuestStayDeviceFromRequest,
 } from '@/lib/guest-stay-device-auth';
 
+/*
+ * The configured public origin.
+ *
+ * Only for URLs that are not a redirect of a live request. Every redirect a
+ * guest follows must use guestUrlForRequest instead: a denial built on the
+ * configured origin sends a guest on staging, on a LAN host, or on any second
+ * domain to a different deployment entirely -- and the verify redirect carries
+ * ?k=<scan secret>, so the tag credential travelled with them and landed in
+ * that host access log.
+ */
 function publicUrl(path: string) {
   return new URL(path, getPublicAppUrl());
 }
@@ -420,7 +430,7 @@ export async function GET(
     });
 
     return NextResponse.redirect(
-      publicUrl('/nfc-access-denied?reason=tag-not-found')
+      guestUrlForRequest(request, '/nfc-access-denied?reason=tag-not-found')
     );
   }
 
@@ -459,7 +469,7 @@ export async function GET(
     });
 
     return NextResponse.redirect(
-      publicUrl('/nfc-access-denied?reason=inactive-hotel')
+      guestUrlForRequest(request, '/nfc-access-denied?reason=inactive-hotel')
     );
   }
 
@@ -477,7 +487,7 @@ export async function GET(
     });
 
     return NextResponse.redirect(
-      publicUrl('/nfc-access-denied?reason=bad-secret')
+      guestUrlForRequest(request, '/nfc-access-denied?reason=bad-secret')
     );
   }
 
@@ -510,20 +520,20 @@ export async function GET(
   if (policy.mode === 'PRIVATE_ROOM') {
     if (tag.status !== 'ACTIVE') {
       return NextResponse.redirect(
-        publicUrl('/nfc-access-denied?reason=inactive-tag')
+        guestUrlForRequest(request, '/nfc-access-denied?reason=inactive-tag')
       );
     }
 
     if (!tag.roomId) {
       return NextResponse.redirect(
-        publicUrl('/nfc-access-denied?reason=room-required')
+        guestUrlForRequest(request, '/nfc-access-denied?reason=room-required')
       );
     }
 
     if (!activeGuestStay) {
       if (nfcRoomPasscodeEnabled) {
         return NextResponse.redirect(
-          publicUrl(
+          guestUrlForRequest(request, 
             `/n/${tag.code}/verify?k=${encodeURIComponent(
               inputSecret
             )}&error=no_active_stay`
@@ -532,7 +542,7 @@ export async function GET(
       }
 
       return NextResponse.redirect(
-        publicUrl('/nfc-access-denied?reason=no-active-stay')
+        guestUrlForRequest(request, '/nfc-access-denied?reason=no-active-stay')
       );
     }
 
@@ -545,7 +555,7 @@ export async function GET(
 
       if (!authorizedDevice) {
         return NextResponse.redirect(
-          publicUrl(`/n/${tag.code}/verify?k=${encodeURIComponent(inputSecret)}`)
+          guestUrlForRequest(request, `/n/${tag.code}/verify?k=${encodeURIComponent(inputSecret)}`)
         );
       }
     }

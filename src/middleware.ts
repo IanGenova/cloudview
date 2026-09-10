@@ -1,6 +1,8 @@
 import { jwtVerify, type JWTPayload } from 'jose';
 import { NextResponse, type NextRequest } from 'next/server';
-import { AUTH_COOKIE } from '@/lib/auth';
+import { AUTH_COOKIE, dashboardHomeForRole } from '@/lib/auth';
+import { shouldForceHttpsForRequest } from '@/lib/https-redirect-policy';
+import { resolveGuestRedirectOrigin } from '@/lib/nfc-redirect-origin';
 
 type DashboardRole = 'SUPER_ADMIN' | 'HOTEL_ADMIN' | 'STAFF' | 'KITCHEN';
 
@@ -28,7 +30,7 @@ const routeRules: Array<{
     roles: ['SUPER_ADMIN', 'HOTEL_ADMIN'],
   },
   {
-    prefix: '/dashboard/kitchen-display',
+    prefix: '/dashboard/kitchen',
     roles: ['SUPER_ADMIN', 'HOTEL_ADMIN', 'KITCHEN'],
   },
   {
@@ -102,17 +104,16 @@ async function verifyDashboardSession(
   }
 }
 
-function dashboardHomeForRole(role: DashboardRole) {
-  if (role === 'KITCHEN') {
-    return '/dashboard/kitchen-display';
-  }
-
-  if (role === 'STAFF') {
-    return '/dashboard/orders';
-  }
-
-  return '/dashboard';
-}
+/*
+ * dashboardHomeForRole is imported from lib/auth rather than duplicated here.
+ *
+ * The copy that used to live in this file sent KITCHEN to
+ * /dashboard/kitchen-display, a route that does not exist -- so a signed-in
+ * kitchen user opening /dashboard/login, or any kitchen user clicking a module
+ * they lack, was redirected to a 404. lib/auth's copy returned the correct
+ * /dashboard/kitchen the whole time, which is exactly how two copies of one
+ * rule fail.
+ */
 
 function getRequiredRoles(pathname: string) {
   return (
@@ -204,39 +205,23 @@ function createSafeNextRedirect(
   return redirectUrl;
 }
 
+/*
+ * The decision lives in https-redirect-policy.ts, which is free of NextRequest
+ * so it can be tested directly.
+ *
+ * This used to read request.nextUrl.hostname, which under `next start -H
+ * 0.0.0.0` is the bind address rather than the Host header -- so 0.0.0.0
+ * matched none of the private-range exemptions and every route answered
+ * 308 -> https://0.0.0.0:PORT. Production never saw it because nginx sets
+ * x-forwarded-proto and the check short-circuited above the host.
+ */
 function shouldForceHttps(request: NextRequest) {
-  if (process.env.NODE_ENV !== 'production') {
-    return false;
-  }
-
-  const host = request.nextUrl.hostname;
-
-  if (
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host.startsWith('10.') ||
-    host.startsWith('192.168.')
-  ) {
-    return false;
-  }
-
-  const private172Match = host.match(/^172\.(\d{1,3})\./);
-
-  if (
-    private172Match &&
-    Number(private172Match[1]) >= 16 &&
-    Number(private172Match[1]) <= 31
-  ) {
-    return false;
-  }
-
-  const forwardedProto = request.headers.get('x-forwarded-proto');
-
-  if (forwardedProto) {
-    return forwardedProto !== 'https';
-  }
-
-  return request.nextUrl.protocol !== 'https:';
+  return shouldForceHttpsForRequest({
+    requestUrl: request.url,
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    isProduction: process.env.NODE_ENV === 'production',
+  });
 }
 
 /**
@@ -333,7 +318,21 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (shouldForceHttps(request)) {
-    const httpsUrl = request.nextUrl.clone();
+    /*
+      Built on the browser-facing origin, not on nextUrl. Flipping the
+      protocol on nextUrl keeps whatever host we bound to, which is how the
+      redirect target became https://0.0.0.0:PORT in the first place.
+    */
+    const browserOrigin = resolveGuestRedirectOrigin({
+      requestUrl: request.url,
+      forwardedHost: request.headers.get('x-forwarded-host'),
+      forwardedProto: request.headers.get('x-forwarded-proto'),
+    });
+
+    const httpsUrl = new URL(
+      request.nextUrl.pathname + request.nextUrl.search,
+      browserOrigin ?? request.nextUrl.origin
+    );
     httpsUrl.protocol = 'https:';
 
     return applySecurityHeaders(NextResponse.redirect(httpsUrl, 308), request);

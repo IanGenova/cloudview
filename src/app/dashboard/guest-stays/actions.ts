@@ -33,6 +33,7 @@ import { sendGuestStayPasscodeSms } from '@/lib/sms';
 import {
   cancelXenditCheckoutSessionIfActive,
   createXenditCheckoutSession,
+  getXenditPaymentMethods,
   getXenditCheckoutSession,
   type XenditLineItem,
 } from '@/lib/xendit';
@@ -1869,6 +1870,13 @@ export async function createGuestStayXenditCheckoutAction(formData: FormData) {
 
     const checkout = await createXenditCheckoutSession({
       idempotencyKey: `cloudview-guest-stay-${draft.id}`,
+      /*
+        XENDIT_PAYMENT_METHODS is documented in .env.example as a channel
+        restriction, and until now nothing read it -- getXenditPaymentMethods
+        had no callers, so a hotel that switched cards off to avoid card fees
+        still got card checkouts on every staff-side sale.
+      */
+      paymentMethods: getXenditPaymentMethods(),
       lineItems,
       successUrl,
       cancelUrl,
