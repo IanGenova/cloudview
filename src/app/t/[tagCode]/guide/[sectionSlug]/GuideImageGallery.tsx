@@ -3,11 +3,13 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type TouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { presentableImageTitle } from "@/lib/guide-image-title";
 import {
   ChevronLeft,
   ChevronRight,
@@ -43,12 +45,26 @@ function getFullscreenElement() {
 }
 
 export function GuideImageGallery({
-  images,
+  images: storedImages,
   variant = "section",
 }: {
   images: GalleryImage[];
   variant?: "section" | "item";
 }) {
+  /*
+    A title that is really a file name -- a UUID, IMG_2026..., a screenshot
+    stamp -- is shown as no title. The live Facilities page captioned a hotel
+    photograph "d885ab12 d9f0 43c2 9976 02eddeebb8db" in serif type.
+  */
+  const images = useMemo(
+    () =>
+      storedImages.map((image) => ({
+        ...image,
+        title: presentableImageTitle(image.title),
+      })),
+    [storedImages],
+  );
+
   const [mounted, setMounted] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
@@ -257,7 +273,7 @@ export function GuideImageGallery({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="h-px w-6 bg-[#d5ad55]" />
-              <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#d5ad55]">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#d5ad55]">
                 Private gallery
               </p>
             </div>
@@ -340,7 +356,7 @@ export function GuideImageGallery({
           <div className="mx-auto max-w-4xl">
             <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d5ad55]">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#d5ad55]">
                   {String(selectedIndex + 1).padStart(2, "0")} /{" "}
                   {String(images.length).padStart(2, "0")}
                 </p>
@@ -351,7 +367,7 @@ export function GuideImageGallery({
               </div>
 
               {fullscreenSupported ? (
-                <p className="hidden shrink-0 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28 sm:block">
+                <p className="hidden shrink-0 text-xs font-semibold uppercase tracking-[0.18em] text-white/60 sm:block">
                   Double-click for full screen
                 </p>
               ) : null}
@@ -415,7 +431,7 @@ export function GuideImageGallery({
 
                 {isHero ? (
                   <>
-                    <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white/75 backdrop-blur">
+                    <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white/75 backdrop-blur">
                       <Images className="size-3.5 text-[#d5ad55]" />
                       {images.length} photographs
                     </span>
@@ -423,9 +439,11 @@ export function GuideImageGallery({
                       <Maximize2 className="size-4" />
                     </span>
                     <span className="absolute inset-x-4 bottom-4">
-                      <span className="block font-serif text-lg text-white">
-                        {image.title || "Gallery highlight"}
-                      </span>
+                      {image.title ? (
+                        <span className="block font-serif text-lg text-white">
+                          {image.title}
+                        </span>
+                      ) : null}
                       {image.caption ? (
                         <span className="mt-1 line-clamp-1 block text-xs text-white/55">
                           {image.caption}
@@ -441,7 +459,7 @@ export function GuideImageGallery({
                       <span className="block font-serif text-2xl text-white">
                         +{images.length - 5}
                       </span>
-                      <span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.2em] text-[#d5ad55]">
+                      <span className="mt-1 block text-xs font-bold uppercase tracking-[0.2em] text-[#d5ad55]">
                         View all
                       </span>
                     </span>

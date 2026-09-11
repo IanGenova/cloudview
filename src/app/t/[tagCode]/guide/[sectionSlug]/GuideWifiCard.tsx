@@ -57,7 +57,7 @@ export function GuideWifiCard({
 
         <div className="min-w-0 flex-1">
           {subtitle ? (
-            <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/38">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/60">
               {subtitle}
             </p>
           ) : null}
@@ -68,7 +68,7 @@ export function GuideWifiCard({
 
           <dl className="mt-4 space-y-3">
             <div>
-              <dt className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/38">
+              <dt className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">
                 Network
               </dt>
               <dd className="mt-1 break-words font-mono text-sm text-white/85">
@@ -77,7 +77,7 @@ export function GuideWifiCard({
             </div>
 
             <div>
-              <dt className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/38">
+              <dt className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">
                 Password
               </dt>
               <dd className="mt-1 break-all font-mono text-sm text-white/85">

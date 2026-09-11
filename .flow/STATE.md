@@ -349,3 +349,31 @@ migrations, health 200). Proven on cloudhotelph.com through the real Pool Deck t
 check-in/out card, "breakfast" -> Restaurant Hours; the admin "View as guest" link
 lands on /t/LNRX6MKW/guide/dining.
 Wakes since commit: 0.
+
+## Phase: guide-photo-titles (11 Sep 2026) — Quick
+
+Owner's words (11 Sep, with a screenshot of the live Facilities page): "can you fix
+this??" -- the gallery hero captioned "d885ab12 d9f0 43c2 9976 02eddeebb8db".
+
+### Intent
+- P1 A photo nobody named shows no caption -- never a file name.
+
+Tasks:
+- [x] P1 `src/lib/guide-image-title.ts`: a file name is a title only when it reads like
+      one (UUIDs, hex hashes, IMG_/DSC_/PXL_, screenshots, WhatsApp images, "image (3)",
+      timestamps -> no title; "pool-deck-sunset.jpg" -> "Pool deck sunset"). The upload
+      stores null instead of "Gallery Image N"; the guest gallery and the admin photo list
+      run stored titles through the same test, so the three rows already on the live site
+      present as untitled without a data change. The hero card shows nothing where it
+      showed the file name. by test (6). from: P1
+- [x] P2 the section screen's remaining 9-10px labels (photo count badge, gallery modal,
+      Wi-Fi card) lifted to 12px / 60%, same as the guide home last phase. by artifact:
+      capture at 375px in CHECK. from: P1
+- [ ] P3 CHECK: build on the frozen clone, upload a UUID-named photo in the disposable
+      admin, read the guest page. from: P1
+
+Decision: the three stored titles on production are left as they are; the display guard
+makes them invisible and a data fix would be the owner's call.
+
+Evidence: 1 by test (closed), 1 by artifact (open until CHECK), 0 by person.
+Wakes since commit: 0.

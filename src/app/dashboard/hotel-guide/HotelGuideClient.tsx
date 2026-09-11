@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { createGuideSlug } from "@/lib/guide-slug";
+import { presentableImageTitle } from "@/lib/guide-image-title";
 import { withGuestReturnPath } from "@/lib/nfc-return-path";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -893,7 +894,7 @@ function GalleryPreview({ images }: { images: GuideImage[] }) {
           <div className="p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-xs font-black">
-                {image.title || "Gallery Image"}
+                {presentableImageTitle(image.title) || "Untitled photo"}
               </p>
 
               <span
@@ -1397,10 +1398,12 @@ function ImageLightbox({
           />
         </div>
 
-        {image.title || image.caption ? (
+        {presentableImageTitle(image.title) || image.caption ? (
           <div className="border-t border-white/10 bg-black px-5 py-4 text-white">
-            {image.title ? (
-              <p className="text-sm font-black">{image.title}</p>
+            {presentableImageTitle(image.title) ? (
+              <p className="text-sm font-black">
+                {presentableImageTitle(image.title)}
+              </p>
             ) : null}
 
             {image.caption ? (

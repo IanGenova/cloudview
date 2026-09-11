@@ -7,6 +7,7 @@ import {
 } from '@/lib/runtime-media-storage';
 import { DashboardModule, HotelGuideItemType } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { imageTitleFromFileName } from "@/lib/guide-image-title";
 import { mkdir, unlink, writeFile } from "fs/promises";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -258,17 +259,13 @@ function isUploadedFile(value: FormDataEntryValue | null): value is File {
   return value instanceof File && value.size > 0;
 }
 
-function cleanImageTitleFromFileName(fileName: string) {
-  const withoutExtension = fileName.replace(/\.[^/.]+$/, "");
-
-  const cleaned = withoutExtension
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return cleaned.slice(0, 120);
-}
-
+/*
+  A file name is a title only when it reads like one. The previous version
+  turned "d885ab12-d9f0-43c2-9976-02eddeebb8db.jpg" into the caption a guest
+  saw over a hotel photograph. The rule lives in src/lib/guide-image-title.ts;
+  a photo with no usable name is stored untitled, and the screens already
+  have their own wording for that.
+*/
 function getImageTitle({
   baseTitle,
   fileName,
@@ -284,7 +281,7 @@ function getImageTitle({
     return total > 1 ? `${baseTitle} ${index + 1}`.slice(0, 120) : baseTitle;
   }
 
-  return cleanImageTitleFromFileName(fileName) || `Gallery Image ${index + 1}`;
+  return imageTitleFromFileName(fileName) || null;
 }
 
 function parseSortOrder(value: FormDataEntryValue | null) {
