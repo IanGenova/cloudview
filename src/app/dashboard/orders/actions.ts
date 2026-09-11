@@ -46,6 +46,7 @@ import {
   voidSyncedOrderPoints,
 } from '@/lib/guest-point-sync';
 import { requestGuestFoodOrderRefund } from '@/lib/guest-xendit-refund';
+import { manualRefundDue } from '@/lib/manual-refund-due';
 
 type RestoreOrderItem = {
   id: string;
@@ -966,6 +967,19 @@ if (order.status !== OrderStatus.PENDING) {
 
     refundAmountCents = Math.max(order.totalCents - nextTotalCents, 0);
 
+    /*
+      Money collected by hand has no automatic refund. A PAID cash or counter
+      order cancelled here used to keep paymentStatus PAID against a total of
+      zero, with nothing anywhere saying the till held the guest's money. The
+      marker -- REFUND_PENDING plus a note naming the amount -- is written in
+      the same transaction as the cancellation, so the two cannot come apart.
+    */
+    const refundDue = manualRefundDue({
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      refundAmountCents,
+    });
+
     if (everyItemCancelled) {
       finalOrderStatus = OrderStatus.CANCELLED;
 
@@ -979,6 +993,7 @@ if (order.status !== OrderStatus.PENDING) {
           serviceChargeCents: 0,
           taxCents: 0,
           totalCents: 0,
+          ...(refundDue ? { paymentStatus: refundDue.paymentStatus } : {}),
         },
       });
 
@@ -996,6 +1011,17 @@ if (order.status !== OrderStatus.PENDING) {
         },
       });
 
+      if (refundDue) {
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            status: OrderStatus.CANCELLED,
+            userId: user.id,
+            note: refundDue.note,
+          },
+        });
+      }
+
       statusUpdatedAt = history.createdAt;
       return;
     }
@@ -1009,6 +1035,7 @@ if (order.status !== OrderStatus.PENDING) {
         serviceChargeCents: liveTotals.serviceChargeCents,
         taxCents: liveTotals.taxCents,
         totalCents: liveTotals.totalCents,
+        ...(refundDue ? { paymentStatus: refundDue.paymentStatus } : {}),
       },
     });
 
@@ -1024,6 +1051,17 @@ if (order.status !== OrderStatus.PENDING) {
         createdAt: true,
       },
     });
+
+    if (refundDue) {
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          status: order.status,
+          userId: user.id,
+          note: refundDue.note,
+        },
+      });
+    }
 
     statusUpdatedAt = history.createdAt;
   }, {
@@ -1208,6 +1246,21 @@ export async function updateOrderStatusAction(formData: FormData) {
     order.status !== OrderStatus.CANCELLED &&
     order.status !== OrderStatus.DELIVERED;
 
+  /*
+    Whole-order cancellation leaves totalCents untouched, so the whole total is
+    what a PAID cash or counter order owes back. Xendit orders are refunded
+    below; every other method is collected by hand and returned by hand, and
+    this marker is the only record that it must be.
+  */
+  const refundDue =
+    status === OrderStatus.CANCELLED
+      ? manualRefundDue({
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          refundAmountCents: order.totalCents,
+        })
+      : null;
+
   try {
     const shouldReleaseToKitchen =
       !order.inventoryDeductedAt &&
@@ -1261,6 +1314,7 @@ export async function updateOrderStatusAction(formData: FormData) {
         },
         data: {
           status,
+          ...(refundDue ? { paymentStatus: refundDue.paymentStatus } : {}),
         },
       });
 
@@ -1278,8 +1332,7 @@ export async function updateOrderStatusAction(formData: FormData) {
 
       /* The status was already written by the claim above. */
 
-
-      return tx.orderStatusHistory.create({
+      const cancellation = await tx.orderStatusHistory.create({
         data: {
           orderId: order.id,
           status,
@@ -1290,6 +1343,19 @@ export async function updateOrderStatusAction(formData: FormData) {
           createdAt: true,
         },
       });
+
+      if (refundDue) {
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            status,
+            userId: user.id,
+            note: refundDue.note,
+          },
+        });
+      }
+
+      return cancellation;
     }, {
       // Whole-order cancellation can execute several stock-restore queries.
       // Allow enough time for production databases without leaving the

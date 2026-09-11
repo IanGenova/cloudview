@@ -35,6 +35,7 @@ import { triggerOrderStatusUpdate } from '@/lib/realtime/order-events';
 import { triggerKitchenOrderUpdated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { requestGuestFoodOrderRefund } from '@/lib/guest-xendit-refund';
+import { manualRefundDue } from '@/lib/manual-refund-due';
 import { voidSyncedOrderPoints } from '@/lib/guest-point-sync';
 import { recalculateOrderTotals } from '@/lib/order-charge-totals';
 
@@ -767,6 +768,20 @@ async function cancelGuestOrderItemAction(formData: FormData) {
   const nextTotalCents = allItemsCancelled ? 0 : totals.totalCents;
   const refundAmountCents = Math.max(order.totalCents - nextTotalCents, 0);
 
+  /*
+    Money collected by hand has no automatic refund. The second ultra
+    inspection marked a PAY_AT_COUNTER order PAID and cancelled it from this
+    page: paymentStatus stayed PAID against a total of zero, and nothing
+    anywhere said the till held the guest's money. The marker -- REFUND_PENDING
+    plus a note naming the amount -- is written in the same transaction as the
+    cancellation, so the two cannot come apart.
+  */
+  const refundDue = manualRefundDue({
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    refundAmountCents,
+  });
+
   await db.$transaction(async (tx) => {
     const restoreRequirements = await buildRestoreRequirementsForOrderItem({
       tx,
@@ -807,6 +822,7 @@ async function cancelGuestOrderItemAction(formData: FormData) {
           serviceChargeCents: 0,
           taxCents: 0,
           totalCents: 0,
+          ...(refundDue ? { paymentStatus: refundDue.paymentStatus } : {}),
         },
       });
 
@@ -823,6 +839,16 @@ async function cancelGuestOrderItemAction(formData: FormData) {
         },
       });
 
+      if (refundDue) {
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: order.id,
+            status: OrderStatus.CANCELLED,
+            note: refundDue.note,
+          },
+        });
+      }
+
       statusUpdatedAt = history.createdAt;
       return;
     }
@@ -836,6 +862,7 @@ async function cancelGuestOrderItemAction(formData: FormData) {
         serviceChargeCents: totals.serviceChargeCents,
         taxCents: totals.taxCents,
         totalCents: totals.totalCents,
+        ...(refundDue ? { paymentStatus: refundDue.paymentStatus } : {}),
       },
     });
 
@@ -851,6 +878,16 @@ async function cancelGuestOrderItemAction(formData: FormData) {
         createdAt: true,
       },
     });
+
+    if (refundDue) {
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          status: order.status,
+          note: refundDue.note,
+        },
+      });
+    }
 
     statusUpdatedAt = history.createdAt;
   });
