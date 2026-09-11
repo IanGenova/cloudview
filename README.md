@@ -296,21 +296,21 @@ npx prisma generate
 npx prisma migrate deploy
 npm run db:seed
 npm run build
-pm2 start ecosystem.production.cjs
+pm2 start ecosystem.production.config.cjs
 ```
 
-> Do **not** use `npm run start` on a server. It runs `next start` on port
-> **3001** behind `local-ssl-proxy --hostname 192.168.0.130`, which is a
-> developer's LAN-HTTPS harness -- the VPS does not hold that address, and
-> `concurrently` and `local-ssl-proxy` are devDependencies a production install
-> omits. `ecosystem.production.cjs` runs `next start -H 127.0.0.1 -p 3000`,
-> which is what `deploy/deploy.sh` and the nginx config expect.
+> `npm start` runs `next start -H 127.0.0.1 -p 3000`, the same command the PM2
+> ecosystem file runs, which is what `deploy/deploy.sh` and the nginx config
+> expect. On a server use PM2 rather than `npm start` so the process is
+> supervised and restarted. (An earlier `npm start` wrapped that in a LAN-HTTPS
+> proxy bound to a developer's address; that harness and its two packages are
+> gone.)
 
 For a VPS, run the app with PM2:
 
 ```bash
 npm install -g pm2
-pm2 start ecosystem.production.cjs
+pm2 start ecosystem.production.config.cjs
 pm2 save
 ```
 
@@ -318,6 +318,10 @@ That starts three processes: the Next.js server, the scheduled-release worker,
 and the refund-retry worker. The last one drives
 `/api/xendit/refunds/retry`; without it a guest refund that fails once is never
 retried.
+
+The `.config.cjs` suffix is what makes pm2 read the file as an ecosystem file.
+Under its old name, `ecosystem.production.cjs`, pm2 7 ran it as a script and
+created one useless process called `ecosystem.production`.
 
 Then use Nginx or Hostinger's reverse proxy setup to point your domain to the Node.js app port.
 

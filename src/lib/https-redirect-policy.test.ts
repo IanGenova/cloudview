@@ -13,8 +13,8 @@ import { shouldForceHttpsForRequest } from './https-redirect-policy';
  *
  * The middleware read `request.nextUrl.hostname` and compared it against a
  * list of hosts exempt from the redirect -- localhost, 127.0.0.1, 10.x,
- * 192.168.x, 172.16-31.x. Under `next start -H 0.0.0.0`, which is what the
- * project's own start:http script runs, that hostname is the *bind* address,
+ * 192.168.x, 172.16-31.x. Under `next start -H 0.0.0.0` -- and `npm run dev`
+ * binds the same way -- that hostname is the *bind* address,
  * not the Host header. `0.0.0.0` matches no exemption, so every route on every
  * plain-HTTP deployment answered 308 -> https://0.0.0.0:PORT, which resolves
  * to nothing at all.

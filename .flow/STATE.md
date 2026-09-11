@@ -156,11 +156,12 @@ retry" against the real endpoint. Backup taken beforehand:
   and `npm ci` had already run, leaving the tree ahead of the running process
   until the build was redone under 22. Either source `~/.nvm/nvm.sh` at the top
   of `deploy.sh`, or always run it from a login shell.
-- **`pm2 start ecosystem.production.cjs` does not work on pm2 7.** It runs the
-  file as a script and creates a process named `ecosystem.production`. pm2
-  only treats `*.config.{js,cjs,json}` as ecosystem files. Rename it to
-  `ecosystem.production.config.cjs` (and update the README), or keep starting
-  apps by path with `--name` as this deploy did.
+- **`pm2 start ecosystem.production.cjs` did not work on pm2 7.** It ran the
+  file as a script and created a process named `ecosystem.production`. pm2
+  only treats `*.config.{js,cjs,json}` as ecosystem files. Renamed to
+  `ecosystem.production.config.cjs` in the ULTRA-2026-09-11 repair (task F);
+  the server still runs the apps started by path with `--name`, which the
+  renamed file describes identically.
 
 ### Observed, not part of the audit
 `cloudview-nextjs` had restarted 28 times in 46 hours before this deploy —
@@ -211,9 +212,10 @@ content was discarded.
    `/var/www/cloudview-uploads/menu` (51 files) and `cloudview-media/menu` (59)
    exist — MINOR 13's history on disk, pre-existing, untouched by this deploy.
    Server clock is UTC.
-5. After deploying: `pm2 start ecosystem.production.cjs` — the deploy script
-   only does `pm2 reload cloudview-nextjs`, so the new `cloudview-refund-retry`
-   worker will not start on its own.
+5. After deploying: start the workers by hand (the ecosystem file, since
+   renamed to `ecosystem.production.config.cjs`) — the deploy script only does
+   `pm2 reload cloudview-nextjs`, so the new `cloudview-refund-retry` worker
+   will not start on its own.
 6. Check the production `.env` for `MENU_UPLOAD_DIR` / `CLOUDVIEW_MEDIA_ROOT`.
    The production media-root fallback moved from `/var/www/cloudview-media` to
    `/var/www/cloudview-uploads` to match the nginx alias. If those are set,
@@ -234,13 +236,17 @@ Tasks (batched by root cause):
 - [x] B  MAJOR 2 (this commit) — inventory-requirements uses the active quantity, skips CANCELLED
       lines, on deduct and restore alike. by test.
 - [x] C  MINOR 1 (d39236b) — PASSCODE_LOCKED shows its own message, with the minutes. by test on the mapper.
-- [x] D  MINOR 2 (this commit; rows read in CHECK) — cancelling a PAID cash/counter order records the refund due:
+- [x] D  MINOR 2 (3a931b6; rows read in CHECK) — cancelling a PAID cash/counter order records the refund due:
       paymentStatus REFUND_PENDING + a history note naming the amount. by test on the
       rule, rows read after.
-- [ ] E  MINOR 4 — npm audit fix; drop concurrently, local-ssl-proxy and start:https.
-      by test: audit critical 0.
-- [ ] F  MINOR 5 — ecosystem.production.cjs -> ecosystem.production.config.cjs; README
-      and deploy.sh follow. by test: old name referenced nowhere.
+- [x] E  MINOR 4 (this commit) — npm audit fix; dropped concurrently, local-ssl-proxy,
+      start:http and start:https; npm start is now next start -H 127.0.0.1 -p 3000.
+      by test: audit critical 0 (13 advisories -> 5: 3 high are the Prisma CLI's
+      deepmerge-ts chain, 2 moderate are exceljs->uuid; both 'fixes' are downgrades).
+- [x] F  MINOR 5 (this commit) — ecosystem.production.cjs -> ecosystem.production.config.cjs;
+      README and .env.example follow. deploy.sh never named the file (it only reloads
+      cloudview-nextjs), so nothing to change there. by test: no command or config
+      references the old name; README explains it once as history.
 
 Assumptions:
 - D: no schema change. REFUND_PENDING already exists in PaymentStatus and the dashboard

@@ -10,7 +10,7 @@ import { resolveGuestRedirectOrigin } from '@/lib/nfc-redirect-origin';
  * rather than one flow.
  *
  * The middleware read `request.nextUrl.hostname`. Under `next start -H
- * 0.0.0.0` -- the project's own start:http script -- that is the bind address,
+ * 0.0.0.0` -- what the project's own `npm run dev` binds to -- that is the bind address,
  * not the Host header the browser sent. `0.0.0.0` matched none of the
  * localhost / 10. / 192.168. / 172.16-31 exemptions, so every route on a plain
  * -HTTP deployment answered 308 -> https://0.0.0.0:PORT, an address that
