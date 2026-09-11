@@ -231,7 +231,7 @@ Tasks (batched by root cause):
       equals the request's own Host (Next synthesises it); README step 4 names
       NFC_PUBLIC_APP_URL. by test: nfc-redirect-origin.test.ts gains Next's real header
       set; curl on a loopback bind stays local.
-- [ ] B  MAJOR 2 — inventory-requirements uses the active quantity, skips CANCELLED
+- [x] B  MAJOR 2 (this commit) — inventory-requirements uses the active quantity, skips CANCELLED
       lines, on deduct and restore alike. by test.
 - [ ] C  MINOR 1 — PASSCODE_LOCKED shows its own message. by test on the mapper.
 - [ ] D  MINOR 2 — cancelling a PAID cash/counter order records the refund due:

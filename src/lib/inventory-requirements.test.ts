@@ -86,17 +86,60 @@ test('an empty order needs nothing', () => {
 });
 
 /*
- * The deduction runs at kitchen release and uses the line's full ordered
- * quantity -- it does not subtract cancelledQty. The restore has to mirror
- * that exactly, or a partially-cancelled order gives back less than it took.
- * This is the property that keeps the two directions in agreement.
+ * The ACTIVE quantity is used -- ordered minus cancelled -- on both directions.
+ *
+ * This test used to assert the opposite: that the full ordered quantity was
+ * used "so the restore mirrors the deduction exactly". The symmetry was right
+ * and the basis was wrong. The second ultra inspection placed an order of one
+ * pancake and one burger, cancelled the burger line from the dashboard while
+ * the order was still PENDING, then released it to the kitchen -- and watched
+ * Burger Bun go 100 -> 99 and Beef Patty 60 -> 59 for a burger nobody ever
+ * cooked. "The guest changed their mind before the kitchen started" is an
+ * ordinary front-desk event, and every one of them leaked the cancelled line's
+ * ingredients for good, because a DELIVERED order cannot be cancelled and so
+ * that restore never runs.
+ *
+ * Both directions still compute the same number; it is just the right number.
  */
-test('the ordered quantity is used, not the quantity net of cancellations', () => {
+test('the active quantity is used, net of cancellations', () => {
   const requirements = buildRecipeRequirements([
-    { ...line(5, [['bun', 1]]), cancelledQty: 3 } as never,
+    { ...line(5, [['bun', 1]]), cancelledQty: 3 },
   ]);
 
-  assert.equal(requirements.get('bun')?.qty, 5);
+  assert.equal(requirements.get('bun')?.qty, 2);
+});
+
+test('a line cancelled outright contributes nothing, whatever its quantity says', () => {
+  const requirements = buildRecipeRequirements([
+    { ...line(2, [['bun', 1], ['patty', 1]]), cancelledQty: 2, status: 'CANCELLED' },
+    { ...line(1, [['bread', 1]]), cancelledQty: 0, status: 'ACTIVE' },
+  ]);
+
+  assert.equal(requirements.has('bun'), false);
+  assert.equal(requirements.has('patty'), false);
+  assert.equal(requirements.get('bread')?.qty, 1);
+});
+
+test('a CANCELLED status wins even if cancelledQty was never written', () => {
+  const requirements = buildRecipeRequirements([
+    { ...line(3, [['bun', 1]]), cancelledQty: 0, status: 'CANCELLED' },
+  ]);
+
+  assert.equal(requirements.has('bun'), false);
+});
+
+test('cancelledQty beyond the ordered quantity floors at zero, never goes negative', () => {
+  const requirements = buildRecipeRequirements([
+    { ...line(2, [['bun', 1]]), cancelledQty: 5 },
+  ]);
+
+  assert.equal(requirements.has('bun'), false);
+});
+
+test('a line with no cancelledQty at all is treated as fully active', () => {
+  const requirements = buildRecipeRequirements([line(4, [['bun', 1]])]);
+
+  assert.equal(requirements.get('bun')?.qty, 4);
 });
 
 test('name and unit come along for the error message', () => {
