@@ -1,27 +1,20 @@
 import { redirect } from 'next/navigation';
 import { KeyRound, Lock, ShieldCheck } from 'lucide-react';
 import { db } from '@/lib/db';
+import { passcodeVerifyMessage } from '@/lib/guest-passcode-messages';
 import { verifyTagScanSecret } from '@/lib/nfc-security';
 import { getActiveGuestStayForRoom } from '@/lib/guest-stay-device-auth';
 import { verifyGuestStayPasscodeAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-function getErrorMessage(error?: string) {
-  if (!error) return null;
-
-  const messages: Record<string, string> = {
-    missing_passcode: 'Please enter the room passcode.',
-    invalid_passcode: 'Invalid room passcode. Please try again.',
-    device_limit:
-      'Device limit reached for this room stay. Please contact the front desk.',
-    no_active_stay:
-      'No active guest stay was found for this room. Please contact the front desk.',
-    authorization_failed:
-      'Unable to authorize this device. Please try again or contact staff.',
-  };
-
-  return messages[error] ?? 'Unable to verify room access.';
+/*
+ * The code -> sentence table lives in lib/guest-passcode-messages.ts, shared
+ * with the action that chooses the codes, so a code cannot be added to one
+ * side and not the other. That is how passcode_locked went unrendered.
+ */
+function getErrorMessage(error?: string, retry?: string) {
+  return passcodeVerifyMessage(error, retry ? Number(retry) : undefined);
 }
 
 export default async function VerifyGuestStayPage({
@@ -34,10 +27,11 @@ export default async function VerifyGuestStayPage({
   searchParams: Promise<{
     k?: string;
     error?: string;
+    retry?: string;
   }>;
 }) {
   const { tagCode } = await params;
-  const { k, error } = await searchParams;
+  const { k, error, retry } = await searchParams;
 
   const scanSecret = k || '';
 
@@ -106,7 +100,8 @@ export default async function VerifyGuestStayPage({
   });
 
   const errorMessage = getErrorMessage(
-    activeStay ? error : 'no_active_stay'
+    activeStay ? error : 'no_active_stay',
+    retry
   );
 
   const roomLabel = tag.room

@@ -21,7 +21,9 @@ export class GuestStayDeviceAuthError extends Error {
       | 'PASSCODE_LOCKED'
       | 'DEVICE_LIMIT_REACHED'
       | 'DEVICE_NOT_AUTHORIZED',
-    message: string
+    message: string,
+    /** For PASSCODE_LOCKED: how long the lockout has left, so the screen can say so. */
+    public retryAfterMinutes?: number
   ) {
     super(message);
     this.name = 'GuestStayDeviceAuthError';
@@ -276,7 +278,8 @@ export async function authorizeGuestStayDeviceWithPasscode({
       'PASSCODE_LOCKED',
       `Too many incorrect passcode attempts. Try again in ${throttleState.retryAfterMinutes} minute${
         throttleState.retryAfterMinutes === 1 ? '' : 's'
-      } or contact the front desk.`
+      } or contact the front desk.`,
+      throttleState.retryAfterMinutes
     );
   }
 

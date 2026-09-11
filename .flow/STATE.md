@@ -233,7 +233,7 @@ Tasks (batched by root cause):
       set; curl on a loopback bind stays local.
 - [x] B  MAJOR 2 (this commit) — inventory-requirements uses the active quantity, skips CANCELLED
       lines, on deduct and restore alike. by test.
-- [ ] C  MINOR 1 — PASSCODE_LOCKED shows its own message. by test on the mapper.
+- [x] C  MINOR 1 (this commit) — PASSCODE_LOCKED shows its own message, with the minutes. by test on the mapper.
 - [ ] D  MINOR 2 — cancelling a PAID cash/counter order records the refund due:
       paymentStatus REFUND_PENDING + a history note naming the amount. by test on the
       rule, rows read after.

@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
+import type { PasscodeErrorCode } from '@/lib/guest-passcode-messages';
 import {
   createNfcAccessSession,
   shouldUseSecureNfcCookies,
@@ -30,10 +31,16 @@ function cleanText(value: FormDataEntryValue | null, maxLength = 200) {
 function redirectToVerify(
   tagCode: string,
   scanSecret: string,
-  error: string
+  error: PasscodeErrorCode,
+  retryAfterMinutes?: number
 ): never {
+  const retry =
+    typeof retryAfterMinutes === 'number' && retryAfterMinutes > 0
+      ? `&retry=${Math.ceil(retryAfterMinutes)}`
+      : '';
+
   redirect(
-    `/n/${tagCode}/verify?k=${encodeURIComponent(scanSecret)}&error=${error}`
+    `/n/${tagCode}/verify?k=${encodeURIComponent(scanSecret)}&error=${error}${retry}`
   );
 }
 
@@ -132,6 +139,20 @@ export async function verifyGuestStayPasscodeAction(formData: FormData) {
 
       if (error.code === 'DEVICE_LIMIT_REACHED') {
         redirectToVerify(tagCode, scanSecret, 'device_limit');
+      }
+
+      /*
+        Was missing. A locked-out guest fell through to authorization_failed,
+        whose sentence tells them to try again -- the one thing that will not
+        work for the next fifteen minutes.
+      */
+      if (error.code === 'PASSCODE_LOCKED') {
+        redirectToVerify(
+          tagCode,
+          scanSecret,
+          'passcode_locked',
+          error.retryAfterMinutes
+        );
       }
 
       redirectToVerify(tagCode, scanSecret, 'authorization_failed');
