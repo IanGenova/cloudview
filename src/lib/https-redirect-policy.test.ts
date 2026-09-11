@@ -180,3 +180,23 @@ test('a malformed request url does not redirect', () => {
     false
   );
 });
+
+/*
+ * The header set `next start -H 127.0.0.1` actually delivers: a forwarded
+ * host synthesised from Host, and a request URL naming the bind address. The
+ * resolver now honours that loopback host (it is the browser's own address),
+ * and loopback is exempt here -- so a production build on a developer's
+ * machine with FORCE_HTTPS on still does not redirect itself into a wall.
+ */
+test('a production build on loopback, as next start delivers it, does not redirect', () => {
+  assert.equal(
+    shouldForceHttpsForRequest({
+      requestUrl: 'http://localhost:3007/dashboard',
+      requestHost: '127.0.0.1:3007',
+      forwardedHost: '127.0.0.1:3007',
+      forwardedProto: 'http',
+      ...PROD,
+    }),
+    false
+  );
+});

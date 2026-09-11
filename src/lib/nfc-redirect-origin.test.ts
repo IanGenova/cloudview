@@ -86,31 +86,113 @@ test('chained proxies: the first forwarded host is the browser-facing one', () =
   );
 });
 
-test('THE PRODUCTION BUG: a proxy forwarding a DIFFERENT loopback host falls back', () => {
-  // request dialled 127.0.0.1:3000, proxy forwarded some *other* loopback name.
-  // That mismatch is the real misconfiguration, and there is no browser-usable
-  // origin to derive, so fall back to the configured one.
-  for (const host of ['localhost', 'localhost:3000', '[::1]']) {
+/*
+ * What `next start` actually delivers, measured on the built app bound to
+ * 127.0.0.1:3007 with curl:
+ *
+ *   req.headers['x-forwarded-host'] ??= req.headers['host']   (base-server ~L609)
+ *   request.url = http://<bind hostname>:<port>/...      (resolve-routes ~L117)
+ *
+ * So every request arrives with a forwarded host synthesised from the Host
+ * header, and request.url carries the BIND name, not the Host the browser
+ * sent: dial 127.0.0.1:3007 and request.url still says localhost:3007. The
+ * first repair compared the forwarded host against request.url and so it
+ * honoured `localhost` and refused `127.0.0.1` -- the curl in the finding
+ * still went to cloudhotelph.com. The right comparison is against the Host
+ * header itself: a forwarded loopback host equal to Host is Next echoing the
+ * browser's own address; one that differs is a proxy claiming loopback.
+ */
+const NEXT_START_ON_LOOPBACK = {
+  // next start -H 127.0.0.1 -p 3007, browser (or curl) at 127.0.0.1:3007
+  requestUrl: 'http://localhost:3007/n/pool-deck-main-panel?k=secret',
+  requestHost: '127.0.0.1:3007',
+  forwardedHost: '127.0.0.1:3007',
+  forwardedProto: 'http',
+};
+
+test('NEXT START: the synthesised forwarded host equals Host, so it is the browser\x27s own address -- honour it', () => {
+  assert.equal(
+    resolveGuestRedirectOrigin(NEXT_START_ON_LOOPBACK),
+    'http://127.0.0.1:3007'
+  );
+
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      ...NEXT_START_ON_LOOPBACK,
+      requestHost: 'localhost:3007',
+      forwardedHost: 'localhost:3007',
+    }),
+    'http://localhost:3007'
+  );
+
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      ...NEXT_START_ON_LOOPBACK,
+      requestHost: '[::1]:3007',
+      forwardedHost: '[::1]:3007',
+    }),
+    'http://[::1]:3007'
+  );
+
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      ...NEXT_START_ON_LOOPBACK,
+      forwardedHost: '127.0.0.1:3007 ',
+      requestHost: ' 127.0.0.1:3007',
+    }),
+    'http://127.0.0.1:3007',
+    'whitespace around either value does not defeat the match'
+  );
+});
+
+test('NEXT START: request.url naming the bind address instead of the Host must not matter', () => {
+  // request.url is built from the -H value; it is not evidence of anything.
+  for (const requestUrl of [
+    'http://localhost:3007/n/ABC?k=s',
+    'http://0.0.0.0:3007/n/ABC?k=s',
+    'http://cloudhotelph.com/n/ABC?k=s',
+    'not a url',
+  ]) {
     assert.equal(
-      resolveGuestRedirectOrigin({
-        ...PROXIED,
-        forwardedHost: host,
-        forwardedProto: 'http',
-      }),
-      null,
-      `forwarded host ${host} differs from the request host and must fall back`
+      resolveGuestRedirectOrigin({ ...NEXT_START_ON_LOOPBACK, requestUrl }),
+      'http://127.0.0.1:3007',
+      `request.url ${requestUrl} must not change the answer`
     );
   }
 });
 
-test('NEXT START: a forwarded host equal to our own host is Next synthesising it, honour it', () => {
-  // `next start` runs `req.headers['x-forwarded-host'] ??= req.headers['host']`
-  // before any handler sees the request (next base-server ~L609), so on a
-  // loopback dev server every request arrives with a *synthesised* forwarded
-  // host equal to the Host header. That is the browser's real address, not a
-  // proxy pointing at loopback -- staying on it is what keeps the just-set
-  // access cookie and the redirect on one origin. Only a forwarded loopback
-  // host that DIFFERS from the request's own host is a misconfigured proxy.
+test('NEXT START over https (next dev --experimental-https): the scheme follows the forwarded proto', () => {
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      ...NEXT_START_ON_LOOPBACK,
+      requestHost: 'localhost:3000',
+      forwardedHost: 'localhost:3000',
+      forwardedProto: 'https',
+    }),
+    'https://localhost:3000'
+  );
+});
+
+test('a proxy forwarding a DIFFERENT loopback host than the request\x27s own falls back', () => {
+  // Host says 127.0.0.1:3000 (the upstream address), the proxy explicitly
+  // claims some other loopback name. That is a misconfiguration and no
+  // browser-usable origin can be derived from it; the configured one wins.
+  for (const forwardedHost of ['localhost', 'localhost:3000', '[::1]', '127.0.0.1:9999']) {
+    assert.equal(
+      resolveGuestRedirectOrigin({
+        ...PROXIED,
+        requestHost: '127.0.0.1:3000',
+        forwardedHost,
+        forwardedProto: 'http',
+      }),
+      null,
+      `forwarded host ${forwardedHost} differs from the request host and must fall back`
+    );
+  }
+});
+
+test('without a Host to compare against, the request URL host is the next best evidence', () => {
+  // Runtimes that do not hand us the Host header (tests, other adapters).
   assert.equal(
     resolveGuestRedirectOrigin({
       requestUrl: 'http://127.0.0.1:3000/n/ABC123?k=secret',
@@ -122,24 +204,13 @@ test('NEXT START: a forwarded host equal to our own host is Next synthesising it
 
   assert.equal(
     resolveGuestRedirectOrigin({
-      requestUrl: 'http://localhost:3005/n/ABC123?k=secret',
-      forwardedHost: 'localhost:3005',
+      requestUrl: 'http://127.0.0.1:3000/n/ABC123?k=secret',
+      forwardedHost: 'localhost:3000',
       forwardedProto: 'http',
     }),
-    'http://localhost:3005'
-  );
-
-  assert.equal(
-    resolveGuestRedirectOrigin({
-      requestUrl: 'http://localhost:3005/n/ABC123?k=secret',
-      forwardedHost: 'LOCALHOST:3005',
-      forwardedProto: 'http',
-    }),
-    'http://localhost:3005',
-    'the synthesised-header match is case-insensitive on the host'
+    null
   );
 });
-
 test('a proxy forwarding an unusable bind address falls back', () => {
   for (const host of ['0.0.0.0', '0.0.0.0:3000', '[::]']) {
     assert.equal(

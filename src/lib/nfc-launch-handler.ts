@@ -62,6 +62,7 @@ function publicUrl(path: string) {
 function guestUrlForRequest(request: Request, path: string) {
   const origin = resolveGuestRedirectOrigin({
     requestUrl: request.url,
+    requestHost: request.headers.get('host'),
     forwardedHost: request.headers.get('x-forwarded-host'),
     forwardedProto: request.headers.get('x-forwarded-proto'),
   });

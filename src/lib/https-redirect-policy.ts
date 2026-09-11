@@ -48,6 +48,7 @@ function isPrivateHostname(hostname: string) {
 
 export function shouldForceHttpsForRequest(input: {
   requestUrl: string;
+  requestHost?: string | null;
   forwardedHost?: string | null;
   forwardedProto?: string | null;
   isProduction: boolean;
@@ -65,6 +66,7 @@ export function shouldForceHttpsForRequest(input: {
    */
   const origin = resolveGuestRedirectOrigin({
     requestUrl: input.requestUrl,
+    requestHost: input.requestHost,
     forwardedHost: input.forwardedHost,
     forwardedProto: input.forwardedProto,
   });

@@ -68,11 +68,32 @@ function bareHostname(hostWithPort: string) {
  * Compared with the port and case-folded, because Next copies the Host header
  * verbatim and browsers send it however they like.
  */
-function matchesRequestHost(requestUrl: string, forwardedHost: string) {
+/*
+ * Is the forwarded host the request's own host -- the one the browser dialled?
+ *
+ * `next start` synthesises x-forwarded-host from the Host header on every
+ * request (base-server ~L609), so on a loopback dev server a forwarded
+ * loopback host EQUAL to Host is the browser's real address, not a proxy
+ * pointing at loopback. The comparison has to be against the Host header:
+ * request.url is built from the bind name (`-H`), so under `next start -H
+ * 127.0.0.1` a browser at 127.0.0.1:3007 still gets request.url saying
+ * localhost:3007. The first repair compared against request.url and honoured
+ * `localhost` while refusing `127.0.0.1`. When no Host is supplied -- other
+ * runtimes, tests -- the URL host is the next best evidence.
+ */
+function matchesRequestHost(
+  input: { requestUrl: string; requestHost?: string | null },
+  forwardedHost: string
+) {
+  const candidate = forwardedHost.trim().toLowerCase();
+  const ownHost = input.requestHost?.trim().toLowerCase();
+
+  if (ownHost) {
+    return candidate === ownHost;
+  }
+
   try {
-    return (
-      new URL(requestUrl).host.toLowerCase() === forwardedHost.trim().toLowerCase()
-    );
+    return new URL(input.requestUrl).host.toLowerCase() === candidate;
   } catch {
     return false;
   }
@@ -80,6 +101,8 @@ function matchesRequestHost(requestUrl: string, forwardedHost: string) {
 
 export function resolveGuestRedirectOrigin(input: {
   requestUrl: string;
+  /** The Host header as the browser sent it. Optional only for other runtimes. */
+  requestHost?: string | null;
   forwardedHost?: string | null;
   forwardedProto?: string | null;
 }): string | null {
@@ -111,7 +134,7 @@ export function resolveGuestRedirectOrigin(input: {
      * other thing: a proxy pointing at loopback, which no guest can follow. The
      * configured origin is the better answer there.
      */
-    if (LOOPBACK_HOSTS.has(hostname) && !matchesRequestHost(input.requestUrl, forwardedHost)) {
+    if (LOOPBACK_HOSTS.has(hostname) && !matchesRequestHost(input, forwardedHost)) {
       return null;
     }
 

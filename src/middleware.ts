@@ -218,6 +218,7 @@ function createSafeNextRedirect(
 function shouldForceHttps(request: NextRequest) {
   return shouldForceHttpsForRequest({
     requestUrl: request.url,
+    requestHost: request.headers.get('host'),
     forwardedHost: request.headers.get('x-forwarded-host'),
     forwardedProto: request.headers.get('x-forwarded-proto'),
     isProduction: process.env.NODE_ENV === 'production',
@@ -325,6 +326,7 @@ export async function middleware(request: NextRequest) {
     */
     const browserOrigin = resolveGuestRedirectOrigin({
       requestUrl: request.url,
+      requestHost: request.headers.get('host'),
       forwardedHost: request.headers.get('x-forwarded-host'),
       forwardedProto: request.headers.get('x-forwarded-proto'),
     });

@@ -229,10 +229,14 @@ finding inverted — a test where the rule is logic, a curl where it is a redire
 Done = 7 status lines read `fixed`, tsc clean, suite green, build green, local commits.
 
 Tasks (batched by root cause):
-- [x] A  MAJOR 1 + MINOR 3 (this commit) — resolver treats a loopback forwarded host as usable when it
-      equals the request's own Host (Next synthesises it); README step 4 names
-      NFC_PUBLIC_APP_URL. by test: nfc-redirect-origin.test.ts gains Next's real header
-      set; curl on a loopback bind stays local.
+- [x] A  MAJOR 1 + MINOR 3 (31e89f6, corrected in this commit) — resolver treats a loopback
+      forwarded host as usable when it equals the request's own Host header (Next
+      synthesises it from Host). The first cut compared against request.url, which Next
+      builds from the BIND name, so it honoured localhost and still refused 127.0.0.1 --
+      the curl in the finding still went to cloudhotelph.com. Caught in CHECK by the live
+      curl, not by the suite. README step 4 names NFC_PUBLIC_APP_URL. by test:
+      nfc-redirect-origin.test.ts pins the measured header set; curl on a loopback bind
+      stays local (re-driven after the correction).
 - [x] B  MAJOR 2 (this commit) — inventory-requirements uses the active quantity, skips CANCELLED
       lines, on deduct and restore alike. by test.
 - [x] C  MINOR 1 (d39236b) — PASSCODE_LOCKED shows its own message, with the minutes. by test on the mapper.
