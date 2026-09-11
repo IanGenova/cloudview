@@ -277,3 +277,12 @@ Left open on purpose: a "mark cash refunded" action that clears REFUND_PENDING f
 hand-returned refund (the natural next phase of MINOR 2); the six carried blockers.
 
 Wakes since commit: 0.
+
+Deployed (11 Sep 2026, ~10:20 Manila): main pushed bf55954..cdc6e64; deploy/deploy.sh on
+the VPS (dry run first) pulled cdc6e64, ran npm ci (lockfile changed), migrate deploy
+against u610581005_cloudviewdb (30/30, no new migrations), built, reloaded
+cloudview-nextjs; health check 200. Workers untouched and online. concurrently and
+local-ssl-proxy gone from the server's node_modules. Public NFC denial redirect still
+stays on https://cloudhotelph.com through nginx. Note: a bare `npx prisma migrate status`
+on the box reads the decoy .env (cloudview@localhost) and reports a pending migration --
+that is the trap deploy.sh exists for; against the real database the schema is up to date.
