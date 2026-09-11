@@ -286,3 +286,46 @@ local-ssl-proxy gone from the server's node_modules. Public NFC denial redirect 
 stays on https://cloudhotelph.com through nginx. Note: a bare `npx prisma migrate status`
 on the box reads the decoy .env (cloudview@localhost) and reports a pending migration --
 that is the trap deploy.sh exists for; against the real database the schema is up to date.
+
+
+## Phase: guide-ux-quick (11 Sep 2026)
+
+Owner's words (11 Sep): "Can you check the UI/UX for the hotel guide in the admin portal
+and the guest portal ... is it user friendly?" then, on the review, "Can you fix that
+now???" -- the small items offered in that review. The plan gate is suspended by the
+owner for this phase (`.flow/plan-off`, their file); the admin form restructure is out.
+
+### Intent
+- I1 A guest finds the answer on the first try, typing the way people type on phones.
+- I2 A search hit is the card that holds the answer, not the drawer it is in.
+- I3 Labels on the guest guide are readable on a phone.
+- I4 A manager can see a section as a guest sees it, from the admin page, in one click.
+
+Tasks:
+- [x] G1 search normalisation + synonyms -- `src/lib/guide-search.ts`. by test (10).
+      from: I1
+- [x] G2 item-level results with a deep link to the card (`#guide-item-<id>`); sections
+      only when the section's own text matched. by test (same file) + by artifact:
+      capture of "Results for breakfast" showing the Restaurant Hours card. from: I2
+- [x] G3 every 9-10px label on the guest guide raised to 12px (`text-xs`); faint 35-45%
+      labels raised to 60%. "detail" kept -- a recorded vocabulary decision, consistent
+      with the section page. by artifact: capture at 375px. from: I3
+- [x] G4 admin "Open guest guide" + per-section "View as guest": the hotel's public tag
+      launch URL with `to=guide/<slug>`; the launch handler lands on `/t/<tag>/<path>`
+      only for a plain relative lowercase path (`src/lib/nfc-return-path.ts`), else home.
+      Shown only to users who may view NFC tags (the secret is the same one the Tags page
+      shows). Slug rule moved to `src/lib/guide-slug.ts`, one copy. by test (9 + 4) +
+      by artifact: capture of the section card with the link. from: I4
+- [ ] G5 CHECK: tsc, suite, production build on the frozen clone, then drive G1-G4 in
+      the browser against the disposable DB and capture. from: I1, I2, I3, I4
+
+Decisions:
+- Bottom nav keeps Home highlighted inside the Guide: deliberate in GuestShell
+  ("Hotel Guide belongs to Home"), same convention as iOS child screens. Not changed.
+- Room tags are never used for the preview link: a tap on one lands on the passcode
+  screen, not the guide.
+- Static Wi-Fi / arrival cards in search results match on added keywords
+  (wifi/internet/password, checkin/checkout/arrival/departure).
+
+Evidence: 3 by test (closed), 3 by artifact (open until CHECK captures), 0 by person.
+Wakes since commit: 0.

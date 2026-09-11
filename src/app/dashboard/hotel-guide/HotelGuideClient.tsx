@@ -21,7 +21,10 @@ import {
   Upload,
   X,
   Maximize2,
+  ExternalLink,
 } from "lucide-react";
+import { createGuideSlug } from "@/lib/guide-slug";
+import { withGuestReturnPath } from "@/lib/nfc-return-path";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui/Select";
@@ -1874,6 +1877,7 @@ function SectionNavigationCard({
 function SelectedSectionWorkspace({
   section,
   visibleItems,
+  guestPreviewUrl,
   onEditSection,
   onUploadSection,
   onCreateItem,
@@ -1882,6 +1886,7 @@ function SelectedSectionWorkspace({
 }: {
   section: GuideSection;
   visibleItems: GuideItem[];
+  guestPreviewUrl: string | null;
   onEditSection: (section: GuideSection) => void;
   onUploadSection: (section: GuideSection) => void;
   onCreateItem: (sectionId: string) => void;
@@ -1943,6 +1948,27 @@ function SelectedSectionWorkspace({
               </div>
 
               <div className="flex flex-wrap gap-2">
+                {/*
+                  Opens this section exactly as a guest sees it, through the
+                  hotel's own public tag. Before this a manager had to walk to a
+                  physical tag to check a change. Hidden when the hotel has no
+                  public tag or the user may not see tag secrets.
+                */}
+                {guestPreviewUrl && section.isActive ? (
+                  <a
+                    href={withGuestReturnPath(
+                      guestPreviewUrl,
+                      `guide/${createGuideSlug(section.title)}`,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#c99c38]/50 bg-[#fffaf0] px-4 text-xs font-black text-[#8a651f] transition hover:border-[#c99c38] hover:bg-[#fff3d6]"
+                  >
+                    <ExternalLink className="size-4" />
+                    View as guest
+                  </a>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={() => onEditSection(section)}
@@ -2044,12 +2070,15 @@ export function HotelGuideClient({
   message,
   defaultHotelId,
   canChangeHotel,
+  guestPreviewUrl = null,
 }: {
   hotels: HotelOption[];
   sections: GuideSection[];
   message: Message;
   defaultHotelId: string;
   canChangeHotel: boolean;
+  /* Tap URL of a public tag of the selected hotel; null when unavailable. */
+  guestPreviewUrl?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -2241,9 +2270,23 @@ export function HotelGuideClient({
               </p>
 
               {selectedHotel ? (
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#c99c38]/30 bg-[#fffaf0] px-3 py-1.5 text-xs font-black text-[#8a651f]">
-                  <Building2 className="size-4" />
-                  Managing: {selectedHotel.name}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/30 bg-[#fffaf0] px-3 py-1.5 text-xs font-black text-[#8a651f]">
+                    <Building2 className="size-4" />
+                    Managing: {selectedHotel.name}
+                  </div>
+
+                  {guestPreviewUrl ? (
+                    <a
+                      href={withGuestReturnPath(guestPreviewUrl, "guide")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-black text-neutral-700 transition hover:border-[#c99c38]/60 hover:bg-[#fffaf0]"
+                    >
+                      <ExternalLink className="size-4 text-[#c99c38]" />
+                      Open guest guide
+                    </a>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -2508,6 +2551,7 @@ export function HotelGuideClient({
               <SelectedSectionWorkspace
                 section={selectedSection}
                 visibleItems={selectedVisibleItems}
+                guestPreviewUrl={guestPreviewUrl}
                 onEditSection={setEditingSection}
                 onUploadSection={setUploadSection}
                 onCreateItem={openCreateItem}

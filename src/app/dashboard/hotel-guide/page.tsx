@@ -1,8 +1,65 @@
-import { DashboardModule, Role } from "@prisma/client";
+import { DashboardModule, Role, TagStatus, TagType } from "@prisma/client";
 import { PageHeader } from "@/components/dashboard/PageHeader";
-import { requireDashboardPermission } from "@/lib/dashboard-permissions";
+import {
+  getUserDashboardPermissions,
+  hasDashboardPermission,
+  requireDashboardPermission,
+} from "@/lib/dashboard-permissions";
 import { db } from "@/lib/db";
+import {
+  buildSecureNfcLaunchUrl,
+  resolveNfcPublicOrigin,
+} from "@/lib/nfc-public-url";
+import { readableTagSecret } from "@/lib/nfc-secret-storage";
 import { HotelGuideClient } from "./HotelGuideClient";
+
+/*
+  The tap URL of one of the hotel's public tags, so "Open in guest portal" can
+  show a manager their guide exactly as a guest sees it. A room tag would land
+  on the passcode screen, so only public types qualify. The URL carries the
+  tag's scan secret -- the same value the NFC Tags page shows -- so it is only
+  produced for users who may view that page; everyone else gets no link rather
+  than a secret they are not cleared for.
+*/
+async function resolveGuestPreviewUrl(
+  user: { id: string; role: Role },
+  hotelId: string,
+) {
+  if (!hotelId) return null;
+
+  if (user.role !== Role.SUPER_ADMIN) {
+    const permissions = await getUserDashboardPermissions(user.id, user.role);
+
+    if (!hasDashboardPermission(permissions, DashboardModule.NFC_TAGS)) {
+      return null;
+    }
+  }
+
+  const tag = await db.nfcTag.findFirst({
+    where: {
+      hotelId,
+      status: TagStatus.ACTIVE,
+      deletedAt: null,
+      tagType: { not: TagType.ROOM },
+    },
+    select: {
+      code: true,
+      scanSecret: true,
+      scanSecretCipher: true,
+    },
+    orderBy: [{ lastScannedAt: "desc" }, { createdAt: "asc" }],
+  });
+
+  if (!tag) return null;
+
+  const url = buildSecureNfcLaunchUrl({
+    origin: await resolveNfcPublicOrigin(),
+    tagCode: tag.code,
+    scanSecret: readableTagSecret(tag),
+  });
+
+  return url || null;
+}
 
 function getMessage(error?: string, success?: string) {
   if (success) {
@@ -213,6 +270,7 @@ export default async function HotelGuideModulePage({
         message={getMessage(error, success)}
         defaultHotelId={selectedHotelId}
         canChangeHotel={user.role === Role.SUPER_ADMIN}
+        guestPreviewUrl={await resolveGuestPreviewUrl(user, selectedHotelId)}
       />
     </div>
   );

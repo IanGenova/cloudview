@@ -26,6 +26,7 @@ import { GuideWifiCard } from "./GuideWifiCard";
 import { PanoramaModalButton } from "./PanoramaModalButton";
 import { GuestShell } from "@/components/guest/GuestShell";
 import { db } from "@/lib/db";
+import { createGuideSlug } from "@/lib/guide-slug";
 import { requireNfcGuestAccess } from "@/lib/nfc-security";
 
 export const dynamic = "force-dynamic";
@@ -76,15 +77,6 @@ type GuideItemCardProps = {
   panoramaImageUrl: string | null;
   galleryImages: GuideImage[];
 };
-
-function createGuideSlug(title: string) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 function resolveHref(tagCode: string, href?: string | null) {
   if (!href) return "#";
@@ -151,7 +143,7 @@ function Eyebrow({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <span className="h-px w-7 bg-[#d5ad55]" />
-      <p className="text-[9px] font-bold uppercase tracking-[0.27em] text-[#d5ad55]">
+      <p className="text-xs font-bold uppercase tracking-[0.27em] text-[#d5ad55]">
         {children}
       </p>
     </div>
@@ -512,22 +504,31 @@ export default async function GuideSectionDetailPage({
                     another screen. Keyed on the existing iconKey so it does not
                     depend on matching the title string.
                   */
-                  item.iconKey === "Wifi" && wifiName ? (
-                    <GuideWifiCard
-                      key={item.id}
-                      title={item.title}
-                      subtitle={item.subtitle}
-                      wifiName={wifiName}
-                      wifiPassword={wifiPassword}
-                    />
-                  ) : (
-                    <GuideItemCard
-                      key={item.id}
-                      item={item}
-                      tagCode={tagCode}
-                      index={index}
-                    />
-                  )
+                  /*
+                    The id is what the guide's search links to: a hit on an
+                    item lands on this card, not on the top of the section.
+                    scroll-mt keeps it clear of the sticky header.
+                  */
+                  <div
+                    key={item.id}
+                    id={`guide-item-${item.id}`}
+                    className="scroll-mt-24"
+                  >
+                    {item.iconKey === "Wifi" && wifiName ? (
+                      <GuideWifiCard
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        wifiName={wifiName}
+                        wifiPassword={wifiPassword}
+                      />
+                    ) : (
+                      <GuideItemCard
+                        item={item}
+                        tagCode={tagCode}
+                        index={index}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             </section>

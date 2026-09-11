@@ -28,6 +28,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { normalizeGuideSearchText, searchGuide } from "@/lib/guide-search";
+import { createGuideSlug } from "@/lib/guide-slug";
+
 const fallbackImage =
   "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1600&q=85";
 
@@ -89,16 +92,9 @@ type StaticInfoCard = {
   title: string;
   body: string;
   iconKey: string;
+  /* Words a guest may type that the card's own text does not contain. */
+  keywords: string;
 };
-
-function createGuideSlug(title: string) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 function getSectionHref(tagCode: string, section: GuideSection) {
   return `/t/${tagCode}/guide/${createGuideSlug(section.title)}`;
@@ -116,28 +112,8 @@ function getSectionIcon(section: GuideSection) {
   return iconMap[section.iconKey] ?? Info;
 }
 
-function sectionMatches(section: GuideSection, query: string) {
-  const searchableText = [
-    section.title,
-    section.subtitle,
-    section.description,
-    section.iconKey,
-    ...section.galleryImages.map((image) => `${image.title} ${image.caption}`),
-    ...section.items.map((item) =>
-      [
-        item.title,
-        item.subtitle,
-        item.content,
-        item.hours,
-        item.location,
-        item.contact,
-      ].join(" "),
-    ),
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  return searchableText.includes(query.toLowerCase());
+function getItemHref(tagCode: string, section: GuideSection, item: GuideItem) {
+  return `${getSectionHref(tagCode, section)}#guide-item-${item.id}`;
 }
 
 function SectionHeading({
@@ -153,7 +129,7 @@ function SectionHeading({
     <div className="mb-4">
       <div className="flex items-center gap-3">
         <span className="h-px w-8 bg-[#d5ad55]" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#d5ad55]">
+        <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#d5ad55]">
           {eyebrow}
         </p>
       </div>
@@ -195,7 +171,7 @@ function ServiceAction({
         <span className="block font-serif text-[15px] tracking-wide text-[#f7f2e8]">
           {label}
         </span>
-        <span className="mt-1 block truncate text-[10px] font-medium uppercase tracking-[0.12em] text-white/36">
+        <span className="mt-1 block truncate text-xs font-medium uppercase tracking-[0.12em] text-white/60">
           {detail}
         </span>
       </span>
@@ -228,7 +204,7 @@ function FeaturedGuideCard({
 
       <div className="relative z-10 flex min-h-[330px] flex-col justify-between p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.22em] text-[#e8c66f] backdrop-blur-xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#e8c66f] backdrop-blur-xl">
             <Icon className="size-3.5" />
             Curated guide
           </span>
@@ -239,7 +215,7 @@ function FeaturedGuideCard({
         </div>
 
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#d5ad55]">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5ad55]">
             Recommended first
           </p>
           <h3 className="mt-2 font-serif text-[2rem] font-light leading-none tracking-wide text-white">
@@ -257,7 +233,7 @@ function FeaturedGuideCard({
             page. Photo counts only appear when there are photos — advertising
             "0 photos" tells the guest about an absence.
           */}
-          <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+          <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/60">
             <span>
               {section.items.length} detail
               {section.items.length === 1 ? "" : "s"}
@@ -301,7 +277,7 @@ function GuideSectionCard({
 
       <div className="flex min-w-0 items-center gap-3 p-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d5ad55]/80">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d5ad55]/80">
             {section.items.length} detail
             {section.items.length === 1 ? "" : "s"}
           </p>
@@ -319,6 +295,58 @@ function GuideSectionCard({
           <ChevronRight className="size-4" />
         </span>
       </div>
+    </Link>
+  );
+}
+
+/*
+  A search hit on an item is the answer itself, so it is shown as one: the
+  card's own title and text, with the section it lives in as the eyebrow, and
+  the link lands on that card rather than on the section's drawer. Before this
+  a search for "breakfast" returned the Dining section and left the guest to
+  find the hours inside it.
+*/
+function SearchResultItemCard({
+  tagCode,
+  section,
+  item,
+}: {
+  tagCode: string;
+  section: GuideSection;
+  item: GuideItem;
+}) {
+  const Icon = iconMap[item.iconKey] ?? getSectionIcon(section);
+  const excerpt = item.content || item.subtitle;
+
+  return (
+    <Link
+      href={getItemHref(tagCode, section, item)}
+      className="group flex items-start gap-3 rounded-[1.45rem] border border-white/[0.08] bg-white/[0.045] p-4 transition duration-300 hover:border-[#d5ad55]/45 hover:bg-[#d5ad55]/[0.08] active:scale-[0.985]"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#d5ad55]/12 text-[#d5ad55]">
+        <Icon className="size-[18px]" />
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[#d5ad55]/85">
+          {section.title}
+        </span>
+        <span className="mt-1 block font-serif text-[17px] text-[#f7f2e8]">
+          {item.title}
+        </span>
+        {excerpt ? (
+          <span className="mt-1.5 line-clamp-2 block whitespace-pre-line text-sm leading-6 text-white/60">
+            {excerpt}
+          </span>
+        ) : null}
+        {item.hours || item.location ? (
+          <span className="mt-2 block text-xs text-white/60">
+            {[item.hours, item.location].filter(Boolean).join(" · ")}
+          </span>
+        ) : null}
+      </span>
+
+      <ChevronRight className="mt-1 size-4 shrink-0 text-[#d5ad55]/70 transition group-hover:translate-x-0.5" />
     </Link>
   );
 }
@@ -379,6 +407,7 @@ export function HotelGuideContent({
           wifiPassword || "Ask the front desk"
         }`,
         iconKey: "Wifi",
+        keywords: "wifi wireless internet network password login",
       },
       {
         id: "arrival",
@@ -387,24 +416,40 @@ export function HotelGuideContent({
           checkOutTime || "Ask the front desk"
         }`,
         iconKey: "BedDouble",
+        keywords: "checkin checkout arrival departure time hours",
       },
     ],
     [checkInTime, checkOutTime, wifiName, wifiPassword],
   );
 
-  const filteredSections = useMemo(() => {
-    if (!query) return sections;
-    return sections.filter((section) => sectionMatches(section, query));
-  }, [query, sections]);
+  /*
+    The matching rule lives in src/lib/guide-search.ts, where it is tested:
+    case, hyphens, spaces and accents are folded away and a short synonym table
+    is applied, so "wifi", "wi fi" and "Wi-Fi" are one word. On the live site
+    the first two found nothing while the empty state suggested "Try Wi-Fi".
+  */
+  const searchResults = useMemo(
+    () => searchGuide(sections, query),
+    [query, sections],
+  );
 
   const filteredStaticCards = useMemo(() => {
     if (!query) return staticInfoCards;
 
-    const lowerQuery = query.toLowerCase();
+    const needle = normalizeGuideSearchText(query);
+    if (!needle) return [];
+
     return staticInfoCards.filter((card) =>
-      `${card.title} ${card.body}`.toLowerCase().includes(lowerQuery),
+      normalizeGuideSearchText(
+        `${card.title} ${card.body} ${card.keywords}`,
+      ).includes(needle),
     );
   }, [query, staticInfoCards]);
+
+  const resultCount =
+    searchResults.items.length +
+    searchResults.sections.length +
+    filteredStaticCards.length;
 
   const featuredSection = sections[0];
   const otherSections = sections.slice(1);
@@ -439,18 +484,18 @@ export function HotelGuideContent({
 
           <div className="relative z-10 flex min-h-[400px] flex-col justify-between p-5">
             <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-[9px] font-bold uppercase tracking-[0.24em] text-[#e8c66f] backdrop-blur-xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#e8c66f] backdrop-blur-xl">
                 <Sparkles className="size-3.5" />
                 Private concierge
               </span>
 
-              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">
                 CloudView
               </span>
             </div>
 
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#d5ad55]">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#d5ad55]">
                 Welcome to your stay
               </p>
               <h1 className="mt-3 max-w-sm font-serif text-[2.75rem] font-light leading-[0.98] tracking-[-0.02em] text-[#fbf7ee]">
@@ -490,16 +535,23 @@ export function HotelGuideContent({
             <SectionHeading
               eyebrow="Search"
               title={`Results for “${query}”`}
-              description={`${filteredSections.length + filteredStaticCards.length} matching result${
-                filteredSections.length + filteredStaticCards.length === 1
-                  ? ""
-                  : "s"
+              description={`${resultCount} matching result${
+                resultCount === 1 ? "" : "s"
               }`}
             />
 
-            {filteredSections.length || filteredStaticCards.length ? (
+            {resultCount ? (
               <div className="space-y-3">
-                {filteredSections.map((section) => (
+                {searchResults.items.map(({ section, item }) => (
+                  <SearchResultItemCard
+                    key={item.id}
+                    tagCode={tagCode}
+                    section={section}
+                    item={item}
+                  />
+                ))}
+
+                {searchResults.sections.map((section) => (
                   <GuideSectionCard
                     key={section.id}
                     tagCode={tagCode}
@@ -579,7 +631,7 @@ export function HotelGuideContent({
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#d5ad55]">
+                      <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#d5ad55]">
                         Complimentary Wi-Fi
                       </p>
                       <p className="mt-2 truncate font-serif text-lg text-[#f7f2e8]">
@@ -639,7 +691,7 @@ export function HotelGuideContent({
                 <div className="grid grid-cols-2 border-t border-white/[0.07]">
                   <div className="border-r border-white/[0.07] p-5">
                     <Clock className="size-4 text-[#d5ad55]" />
-                    <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">
+                    <p className="mt-3 text-xs font-bold uppercase tracking-[0.22em] text-white/60">
                       Check-in
                     </p>
                     <p className="mt-1.5 font-serif text-lg text-[#f7f2e8]">
@@ -648,7 +700,7 @@ export function HotelGuideContent({
                   </div>
                   <div className="p-5">
                     <BedDouble className="size-4 text-[#d5ad55]" />
-                    <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">
+                    <p className="mt-3 text-xs font-bold uppercase tracking-[0.22em] text-white/60">
                       Check-out
                     </p>
                     <p className="mt-1.5 font-serif text-lg text-[#f7f2e8]">

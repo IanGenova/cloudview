@@ -17,6 +17,7 @@ import {
 } from '@/lib/nfc-guest-session';
 import { getNfcSessionPolicy } from '@/lib/nfc-session-policy';
 import { resolveGuestRedirectOrigin } from '@/lib/nfc-redirect-origin';
+import { guestLandingPath } from '@/lib/nfc-return-path';
 import {
   getActiveGuestStayForRoom,
   getAuthorizedGuestStayDeviceFromRequest,
@@ -385,6 +386,12 @@ export async function GET(
   const url = new URL(request.url);
   const inputSecret = url.searchParams.get('k') || '';
   const stableTagId = String(url.searchParams.get('i') || '').trim();
+  /*
+   * Optional landing path inside the portal, used by the dashboard's
+   * "Open in guest portal" preview links. Sanitised in nfc-return-path.ts;
+   * anything that is not a plain relative path lands on home as before.
+   */
+  const returnPath = url.searchParams.get('to');
 
   const tag = await db.nfcTag.findFirst({
     where: {
@@ -741,13 +748,10 @@ export async function GET(
 
   const redirectUrl =
     tag.status === 'ACTIVE'
-      ? guestUrlForRequest(
-          request,
-          `/t/${tag.code}?nfcSession=1`
-        )
+      ? guestUrlForRequest(request, guestLandingPath(tag.code, returnPath))
       : guestUrlForRequest(
           request,
-          `/t/${tag.code}?nfcSession=1&tagStatus=inactive`
+          guestLandingPath(tag.code, returnPath, { tagStatus: 'inactive' })
         );
 
   const response = NextResponse.redirect(redirectUrl);
