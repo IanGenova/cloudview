@@ -246,6 +246,9 @@ Tasks (batched by root cause):
 - [x] D  MINOR 2 (3a931b6; rows read in CHECK) — cancelling a PAID cash/counter order records the refund due:
       paymentStatus REFUND_PENDING + a history note naming the amount. by test on the
       rule, rows read after.
+      Rows read in CHECK on all three paths (orders 5, 6, 7 in the disposable DB). The
+      guest tracking page rendered the raw enum as "Refund_pending" once cash orders could
+      reach it -- now goes through the page's own paymentLabel(), "Refund pending".
 - [x] E  MINOR 4 (this commit) — npm audit fix; dropped concurrently, local-ssl-proxy,
       start:http and start:https; npm start is now next start -H 127.0.0.1 -p 3000.
       by test: audit critical 0 (13 advisories -> 5: 3 high are the Prisma CLI's

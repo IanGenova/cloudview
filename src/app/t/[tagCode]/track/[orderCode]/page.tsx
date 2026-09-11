@@ -1625,7 +1625,7 @@ export default async function OrderTrackingPage({
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Payment</p>
                 <p className="mt-1 font-serif tracking-wide text-white capitalize">
-                  {paymentLabel(order.paymentMethod).toLowerCase()} · {order.paymentStatus.toLowerCase()}
+                  {paymentLabel(order.paymentMethod).toLowerCase()} · {paymentLabel(order.paymentStatus).toLowerCase()}
                 </p>
               </div>
             </div>
