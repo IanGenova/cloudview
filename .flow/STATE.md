@@ -320,8 +320,18 @@ Tasks:
       Shown only to users who may view NFC tags (the secret is the same one the Tags page
       shows). Slug rule moved to `src/lib/guide-slug.ts`, one copy. by test (9 + 4) +
       by artifact: capture of the section card with the link. from: I4
-- [ ] G5 CHECK: tsc, suite, production build on the frozen clone, then drive G1-G4 in
-      the browser against the disposable DB and capture. from: I1, I2, I3, I4
+- [x] G5 CHECK (fed5dea): tsc clean; 192 tests; production build green on the frozen
+      clone three times (2b191ac, 0a37b2d, fed5dea); driven at 375px against the
+      disposable DB with the starter guide loaded. "wifi" / "wi fi" / "Wi-Fi" -> 3
+      results, Wi-Fi card first; "checkout" / "check out" -> the check-in/out card;
+      "breakfast" -> Restaurant Hours card then the Dining section (captured); "pool
+      hours" -> Pool Hours first; the item link lands on the card 214px from the top,
+      clear of the header. Labels captured at 375px: the "Curated guide" badge now reads.
+      Admin: "Open guest guide" next to Managing, "View as guest" first in each section's
+      action row; the link taps the pool tag and lands on /t/<tag>/guide/dining. Ten
+      hostile `to=` shapes (absolute URL, //host, ../, ?query, uppercase, javascript:)
+      all land on the portal home. Captures live in the browser pane, not on disk.
+      from: I1, I2, I3, I4
 
 Decisions:
 - Bottom nav keeps Home highlighted inside the Guide: deliberate in GuestShell
@@ -331,5 +341,7 @@ Decisions:
 - Static Wi-Fi / arrival cards in search results match on added keywords
   (wifi/internet/password, checkin/checkout/arrival/departure).
 
-Evidence: 3 by test (closed), 3 by artifact (open until CHECK captures), 0 by person.
+Evidence: 3 by test (closed), 3 by artifact (closed by the captures above), 0 by person.
+Shipped locally: 2b191ac, 0a37b2d, fed5dea. Not pushed -- the push gate now needs the
+owner's `.flow/allow-push`. Not deployed.
 Wakes since commit: 0.
