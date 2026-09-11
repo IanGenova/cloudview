@@ -222,14 +222,14 @@ content was discarded.
    nothing changes; if they are not, image paths move.
    Add `NFC_PUBLIC_APP_URL` if that host is not `cloudhotelph.com`.
 
-## Phase: repair ULTRA-2026-09-11 (11 Sep 2026)
+## Phase: repair ULTRA-2026-09-11 (11 Sep 2026) — SHIPPED locally, 8 commits 31e89f6..ab8f020
 
 Goal: every finding in `.flow/ULTRA-2026-09-11.md` moves to `fixed`, proven by the
 finding inverted — a test where the rule is logic, a curl where it is a redirect.
 Done = 7 status lines read `fixed`, tsc clean, suite green, build green, local commits.
 
 Tasks (batched by root cause):
-- [x] A  MAJOR 1 + MINOR 3 (31e89f6, corrected in this commit) — resolver treats a loopback
+- [x] A  MAJOR 1 + MINOR 3 (31e89f6, corrected in 94cd044; [::1] follow-on in dba2a4e) — resolver treats a loopback
       forwarded host as usable when it equals the request's own Host header (Next
       synthesises it from Host). The first cut compared against request.url, which Next
       builds from the BIND name, so it honoured localhost and still refused 127.0.0.1 --
@@ -240,7 +240,7 @@ Tasks (batched by root cause):
       Follow-on found by the same curl: with the resolver now honouring loopback, the
       HTTPS policy saw `[::1]` (URL.hostname keeps the brackets) as public and 308-ed
       every path to https. Brackets stripped before the loopback check; test pins it.
-- [x] B  MAJOR 2 (this commit) — inventory-requirements uses the active quantity, skips CANCELLED
+- [x] B  MAJOR 2 (42b4c7c; re-driven live in CHECK: bun 99->99, patty 59->59, bread 117->116) — inventory-requirements uses the active quantity, skips CANCELLED
       lines, on deduct and restore alike. by test.
 - [x] C  MINOR 1 (d39236b) — PASSCODE_LOCKED shows its own message, with the minutes. by test on the mapper.
 - [x] D  MINOR 2 (3a931b6; rows read in CHECK) — cancelling a PAID cash/counter order records the refund due:
@@ -249,11 +249,11 @@ Tasks (batched by root cause):
       Rows read in CHECK on all three paths (orders 5, 6, 7 in the disposable DB). The
       guest tracking page rendered the raw enum as "Refund_pending" once cash orders could
       reach it -- now goes through the page's own paymentLabel(), "Refund pending".
-- [x] E  MINOR 4 (this commit) — npm audit fix; dropped concurrently, local-ssl-proxy,
+- [x] E  MINOR 4 (f6bd516) — npm audit fix; dropped concurrently, local-ssl-proxy,
       start:http and start:https; npm start is now next start -H 127.0.0.1 -p 3000.
       by test: audit critical 0 (13 advisories -> 5: 3 high are the Prisma CLI's
       deepmerge-ts chain, 2 moderate are exceljs->uuid; both 'fixes' are downgrades).
-- [x] F  MINOR 5 (this commit) — ecosystem.production.cjs -> ecosystem.production.config.cjs;
+- [x] F  MINOR 5 (f6bd516) — ecosystem.production.cjs -> ecosystem.production.config.cjs;
       README and .env.example follow. deploy.sh never named the file (it only reloads
       cloudview-nextjs), so nothing to change there. by test: no command or config
       references the old name; README explains it once as history.
@@ -264,5 +264,16 @@ Assumptions:
 - A: production and LAN are unaffected either way; the fix must not change the proxied
   path's behaviour. nginx-cloudview.conf sends a real forwarded host.
 
-Stage 3 readers are still out against the frozen clone; their survivors become an
-addendum and a second task list.
+CHECK (11 Sep): tsc clean; 166 tests pass; production build green at ab8f020 on the frozen
+clone D:\_ultra\cv2; every finding re-driven on that build against the disposable DB and
+recorded in the report's Stage 4 section. Evidence: 7 by test (all closed), 2 by artifact
+(the lockout screen at desktop and 375px, the dashboard timeline showing the refund-due
+row -- both captured in the browser pane, not saved as files), 0 by person.
+
+Stage 3 readers were lost with the session that launched them; the report records stage
+3 as not run. Next inspection owes it.
+
+Left open on purpose: a "mark cash refunded" action that clears REFUND_PENDING for a
+hand-returned refund (the natural next phase of MINOR 2); the six carried blockers.
+
+Wakes since commit: 0.
