@@ -237,6 +237,9 @@ Tasks (batched by root cause):
       curl, not by the suite. README step 4 names NFC_PUBLIC_APP_URL. by test:
       nfc-redirect-origin.test.ts pins the measured header set; curl on a loopback bind
       stays local (re-driven after the correction).
+      Follow-on found by the same curl: with the resolver now honouring loopback, the
+      HTTPS policy saw `[::1]` (URL.hostname keeps the brackets) as public and 308-ed
+      every path to https. Brackets stripped before the loopback check; test pins it.
 - [x] B  MAJOR 2 (this commit) — inventory-requirements uses the active quantity, skips CANCELLED
       lines, on deduct and restore alike. by test.
 - [x] C  MINOR 1 (d39236b) — PASSCODE_LOCKED shows its own message, with the minutes. by test on the mapper.

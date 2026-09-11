@@ -188,6 +188,25 @@ test('a malformed request url does not redirect', () => {
  * and loopback is exempt here -- so a production build on a developer's
  * machine with FORCE_HTTPS on still does not redirect itself into a wall.
  */
+/*
+ * URL.hostname keeps the brackets on an IPv6 literal: new URL('http://[::1]:3007')
+ * .hostname is '[::1]', and a loopback set holding '::1' never matched it. Found
+ * by curl once the resolver started honouring loopback: Host [::1]:3007 was
+ * 308-redirected to https on every path, robots.txt included.
+ */
+test('the IPv6 loopback literal is loopback, brackets and all', () => {
+  assert.equal(
+    shouldForceHttpsForRequest({
+      requestUrl: 'http://localhost:3007/robots.txt',
+      requestHost: '[::1]:3007',
+      forwardedHost: '[::1]:3007',
+      forwardedProto: 'http',
+      ...PROD,
+    }),
+    false
+  );
+});
+
 test('a production build on loopback, as next start delivers it, does not redirect', () => {
   assert.equal(
     shouldForceHttpsForRequest({

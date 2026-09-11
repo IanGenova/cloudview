@@ -88,7 +88,8 @@ export function shouldForceHttpsForRequest(input: {
    * private address so NFC phones on the hotel's wifi can reach it. Those
    * hosts have no certificate, so redirecting them to https is an outage.
    */
-  if (isPrivateHostname(parsed.hostname.toLowerCase())) {
+  /* URL.hostname keeps the brackets on an IPv6 literal; the loopback set does not. */
+  if (isPrivateHostname(parsed.hostname.toLowerCase().replace(/^\[|\]$/g, ''))) {
     return false;
   }
 
