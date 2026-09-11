@@ -342,6 +342,10 @@ Decisions:
   (wifi/internet/password, checkin/checkout/arrival/departure).
 
 Evidence: 3 by test (closed), 3 by artifact (closed by the captures above), 0 by person.
-Shipped locally: 2b191ac, 0a37b2d, fed5dea. Not pushed -- the push gate now needs the
-owner's `.flow/allow-push`. Not deployed.
+Shipped locally: 2b191ac, 0a37b2d, fed5dea, 906143a. Pushed 11 Sep ~12:02 (owner created
+`.flow/allow-push`); deployed to the VPS at 906143a via deploy.sh (dry run first, no
+migrations, health 200). Proven on cloudhotelph.com through the real Pool Deck tag:
+"wifi" / "wi fi" / "internet" -> Wi-Fi card first, "checkout" / "check out" -> the
+check-in/out card, "breakfast" -> Restaurant Hours; the admin "View as guest" link
+lands on /t/LNRX6MKW/guide/dining.
 Wakes since commit: 0.
