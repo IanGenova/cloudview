@@ -86,8 +86,11 @@ test('chained proxies: the first forwarded host is the browser-facing one', () =
   );
 });
 
-test('THE PRODUCTION BUG: a proxy must never send a guest to loopback', () => {
-  for (const host of ['localhost', 'localhost:3000', '127.0.0.1:3000', '[::1]']) {
+test('THE PRODUCTION BUG: a proxy forwarding a DIFFERENT loopback host falls back', () => {
+  // request dialled 127.0.0.1:3000, proxy forwarded some *other* loopback name.
+  // That mismatch is the real misconfiguration, and there is no browser-usable
+  // origin to derive, so fall back to the configured one.
+  for (const host of ['localhost', 'localhost:3000', '[::1]']) {
     assert.equal(
       resolveGuestRedirectOrigin({
         ...PROXIED,
@@ -95,9 +98,46 @@ test('THE PRODUCTION BUG: a proxy must never send a guest to loopback', () => {
         forwardedProto: 'http',
       }),
       null,
-      `forwarded host ${host} must fall back, not be used`
+      `forwarded host ${host} differs from the request host and must fall back`
     );
   }
+});
+
+test('NEXT START: a forwarded host equal to our own host is Next synthesising it, honour it', () => {
+  // `next start` runs `req.headers['x-forwarded-host'] ??= req.headers['host']`
+  // before any handler sees the request (next base-server ~L609), so on a
+  // loopback dev server every request arrives with a *synthesised* forwarded
+  // host equal to the Host header. That is the browser's real address, not a
+  // proxy pointing at loopback -- staying on it is what keeps the just-set
+  // access cookie and the redirect on one origin. Only a forwarded loopback
+  // host that DIFFERS from the request's own host is a misconfigured proxy.
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      requestUrl: 'http://127.0.0.1:3000/n/ABC123?k=secret',
+      forwardedHost: '127.0.0.1:3000',
+      forwardedProto: 'http',
+    }),
+    'http://127.0.0.1:3000'
+  );
+
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      requestUrl: 'http://localhost:3005/n/ABC123?k=secret',
+      forwardedHost: 'localhost:3005',
+      forwardedProto: 'http',
+    }),
+    'http://localhost:3005'
+  );
+
+  assert.equal(
+    resolveGuestRedirectOrigin({
+      requestUrl: 'http://localhost:3005/n/ABC123?k=secret',
+      forwardedHost: 'LOCALHOST:3005',
+      forwardedProto: 'http',
+    }),
+    'http://localhost:3005',
+    'the synthesised-header match is case-insensitive on the host'
+  );
 });
 
 test('a proxy forwarding an unusable bind address falls back', () => {

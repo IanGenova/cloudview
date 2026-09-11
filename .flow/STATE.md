@@ -219,3 +219,34 @@ content was discarded.
    `/var/www/cloudview-uploads` to match the nginx alias. If those are set,
    nothing changes; if they are not, image paths move.
    Add `NFC_PUBLIC_APP_URL` if that host is not `cloudhotelph.com`.
+
+## Phase: repair ULTRA-2026-09-11 (11 Sep 2026)
+
+Goal: every finding in `.flow/ULTRA-2026-09-11.md` moves to `fixed`, proven by the
+finding inverted — a test where the rule is logic, a curl where it is a redirect.
+Done = 7 status lines read `fixed`, tsc clean, suite green, build green, local commits.
+
+Tasks (batched by root cause):
+- [x] A  MAJOR 1 + MINOR 3 (this commit) — resolver treats a loopback forwarded host as usable when it
+      equals the request's own Host (Next synthesises it); README step 4 names
+      NFC_PUBLIC_APP_URL. by test: nfc-redirect-origin.test.ts gains Next's real header
+      set; curl on a loopback bind stays local.
+- [ ] B  MAJOR 2 — inventory-requirements uses the active quantity, skips CANCELLED
+      lines, on deduct and restore alike. by test.
+- [ ] C  MINOR 1 — PASSCODE_LOCKED shows its own message. by test on the mapper.
+- [ ] D  MINOR 2 — cancelling a PAID cash/counter order records the refund due:
+      paymentStatus REFUND_PENDING + a history note naming the amount. by test on the
+      rule, rows read after.
+- [ ] E  MINOR 4 — npm audit fix; drop concurrently, local-ssl-proxy and start:https.
+      by test: audit critical 0.
+- [ ] F  MINOR 5 — ecosystem.production.cjs -> ecosystem.production.config.cjs; README
+      and deploy.sh follow. by test: old name referenced nowhere.
+
+Assumptions:
+- D: no schema change. REFUND_PENDING already exists in PaymentStatus and the dashboard
+  renders it; that is the signal. A "mark cash refunded" action is a later phase.
+- A: production and LAN are unaffected either way; the fix must not change the proxied
+  path's behaviour. nginx-cloudview.conf sends a real forwarded host.
+
+Stage 3 readers are still out against the frozen clone; their survivors become an
+addendum and a second task list.

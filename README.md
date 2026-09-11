@@ -112,8 +112,13 @@ Update `.env`:
 DATABASE_URL="mysql://cloudview_user:strong_password@localhost:3306/cloudview"
 AUTH_SECRET="replace-with-a-long-random-secret"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NFC_PUBLIC_APP_URL="http://localhost:3000"
 MOCK_POS_SHARED_SECRET="dev-pos-secret"
 ```
+
+`NFC_PUBLIC_APP_URL` is the origin the dashboard prints into NFC launch links and QR
+codes. Without it a local build shows `https://cloudhotelph.com/n/…` on the NFC Tags
+page — links that point at production, not at your machine.
 
 Generate a strong auth secret:
 
