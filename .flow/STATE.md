@@ -369,11 +369,15 @@ Tasks:
 - [x] P2 the section screen's remaining 9-10px labels (photo count badge, gallery modal,
       Wi-Fi card) lifted to 12px / 60%, same as the guide home last phase. by artifact:
       capture at 375px in CHECK. from: P1
-- [ ] P3 CHECK: build on the frozen clone, upload a UUID-named photo in the disposable
-      admin, read the guest page. from: P1
+- [x] P3 CHECK (a936423): tsc clean, 198 tests, build green on the frozen clone. Uploaded
+      three photos through the disposable admin -- d885ab12-....png, IMG_20260911_101512.png,
+      sunset-over-the-pool.png -- and read the rows: null, null, "Sunset over the pool".
+      The guest Facilities page at 375px shows the hero photo with the "3 photographs"
+      badge and no caption; no UUID or IMG text anywhere on the page. from: P1
 
 Decision: the three stored titles on production are left as they are; the display guard
 makes them invisible and a data fix would be the owner's call.
 
-Evidence: 1 by test (closed), 1 by artifact (open until CHECK), 0 by person.
+Evidence: 1 by test (closed), 1 by artifact (closed by the 375px capture in CHECK), 0 by person.
+Shipped locally: a936423. Not pushed, not deployed.
 Wakes since commit: 0.
