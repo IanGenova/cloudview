@@ -379,5 +379,8 @@ Decision: the three stored titles on production are left as they are; the displa
 makes them invisible and a data fix would be the owner's call.
 
 Evidence: 1 by test (closed), 1 by artifact (closed by the 375px capture in CHECK), 0 by person.
-Shipped locally: a936423. Not pushed, not deployed.
+Shipped locally: a936423, 5446cab. Pushed and deployed to the VPS at 5446cab (11 Sep
+~12:40, dry run first, no migrations, health 200). The live Facilities page from the
+owner's screenshot now shows the hero photo with no caption; the three stored UUID titles
+are left in the database and simply not shown.
 Wakes since commit: 0.
