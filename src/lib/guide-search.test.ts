@@ -140,6 +140,50 @@ test('an accented query finds unaccented text and vice versa', () => {
   assert.ok(searchGuide(sections, 'café').sections.some((s) => s.id === 'dining'));
 });
 
+/*
+ * Driven on the rebuilt clone: "Wi-Fi" returned five results with Pool Hours
+ * first, while "wifi" returned three with the Wi-Fi card first. The hyphen
+ * split the word into "wi" and "fi", and those fragments matched "with" and
+ * "first" all over the guide. A hyphenated or spaced word is one word; only
+ * real words of a multi-word query are tried on their own.
+ */
+test('a hyphenated word is one word, not two fragments', () => {
+  const withNoise = [
+    ...sections,
+    {
+      id: 'facilities',
+      title: 'Facilities',
+      subtitle: 'Explore facilities and amenities',
+      description: 'Pool, gym and spa.',
+      iconKey: 'Waves',
+      galleryImages: [],
+      items: [
+        {
+          id: 'pool',
+          title: 'Pool Hours',
+          subtitle: 'Open daily',
+          content: 'Pool is open daily with towels at the first cabana.',
+          hours: '7:00 AM - 9:00 PM',
+          location: null,
+          contact: null,
+        },
+      ],
+    },
+  ];
+
+  for (const query of ['Wi-Fi', 'wi fi', 'wifi']) {
+    const ids = searchGuide(withNoise, query).items.map((h) => h.item.id);
+
+    assert.deepEqual(ids, ['wifi'], `${query} must find only the Wi-Fi card`);
+  }
+});
+
+test('short words in a phrase do not add noise', () => {
+  const ids = searchGuide(sections, 'check out').items.map((h) => h.item.id);
+
+  assert.deepEqual(ids, ['times']);
+});
+
 test('no item is returned twice', () => {
   const result = searchGuide(sections, 'check');
   const ids = result.items.map((h) => h.item.id);

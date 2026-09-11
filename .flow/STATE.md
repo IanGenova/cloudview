@@ -302,8 +302,10 @@ owner for this phase (`.flow/plan-off`, their file); the admin form restructure 
 - I4 A manager can see a section as a guest sees it, from the admin page, in one click.
 
 Tasks:
-- [x] G1 search normalisation + synonyms -- `src/lib/guide-search.ts`. by test (10).
-      from: I1
+- [x] G1 search normalisation + synonyms -- `src/lib/guide-search.ts`. by test (12).
+      CHECK found "Wi-Fi" splitting into "wi"/"fi" fragments that matched "with" and
+      "first" everywhere (5 results, Pool Hours first); words under four letters are no
+      longer tried on their own. from: I1
 - [x] G2 item-level results with a deep link to the card (`#guide-item-<id>`); sections
       only when the section's own text matched. by test (same file) + by artifact:
       capture of "Results for breakfast" showing the Restaurant Hours card. from: I2

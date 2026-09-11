@@ -95,13 +95,21 @@ export function normalizeGuideSearchText(text: string) {
  * The query is first tried whole -- "check out" folds to "checkout" and must
  * match "Check-out" -- then word by word, so "pool hours" still finds a card
  * that mentions either. Every candidate carries its synonyms.
+ *
+ * Only real words are tried on their own. "Wi-Fi" split into "wi" and "fi"
+ * matched "with" and "first" across the whole guide and put Pool Hours ahead
+ * of the Wi-Fi card; a fragment shorter than four letters is either part of a
+ * hyphenated word or a stop word, and the whole-query match already covers
+ * the short single words ("gym", "spa").
  */
+const MIN_WORD_LENGTH = 4;
+
 function queryCandidates(query: string) {
   const whole = normalizeGuideSearchText(query);
   const words = query
     .split(/[^\p{L}\p{N}]+/u)
     .map(normalizeGuideSearchText)
-    .filter((word) => word.length >= 2);
+    .filter((word) => word.length >= MIN_WORD_LENGTH);
 
   const candidates = new Set<string>();
 
