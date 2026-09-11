@@ -124,6 +124,14 @@ function queryCandidates(query: string) {
   return [...candidates];
 }
 
+/* How many of the query's candidates the title itself contains. */
+function titleScoreFor(title: string, candidates: string[]) {
+  const normalizedTitle = normalizeGuideSearchText(title);
+
+  return candidates.filter((candidate) => normalizedTitle.includes(candidate))
+    .length;
+}
+
 function haystackMatches(
   parts: Array<string | null | undefined>,
   candidates: string[]
@@ -146,7 +154,9 @@ export function searchGuide<Section extends GuideSearchSection>(
   }
 
   const matchedSections: Section[] = [];
-  const matchedItems: GuideSearchResult<Section>['items'] = [];
+  const matchedItems: Array<
+    GuideSearchResult<Section>["items"][number] & { titleScore: number }
+  > = [];
 
   for (const section of sections) {
     const sectionOwnText = [
@@ -173,10 +183,28 @@ export function searchGuide<Section extends GuideSearchSection>(
       ];
 
       if (haystackMatches(itemText, candidates)) {
-        matchedItems.push({ section, item });
+        matchedItems.push({
+          section,
+          item,
+          /*
+           * A card whose title matches is the likelier answer than one that
+           * merely mentions the word, and the more of the query its title
+           * carries the better: "pool hours" put Restaurant Hours first
+           * because every hours card contains "hours" and Dining sorts first.
+           */
+          titleScore: titleScoreFor(item.title, candidates),
+        });
       }
     }
   }
 
-  return { sections: matchedSections, items: matchedItems };
+  /* Stable: the strongest title match first, otherwise the guide's own order. */
+  const ranked = matchedItems
+    .map((hit, index) => ({ hit, index }))
+    .sort(
+      (a, b) => b.hit.titleScore - a.hit.titleScore || a.index - b.index
+    )
+    .map(({ hit }) => ({ section: hit.section, item: hit.item }));
+
+  return { sections: matchedSections, items: ranked };
 }

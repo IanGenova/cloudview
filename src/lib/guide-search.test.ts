@@ -178,6 +178,41 @@ test('a hyphenated word is one word, not two fragments', () => {
   }
 });
 
+/*
+ * "pool hours" matched Restaurant Hours first, because "hours" is in every
+ * hours card and Dining sorts before Facilities. A card whose TITLE matches
+ * is the likelier answer than one that merely mentions the word.
+ */
+test('a title match outranks a mention in the text', () => {
+  const two = [
+    ...sections,
+    {
+      id: 'facilities',
+      title: 'Facilities',
+      subtitle: '',
+      description: '',
+      iconKey: 'Waves',
+      galleryImages: [],
+      items: [
+        {
+          id: 'pool',
+          title: 'Pool Hours',
+          subtitle: 'Open daily',
+          content: 'Pool is open daily.',
+          hours: '7:00 AM - 9:00 PM',
+          location: null,
+          contact: null,
+        },
+      ],
+    },
+  ];
+
+  const ids = searchGuide(two, 'pool hours').items.map((h) => h.item.id);
+
+  assert.equal(ids[0], 'pool');
+  assert.ok(ids.includes('hours'), 'the restaurant hours still appear, just later');
+});
+
 test('short words in a phrase do not add noise', () => {
   const ids = searchGuide(sections, 'check out').items.map((h) => h.item.id);
 
