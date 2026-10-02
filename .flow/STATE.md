@@ -384,3 +384,26 @@ Shipped locally: a936423, 5446cab. Pushed and deployed to the VPS at 5446cab (11
 owner's screenshot now shows the hero photo with no caption; the three stored UUID titles
 are left in the database and simply not shown.
 Wakes since commit: 0.
+
+## Phase: uiux-audit (2 October 2026) — report sealed, apply gated
+
+`/flow:uiux` on the whole product. Stages 1–3 complete; stage 4 (apply) has not started and
+cannot: `.flow/uiux/pending` holds every source write closed until the owner runs
+`node .flow/uiux/2026-10-02/confirm.mjs`.
+
+- Captured 141 screens of `2c7e5eb` from a disposable instance (fresh MySQL on 3399, pm2 on
+  3007, Chrome via playwright-core, 1440 and 390, light and dark). Harness, captures and
+  measurements under `D:/_ultra/uiux/`; the record is `.flow/uiux/2026-10-02/STAGE-1-CAPTURE.md`.
+- Six lenses returned **72 findings — 5 BLOCKER, 55 MAJOR, 12 MINOR**, sealed in
+  `.flow/UIUX-2026-10-02.md` with a status line each.
+- Five causes; five screen groups; seven screens designed, rendered and published for review
+  at <https://claude.ai/artifact/G2i6CALe3HjdzB3REq7rNo>.
+- **Six decisions are with the owner** (typeface pair, dashboard regroup + renames, guest tab
+  bar + merging `/orders` with `/activity`, whether the portal follows the theme, kitchen TV
+  Mode as default, landing page in or out of scope). Group E does not start until they answer.
+- Correction to an earlier claim in this session: emoji in interface chrome is **one**
+  instance (`☁`, `GuestShell.tsx:55`), not zero. A Unicode grep in this environment reported
+  zero; a plain search finds it.
+- The disposable environment is still up (pm2 app `cvuiux`, MySQL on 3399 from `D:/_ultra/db`).
+
+Wakes since commit: 0.

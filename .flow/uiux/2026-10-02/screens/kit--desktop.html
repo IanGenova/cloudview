@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component kit and states — redesign</title>
+<link rel="stylesheet" href="cv.css">
+<style>
+  body { width: 1440px; }
+  .sheet { padding: 40px 44px 56px; }
+  .sheet > header { border-bottom: 1px solid var(--paper-hairline-strong); padding-bottom: 18px; margin-bottom: 30px; }
+  .sheet > header h1 { font-family: var(--cv-serif); font-size: 34px; }
+  .sheet > header p { color: var(--paper-muted); font-size: 14px; margin-top: 8px; max-width: 760px; }
+
+  section { margin-bottom: 36px; }
+  section > h2 { font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--paper-muted); padding-bottom: 10px; border-bottom: 1px solid var(--paper-hairline); }
+  .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-end; padding: 22px 0 0; }
+  .cell { display: grid; gap: 8px; }
+  .cap { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--paper-faint); }
+
+  .type-row { display: grid; grid-template-columns: 180px 1fr; gap: 20px; padding: 14px 0;
+    border-bottom: 1px solid var(--paper-hairline); align-items: baseline; }
+  .type-row .k { font-size: 12px; color: var(--paper-muted); font-variant-numeric: tabular-nums; }
+
+  .sw { display: flex; gap: 0; border: 1px solid var(--paper-hairline-strong); width: max-content; }
+  .sw div { width: 104px; height: 64px; display: flex; align-items: flex-end; padding: 6px;
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; border-right: 1px solid var(--paper-hairline); }
+  .sw div:last-child { border-right: 0; }
+
+  .states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+    border: 1px solid var(--paper-hairline); background: var(--paper-surface); }
+  .states > div { padding: 18px; border-right: 1px solid var(--paper-hairline);
+    border-bottom: 1px solid var(--paper-hairline); }
+  .states > div:nth-child(4n) { border-right: 0; }
+  .focus-demo { outline: 2px solid var(--paper-ink); outline-offset: 2px; }
+  .err { border-color: var(--st-stop) !important; }
+  .errmsg { color: var(--st-stop); font-size: 13px; margin-top: 7px; display: flex; gap: 7px; align-items: flex-start; }
+  .errmsg::before { content: '!'; font-weight: 600; border: 1px solid currentColor; width: 16px;
+    height: 16px; display: inline-flex; align-items: center; justify-content: center; flex: none; font-size: 11px; }
+
+  .emptybox { border: 1px solid var(--paper-hairline); background: var(--paper-surface);
+    padding: 34px 30px; max-width: 520px; }
+  .emptybox .t { font-family: var(--cv-serif); font-size: 22px; }
+  .emptybox p { color: var(--paper-muted); font-size: 14px; margin-top: 8px; line-height: 1.6; }
+  .emptybox .btn { margin-top: 18px; }
+  .was { color: var(--st-stop); font-size: 13px; margin-top: 12px; }
+  .was b { font-weight: 600; }
+
+  .skel { background: var(--paper-sunk); height: 13px; }
+  .inkpanel { background: var(--ink-bg); color: var(--ink-text); padding: 24px; }
+</style>
+</head>
+<body class="paper">
+<div class="sheet">
+
+  <header>
+    <h1>One system, defined once</h1>
+    <p>Radius, colour, type, spacing and hairlines live in <code>globals.css</code> and
+      <code>tailwind.config.ts</code> and nowhere else. Every component below ships the eight
+      states the brief requires. Nothing on this sheet has a corner radius except a status dot.</p>
+  </header>
+
+  <section>
+    <h2>Type — one display serif, one grotesque</h2>
+    <div class="type-row"><span class="k">Display / 40 · EB Garamond</span><span class="display d-40">Cloud View Demo Hotel</span></div>
+    <div class="type-row"><span class="k">Display / 26</span><span class="display d-26">Order food</span></div>
+    <div class="type-row"><span class="k">Figure / 38 · tabular</span><span class="figure" style="font-size:38px">₱3,163.20</span></div>
+    <div class="type-row"><span class="k">Body / 15 · Instrument Sans</span><span class="body">Pancakes with butter, syrup, and fresh fruit.</span></div>
+    <div class="type-row"><span class="k">Small / 13</span><span class="small">Pay at counter · unpaid</span></div>
+    <div class="type-row"><span class="k">Micro / 11 · 0.20em</span><span class="micro">Awaiting acceptance</span></div>
+  </section>
+
+  <section>
+    <h2>Colour — paper and ink, with the gold as a line</h2>
+    <div class="row">
+      <div class="cell"><span class="cap">Paper</span>
+        <div class="sw">
+          <div style="background:#f4f2ed">bg</div><div style="background:#fff">surface</div>
+          <div style="background:#eceae4">sunk</div><div style="background:#16130e;color:#fff">ink</div>
+          <div style="background:#6a6358;color:#fff">muted</div><div style="background:#ddd8cd">hairline</div>
+        </div>
+      </div>
+      <div class="cell"><span class="cap">Ink (guest)</span>
+        <div class="sw">
+          <div style="background:#0b0b0a;color:#fff">bg</div><div style="background:#121211;color:#fff">surface</div>
+          <div style="background:#191817;color:#fff">raised</div><div style="background:#f3f0ea">text</div>
+          <div style="background:#2b2a27;color:#fff">hairline</div>
+        </div>
+      </div>
+      <div class="cell"><span class="cap">Accent — rules and one word, never a filled surface</span>
+        <div class="sw"><div style="background:#c99c38">line #c99c38</div><div style="background:#8a641b;color:#fff">text #8a641b</div></div>
+      </div>
+      <div class="cell"><span class="cap">Status — dot plus word</span>
+        <div style="display:grid;gap:7px">
+          <span class="status"><span class="dot dot-live"></span>Delivered</span>
+          <span class="status"><span class="dot dot-wait"></span>Needs acceptance</span>
+          <span class="status"><span class="dot dot-stop"></span>Cancelled · refund due</span>
+          <span class="status"><span class="dot dot-done"></span>Closed</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Button — one accent action per screen; everything else is a hairline or text</h2>
+    <div class="states">
+      <div><span class="cap">Default</span><div style="margin-top:10px"><button class="btn btn-primary">Accept</button></div></div>
+      <div><span class="cap">Hover</span><div style="margin-top:10px"><button class="btn btn-primary" style="background:#2a251d">Accept</button></div></div>
+      <div><span class="cap">Focus-visible</span><div style="margin-top:10px"><button class="btn btn-primary focus-demo">Accept</button></div></div>
+      <div><span class="cap">Disabled</span><div style="margin-top:10px"><button class="btn btn-primary" style="opacity:.42" disabled>Accept</button></div></div>
+      <div><span class="cap">Secondary</span><div style="margin-top:10px"><button class="btn btn-line">Open</button></div></div>
+      <div><span class="cap">Text</span><div style="margin-top:10px"><button class="btn btn-text">Print run sheet</button></div></div>
+      <div><span class="cap">Destructive</span><div style="margin-top:10px"><button class="btn btn-danger">Cancel order</button></div></div>
+      <div><span class="cap">Loading</span><div style="margin-top:10px"><button class="btn btn-primary" style="opacity:.7">Accepting…</button></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Field — square, label above, error at the field</h2>
+    <div class="states">
+      <div><label class="field"><span class="micro">Guest name</span><input placeholder="Maria Santos"></label></div>
+      <div><label class="field"><span class="micro">Guest name</span><input value="Maria Santos" class="focus-demo"></label></div>
+      <div><label class="field"><span class="micro">Guest name</span><input value="Maria Santos" disabled style="background:var(--paper-sunk);color:var(--paper-faint)"></label></div>
+      <div><label class="field"><span class="micro">Phone <span style="color:var(--paper-accent)">*</span></span><input value="0917" class="err"><span class="errmsg">Enter 11 digits, starting 09.</span></label></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Empty states — written like a concierge note, not "No data found"</h2>
+    <div class="row" style="align-items:flex-start">
+      <div class="emptybox">
+        <p class="t">No services are set up yet</p>
+        <p>Guests tapping a panel will not see this screen until the hotel adds its first
+          service. Housekeeping, towels and maintenance are the usual three.</p>
+        <button class="btn btn-primary">Add the first service</button>
+        <p class="was">Today it says: <b>“No services found. Try another category or clear your search.”</b> — to a guest who searched nothing.</p>
+      </div>
+      <div class="emptybox">
+        <p class="t">Nothing waiting</p>
+        <p>Every order placed today has been accepted. New orders appear here the moment a
+          guest taps a panel.</p>
+        <p class="was">Today: an empty card area with no words at all.</p>
+      </div>
+      <div class="emptybox">
+        <p class="t">That page has moved on</p>
+        <p>Your request may still have gone through. Open My Requests to check, or call the
+          front desk on extension 0.</p>
+        <button class="btn btn-line">Open my requests</button>
+        <p class="was">Today: <b>a bare Next.js 404</b> — white page, system font, no hotel
+          name, no way back. There is no <code>not-found.tsx</code> or
+          <code>error.tsx</code> anywhere in the repository.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Loading — a skeleton that keeps the layout, never a spinner over a drawn page</h2>
+    <div class="row">
+      <div style="border:1px solid var(--paper-hairline);background:var(--paper-surface);padding:16px;width:420px">
+        <div class="skel" style="width:40%"></div>
+        <div class="skel" style="width:70%;margin-top:12px"></div>
+        <div class="skel" style="width:55%;margin-top:12px"></div>
+        <div class="rule" style="margin:16px 0"></div>
+        <div class="skel" style="width:30%"></div>
+      </div>
+      <p class="small" style="max-width:380px;color:var(--paper-muted)">
+        The repository holds exactly one loading file,
+        <code>src/app/dashboard/loading.tsx</code>. It replaces the whole page including the
+        sidebar, so a refresh mid-task reads as a sign-out — and the guest portal has no
+        loading state at all. A skeleton belongs to the region that is loading, not the app.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The guest surface, same system inverted</h2>
+    <div class="inkpanel ink">
+      <div class="row" style="padding-top:0">
+        <div class="cell"><span class="cap" style="color:var(--ink-faint)">Primary</span><button class="btn btn-primary">Review order</button></div>
+        <div class="cell"><span class="cap" style="color:var(--ink-faint)">Secondary</span><button class="btn btn-line">Add a note</button></div>
+        <div class="cell"><span class="cap" style="color:var(--ink-faint)">Field</span>
+          <label class="field"><span class="micro">Room number</span><input placeholder="305"></label></div>
+        <div class="cell"><span class="cap" style="color:var(--ink-faint)">Status</span>
+          <span class="status"><span class="dot dot-live"></span>On its way</span></div>
+        <div class="cell"><span class="cap" style="color:var(--ink-faint)">Price</span>
+          <span class="figure" style="font-size:26px">₱780.80</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,155 @@
+/*
+ * CloudView — redesign mockup kit.
+ *
+ * Every token the redesigned screens use, defined once. This file is the
+ * specification the real `globals.css` and `tailwind.config.ts` will carry; the
+ * mockups import it so that what the owner approves is literally the token set
+ * that gets applied.
+ *
+ * Three rules, from the owner's brief, enforced here rather than remembered:
+ *   --cv-radius is 0 and nothing sets a radius except a status dot or spinner;
+ *   the accent is a rule, a line, a word — never a filled surface;
+ *   the heaviest sans weight available is 600.
+ */
+
+/* ── Type ───────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --cv-serif: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
+  --cv-sans: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --cv-radius: 0;
+
+  /* Paper — the staff dashboard. */
+  --paper-bg: #f4f2ed;
+  --paper-surface: #ffffff;
+  --paper-sunk: #eceae4;
+  --paper-ink: #16130e;
+  --paper-muted: #6a6358;
+  --paper-faint: #918a7d;
+  --paper-hairline: #ddd8cd;
+  --paper-hairline-strong: #c2bbab;
+  --paper-accent: #8a641b;      /* gold, darkened for 4.5:1 on paper */
+  --paper-accent-line: #c99c38; /* the brand gold, used only as a rule */
+
+  /* Ink — the guest portal. */
+  --ink-bg: #0b0b0a;
+  --ink-surface: #121211;
+  --ink-raised: #191817;
+  --ink-text: #f3f0ea;
+  --ink-muted: rgba(243, 240, 234, 0.68);
+  --ink-faint: rgba(243, 240, 234, 0.52);
+  --ink-hairline: rgba(243, 240, 234, 0.16);
+  --ink-hairline-strong: rgba(243, 240, 234, 0.3);
+  --ink-accent: #d9ae4d;
+
+  /* Status: a dot and a word, never a filled pill. */
+  --st-live: #2f8f5b;
+  --st-wait: #9a7320;
+  --st-stop: #a4342a;
+  --st-done: #4a5a6b;
+
+  --tap: 44px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+* { border-radius: var(--cv-radius); }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--cv-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+img { display: block; max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; background: none; border: 0; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4, p, figure { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+table { border-collapse: collapse; width: 100%; }
+
+:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* ── Type roles ─────────────────────────────────────────────────────────── */
+.display   { font-family: var(--cv-serif); font-weight: 400; line-height: 1.08; letter-spacing: -0.01em; }
+.d-56 { font-size: 56px; } .d-40 { font-size: 40px; } .d-32 { font-size: 32px; }
+.d-26 { font-size: 26px; } .d-22 { font-size: 22px; } .d-19 { font-size: 19px; }
+
+.micro {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.2em; line-height: 1.4;
+}
+.micro-sm { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; }
+.body { font-size: 15px; line-height: 1.65; }
+.small { font-size: 13px; line-height: 1.5; }
+.figure { font-family: var(--cv-serif); font-variant-numeric: tabular-nums; font-weight: 400; }
+
+/* ── Structure ──────────────────────────────────────────────────────────── */
+.rule        { border: 0; border-top: 1px solid var(--paper-hairline); margin: 0; }
+.rule-accent { border: 0; border-top: 1px solid var(--paper-accent-line); margin: 0; }
+.ink .rule   { border-top-color: var(--ink-hairline); }
+.ink .rule-accent { border-top-color: var(--ink-accent); }
+
+/* Status: dot + word. */
+.status { display: inline-flex; align-items: center; gap: 7px; }
+.status .dot { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+.dot-live { background: var(--st-live); } .dot-wait { background: var(--st-wait); }
+.dot-stop { background: var(--st-stop); } .dot-done { background: var(--st-done); }
+
+/* Buttons — one accent action per screen; the rest are hairline or text. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: var(--tap); padding: 0 20px; font-size: 14px; font-weight: 500;
+  letter-spacing: 0.01em; cursor: pointer;
+  transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out;
+}
+.btn-primary { background: var(--paper-ink); color: #fff; }
+.btn-primary:hover { background: #2a251d; }
+.btn-line { border: 1px solid var(--paper-hairline-strong); color: var(--paper-ink); }
+.btn-line:hover { border-color: var(--paper-ink); }
+.btn-text { padding: 0 4px; color: var(--paper-muted); text-decoration: underline;
+  text-underline-offset: 3px; text-decoration-color: var(--paper-hairline-strong); }
+.btn-text:hover { color: var(--paper-ink); }
+.btn-danger { color: var(--st-stop); border: 1px solid transparent; padding: 0 12px; }
+.btn-danger:hover { border-color: var(--st-stop); }
+
+.ink .btn-primary { background: var(--ink-text); color: var(--ink-bg); }
+.ink .btn-line { border-color: var(--ink-hairline-strong); color: var(--ink-text); }
+.ink .btn-text { color: var(--ink-muted); text-decoration-color: var(--ink-hairline-strong); }
+
+/* Fields — square, label above, hairline under. */
+.field { display: block; }
+.field > .micro { color: var(--paper-muted); display: block; margin-bottom: 7px; }
+.field input, .field select, .field textarea {
+  width: 100%; min-height: var(--tap); padding: 10px 12px;
+  border: 1px solid var(--paper-hairline-strong); background: var(--paper-surface);
+  color: var(--paper-ink); font-size: 15px;
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--paper-faint); }
+.ink .field > .micro { color: var(--ink-faint); }
+.ink .field input, .ink .field select, .ink .field textarea {
+  border-color: var(--ink-hairline-strong); background: transparent; color: var(--ink-text);
+}
+
+/* Elevation only for things that genuinely float. */
+.float { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28); }
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+.paper { background: var(--paper-bg); color: var(--paper-ink); }
+.ink   { background: var(--ink-bg);   color: var(--ink-text); }
+
+.plate { position: relative; overflow: hidden; }
+.plate img { width: 100%; height: 100%; object-fit: cover; }
+.plate .scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.78) 100%);
+}
+.plate .caption { position: absolute; left: 20px; right: 20px; bottom: 18px; color: #fff; }
+
+/* Mockup frame chrome, not part of the product. */
+.frame { margin: 0 auto; background: #fff; }
+.frame-mobile { width: 390px; }
+.frame-desktop { width: 1440px; }

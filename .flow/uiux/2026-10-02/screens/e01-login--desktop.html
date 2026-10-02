@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Staff sign-in — redesign</title>
+<link rel="stylesheet" href="cv.css">
+<style>
+  body { width: 1440px; }
+  .split { display: grid; grid-template-columns: 1fr 520px; min-height: 900px; }
+
+  .pic { position: relative; overflow: hidden; }
+  .pic img { width: 100%; height: 100%; object-fit: cover; }
+  .pic .scrim { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,.12) 36%, rgba(0,0,0,.72) 100%); }
+  .pic .mark { position: absolute; top: 40px; left: 44px; color: #fff; }
+  .pic .mark .wm { font-family: var(--cv-serif); font-size: 30px; line-height: 1.1; }
+  .pic .mark .rule-accent { width: 40px; margin-top: 14px; }
+  .pic .foot { position: absolute; left: 44px; bottom: 36px; color: rgba(255,255,255,.78); }
+
+  .panel { background: var(--paper-surface); display: flex; flex-direction: column;
+    justify-content: center; padding: 0 64px; border-left: 1px solid var(--paper-hairline); }
+  .panel h1 { font-family: var(--cv-serif); font-size: 34px; line-height: 1.1; }
+  .panel .lede { color: var(--paper-muted); font-size: 14px; margin-top: 10px; }
+  .panel form { margin-top: 36px; display: grid; gap: 22px; }
+  .panel .req { color: var(--paper-accent); margin-left: 4px; }
+  .panel .btn-primary { width: 100%; }
+  .panel .note { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--paper-hairline);
+    font-size: 13px; color: var(--paper-muted); line-height: 1.55; }
+  .panel .credit { margin-top: 42px; color: var(--paper-faint); }
+</style>
+</head>
+<body class="paper">
+<div class="split">
+
+  <figure class="pic">
+    <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=80" alt="">
+    <span class="scrim"></span>
+    <figcaption class="mark">
+      <p class="wm">Cloud View<br>Demo Hotel</p>
+      <hr class="rule-accent">
+    </figcaption>
+    <p class="foot micro-sm">Staff portal</p>
+  </figure>
+
+  <section class="panel">
+    <h1>Sign in</h1>
+    <p class="lede">Use the account the hotel issued you. Sessions last eight hours.</p>
+
+    <form>
+      <label class="field">
+        <span class="micro">Email<span class="req">*</span></span>
+        <input type="email" required placeholder="name@cloudview.test" autocomplete="username">
+      </label>
+      <label class="field">
+        <span class="micro">Password<span class="req">*</span></span>
+        <input type="password" required placeholder="••••••••" autocomplete="current-password">
+      </label>
+      <button class="btn btn-primary" type="submit">Sign in</button>
+    </form>
+
+    <p class="note">Access is recorded for security and operational auditing. Lost your
+      password? Ask a hotel administrator to reset it.</p>
+
+    <p class="credit micro-sm">CloudView</p>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,635 @@
+<title>CloudView Redesign Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: a single reading column on paper, with before/after pairs breaking
+     to two columns on wide screens. Tokens below are the redesign's own. */
+  :root {
+    --serif: 'EB Garamond', Georgia, serif;
+    --sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --bg: #f4f2ed; --surface: #fff; --ink: #16130e; --muted: #6a6358; --faint: #918a7d;
+    --hair: #ddd8cd; --hair2: #c2bbab; --gold: #c99c38; --goldtext: #8a641b;
+    --stop: #a4342a; --live: #2f8f5b; --wait: #9a7320;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141311; --surface: #1b1a17; --ink: #f2efe8; --muted: #a9a294; --faint: #9a9284;
+      --hair: #2e2b26; --hair2: #46413a; --gold: #d9ae4d; --goldtext: #d9ae4d;
+      --stop: #e8988c; --live: #7fcfa2; --wait: #dcb45e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141311; --surface: #1b1a17; --ink: #f2efe8; --muted: #a9a294; --faint: #9a9284;
+    --hair: #2e2b26; --hair2: #46413a; --gold: #d9ae4d; --goldtext: #d9ae4d;
+    --stop: #e8988c; --live: #7fcfa2; --wait: #dcb45e;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans);
+    font-size: 16px; line-height: 1.65; margin: 0; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 96px; }
+
+  h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.12; margin: 0;
+    text-wrap: balance; }
+  h1 { font-size: clamp(38px, 6vw, 60px); letter-spacing: -0.015em; }
+  h2 { font-size: clamp(27px, 3.4vw, 36px); }
+  h3 { font-size: 23px; }
+  p { margin: 0 0 14px; }
+  a { color: inherit; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .87em;
+    background: var(--surface); border: 1px solid var(--hair); padding: 1px 5px; }
+
+  .micro { font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .2em; color: var(--muted); }
+  .lede { font-size: 19px; line-height: 1.6; color: var(--muted); max-width: 64ch; }
+  hr { border: 0; border-top: 1px solid var(--hair); margin: 0; }
+  .gold-rule { border: 0; border-top: 1px solid var(--gold); width: 46px; margin: 18px 0; }
+
+  header.top { padding: 72px 0 36px; border-bottom: 1px solid var(--hair2); }
+  section { padding: 54px 0 0; }
+  section > .micro { display: block; margin-bottom: 14px; }
+
+  .cause { border-top: 1px solid var(--hair); padding: 22px 0; display: grid;
+    grid-template-columns: 56px 1fr; gap: 20px; align-items: start; }
+  .cause .n { font-family: var(--serif); font-size: 32px; color: var(--goldtext); line-height: 1; }
+  .cause h3 { margin-bottom: 8px; }
+  .cause p { color: var(--muted); margin-bottom: 10px; }
+  .cause .refs { font-size: 13px; color: var(--faint); }
+
+  .tscroll { overflow-x: auto; margin: 8px 0 20px; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--hair);
+    font-size: 14px; vertical-align: top; }
+  th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .16em;
+    color: var(--muted); border-bottom-color: var(--hair2); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .keep { columns: 2; column-gap: 40px; margin-top: 6px; }
+  .keep li { break-inside: avoid; margin-bottom: 13px; font-size: 15px; color: var(--muted); }
+  .keep li b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 760px) { .keep { columns: 1; } }
+
+  .group { border-top: 1px solid var(--hair2); padding-top: 28px; margin-top: 40px; }
+  .group > header { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: baseline;
+    margin-bottom: 8px; }
+  .group .tag { font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .18em; color: var(--goldtext); border: 1px solid var(--gold); padding: 3px 8px; }
+  .group .why { color: var(--muted); max-width: 70ch; }
+
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin: 26px 0 8px;
+    align-items: start; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  .pair figure { margin: 0; }
+  .pair figcaption { font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .18em; color: var(--muted); padding-bottom: 8px; }
+  .pair .now figcaption { color: var(--stop); }
+  .pair .next figcaption { color: var(--live); }
+  .pair img { width: 100%; max-width: 100%; display: block; border: 1px solid var(--hair2); }
+  .wide { grid-template-columns: 1fr; }
+
+  .resolves { font-size: 13px; color: var(--faint); border-left: 1px solid var(--gold);
+    padding-left: 12px; margin-top: 14px; }
+
+  .decision { border: 1px solid var(--hair2); background: var(--surface); padding: 22px 24px;
+    margin: 18px 0; }
+  .decision h3 { font-size: 21px; margin-bottom: 8px; }
+  .decision .opt { border-top: 1px solid var(--hair); padding: 12px 0 2px; }
+  .decision .opt b { font-weight: 600; }
+  .decision .rec { color: var(--goldtext); font-weight: 600; }
+  .decision p { margin-bottom: 8px; color: var(--muted); }
+
+  .confirm { border: 1px solid var(--gold); background: var(--surface); padding: 26px 28px; margin-top: 30px; }
+  .confirm pre { background: var(--bg); border: 1px solid var(--hair); padding: 14px 16px;
+    overflow-x: auto; font-size: 13px; margin: 14px 0 6px; }
+
+  .sev { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  .sev-b { color: var(--stop); } .sev-m { color: var(--wait); } .sev-n { color: var(--faint); }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="micro">CloudView · UI/UX audit and redesign · 2 October 2026</p>
+  <h1>It is not the gold paint.<br>It is that nothing on the<br>screen means anything.</h1>
+  <hr class="gold-rule">
+  <p class="lede">141 screens of the product as built were captured from a disposable
+    instance and read by six specialists against their own failing conditions. They returned
+    <b>72 findings — 5 blockers, 55 majors, 12 minors</b>, with five causes behind them.
+    Below: the causes, where your own brief was right and where it was not, what is worth
+    keeping, the five screen groups that fix them with the redesigned screens beside the
+    current ones, and six decisions only you can make. <b>Nothing has been applied.</b></p>
+</header>
+
+<section>
+  <span class="micro">The verdict</span>
+  <h2>Five causes</h2>
+  <p class="lede" style="margin-bottom:26px">A product with this many findings usually has a
+    handful of structural decisions behind them. These are CloudView's. Fix these and most of
+    the list goes with them.</p>
+
+  <div class="cause">
+    <span class="n">01</span>
+    <div>
+      <h3>There is no design system — there is a pile of utility classes</h3>
+      <p>Nothing is defined once. <b>1,996</b> <code>rounded-*</code> classes in 30 distinct
+        values; <b>7 to 10 different corner radii on a single screen</b>, five of them inside
+        a 13-pixel band on the guest guide. <b>1,481</b> <code>font-black</code> — on the
+        orders board, 192 elements sit at weight 900 against 184 at weight 400, so the
+        heaviest weight available is the product's <em>default</em>, not its emphasis.
+        <b>15 to 28 distinct text colours</b> per dashboard screen, including two golds
+        thirteen points apart on one page. No webfont is loaded at all: the whole product
+        renders in the operating system's UI font.</p>
+      <p>The proof that there are no tokens is dark mode. It is implemented as roughly
+        <b>180 lines of <code>!important</code> overrides keyed to literal hex values and
+        Tailwind colour classes</b> — <code>.dark .cloudview-dashboard-shell
+        .bg-[#fff8e7]</code> and 60 more like it. That file exists because the components
+        carry no semantic colour to invert.</p>
+      <p class="refs">VH-1, VH-5, VH-6, VH-7, VH-8, VH-13, IX-3</p>
+    </div>
+  </div>
+
+  <div class="cause">
+    <span class="n">02</span>
+    <div>
+      <h3>Every screen advertises itself before it works</h3>
+      <p>The orders board says the word <em>Orders</em> four times — nav item, page title,
+        hero "Order Operations Board", list heading — and the concept six times, before the
+        first order. On the analytics screen the largest element is the slogan
+        <em>"A clearer pulse of hotel performance."</em> at 48px, <b>60% larger than the page's
+        own H1 and exactly twice the size of the revenue figure the screen exists to
+        deliver</b>. The guest menu stacks three headers before the first dish. Four guest
+        screens carry two <code>&lt;h1&gt;</code> elements; on the Dining page both of them
+        are the word "Dining".</p>
+      <p>The cost is the fold. A guest hunting for the Wi-Fi password reads five headings
+        before reaching the search box that answers it in one tap. On the checkout, the
+        <b>Place Order button sits 2.5 screens below the fold</b> — and the only
+        primary-coloured button above the fold is a loyalty upsell in the identical gold.</p>
+      <p class="refs">VH-2, VH-10, VH-11, VH-12, IX-4, CP-1, CP-3</p>
+    </div>
+  </div>
+
+  <div class="cause">
+    <span class="n">03</span>
+    <div>
+      <h3>Colour carries no meaning, so the loudest controls are the dangerous ones</h3>
+      <p>Tints are bound to the card, not the value inside it, so they cannot move when the
+        number does: on the analytics screen <b>four failing metrics are painted green and the
+        one good metric is painted neutral</b>. In the order-details modal three green
+        <em>READY</em> badges sit above an order badged <em>UNPAID</em> in red.</p>
+      <p>The same confusion decides the buttons. On each order card the two highest-chroma
+        controls are <b>Reject</b> (red) and <b>Mark Paid</b> (green, full width, 2.06× every
+        other button) — the routine action, Accept, is the quiet black one, and in dark mode
+        it renders black-on-black at about <b>1.1:1</b>, invisible. On the kitchen tablet,
+        <b>Reject cancels a guest's order with one tap, 8 pixels from Accept, with no
+        confirmation at all</b> — while the same action on the desk screen is correctly gated
+        behind a reason modal. <b>Mark Paid moves ₱707.60 with one click</b>, no confirm, no
+        amount restated, on four visually interchangeable cards.</p>
+      <p class="refs">VH-3, VH-4, VH-8, IX-1 (blocker), IX-2 (blocker), IX-3, IX-11, IX-12</p>
+    </div>
+  </div>
+
+  <div class="cause">
+    <span class="n">04</span>
+    <div>
+      <h3>The navigation and the vocabulary belong to the database, not to the hotel</h3>
+      <p>Nineteen sidebar items named for code modules — the nav literally reads "Services
+        Module", and the guide page's own H1 is "Hotel Guide Module". Setting up one
+        chargeable towel service touches three items in two groups. The guest's four tabs
+        reach <b>4 of 16 screens</b>; the other twelve hang off links inside other screens,
+        seven behind a tab called "Profile" — and the product ships an FAQ whose first three
+        entries are navigation instructions for itself.</p>
+      <p>The words are worse than the structure. One order lifecycle is told in <b>four
+        different vocabularies</b> — the guest is shown "PENDING", then "Waiting for
+        confirmation", while the board says "Needs acceptance" and the kitchen calls READY
+        "Serving". <b>Seven different strings</b> mean "has not paid yet". The guide's content
+        unit is called an item, a card, content, a detail and "1 ITEMS" — four of those on one
+        screen. The thing a guest asks for has six names, and the interface hedges with a
+        slash rather than choosing: "Create Service / Add-on", "CUSTOMER / GUEST NAME",
+        "Track / Manage". The sticker on the wall is an NFC Tag, an access point, a launch
+        link, a destination, a location and a Panel. And raw enums reach guests directly:
+        a guest's own order carries the chip <b>"CAN CANCEL ITEMS"</b> — a boolean permission
+        flag upcased — and their activity screen counts <b>"XENDIT 0"</b>, a payment
+        gateway's company name offered to someone on holiday as a category of their own
+        spending. The same guest is "Maria Santos" on one screen and "Guest" two taps later;
+        the hotel is "Cloud View Demo Hotel" on four screens and "Cloud View Resort &amp;
+        Hotel" on the one they stare at while waiting for food.</p>
+      <p class="refs">IA-1, IA-2, IA-3, IA-5, IA-6, IA-7, IA-9, IA-10, IA-11, IA-12, CP-3,
+        CP-4, CP-5, CP-6, CP-7, CP-13, CP-14</p>
+    </div>
+  </div>
+
+  <div class="cause">
+    <span class="n">05</span>
+    <div>
+      <h3>The empty and broken cases were never drawn</h3>
+      <p>The source holds <b>56 distinct empty-state strings</b> in two incompatible
+        vocabularies — "No X found" and "No X yet" — and the blaming one is used exactly where
+        nothing was filtered. A guest tapping <em>Request service</em>, one of two primary
+        tiles on the arrival screen, is told <b>"No services found. Try another category or
+        clear your search."</b> There is no other category, no search term, and no clear
+        control on the page: the hotel simply has no services configured. Both named
+        recoveries are impossible. On a fresh install that is the hotel's second-most-used
+        function, dead, with no fallback — no front-desk number, no way back.</p>
+      <p>There is <b>no <code>not-found.tsx</code> and no <code>error.tsx</code> anywhere in
+        the repository</b>, so a guest who submits a service request lands on a bare white
+        Next.js 404 — system font, no hotel name, no navigation. The room-passcode screen
+        says "No active guest stay was found for this room. Please contact the front desk."
+        and then offers a fully enabled form and a gold "Authorize Device" button. Three of
+        the hotel's four staff accounts report <b>"0 visible modules · Needs save to repair
+        landing"</b> beside a green "Active" pill, in developer shorthand, with no repair
+        control.</p>
+      <p class="refs">ST-1 (blocker), ST-2, ST-3, ST-4, ST-5, ST-6, ST-7, ST-8, ST-9, CP-8,
+        CP-9, CP-12, IX-9</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="micro">Your three rules, checked</span>
+  <h2>Where the brief was right, and where it was not</h2>
+  <p class="lede" style="margin-bottom:22px">You named three hard rules and a list of things
+    you would check for. Here is what the captures actually show — including the two you were
+    most certain about that turn out not to be the problem.</p>
+  <div class="tscroll"><table>
+    <tr><th>What you said</th><th class="n">Measured</th><th>Verdict</th></tr>
+    <tr><td><b>Sharp corners.</b> ~1,900 <code>rounded-*</code> to remove</td><td class="n">1,996</td>
+      <td>Right, and worse than you thought: <b>30 distinct radius values</b>, 7–10 of them on a
+        single screen, five inside a 13px band on one phone screen. Radius is the cheapest
+        grouping cue a card system has and here it varies by whoever wrote the component.</td></tr>
+    <tr><td><b>One header per screen</b></td><td class="n">4×</td>
+      <td>Right. The orders board states "Orders" four times before the first order. Four guest
+        screens carry two <code>&lt;h1&gt;</code>s; on the Dining page both of them are the word
+        "Dining".</td></tr>
+    <tr><td><b>No <code>font-black</code></b> — max weight 600</td><td class="n">1,481</td>
+      <td>Right, and it is not emphasis — it is the <b>default</b>. On the orders board 192
+        elements sit at weight 900 against 184 at weight 400.</td></tr>
+    <tr><td><b>No glassmorphism on every panel</b></td><td class="n">130</td>
+      <td>Right — 32 on the landing page alone.</td></tr>
+    <tr><td><b>No <code>shadow-soft</code> glow</b></td><td class="n">17</td>
+      <td>Right but small. The shadow problem is concentrated on the landing page, not spread
+        through the product.</td></tr>
+    <tr><td><b>No "Welcome back!" greetings</b></td><td class="n">1</td>
+      <td><b>Not the problem.</b> It appears once, on the <em>staff</em> login, without an
+        exclamation mark. It is not in the guest portal at all. It still goes — but it was
+        never costing a guest anything.</td></tr>
+    <tr><td><b>No emoji in chrome</b></td><td class="n">1</td>
+      <td><b>Nearly absent.</b> Exactly one: <code>☁</code> in
+        <code>GuestShell.tsx:55</code>, the brand mark on the order-tracking screen, where
+        every other guest screen uses the "CV" monogram. Everything else is line icons.</td></tr>
+    <tr><td><b>No gradient text / rainbow gradients</b></td><td class="n">0 / 39</td>
+      <td>No gradient text anywhere. The gradients are gold-to-dark field washes, not rainbows
+        — concentrated on the landing page (65 computed instances) rather than in the product.</td></tr>
+  </table></div>
+
+  <p class="lede" style="margin-top:26px"><b>And the part the brief did not ask about.</b>
+    The six lenses found <b>five blockers</b>, and none of them is cosmetic. On the kitchen
+    tablet, <em>Reject</em> cancels a guest's order with one tap, eight pixels from
+    <em>Accept</em>, with no confirmation — while the identical action on the desk screen is
+    properly gated behind a reason modal. <em>Mark Paid</em> moves ₱707.60 with one click, no
+    confirm, on four visually interchangeable cards. On a fresh install a guest tapping
+    <em>Request service</em> hits a dead end that blames them for a filter they never set. And
+    two more are about the one thing the design is most proud of: on the near-black guest
+    field, <b>everything that tells a guest what a field is for sits below 4.5:1</b>, with no
+    light mode to escape to — and the dish names are laid straight onto the photographs, where
+    the contrast measures <b>1.00:1</b> against a lit plate. A product can survive looking like
+    a template. It should not ship a one-tap unconfirmed cancel on a kitchen touchscreen, or a
+    menu a guest cannot read in the sun.</p>
+</section>
+
+<section>
+  <span class="micro">The sixth lens</span>
+  <h2>Accessibility, measured from the pixels</h2>
+  <p class="lede" style="margin-bottom:20px">Two of the five blockers are here, and both are
+    about a guest standing outdoors in Philippine daylight — which is where this product is
+    used.</p>
+  <div class="tscroll"><table>
+    <tr><th>Finding</th><th class="n">Measured</th><th>What it means</th></tr>
+    <tr><td><b>Guest micro-labels and helper text fall below 4.5:1</b>, on a field with no
+      light alternative</td><td class="n">3.17–4.53:1</td>
+      <td>"PHONE NUMBER" 4.40:1, "SERVICE LOCATION" 3.17:1, "Required so hotel staff can
+        contact you about this order" 3.82:1, the four un-reached tracking steps 3.81:1. Those
+        are <em>peak</em> glyph values; the mean stroke is dimmer. 141 elements sit at
+        <code>text-white/35</code>, <code>/40</code> and <code>/45</code>. A pixel diff of
+        light against dark guest captures found 16 differing pixels in 32,682 — there is no
+        light mode to escape to.</td></tr>
+    <tr><td><b>Dish names and the guide eyebrow sit straight on photographs with no
+      scrim</b></td><td class="n">down to 1.00:1</td>
+      <td>"Breakfast Pancakes" is white over the lit pancake stack: 95th-percentile backdrop
+        is pure white — the same value as the type. The gold eyebrow over a sunlit roof hits
+        2.29:1. One place <em>does</em> have a scrim and measures 10–17:1, so the pattern
+        exists and is applied inconsistently.</td></tr>
+    <tr><td>Primary inputs and one primary submit are 20–25px tall</td><td class="n">20px</td>
+      <td>Every search field is a 20px hit box inside a taller decorated shell. Worst: the
+        <b>"Authorize Device" button is 300×20</b> — the single action that authorises a
+        device to charge to a room.</td></tr>
+    <tr><td>Undersized tap targets — guest / dashboard at phone width</td><td class="n">18 / 597</td>
+      <td>The cart stepper is 32×32 with a 36×36 delete beside it; the Wi-Fi reveal and copy
+        buttons — for the most-asked question in a hotel — are the two smallest controls in
+        the product. On the dashboard the baseline is a 40px nav strip hiding two thirds of
+        the menu behind an unmarked horizontal scroll.</td></tr>
+    <tr><td><code>outline-none</code> with no replacement focus style</td><td class="n">37 controls</td>
+      <td>Of 149 occurrences across 35 files, 37 have no focus style at all — including both
+        gates into the product (login, room passcode) and <b>ten in the POS till</b>. The 112
+        that are replaced use a gold ring at 10–35% opacity, which computes to
+        <b>1.13–1.90:1</b>. Where the global ring does survive, gold on white is 2.53:1.
+        A focus indicator needs 3:1.</td></tr>
+    <tr><td>Modals declaring <code>aria-modal="true"</code> with no focus trap</td><td class="n">22</td>
+      <td>No focus-trap utility anywhere in <code>src</code>; 3 Escape handlers; 0
+        <code>autoFocus</code>. Tab walks out of the order dialog straight into the Accept and
+        Reject buttons on the cards behind it.</td></tr>
+    <tr><td>Analytics legends identifying a series by dot colour alone</td><td class="n">3 of 6 identical</td>
+      <td>Six legend rows read "0 · 0%" with no series name; three of the dots are
+        byte-identical. The panel cannot be read by anyone, with or without colour vision.</td></tr>
+    <tr><td>Kitchen line state carried by a dot with no word</td><td class="n">2.46:1, 6px</td>
+      <td>On the one screen read at two metres, whether a line was cancelled is a 6px green
+        dot. A cook reads both lines and cooks the one the guest cancelled.</td></tr>
+    <tr><td>Dashboard micro-labels, and zero-count tiles</td><td class="n">2.52:1 / 1.37:1</td>
+      <td>One specific grey — <code>rgb(163,163,163)</code>, 152 elements — plus an opacity
+        dimming that takes empty stat tiles to 1.37:1. The rest of the dashboard palette
+        passes, so this is a narrow band, not a palette-wide failure.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <span class="micro">Before anything is changed</span>
+  <h2>What is kept</h2>
+  <p class="lede" style="margin-bottom:22px">A critique that finds nothing to keep is not
+    credible. Every lens was asked what should survive, and these came back. Several are
+    better than anything the redesign would have invented.</p>
+  <ul class="keep">
+    <li><b>Order tracking (g06) handles waiting properly.</b> A named status, a bounded
+      estimate, a five-step rail, a live timer, an "updated" stamp and a human escape hatch.
+      Across all 141 captures no lens could find a wait with nothing on screen — the product
+      consistently swaps buttons to "Submitting…", applies optimistic updates and raises a
+      toast. That discipline survives untouched.</li>
+    <li><b>The guest guide's type ramp already works.</b> The same content the staff screen
+      renders with 98 weight-900 elements and 25 text colours, the guest screen renders with
+      <em>one</em> element at 900 and a six-step weight ramp. The redesign generalises this
+      ramp; it did not invent it.</li>
+    <li><b>The kitchen's three lanes are the job.</b> Pending / Preparing / Serving with the
+      count in the lane head is the only place in the product where a hue maps to a state
+      that actually changes. The orders board should move toward the kitchen, not the
+      reverse. <b>And the correct sizing already exists in the code</b> — TV Mode raises the
+      order code to 30px and the dish lines to 16px. It is behind an opt-in button.</li>
+    <li><b>Two zero-states that resolve themselves.</b> The staff services screen offers
+      "Add Default Services" — one click from nothing to a working catalogue — and the
+      backups screen says "No backups yet. Create the first full hotel backup above."
+      Those two are the template for the other 54 strings.</li>
+    <li><b>The guest requests screen is the best empty state in the product:</b> icon,
+      serif headline, one sentence saying exactly when content appears, one action, all
+      inside a single phone screen.</li>
+    <li><b>The POS total block is the one place the most important number is the largest.</b>
+      Food, services, subtotal in regular; Total largest and heaviest at the bottom. It is
+      the model the stat cards are not following.</li>
+    <li><b>Destructive actions are already protected in two of the four places they occur</b>
+      — the desk's Reject demands a reason, and the guest's item cancellation is a two-step
+      disclosure. The fix is extending those two, not inventing a pattern.</li>
+    <li><b>The access-denied screen is the one error that reads as designed:</b> a lock, the
+      reason, and a literal instruction for what to do next.</li>
+    <li><b>The guide section page is the only screen offering lateral movement</b> —
+      "Continue exploring" with its three sibling sections. Every other leaf is a cul-de-sac.</li>
+    <li><b>All five palettes, <code>next-themes</code> and <code>ThemePaletteProvider</code>
+      stay.</b> So does every route, every data flow and every real string of copy.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="micro">The work</span>
+  <h2>Five groups, ordered by what they fix</h2>
+  <p class="lede">Grouped by cause rather than by menu, so the screens in each group agree
+    with one another when they land.</p>
+
+  <!-- A -->
+  <div class="group">
+    <header><span class="tag">Group A</span><h3>The system itself</h3></header>
+    <p class="why">Tokens, the six <code>ui/</code> primitives, the shell, the sidebar and the
+      bottom bar. Nothing else can be fixed before this: radius, colour, type, spacing and
+      hairlines get defined once in <code>globals.css</code> and
+      <code>tailwind.config.ts</code>, every component ships its eight states, and the 180
+      lines of <code>!important</code> dark-mode overrides are deleted because the components
+      finally carry semantic colour. The primitives keep their public API, so the 121 files
+      that use them are a class sweep, not a rewrite.</p>
+    <div class="pair wide">
+      <figure class="next"><figcaption>The system, defined once</figcaption>
+        <img alt="Component and state sheet" src="__IMG:after/kit--desktop.png__"></figure>
+    </div>
+    <p class="resolves">Resolves VH-1, VH-5, VH-6, VH-7, VH-8, VH-13, IX-3, A11Y-1, A11Y-4,
+      A11Y-6, A11Y-10, A11Y-11, and ST-7's 56 empty-state strings. One accent action per screen; the
+      gold becomes a 1px rule; status becomes a dot and a word; focus is a 2px outline at 2px
+      offset that survives the loss of radius.</p>
+  </div>
+
+  <!-- B -->
+  <div class="group">
+    <header><span class="tag">Group B</span><h3>The guest spine — arrival, menu, checkout</h3></header>
+    <p class="why">The three screens a guest actually uses, in order. The arrival screen
+      becomes the key-card moment: the property's photograph full-bleed and square-cornered,
+      its name in the display serif, and three numbered actions on hairlines — not a grid of
+      coloured tiles with the guest's own name set larger than anything they came to do. The
+      menu becomes an editorial list. The checkout becomes a printed receipt, with the two
+      facts the hotel already knows shown as facts rather than empty required fields.</p>
+
+    <div class="pair">
+      <figure class="now"><figcaption>Now · arrival</figcaption>
+        <img alt="Arrival screen as built" src="__IMG:before/g01-arrival--mobile--light.png__"></figure>
+      <figure class="next"><figcaption>Proposed · arrival</figcaption>
+        <img alt="Arrival screen redesigned" src="__IMG:after/g01-arrival.png__"></figure>
+    </div>
+    <div class="pair">
+      <figure class="now"><figcaption>Now · menu</figcaption>
+        <img alt="Menu as built" src="__IMG:before/g02-menu--mobile--light.png__"></figure>
+      <figure class="next"><figcaption>Proposed · menu</figcaption>
+        <img alt="Menu redesigned" src="__IMG:after/g02-menu.png__"></figure>
+    </div>
+    <div class="pair">
+      <figure class="now"><figcaption>Now · checkout</figcaption>
+        <img alt="Checkout as built" src="__IMG:before/g03-cart--mobile--light.png__"></figure>
+      <figure class="next"><figcaption>Proposed · checkout</figcaption>
+        <img alt="Checkout redesigned" src="__IMG:after/g03-cart.png__"></figure>
+    </div>
+    <p class="resolves">Resolves VH-2, VH-11, VH-13, IX-4, IX-5, IX-6, IX-7, IX-10, CP-1,
+      CP-3. The guest reaches the first dish in one screen instead of three headers; the
+      order total is the largest thing on the checkout and the button that places it names
+      the amount; quantity controls go from 32px to 44px; the only destructive control on the
+      screen stops being a twin of the back button; the single error banner becomes an error
+      at the field it is about. The dish name moves off the photograph onto the surface beside
+      a fixed square thumbnail, which is what takes A11Y-2 from 1.00:1 to the body ramp.</p>
+  </div>
+
+  <!-- C -->
+  <div class="group">
+    <header><span class="tag">Group C</span><h3>The staff console</h3></header>
+    <p class="why">The orders board, the kitchen display, the POS and the order detail. One
+      header per screen; figures as figure blocks with a rule above and a serif numeral; a
+      hairline table instead of cards-inside-cards; one emphasised action per row with the
+      destructive one moved into the record it belongs to. The kitchen is the deliberate
+      exception — it keeps its scale and its contrast and takes only the corners, the
+      hairlines and the typeface.</p>
+
+    <div class="pair">
+      <figure class="now"><figcaption>Now · orders</figcaption>
+        <img alt="Orders board as built" src="__IMG:before/d02-orders--desktop--light.png__"></figure>
+      <figure class="next"><figcaption>Proposed · orders</figcaption>
+        <img alt="Orders board redesigned" src="__IMG:after/d02-orders--desktop.png__"></figure>
+    </div>
+    <div class="pair">
+      <figure class="now"><figcaption>Now · kitchen, read at two metres</figcaption>
+        <img alt="Kitchen display as built" src="__IMG:before/d03-kitchen--desktop--light.png__"></figure>
+      <figure class="next"><figcaption>Proposed · kitchen</figcaption>
+        <img alt="Kitchen display redesigned" src="__IMG:after/d03-kitchen--desktop.png__"></figure>
+    </div>
+    <p class="resolves">Resolves VH-1, VH-2, VH-3, VH-4, VH-5, VH-9, VH-10, IX-1 (blocker),
+      IX-2 (blocker), IX-3, IX-9, IX-11, IA-4, A11Y-7, A11Y-8, A11Y-9. On the kitchen ticket
+      the dish and the timer become the largest things on the screen, a cancelled line is struck
+      through and worded rather than dotted, and the one-tap cancel is gone. On the board,
+      ₱0.00 stops being the biggest number on the page.</p>
+  </div>
+
+  <!-- D -->
+  <div class="group">
+    <header><span class="tag">Group D</span><h3>The states, and the dead ends</h3></header>
+    <p class="why">Spans twelve screens but is one piece of work: one empty-state vocabulary
+      instead of 56 strings in two, written like a concierge note; the blaming wording used
+      only where something was actually filtered; a <code>not-found.tsx</code> and an
+      <code>error.tsx</code> that keep the guest inside the hotel's portal; a skeleton that
+      belongs to the region loading rather than replacing the whole app including its
+      navigation; and the two screens that already resolve their own emptiness used as the
+      template for the rest.</p>
+    <p class="resolves">Resolves ST-1 (blocker), ST-2, ST-3, ST-4, ST-5, ST-6, ST-7, ST-8,
+      ST-9, IX-9. The highest-value single change in the whole audit is here: on a fresh
+      install the guest's second-most-used function currently dead-ends, and the fix is copy
+      plus one fallback action.</p>
+  </div>
+
+  <!-- E -->
+  <div class="group">
+    <header><span class="tag">Group E</span><h3>Navigation and vocabulary</h3></header>
+    <p class="why">The sidebar regrouped by what staff do rather than by database module; the
+      guest's four tabs made to reach what a guest actually needs; and one word per concept
+      across both surfaces. This group changes shape, so all of it is in the decisions below
+      and none of it moves without your answer.</p>
+    <div class="pair wide">
+      <figure class="next"><figcaption>Proposed · the brand moment</figcaption>
+        <img alt="Login redesigned" src="__IMG:after/e01-login--desktop.png__"></figure>
+    </div>
+    <p class="resolves">Resolves IA-1, IA-2, IA-3, IA-5, IA-6, IA-7, IA-9, IA-10, IA-11,
+      IA-12, CP-2. The login is included here because it is the one screen whose whole job is
+      identity: today it opens with "Welcome back" over a gradient and three feature tiles.</p>
+  </div>
+</section>
+
+<section>
+  <span class="micro">Yours to decide</span>
+  <h2>Six decisions</h2>
+  <p class="lede">Each of these changes the shape of the product, not just its surface.
+    Nothing in group E starts until they are answered.</p>
+
+  <div class="decision">
+    <h3>1 · The typeface pair</h3>
+    <p>The product loads no webfont today, which is half of the cheapness. The mockups use
+      EB Garamond for display, figures and prices, and Instrument Sans for interface text.</p>
+    <div class="opt"><b class="rec">EB Garamond + Instrument Sans — recommended.</b> Garamond
+      has the old-style figures and the quiet authority of printed stationery; Instrument Sans
+      is a neutral grotesque with real tabular numerals and no SaaS association.</div>
+    <div class="opt"><b>EB Garamond + Archivo.</b> Slightly narrower and more editorial;
+      better at very small tracked caps, marginally heavier on screen.</div>
+    <div class="opt"><b>Cormorant Garamond + Instrument Sans.</b> Finer, more fashion-house,
+      noticeably weaker below 18px — a risk on a phone in sunlight.</div>
+  </div>
+
+  <div class="decision">
+    <h3>2 · Regrouping the dashboard, and three renames</h3>
+    <p>Nineteen items in five groups named after parts of the system. The proposal groups them
+      by when they are used — <b>Today</b> (overview, orders, kitchen, service requests,
+      counter sales), <b>The hotel</b> (stays, rooms, panels, guide), <b>What we sell</b>
+      (menu, services, stock, rewards), <b>Records</b> (reports, settings) — and renames
+      "Services Module" → <b>Services</b>, "POS Terminal" → <b>Counter sales</b>, "Hotel Guide
+      Module" → <b>Hotel guide</b>.</p>
+    <div class="opt"><b class="rec">Regroup and rename — recommended.</b> Staff vocabulary is
+      a content decision, so it is yours, not the redesign's.</div>
+    <div class="opt"><b>Regroup, keep the names.</b> Safer if staff have learned them.</div>
+  </div>
+
+  <div class="decision">
+    <h3>3 · The guest's four tabs, and two screens that are the same list</h3>
+    <p>Four tabs cannot represent sixteen screens, and today they reach four of them while
+      telling a guest they are on "Home" when they are reading "My Requests".
+      <code>/orders</code> and <code>/activity</code> show the same order with the guest named
+      two different ways — "Guest" on one, "Maria Santos" on the other.</p>
+    <div class="opt"><b class="rec">Merge <code>/orders</code> and <code>/activity</code> into
+      one "My stay" screen, and rename the fourth tab from "Profile" to <b>My stay</b> —
+      recommended.</b> One place for everything a guest has going on; the tab stops naming a
+      database record.</div>
+    <div class="opt"><b>Keep both screens, cross-link them and fix the active tab.</b> Less
+      disruption, keeps two answers to one question.</div>
+  </div>
+
+  <div class="decision">
+    <h3>4 · Does the guest portal follow the theme?</h3>
+    <p>It does not today — there is not one <code>dark:</code> style anywhere under
+      <code>src/app/t/</code>, so the portal is permanently a near-black field and the theme
+      toggle does nothing there. Two of the captured guest screens are byte-identical in
+      light and dark.</p>
+    <div class="opt"><b class="rec">Keep it permanently dark, and say so — recommended.</b>
+      The dark field is the key-card look and it is what the photography needs. Make it a
+      deliberate rule rather than an accident, and fix the contrast inside it.</div>
+    <div class="opt"><b>Make it follow the theme.</b> A real light mode for the portal is
+      better in bright sunlight, and is roughly a group of its own in cost.</div>
+  </div>
+
+  <div class="decision">
+    <h3>5 · Make the kitchen's TV Mode the default</h3>
+    <p>The correct sizing for a two-metre read already exists in
+      <code>src/app/dashboard/kitchen/page.tsx</code>, behind one of six equally weighted
+      chrome buttons. The captured default sets the order code at 14px and the dish lines at
+      12px, while the words "Kitchen Display" are 30px.</p>
+    <div class="opt"><b class="rec">Default to TV Mode on that route; keep a "desk view"
+      toggle — recommended.</b></div>
+    <div class="opt"><b>Leave it opt-in.</b> Nothing changes for anyone who has learned the
+      button.</div>
+  </div>
+
+  <div class="decision">
+    <h3>6 · Is the public landing page in scope?</h3>
+    <p><code>/</code> is 11,770px tall and carries 32 blurred elements, 65 gradient
+      backgrounds, 8 glow shadows and 14 corner radii. Its hierarchy below the fold depends
+      entirely on a scroll-triggered opacity reveal: measured in the static render, a section
+      heading sits at about <b>1.6:1</b> against its background, and eighteen of nineteen
+      headings are at or near background luminance. It is a marketing site, not the product.</p>
+    <div class="opt"><b class="rec">Out of scope for now — recommended.</b> It sells to hotel
+      owners; the product serves guests and staff. Fix it separately.</div>
+    <div class="opt"><b>In scope.</b> Adds roughly one group, and it is the first thing a
+      prospective owner sees.</div>
+  </div>
+</section>
+
+<section>
+  <span class="micro">Deliberately untouched</span>
+  <h2>What this does not change</h2>
+  <div class="tscroll"><table>
+    <tr><th>Area</th><th>Why</th></tr>
+    <tr><td>Every route, data flow and business rule</td><td>No route is removed. The merge in decision 3 is the only structural change proposed, and it is yours to approve.</td></tr>
+    <tr><td>All five palettes, <code>next-themes</code>, <code>ThemePaletteProvider</code></td><td>Kept and made to work properly. No stock theme is installed.</td></tr>
+    <tr><td>The public API of the six <code>ui/</code> primitives</td><td>So the 121 files that import them need a class sweep, not a rewrite.</td></tr>
+    <tr><td>Every real string of copy</td><td>Nothing is invented. Where copy changes it is a named content finding with a decision attached.</td></tr>
+    <tr><td>Backups, users, hotels, reports — their structure</td><td>The lenses cleared their layout. They receive the tokens and the states, nothing more.</td></tr>
+    <tr><td><code>/payment</code> and <code>/service/thanks</code></td><td>Could not be reached in a disposable environment — one needs a live Xendit session, the other needs a service to request. They are not judged, only their shared 404 is.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <div class="confirm">
+    <span class="micro">The gate</span>
+    <h2 style="margin:10px 0 12px">Nothing is applied until you say so</h2>
+    <p>A file named <code>.flow/uiux/pending</code> now sits in the repository. While it is
+      there every source write is denied — not as a promise, as a mechanism. When you have
+      looked at the screens above and answered the six decisions, this clears it:</p>
+    <pre>node .flow/uiux/2026-10-02/confirm.mjs</pre>
+    <p style="margin-bottom:0">Or tell me your answers and I will run it. Either way, say
+      which of the six you want and anything in the groups you would change — a sentence per
+      item is enough.</p>
+  </div>
+</section>
+
+</div>

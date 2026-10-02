@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kitchen display — redesign</title>
+<link rel="stylesheet" href="cv.css">
+<style>
+  /*
+   * The exception. This screen is read across a hot room at two metres, so it
+   * takes only the sharp corners, the hairlines and the typeface. Nothing here
+   * is made quieter: the type is larger than before, not smaller, and the
+   * contrast is pushed up rather than down.
+   */
+  body { width: 1440px; background: #0a0a09; color: #f5f2ec; }
+  .kd { min-height: 900px; display: flex; flex-direction: column; }
+
+  .kbar { display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px; border-bottom: 1px solid rgba(245,242,236,.22); }
+  .kbar h1 { font-family: var(--cv-serif); font-size: 30px; }
+  .kbar .clock { font-family: var(--cv-serif); font-size: 30px; font-variant-numeric: tabular-nums; }
+  .kbar .micro { color: rgba(245,242,236,.7); }
+
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); flex: 1; }
+  .col { border-right: 1px solid rgba(245,242,236,.22); display: flex; flex-direction: column; }
+  .col:last-child { border-right: 0; }
+  .colhd { display: flex; align-items: baseline; justify-content: space-between;
+    padding: 16px 22px; border-bottom: 1px solid rgba(245,242,236,.22); }
+  .colhd .nm { font-size: 20px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  .colhd .ct { font-family: var(--cv-serif); font-size: 34px; }
+
+  .ticket { padding: 18px 22px 20px; border-bottom: 1px solid rgba(245,242,236,.22); }
+  .ticket .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .ticket .code { font-family: var(--cv-serif); font-size: 26px; }
+  .ticket .age { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ticket .age.warn { color: #ffb84d; }
+  .ticket .age.late { color: #ff7a6a; }
+  .ticket .at { font-size: 17px; color: rgba(245,242,236,.72); margin-top: 4px; }
+  .ticket ul { margin-top: 14px; }
+  .ticket li { display: flex; gap: 14px; font-size: 26px; line-height: 1.4; }
+  .ticket li .q { font-family: var(--cv-serif); min-width: 42px; }
+  .ticket .note { margin-top: 10px; font-size: 18px; color: #ffd27d;
+    border-left: 2px solid #ffd27d; padding-left: 12px; }
+  .ticket .go { margin-top: 16px; display: flex; gap: 12px; }
+  .ticket .go .main { flex: 1; min-height: 64px; font-size: 22px; font-weight: 600;
+    background: #f5f2ec; color: #0a0a09; display: inline-flex; align-items: center; justify-content: center; }
+  .ticket .go .alt { min-height: 64px; padding: 0 20px; font-size: 18px;
+    border: 1px solid rgba(245,242,236,.4); color: rgba(245,242,236,.86); }
+
+  .empty { flex: 1; display: flex; align-items: center; justify-content: center;
+    color: rgba(245,242,236,.5); font-size: 20px; padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="kd">
+
+  <header class="kbar">
+    <h1>Kitchen</h1>
+    <span class="micro">Cloud View Demo Hotel · Pool Deck kitchen</span>
+    <span class="clock">14:38</span>
+  </header>
+
+  <div class="cols">
+    <section class="col">
+      <div class="colhd"><span class="nm">Pending</span><span class="ct">4</span></div>
+
+      <article class="ticket">
+        <div class="hd"><span class="code">FO·0004</span><span class="age late">17:43</span></div>
+        <p class="at">Pool Deck · Maria Santos</p>
+        <ul>
+          <li><span class="q">1×</span><span>Breakfast Pancakes</span></li>
+          <li><span class="q">1×</span><span>Cloud Club Sandwich</span></li>
+        </ul>
+        <p class="note">No syrup on the pancakes</p>
+        <div class="go"><button class="main">Start</button><button class="alt">Hold</button></div>
+      </article>
+
+      <article class="ticket">
+        <div class="hd"><span class="code">FO·0003</span><span class="age warn">09:17</span></div>
+        <p class="at">Pool Deck · Maria Santos</p>
+        <ul>
+          <li><span class="q">1×</span><span>Breakfast Pancakes</span></li>
+          <li><span class="q">1×</span><span>Cloud Club Sandwich</span></li>
+        </ul>
+        <div class="go"><button class="main">Start</button><button class="alt">Hold</button></div>
+      </article>
+    </section>
+
+    <section class="col">
+      <div class="colhd"><span class="nm">Preparing</span><span class="ct">0</span></div>
+      <p class="empty">Nothing on the pass.<br>Tickets you start appear here.</p>
+    </section>
+
+    <section class="col">
+      <div class="colhd"><span class="nm">Ready</span><span class="ct">0</span></div>
+      <p class="empty">Nothing waiting to go out.</p>
+    </section>
+  </div>
+
+</div>
+</body>
+</html>

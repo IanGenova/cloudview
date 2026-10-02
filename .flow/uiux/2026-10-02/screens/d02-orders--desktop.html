@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orders — redesign</title>
+<link rel="stylesheet" href="cv.css">
+<style>
+  body { width: 1440px; }
+  .app { display: grid; grid-template-columns: 236px 1fr; min-height: 900px; }
+
+  /* Sidebar — near-black, hairline separators, active marked by an edge rule. */
+  .side { background: #0d0c0a; color: #cfc8b8; border-right: 1px solid #211e18; }
+  .side .brand { padding: 22px 20px 18px; border-bottom: 1px solid #211e18; }
+  .side .brand .wm { font-family: var(--cv-serif); font-size: 19px; color: #f3efe6; }
+  .side .brand .micro-sm { color: #8d8373; display: block; margin-top: 3px; }
+  .side .sect { padding: 20px 20px 8px; color: #7d7464; }
+  .side a { display: block; padding: 10px 20px; font-size: 14px; color: #cfc8b8;
+    border-left: 2px solid transparent; min-height: 40px; }
+  .side a:hover { background: #141210; color: #f3efe6; }
+  .side a[aria-current] { color: #fff; font-weight: 600; border-left-color: var(--paper-accent-line); background: #141210; }
+  .side .who { margin-top: auto; padding: 16px 20px; border-top: 1px solid #211e18; color: #8d8373; }
+
+  .main { background: var(--paper-bg); color: var(--paper-ink); display: flex; flex-direction: column; }
+
+  /* One header. The bar owns the title; nothing below repeats it. */
+  .bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+    padding: 26px 32px 18px; background: var(--paper-surface); border-bottom: 1px solid var(--paper-hairline); }
+  .bar h1 { font-family: var(--cv-serif); font-size: 32px; line-height: 1; }
+  .bar .sub { color: var(--paper-muted); font-size: 13px; margin-top: 7px; }
+  .bar .tools { display: flex; gap: 10px; align-items: center; }
+
+  .figs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0;
+    background: var(--paper-surface); border-bottom: 1px solid var(--paper-hairline); }
+  .fig { padding: 18px 32px 20px; border-right: 1px solid var(--paper-hairline); }
+  .fig:last-child { border-right: 0; }
+  .fig .rule-accent { width: 28px; margin-bottom: 12px; }
+  .fig .micro { color: var(--paper-muted); }
+  .fig .v { font-family: var(--cv-serif); font-size: 38px; line-height: 1.05; margin-top: 8px; }
+  .fig .d { font-size: 13px; color: var(--paper-muted); margin-top: 4px; }
+
+  .filters { display: flex; align-items: center; gap: 26px; padding: 0 32px;
+    background: var(--paper-surface); border-bottom: 1px solid var(--paper-hairline); }
+  .filters button { min-height: 46px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--paper-muted); border-bottom: 1px solid transparent; margin-bottom: -1px; font-weight: 500; }
+  .filters button[aria-pressed="true"] { color: var(--paper-ink); font-weight: 600; border-bottom-color: var(--paper-accent-line); }
+  .filters .n { font-family: var(--cv-serif); margin-left: 6px; color: var(--paper-faint); }
+  .filters .search { margin-left: auto; }
+  .filters .search input { min-height: 36px; border: 1px solid var(--paper-hairline-strong);
+    padding: 0 12px; width: 240px; font-size: 14px; background: var(--paper-surface); }
+
+  .tablewrap { padding: 0 32px 32px; }
+  thead th { position: sticky; top: 0; background: var(--paper-bg); text-align: left;
+    font-size: 11px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--paper-muted); padding: 16px 14px; border-bottom: 1px solid var(--paper-hairline-strong); }
+  tbody td { padding: 16px 14px; border-bottom: 1px solid var(--paper-hairline); font-size: 14px; vertical-align: top; }
+  tbody tr:hover td { background: var(--paper-surface); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .code { font-family: var(--cv-serif); font-size: 17px; }
+  .when { color: var(--paper-muted); font-size: 13px; margin-top: 3px; }
+  .who2 { font-weight: 500; }
+  .where { color: var(--paper-muted); font-size: 13px; margin-top: 3px; }
+  .lines { color: var(--paper-muted); font-size: 13px; }
+  .total { font-family: var(--cv-serif); font-size: 18px; }
+  .pay { font-size: 13px; color: var(--paper-muted); margin-top: 3px; }
+  .act { text-align: right; white-space: nowrap; }
+  .act .btn { min-height: 36px; font-size: 13px; padding: 0 14px; }
+  th.num, td.num { text-align: right; }
+</style>
+</head>
+<body class="paper">
+<div class="app">
+
+  <aside class="side" style="display:flex;flex-direction:column">
+    <div class="brand"><span class="wm">Cloud View</span><span class="micro-sm">Demo Hotel</span></div>
+    <p class="sect micro-sm">Today</p>
+    <a href="#">Overview</a>
+    <a href="#" aria-current="page">Orders</a>
+    <a href="#">Kitchen display</a>
+    <a href="#">Service requests</a>
+    <a href="#">Counter sales</a>
+    <p class="sect micro-sm">The hotel</p>
+    <a href="#">Guest stays</a>
+    <a href="#">Rooms &amp; locations</a>
+    <a href="#">NFC panels</a>
+    <a href="#">Hotel guide</a>
+    <p class="sect micro-sm">What we sell</p>
+    <a href="#">Menu</a>
+    <a href="#">Services</a>
+    <a href="#">Stock</a>
+    <a href="#">Rewards</a>
+    <p class="sect micro-sm">Records</p>
+    <a href="#">Reports</a>
+    <a href="#">Settings</a>
+    <div class="who"><span class="micro-sm">Super admin</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="bar">
+      <div>
+        <h1>Orders</h1>
+        <p class="sub">Guest portal and counter · Thursday 2 October</p>
+      </div>
+      <div class="tools">
+        <button class="btn btn-line">Print run sheet</button>
+        <button class="btn btn-primary">New counter sale</button>
+      </div>
+    </header>
+
+    <section class="figs" aria-label="Today">
+      <div class="fig"><hr class="rule-accent"><p class="micro">Awaiting acceptance</p><p class="v">4</p><p class="d">Oldest waiting 17 minutes</p></div>
+      <div class="fig"><hr class="rule-accent"><p class="micro">Unpaid balance</p><p class="v">₱3,163.20</p><p class="d">Across 4 orders</p></div>
+      <div class="fig"><hr class="rule-accent"><p class="micro">Collected today</p><p class="v">₱0.00</p><p class="d">No payments taken yet</p></div>
+    </section>
+
+    <div class="filters">
+      <button aria-pressed="true">All <span class="n">4</span></button>
+      <button aria-pressed="false">Pending <span class="n">4</span></button>
+      <button aria-pressed="false">Preparing <span class="n">0</span></button>
+      <button aria-pressed="false">Ready <span class="n">0</span></button>
+      <button aria-pressed="false">Delivered <span class="n">0</span></button>
+      <button aria-pressed="false">Cancelled <span class="n">0</span></button>
+      <span class="search"><input type="search" placeholder="Order code, room, guest"></span>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Order</th><th>Guest</th><th>Items</th>
+            <th class="num">Total</th><th>Status</th><th class="act">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="code">CVDHFO000004</div><div class="when">17 min ago · Pool Deck</div></td>
+            <td><div class="who2">Maria Santos</div><div class="where">Pick up at counter</div></td>
+            <td class="lines">1 × Breakfast Pancakes<br>1 × Cloud Club Sandwich</td>
+            <td class="num"><div class="total">₱790.80</div><div class="pay">Pay at counter · unpaid</div></td>
+            <td><span class="status"><span class="dot dot-wait"></span>Needs acceptance</span></td>
+            <td class="act"><button class="btn btn-line">Open</button> <button class="btn btn-primary">Accept</button></td>
+          </tr>
+          <tr>
+            <td><div class="code">CVDHFO000003</div><div class="when">24 min ago · Pool Deck</div></td>
+            <td><div class="who2">Maria Santos</div><div class="where">Pick up at counter</div></td>
+            <td class="lines">1 × Breakfast Pancakes<br>1 × Cloud Club Sandwich</td>
+            <td class="num"><div class="total">₱790.80</div><div class="pay">Pay at counter · unpaid</div></td>
+            <td><span class="status"><span class="dot dot-wait"></span>Needs acceptance</span></td>
+            <td class="act"><button class="btn btn-line">Open</button> <button class="btn btn-primary">Accept</button></td>
+          </tr>
+          <tr>
+            <td><div class="code">CVDHFO000002</div><div class="when">41 min ago · Pool Deck</div></td>
+            <td><div class="who2">Maria Santos</div><div class="where">Pick up at counter</div></td>
+            <td class="lines">1 × Breakfast Pancakes<br>1 × Cloud Club Sandwich</td>
+            <td class="num"><div class="total">₱790.80</div><div class="pay">Pay at counter · unpaid</div></td>
+            <td><span class="status"><span class="dot dot-wait"></span>Needs acceptance</span></td>
+            <td class="act"><button class="btn btn-line">Open</button> <button class="btn btn-primary">Accept</button></td>
+          </tr>
+          <tr>
+            <td><div class="code">CVDHFO000001</div><div class="when">1 hr ago · Pool Deck</div></td>
+            <td><div class="who2">Maria Santos</div><div class="where">Pick up at counter</div></td>
+            <td class="lines">1 × Breakfast Pancakes<br>1 × Cloud Club Sandwich</td>
+            <td class="num"><div class="total">₱790.80</div><div class="pay">Pay at counter · unpaid</div></td>
+            <td><span class="status"><span class="dot dot-wait"></span>Needs acceptance</span></td>
+            <td class="act"><button class="btn btn-line">Open</button> <button class="btn btn-primary">Accept</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+</div>
+</body>
+</html>
