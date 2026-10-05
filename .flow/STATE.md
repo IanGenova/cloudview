@@ -1117,3 +1117,23 @@ gave the order stage — one word, chosen deliberately, applied everywhere — a
 sitting with the owner and a word list, not a pass by the loop.
 
 Wakes since commit: 0.
+
+Deployed (5 Oct 2026, ~15:10 Manila): owner said "deploy". `main` pushed
+`69a55eb..b344587`, one commit. Same route as the last one: dry run first, resolving
+`.env.production.local -> @srv2093.hstgr.io:3306/u610581005_cloudviewdb`; **no migration
+and no dependency change** between the two commits, so `migrate deploy` was a no-op and
+`npm ci` did not run; built under nvm's Node 22; `pm2 reload cloudview-nextjs`; health
+check 200. The server reports `b344587` and the process is online on its 34th restart.
+
+Proven on the public domain by four strings flipping at once on
+`https://cloudhotelph.com/dashboard/login`: **"Welcome back" 1 -> 0**, **"Encrypted
+access" 1 -> 0**, **"Secure sign in" 1 -> 0**, **`linear-gradient` 3 -> 0**, with "Sign
+in" and "Use the account the hotel issued you" now present. Smoke check: `/` 200,
+`/dashboard/login` 200, `/nothing-at-all` 404 with the branded boundary,
+`/nfc-access-denied` 200.
+
+**All five groups of the UI/UX audit are now applied and in production.** What remains of
+the audit is the ten vocabulary findings listed above, which need the owner's word list,
+and the handful of VH items recorded as partial.
+
+Wakes since commit: 0.
