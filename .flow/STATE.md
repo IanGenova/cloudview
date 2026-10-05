@@ -618,3 +618,37 @@ generic remover walked to the wrong enclosing element and was abandoned rather t
 loose on five files.
 
 Wakes since commit: 0.
+
+## Phase: uiux-C2b-remaining-heroes (5 October 2026) — Quick
+
+Owner: "yes, remove those five too". The five modules the previous phase left carrying a
+hero card: the dashboard home, rewards, services, backups and NFC tags.
+
+### Acceptance criteria
+- [x] F1 All five hero cards gone. Each was a bespoke block, so each was bounded by
+      reading it rather than by a pattern; the generic remover from the last phase was
+      used only to report boundaries, never to edit.
+      from: UIUX-2026-10-02 § Findings — VH-10
+- [x] F2 Every real control inside those heroes survives, moved out above the content:
+      "Create NFC Tag", "Create Service / Add-on" and backups' "Refresh".
+      from: artifact § What this does not change
+- [x] F3 The dashboard home is the one page with no `PageHeader` — its `<h1>` *was* the
+      48px slogan "Today's hotel operations pulse.". Replaced with a plain serif "Today",
+      and its Needs Attention panel and figure grid kept, because counting is that
+      screen's job. from: UIUX-2026-10-02 § Findings — VH-2
+- [x] F4 NFC Tags also lost a second four-tile strip and a third heading
+      ("Search & Filters / Find NFC Access Points"); the search and filters stay.
+      from: UIUX-2026-10-02 § Findings — VH-10
+- [x] F5 Three tile components left rendering nothing were deleted — `LuxuryStatCard`,
+      the rewards-local `StatCard`, `NfcMetricCard`. tsc does not flag an unused function,
+      so they would have sat there as the next person's confusion.
+- [x] F6 Measured against the pre-audit build on the same database at the same moment:
+      **22,889px -> 18,062px across ten captures, 21% shorter**, every route HTTP 200.
+      NFC Tags on a phone 3,830 -> 2,477 (-1,353px); Services 2,272 -> 1,494 (-778px).
+      by artifact: `.flow/uiux/2026-10-02/applied/F-*.png`.
+      from: artifact § Five groups — Group C
+
+Section headings that carry their own information stay — "Stored Archives", "Recovery
+Activity", "Recommended services". The rule is one header per screen, not one heading.
+
+Wakes since commit: 0.

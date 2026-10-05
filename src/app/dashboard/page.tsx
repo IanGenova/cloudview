@@ -831,68 +831,6 @@ function MiniProgressBar({
   );
 }
 
-function LuxuryStatCard({
-  label,
-  value,
-  caption,
-  icon: Icon,
-  dark = false,
-}: {
-  label: string;
-  value: string | number;
-  caption?: string;
-  icon: LucideIcon;
-  dark?: boolean;
-}) {
-  return (
-    <div
-      className={
-        dark
-          ? 'border border-[#c99c38]/30 bg-[#11100b] p-5 text-white'
-          : 'border border-neutral-200 bg-white p-5'
-      }
-    >
-      <div className="flex items-center gap-4">
-        <span
-          className={
-            dark
-              ? 'grid size-14 place-items-center bg-gradient-to-br from-[#f1c66a] via-[#c99c38] to-[#8f6820] text-[#090806]'
-              : 'grid size-14 place-items-center bg-[#f7f1e5] text-[#c99c38]'
-          }
-        >
-          <Icon className="size-6" />
-        </span>
-
-        <div>
-          <p
-            className={
-              dark
-                ? 'text-sm font-bold text-white/70'
-                : 'text-sm font-bold text-neutral-500'
-            }
-          >
-            {label}
-          </p>
-
-          <p className="mt-1 text-3xl font-semibold">{value}</p>
-
-          {caption ? (
-            <p
-              className={
-                dark
-                  ? 'mt-1 text-xs font-bold text-[#f1c66a]'
-                  : 'mt-1 text-xs font-bold text-neutral-500'
-              }
-            >
-              {caption}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default async function DashboardHome({
   searchParams,
 }: {
@@ -1278,19 +1216,7 @@ return (
 
         <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
-            <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
-              <Sparkles className="size-4" />
-              Command Center
-            </p>
-
-            <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
-              Today’s hotel operations pulse.
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/60">
-              Monitor revenue, guest activity, kitchen flow, service requests,
-              inventory alerts, and front desk workload from one place.
-            </p>
+            <h1 className="font-serif text-3xl font-normal tracking-tight">Today</h1>
           </div>
 
           <div className="min-w-[260px] border border-white/10 bg-white/10 p-5 backdrop-blur">

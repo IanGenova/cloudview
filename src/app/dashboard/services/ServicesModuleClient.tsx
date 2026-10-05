@@ -828,83 +828,20 @@ function handleDeleteServiceConfirm() {
       <FloatingToast toast={toast} onClose={() => setToast(null)} />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_370px]">
-        <section className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
-          <div className="relative p-6">
-            <div className="pointer-events-none absolute -right-24 -top-24 size-72 bg-[#c99c38]/25 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-24 left-10 size-72 bg-emerald-500/10 blur-3xl" />
-
-            <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
-                  <ConciergeBell className="size-4" />
-                  Guest Portal Catalog
-                </p>
-
-                <h2 className="mt-5 text-3xl font-semibold tracking-tight lg:text-4xl">
-                  Services & Room Add-ons
-                </h2>
-
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/60">
-                  Manage guest-facing services, paid add-ons, visibility, pricing,
-                  and display order from one clean service catalog.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setCreatingService(true)}
-                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d6a738] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
-              >
-                <PackagePlus className="size-4" />
-                Create Service / Add-on
-              </button>
-            </div>
-          </div>
-
-          <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
-            <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-                Total Items
-              </p>
-              <p className="mt-1 text-3xl font-semibold">{serviceStats.total}</p>
-              <p className="mt-1 text-xs font-semibold text-white/45">
-                Full catalog
-              </p>
-            </div>
-
-            <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-                Active
-              </p>
-              <p className="mt-1 text-3xl font-semibold">{serviceStats.active}</p>
-              <p className="mt-1 text-xs font-semibold text-white/45">
-                Visible in portal
-              </p>
-            </div>
-
-            <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-                Hidden
-              </p>
-              <p className="mt-1 text-3xl font-semibold">{serviceStats.hidden}</p>
-              <p className="mt-1 text-xs font-semibold text-white/45">
-                Not guest-visible
-              </p>
-            </div>
-
-            <div className="p-5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-                Paid / Confirm
-              </p>
-              <p className="mt-1 text-3xl font-semibold">
-                {serviceStats.paid + serviceStats.confirmation}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-white/45">
-                Billable services
-              </p>
-            </div>
-          </div>
-        </section>
+        {/*
+          The hero that stood here repeated the page title and carried four
+          tiles counting the catalogue listed below it. Its action stays.
+        */}
+        <div className="mb-5 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setCreatingService(true)}
+            className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#11100b] px-5 text-sm font-medium text-white transition hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+          >
+            <PackagePlus className="size-4" />
+            Create Service / Add-on
+          </button>
+        </div>
 
         <section className="border border-[#c99c38]/25 bg-[#fffaf0] p-5 shadow-sm">
           <div className="flex items-start gap-3">

@@ -385,68 +385,21 @@ export function BackupManagerClient({
     <>
       <NoticeBox notice={notice} onClose={() => setNotice(null)} />
 
-      <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
-        <div className="bg-[radial-gradient(circle_at_top_right,rgba(184,137,56,0.26),transparent_38%),linear-gradient(145deg,#18150e,#090908)] p-6 text-white">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f1c66a]">
-                <ShieldCheck className="size-4" />
-                Backup Health
-              </p>
-              <h2 className="mt-5 text-3xl font-semibold">
-                {selectedHotel?.name || 'Select a hotel'}
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/60">
-                Backups are created as verified ZIP archives with module
-                manifests and SHA-256 checksums.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={refreshPage}
-              disabled={pending}
-              className="inline-flex h-11 items-center justify-center gap-2 border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/15 disabled:opacity-50"
-            >
-              <RefreshCcw className="size-4" />
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="border border-neutral-200 bg-neutral-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Stored Backups
-            </p>
-            <p className="mt-2 text-3xl font-semibold">{summary.total}</p>
-          </div>
-          <div className="border border-emerald-200 bg-emerald-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
-              Valid
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-emerald-900">
-              {summary.valid}
-            </p>
-          </div>
-          <div className="border border-red-200 bg-red-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
-              Needs Review
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-red-900">
-              {summary.failed}
-            </p>
-          </div>
-          <div className="border border-blue-200 bg-blue-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-              Total Size
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-blue-950">
-              {formatBytes(String(summary.bytes))}
-            </p>
-          </div>
-        </div>
-      </section>
+      {/*
+        The hero that stood here repeated the page title and carried tiles
+        counting the backups listed below. Its one real control stays.
+      */}
+      <div className="mb-6 flex justify-end">
+        <button
+          type="button"
+          onClick={refreshPage}
+          disabled={pending}
+          className="inline-flex min-h-11 items-center justify-center gap-2 border border-cv-hairline px-5 text-sm font-medium transition hover:border-neutral-900 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+        >
+          <RefreshCcw className="size-4" />
+          Refresh
+        </button>
+      </div>
 
       <section className="mt-6 grid gap-5 xl:grid-cols-2">
         <div className="border border-neutral-200 bg-white p-6 shadow-sm">

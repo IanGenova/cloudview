@@ -341,64 +341,6 @@ function SessionModePreview({
   );
 }
 
-function NfcMetricCard({
-  icon,
-  label,
-  value,
-  helper,
-  tone = 'neutral',
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number | string;
-  helper: string;
-  tone?: 'green' | 'amber' | 'blue' | 'red' | 'neutral';
-}) {
-  const className =
-    tone === 'green'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-      : tone === 'amber'
-        ? 'border-amber-200 bg-amber-50 text-amber-900'
-        : tone === 'blue'
-          ? 'border-blue-200 bg-blue-50 text-blue-900'
-          : tone === 'red'
-            ? 'border-red-200 bg-red-50 text-red-900'
-            : 'border-neutral-200 bg-neutral-50 text-neutral-900';
-
-  const iconClassName =
-    tone === 'green'
-      ? 'bg-emerald-100 text-emerald-700'
-      : tone === 'amber'
-        ? 'bg-amber-100 text-amber-700'
-        : tone === 'blue'
-          ? 'bg-blue-100 text-blue-700'
-          : tone === 'red'
-            ? 'bg-red-100 text-red-700'
-            : 'bg-white text-[#b88938]';
-
-  return (
-    <div className={` border p-5 ${className}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
-            {label}
-          </p>
-
-          <p className="mt-2 text-3xl font-semibold">{value}</p>
-
-          <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
-        </div>
-
-        <span
-          className={`grid size-11 shrink-0 place-items-center ${iconClassName}`}
-        >
-          {icon}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function NfcActionConfirmDialog({
   dialog,
   onCancel,
@@ -1300,130 +1242,26 @@ return (
     <>
 
 
-     <section className="mb-6 overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
-  <div className="relative p-4 sm:p-6">
-    <div className="pointer-events-none absolute -right-20 -top-20 size-64 bg-[#c99c38]/25 blur-3xl" />
-    <div className="pointer-events-none absolute -bottom-24 left-10 size-64 bg-emerald-500/10 blur-3xl" />
-
-    <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-      <div>
-        <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
-          <RadioTower className="size-4" />
-          NFC Access Control
-        </p>
-
-        <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
-          NFC Tag Management
-        </h2>
-
-        <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/60">
-          Create secure NFC launch links, assign room or public location tags,
-          monitor scan activity, rotate secrets, and control guest portal access.
-        </p>
+      {/*
+        The dark hero that stood here repeated the page title, added a
+        sentence of reassurance, and carried four tiles counting the tags
+        listed directly below it. Only the action it held is worth keeping.
+      */}
+      <div className="mb-6 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#11100b] px-5 text-sm font-medium text-white transition hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+        >
+          <Plus className="size-4" />
+          Create NFC Tag
+        </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setCreating(true)}
-        className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d6a738] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
-      >
-        <Plus className="size-4" />
-        Create NFC Tag
-      </button>
-    </div>
-  </div>
-
-  <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
-    <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-        Total Tags
-      </p>
-      <p className="mt-1 text-3xl font-semibold">{localTags.length}</p>
-      <p className="mt-1 text-xs font-semibold text-white/45">
-        Registered NFC access points
-      </p>
-    </div>
-
-    <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-        Active
-      </p>
-      <p className="mt-1 text-3xl font-semibold">{activeTagCount}</p>
-      <p className="mt-1 text-xs font-semibold text-white/45">
-        Currently scannable
-      </p>
-    </div>
-
-    <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-        Room Tags
-      </p>
-      <p className="mt-1 text-3xl font-semibold">{roomTagCount}</p>
-      <p className="mt-1 text-xs font-semibold text-white/45">
-        Private room access
-      </p>
-    </div>
-
-    <div className="p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-        Never Scanned
-      </p>
-      <p className="mt-1 text-3xl font-semibold">{neverScannedCount}</p>
-      <p className="mt-1 text-xs font-semibold text-white/45">
-        Needs testing or deployment
-      </p>
-    </div>
-  </div>
-</section>
-
-<section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-  <NfcMetricCard
-    icon={<ShieldCheck className="size-5" />}
-    label="Active Tags"
-    value={activeTagCount}
-    helper="Guest access enabled"
-    tone="green"
-  />
-
-  <NfcMetricCard
-    icon={<X className="size-5" />}
-    label="Inactive Tags"
-    value={inactiveTagCount}
-    helper="Disabled or hidden"
-  />
-
-  <NfcMetricCard
-    icon={<Hotel className="size-5" />}
-    label="Room Tags"
-    value={roomTagCount}
-    helper="Private stay sessions"
-    tone="blue"
-  />
-
-  <NfcMetricCard
-    icon={<UsersRound className="size-5" />}
-    label="Public Tags"
-    value={publicTagCount}
-    helper="Lobby, pool, dining, amenities"
-    tone="amber"
-  />
-</section>
+      {/* Four tiles counting the tags listed directly below them. */}
 
 <section className="mb-6 border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
   <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
-        Search & Filters
-      </p>
-
-      <h3 className="mt-1 text-xl font-semibold text-[#11100b] dark:text-white">
-        Find NFC Access Points
-      </h3>
-
-      <p className="mt-1 text-sm font-semibold text-neutral-500 dark:text-neutral-400">
-        Search by tag name, ID, hotel, room, location, or linked destination.
-      </p>
-    </div>
 
     <span className="w-fit bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
       Showing {filteredTags.length} of {localTags.length}

@@ -42,40 +42,6 @@ function parsePage(value?: string) {
   return Math.max(1, Math.floor(parsed));
 }
 
-function StatCard({
-  label,
-  value,
-  helper,
-  icon: Icon,
-}: {
-  label: string;
-  value: string | number;
-  helper: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <div className="border border-white/10 bg-white/[0.07] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.14)]">
-      <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center bg-[#d6a738]/15 text-[#f1c66a]">
-          <Icon className="size-5" />
-        </span>
-
-        <div className="min-w-0">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f1c66a]">
-            {label}
-          </p>
-          <p className="mt-1 text-2xl font-semibold leading-none text-white">
-            {value}
-          </p>
-          <p className="mt-1 truncate text-[11px] font-bold text-white/45">
-            {helper}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function RedemptionStatusPill({ status }: { status: string }) {
   const className =
     status === 'RESERVED'
@@ -453,34 +419,10 @@ export default async function RewardsPage({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
-        <div className="relative p-5 md:p-6">
-          <div className="pointer-events-none absolute -right-20 -top-24 size-72 bg-[#c99c38]/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 left-10 size-72 bg-emerald-500/10 blur-3xl" />
-
-          <div className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)] xl:items-end">
-            <div>
-              <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
-                <Sparkles className="size-4" />
-                Super Admin Loyalty Center
-              </p>
-
-              <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
-                Global CloudView Rewards
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/55">
-                Manage global guest loyalty points, reward catalog, redemptions,
-                and point activity for every active CloudView hotel.
-              </p>
-            </div>
-
-            {/*
-              A four-tile strip stood here; the lists below carry the same numbers.
-            */}
-          </div>
-        </div>
-      </section>
+      {/*
+        The hero that stood here repeated the page title; its four tiles
+        were removed earlier and nothing else in it carried information.
+      */}
 
       <RewardsActionModals
         hotels={hotels}
