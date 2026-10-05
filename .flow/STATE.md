@@ -983,3 +983,33 @@ The de-hero passes removed containers without checking what the surviving childr
 children *of*.
 
 Wakes since commit: 0.
+
+Deployed (5 Oct 2026, ~14:30 Manila): owner said "now push and deploy it". `main` pushed
+`2c7e5eb..1cf9887` — ten commits, the whole UI/UX redesign: the audit, groups A, B, C and
+D, the class sweep and the Services regression fix. `deploy/deploy.sh` on the VPS, dry run
+first, resolving `.env.production.local -> @srv2093.hstgr.io:3306/u610581005_cloudviewdb`
+(the real database, not the local decoy). **No migration and no dependency change in this
+release** — `prisma/migrations`, `prisma/schema.prisma`, `package.json` and
+`package-lock.json` are all untouched between the two commits — so `migrate deploy` was a
+no-op and `npm ci` did not run. Built under nvm's Node 22; `pm2 reload cloudview-nextjs`;
+health check `http://127.0.0.1:3000/dashboard/login` 200.
+
+Proven live on the public domain rather than on localhost:
+`https://cloudhotelph.com/nothing-at-all` returns **404 with "There is nothing at this
+address"**, the root boundary added in group D, which did not exist in `5446cab` — that
+path previously served Next's own white 404. All three self-hosted faces load:
+EBGaramond_Variable (44,336B), EBGaramond_Italic_Variable (47,940B) and
+InstrumentSans_Variable (30,092B), each 200.
+
+Still true of the two recorded deploy traps: the server's `~/.ssh/config` still points
+`github.com` at `id_ed25519`, so the pull needs
+`GIT_SSH_COMMAND="ssh -i ~/.ssh/cloudview_github -o IdentitiesOnly=yes"`; and `deploy.sh`
+still needs `~/.nvm/nvm.sh` sourced, because the system Node is 18.19.1 and the build
+requires 20.9+. Neither was fixed on the server by this deploy. A third to add: the script
+is not executable in the checkout, so it runs as `bash ./deploy/deploy.sh`, not `./`.
+
+Nothing was backed up beforehand and nothing needed to be: this release does not touch the
+schema or any row. The guest-facing change is large and visual, so the thing to watch is
+guests and staff reacting to the new layouts, not data.
+
+Wakes since commit: 0.
