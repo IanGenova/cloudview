@@ -511,7 +511,16 @@ function KitchenOrderItemLine({
 }) {
   const activeQty = getActiveItemQuantity(item);
   const isCancelled = isCancelledKitchenItem(item);
-  const shouldShowItemStatusBadge = !compact;
+  /*
+   * The badge is the only place the state is written as a word. Rush mode used
+   * to drop it, leaving a cancelled dish marked by red, a strikethrough and a
+   * 8px dot — colour and a line, no word. A cook reading a lane at speed gets
+   * the word for anything that is not simply active.
+   */
+  const shouldShowItemStatusBadge =
+    !compact ||
+    isCancelled ||
+    item.status === OrderItemStatus.PARTIALLY_CANCELLED;
   const indicatorLabel = isCancelled
     ? 'Cancelled item'
     : item.status === OrderItemStatus.PARTIALLY_CANCELLED
@@ -524,7 +533,7 @@ function KitchenOrderItemLine({
         isCancelled
           ? 'border border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/10'
           : 'bg-neutral-50 dark:bg-neutral-950',
-        compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-2 text-xs'
+        compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-2 text-sm'
       )}
     >
       <div className={cn('flex flex-wrap items-center justify-between', compact ? 'gap-0.5' : 'gap-2')}>
@@ -562,7 +571,7 @@ function KitchenOrderItemLine({
               <span
                 className={cn(
                   'bg-amber-100 py-0.5 font-semibold leading-none text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
-                  compact ? 'px-1.5 text-[8px]' : 'px-2 text-[10px]'
+                  compact ? 'px-1.5 text-[8px]' : 'px-2 text-[11px]'
                 )}
               >
                 Bundle
@@ -573,7 +582,7 @@ function KitchenOrderItemLine({
               <span
                 className={cn(
                   'py-0.5 font-semibold leading-none',
-                  compact ? 'px-1.5 text-[8px]' : 'px-2 text-[10px]',
+                  compact ? 'px-1.5 text-[9px]' : 'px-2 text-[11px]',
                   getItemStatusClass(item)
                 )}
               >
@@ -583,19 +592,19 @@ function KitchenOrderItemLine({
           </div>
 
           {item.cancelledQty > 0 ? (
-            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-semibold leading-tight text-red-700 dark:text-red-200')}>
+            <p className={cn(compact ? 'mt-0.5 text-[10px]' : 'mt-1 text-xs', 'font-semibold leading-tight text-red-700 dark:text-red-200')}>
               Cancelled qty: {item.cancelledQty}
             </p>
           ) : null}
 
           {item.cancelReason ? (
-            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-medium leading-tight text-red-700 dark:text-red-200')}>
+            <p className={cn(compact ? 'mt-0.5 text-[10px]' : 'mt-1 text-xs', 'font-medium leading-tight text-red-700 dark:text-red-200')}>
               Reason: {item.cancelReason}
             </p>
           ) : null}
 
           {item.notes ? (
-            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-medium leading-tight text-neutral-500 dark:text-neutral-400')}>
+            <p className={cn(compact ? 'mt-0.5 text-[10px]' : 'mt-1 text-xs', 'font-medium leading-tight text-neutral-500 dark:text-neutral-400')}>
               Note: {item.notes}
             </p>
           ) : null}
@@ -802,8 +811,16 @@ function KitchenOrderCard({
           isTvMode ? 'p-5' : isRushMode ? 'p-2' : 'p-2.5'
         )}
       >
-        <div className={cn('flex items-start justify-between', isRushMode ? 'gap-2' : 'gap-3')}>
-          <div className="min-w-0 flex-1">
+        <div className={cn('flex items-start justify-between', isRushMode ? 'gap-2' : 'flex-wrap gap-x-3 gap-y-1')}>
+          {/*
+            Outside rush the code takes the whole line. Sharing it with the status
+            and the timer left 100px for the one string that identifies the
+            ticket, and it truncated to "CVDHF..." — which is worse than the
+            clipping that sharing was meant to cure. The lane heading already
+            says PENDING; the code is the only thing here that cannot be
+            inferred from somewhere else on the screen.
+          */}
+          <div className={cn('min-w-0', isRushMode ? 'flex-1' : 'w-full')}>
             {isRushMode ? (
               <div className="min-w-0 space-y-1">
                 <span className={cn(rushMetaPillClass, 'max-w-full')}>
@@ -819,7 +836,7 @@ function KitchenOrderCard({
                 <h3
                   className={cn(
                     'truncate font-semibold text-neutral-950 dark:text-white',
-                    isTvMode ? 'text-3xl' : 'text-sm'
+                    isTvMode ? 'text-3xl' : 'text-lg'
                   )}
                 >
                   {order.orderCode}
@@ -828,7 +845,7 @@ function KitchenOrderCard({
                 <p
                   className={cn(
                     'mt-1 truncate font-bold text-neutral-500 dark:text-neutral-400',
-                    isTvMode ? 'text-lg' : 'text-[11px]'
+                    isTvMode ? 'text-lg' : 'text-sm'
                   )}
                 >
                   {roomLocationLabel} · {guestName}
@@ -837,7 +854,7 @@ function KitchenOrderCard({
             )}
           </div>
 
-          <div className={cn('flex shrink-0 flex-nowrap items-center justify-end whitespace-nowrap [&>*]:mt-0', isRushMode ? 'gap-1' : 'gap-2')}>
+          <div className={cn('flex items-center [&>*]:mt-0', isRushMode ? 'shrink-0 flex-nowrap justify-end gap-1 whitespace-nowrap' : 'w-full flex-wrap justify-start gap-2')}>
             {!isRushMode ? <StatusBadge status={displayStatus} /> : null}
             <KitchenRunningTimer startedAt={order.createdAt.toISOString()} />
           </div>
@@ -850,7 +867,7 @@ function KitchenOrderCard({
               ? 'mt-3 p-4 text-base'
               : isRushMode
                 ? 'mt-2 p-1.5 text-[10px]'
-                : 'mt-3 p-2 text-[11px]'
+                : 'mt-3 p-2 text-sm'
           )}
         >
           {!isRushMode ? (
@@ -881,13 +898,13 @@ function KitchenOrderCard({
               )}
             >
               {!isRushMode ? (
-                <span className="bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                <span className="bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                   {activeItemCount} active
                 </span>
               ) : null}
 
               {cancelledItemCount > 0 ? (
-                <span className="bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-200">
+                <span className="bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-200">
                   {cancelledItemCount} cancelled
                 </span>
               ) : null}
@@ -926,7 +943,7 @@ function KitchenOrderCard({
                 ? 'p-4 text-base'
                 : isRushMode
                   ? 'p-1.5 text-[11px]'
-                  : 'p-2 text-xs'
+                  : 'p-2 text-sm'
             )}
           >
             <p className="font-semibold uppercase tracking-wide">Guest note</p>
@@ -1241,7 +1258,13 @@ function KitchenLane({
             </p>
           </div>
         ) : (
-          <div className={cn('grid', isRushMode ? 'gap-2' : 'gap-3')}>
+          /*
+           * minmax(0,1fr) rather than the default auto track: an auto track grows
+           * to its widest item's min-content, so once the cards carried readable
+           * type the lane widened past its column and clipped the timer and the
+           * Reject button against the edge.
+           */
+          <div className={cn('grid grid-cols-[minmax(0,1fr)]', isRushMode ? 'gap-2' : 'gap-3')}>
             {orders.map((order) =>
               isRushMode && type === 'ready' ? (
                 <KitchenRushReadyCard key={order.id} order={order} focusedOrderCode={focusedOrderCode} />
@@ -1332,8 +1355,17 @@ const isScheduledView = activeView === 'scheduled';
 const focusOrderCode = String(params?.focusOrder ?? '').trim().slice(0, 120);
   const showHistory = params?.history === '1';
   const message = getKitchenMessage(params?.success, params?.error);
+ /*
+  * VH-9: this read `mode === 'tv' ? 'tv' : 'rush'`, so every arrival at the
+  * kitchen landed in rush — the densest layout, 10px dish lines — and the
+  * 'normal' branches the cards were written for were unreachable code. The
+  * knock-on was that the "Rush Mode" button rendered permanently engaged and
+  * linked to the mode it was already in, and "Exit TV" exited into rush.
+  * Each mode is now the one that was asked for, and nothing is the default
+  * except the readable one.
+  */
  const displayMode: KitchenDisplayMode =
-  params?.mode === 'tv' ? 'tv' : 'rush';
+  params?.mode === 'tv' ? 'tv' : params?.mode === 'rush' ? 'rush' : 'normal';
 
 const isTvMode = displayMode === 'tv';
 const isRushMode = displayMode === 'rush';
@@ -1566,7 +1598,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       <Link
         href={buildKitchenModeHref({
           history: false,
-          mode: 'rush',
+          mode: displayMode,
           view: 'scheduled',
         })}
         className={
@@ -1614,9 +1646,10 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       <Link
         href={buildKitchenModeHref({
           history: showHistory,
-          mode: 'rush',
+          mode: isRushMode ? 'normal' : 'rush',
           view: 'live',
         })}
+        aria-pressed={activeView === 'live' && isRushMode}
         className={cn(
           'inline-flex min-h-11 items-center gap-2 px-4 py-2 text-sm font-semibold transition',
           activeView === 'live' && isRushMode
@@ -1624,7 +1657,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
             : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
         )}
       >
-        Rush Mode
+        {isRushMode ? 'Exit Rush' : 'Rush Mode'}
       </Link>
     </>
   ) : null}

@@ -6,8 +6,11 @@ import { cn } from '@/lib/utils';
 
 export function KitchenRunningTimer({
   startedAt,
+  compact = false,
 }: {
   startedAt: string;
+  /* Rush lanes trade legibility for density on purpose; everywhere else reads at 14px. */
+  compact?: boolean;
 }) {
   const startedAtMs = useMemo(() => {
     const timestamp = new Date(startedAt).getTime();
@@ -48,13 +51,14 @@ export function KitchenRunningTimer({
       suppressHydrationWarning
       title={stale ? 'This order has been open unusually long — check if it is still valid.' : undefined}
       className={cn(
-        'mt-2 px-3 py-1 text-center text-[11px] font-semibold',
+        'mt-2 px-3 py-1 text-center font-semibold tabular-nums',
+        compact ? 'text-[11px]' : 'text-sm',
         stale
           ? 'bg-red-600 text-white dark:bg-red-500 dark:text-white'
           : 'bg-black text-white dark:bg-gold dark:text-black'
       )}
     >
-      {stale ? `⚠ ${label}` : label}
+      {stale ? `LATE · ${label}` : label}
     </div>
   );
 }

@@ -385,6 +385,14 @@ body {
   strong {
     font-weight: 600;
   }
+  /*
+   * The same leak through a different door: a bare <th> takes the browser's
+   * own `font-weight: bold`, which is 700. Six of them on the analytics stock
+   * table were the last elements above the cap anywhere in the console.
+   */
+  th {
+    font-weight: 600;
+  }
   /* Figures line up wherever they are stacked. */
   table, [data-figures] {
     font-variant-numeric: tabular-nums;

@@ -298,18 +298,28 @@ function canStartOrderProcessing(order: DashboardOrder) {
 }
 
 
+/*
+ * VH-4: the forward move used to change colour with the status — black, then
+ * amber, then amber, then emerald — so the same decision wore four different
+ * clothes, and none of them outranked Mark Paid's emerald slab. One style for
+ * the move the operator is here to make; everything else is a line.
+ */
+const FORWARD_ACTION = 'bg-black text-white hover:bg-neutral-800';
+const REVERSE_ACTION =
+  'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50';
+
 function getNextActions(status: OrderStatus) {
   if (status === 'PENDING') {
     return [
       {
         status: 'PREPARING' as OrderStatus,
         label: 'Accept & Prepare',
-        className: 'bg-black text-white hover:bg-neutral-800',
+        className: FORWARD_ACTION,
       },
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Reject',
-        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
+        className: REVERSE_ACTION,
       },
     ];
   }
@@ -319,12 +329,12 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'PREPARING' as OrderStatus,
         label: 'Start',
-        className: 'bg-amber-500 text-white hover:bg-amber-600',
+        className: FORWARD_ACTION,
       },
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Cancel',
-        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
+        className: REVERSE_ACTION,
       },
     ];
   }
@@ -334,12 +344,12 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'READY' as OrderStatus,
         label: 'Ready',
-        className: 'bg-amber-500 text-white hover:bg-amber-600',
+        className: FORWARD_ACTION,
       },
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Cancel',
-        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
+        className: REVERSE_ACTION,
       },
     ];
   }
@@ -349,12 +359,12 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'DELIVERED' as OrderStatus,
         label: 'Delivered',
-        className: 'bg-emerald-600 text-white hover:bg-emerald-700',
+        className: FORWARD_ACTION,
       },
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Cancel',
-        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
+        className: REVERSE_ACTION,
       },
     ];
   }
@@ -1380,30 +1390,13 @@ function OrderDetailsModal({
                 </div>
               ) : null}
 
-              <button
-                type="button"
-                onClick={() => printOrder(order)}
-                className="flex h-11 w-full items-center justify-center gap-2 border border-neutral-200 bg-white text-sm font-semibold hover:bg-neutral-50"
-              >
-                <Printer className="size-4" />
-                Print Summary
-              </button>
-
-              {canManuallyMarkPaid(order) ? (
-                <form action={onMarkPaid}>
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <input type="hidden" name="redirectTo" value="orders" />  
-                  <button
-                    type="submit"
-                    onClick={askBeforeMarkingPaid(order)}
-                    className="flex h-11 w-full items-center justify-center gap-2 bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
-                  >
-                    <CreditCard className="size-4" />
-                    Mark Paid
-                  </button>
-                </form>
-              ) : null}
-
+              {/*
+                IX-11: the stack used to read Print, Mark Paid, Accept, Reject,
+                which put the move the operator opened the order to make third,
+                and left Reject pressed against the bottom edge of the modal
+                where it clipped. The workflow move comes first now; the
+                utilities follow it.
+              */}
               {nextActions.length ? (
                 <div className="grid gap-2">
                   {nextActions.map((action) =>
@@ -1465,10 +1458,34 @@ function OrderDetailsModal({
                   )}
                 </div>
               ) : (
-                <div className="bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
+                <div className="bg-neutral-50 p-4 text-sm font-semibold text-neutral-500">
                   This order is already {label(order.status).toLowerCase()}.
                 </div>
               )}
+
+              {canManuallyMarkPaid(order) ? (
+                <form action={onMarkPaid}>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <input type="hidden" name="redirectTo" value="orders" />
+                  <button
+                    type="submit"
+                    onClick={askBeforeMarkingPaid(order)}
+                    className="flex h-11 w-full items-center justify-center gap-2 border border-neutral-300 bg-white text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
+                  >
+                    <CreditCard className="size-4" />
+                    Mark Paid · {money(order.totalCents)}
+                  </button>
+                </form>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => printOrder(order)}
+                className="flex h-11 w-full items-center justify-center gap-2 border border-neutral-200 bg-white text-sm font-semibold hover:bg-neutral-50"
+              >
+                <Printer className="size-4" />
+                Print Summary
+              </button>
             </aside>
           </div>
         </div>
@@ -1754,17 +1771,23 @@ function MarkPaidButton({
     <form action={action}>
       <input type="hidden" name="orderId" value={order.id} />
       <input type="hidden" name="redirectTo" value="orders" />
+      {/*
+        Declaring cash collected is not the move the operator came here to make,
+        so it is a line, not the widest filled slab on the card. The amount it
+        would settle is on the control itself — the confirmation names it too,
+        but by then the click has happened.
+      */}
       <button
         type="submit"
         onClick={askBeforeMarkingPaid(order)}
         className={
           compact
-            ? 'inline-flex h-9 items-center justify-center gap-2 bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700'
-            : 'inline-flex h-11 w-full items-center justify-center gap-2 bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700'
+            ? 'inline-flex h-9 items-center justify-center gap-2 border border-neutral-300 bg-white px-3 text-xs font-semibold text-neutral-900 hover:bg-neutral-50'
+            : 'inline-flex h-11 w-full items-center justify-center gap-2 border border-neutral-300 bg-white px-4 text-xs font-semibold text-neutral-900 hover:bg-neutral-50'
         }
       >
         <CreditCard className={compact ? 'size-3.5' : 'size-4'} />
-        Mark Paid
+        {compact ? 'Mark Paid' : `Mark Paid · ${money(order.totalCents)}`}
       </button>
     </form>
   );
@@ -1964,9 +1987,7 @@ function OrderCard({
         </button>
 
         {canManuallyMarkPaid(order) ? (
-          <div className="sm:col-span-2">
-            <MarkPaidButton order={order} action={onMarkPaid} />
-          </div>
+          <MarkPaidButton order={order} action={onMarkPaid} />
         ) : null}
       </div>
     </article>
@@ -1977,10 +1998,13 @@ function PriorityQueue({
   orders,
   now,
   onSelectOrder,
+  narrowed,
 }: {
   orders: DashboardOrder[];
   now: number;
   onSelectOrder: (order: DashboardOrder) => void;
+  /* True when a search or filter is narrowing the list this queue is drawn from. */
+  narrowed: boolean;
 }) {
   const priorityOrders = orders
     .filter(
@@ -2001,6 +2025,11 @@ function PriorityQueue({
               Focus Queue
             </p>
             <h3 className="mt-1 text-lg font-semibold">Needs Attention</h3>
+            {narrowed ? (
+              <p className="mt-1 text-xs text-neutral-500">
+                Within the current filters
+              </p>
+            ) : null}
           </div>
 
           <span className="bg-black px-3 py-1 text-xs font-semibold text-white">
@@ -2059,10 +2088,14 @@ function PriorityQueue({
           ) : (
             <div className="border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
               <p className="text-sm font-semibold text-neutral-700">
-                No urgent order right now.
+                {narrowed
+                  ? 'Nothing urgent in this filter.'
+                  : 'No urgent order right now.'}
               </p>
-              <p className="mt-1 text-xs font-semibold text-neutral-500">
-                Pending, ready, or unpaid orders will appear here.
+              <p className="mt-1 text-xs text-neutral-500">
+                {narrowed
+                  ? 'Clear the filters to see the whole queue.'
+                  : 'Pending, ready, or unpaid orders will appear here.'}
               </p>
             </div>
           )}
@@ -2263,17 +2296,6 @@ export function OrdersClient({
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
-
-  const attentionCount = localOrders.filter(
-    (order) =>
-      order.status === 'PENDING' ||
-      order.status === 'READY' ||
-      order.paymentStatus === 'UNPAID'
-  ).length;
-
-  const kitchenQueueCount = localOrders.filter((order) =>
-    ['ACCEPTED', 'PREPARING', 'READY'].includes(order.status)
-  ).length;
 
   function getClientActionError(error: unknown) {
     if (error instanceof Error) {
@@ -2632,10 +2654,18 @@ export function OrdersClient({
           ) : null}
         </section>
 
+        {/*
+          The queue is drawn from the filtered list, not from every order. It
+          used to take localOrders, so a search matching nothing left the main
+          list saying "No orders found" while the one panel titled "Needs
+          Attention" still listed every order — the filter could never be
+          trusted to narrow the work.
+        */}
         <PriorityQueue
-          orders={localOrders}
+          orders={sortedOrders}
           now={now}
           onSelectOrder={(order) => setSelectedOrder(order)}
+          narrowed={Boolean(search) || statusFilter !== 'ALL' || paymentFilter !== 'ALL'}
         />
       </div>
 

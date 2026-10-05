@@ -301,7 +301,7 @@ function KitchenRushOrderDrawer({
                 </h2>
 
                 <StatusBadge status={displayStatus} />
-                 <KitchenRunningTimer startedAt={order.createdAt} />
+                 <KitchenRunningTimer startedAt={order.createdAt} compact />
 
               </div>
 
@@ -514,7 +514,7 @@ function KitchenRushOrderRow({
             </h3>
 
             <StatusBadge status={displayStatus} />
-             <KitchenRunningTimer startedAt={order.createdAt} />
+             <KitchenRunningTimer startedAt={order.createdAt} compact />
           </div>
 
           <p className="mt-1 truncate text-xs font-bold text-neutral-500 dark:text-neutral-400">

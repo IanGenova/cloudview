@@ -1,0 +1,38 @@
+{
+ "open": "opened",
+ "asideOrder": {
+  "found": true,
+  "order": [
+   "Accept & Prepare",
+   "Reject",
+   "Mark Paid · ₱707.60",
+   "Print Summary"
+  ],
+  "filled": [
+   "Accept & Prepare"
+  ],
+  "lastControl": "Print Summary",
+  "modalBottom": 796
+ },
+ "cancel": "confirmed with reason ALL",
+ "kitchen_rush": {
+  "words": [
+   "CANCELLED"
+  ],
+  "wordCount": 1,
+  "struck": [
+   "1× Breakfast Pancakes"
+  ],
+  "dots": 1
+ },
+ "kitchen_default": {
+  "words": [
+   "CANCELLED"
+  ],
+  "wordCount": 1,
+  "struck": [
+   "1× Breakfast Pancakes"
+  ],
+  "dots": 1
+ }
+}

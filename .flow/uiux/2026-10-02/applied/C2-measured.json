@@ -1,0 +1,146 @@
+{
+ "before": {
+  "kitchenDefault": {
+   "mode": "rush",
+   "orderCards": 7,
+   "codePx": 9,
+   "dishLines": 14,
+   "dishPx": 10,
+   "timerText": null,
+   "timerPx": null,
+   "modeButtons": [
+    "TV Mode",
+    "Rush Mode"
+   ],
+   "statusWords": [
+    "ACTIVE"
+   ],
+   "statusWordCount": 1
+  },
+  "kitchenRush": {
+   "mode": "rush",
+   "orderCards": 7,
+   "codePx": 9,
+   "dishLines": 14,
+   "dishPx": 10,
+   "timerText": null,
+   "timerPx": null,
+   "modeButtons": [
+    "TV Mode",
+    "Rush Mode"
+   ],
+   "statusWords": [
+    "ACTIVE"
+   ],
+   "statusWordCount": 1
+  },
+  "kitchenTv": {
+   "mode": "normal/tv",
+   "orderCards": 3,
+   "codePx": 30,
+   "dishLines": 6,
+   "dishPx": 12,
+   "timerText": null,
+   "timerPx": null,
+   "modeButtons": [
+    "Exit TV"
+   ],
+   "statusWords": [
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE"
+   ],
+   "statusWordCount": 7
+  },
+  "inventory390": {
+   "found": true,
+   "vw": 390,
+   "tableWidth": 1180,
+   "cells": 8,
+   "visibleCells": 3,
+   "figureInView": false,
+   "firstTwo": [
+    "",
+    "Breakfast Pancakes | Cloud View Demo Hotel · Breakfast"
+   ]
+  }
+ },
+ "after": {
+  "kitchenDefault": {
+   "mode": "normal/tv",
+   "orderCards": 7,
+   "codePx": 18,
+   "dishLines": 14,
+   "dishPx": 14,
+   "timerText": null,
+   "timerPx": null,
+   "modeButtons": [
+    "TV Mode",
+    "Rush Mode"
+   ],
+   "statusWords": [
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE"
+   ],
+   "statusWordCount": 15
+  },
+  "kitchenRush": {
+   "mode": "rush",
+   "orderCards": 7,
+   "codePx": 9,
+   "dishLines": 14,
+   "dishPx": 10,
+   "timerText": null,
+   "timerPx": null,
+   "modeButtons": [
+    "TV Mode",
+    "Exit Rush"
+   ],
+   "statusWords": [
+    "ACTIVE",
+    "CANCELLED"
+   ],
+   "statusWordCount": 2
+  },
+  "kitchenTv": {
+   "mode": "normal/tv",
+   "orderCards": 3,
+   "codePx": 30,
+   "dishLines": 6,
+   "dishPx": 14,
+   "timerText": null,
+   "timerPx": null,
+   "modeButtons": [
+    "Exit TV"
+   ],
+   "statusWords": [
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE",
+    "ACTIVE"
+   ],
+   "statusWordCount": 7
+  },
+  "inventory390": {
+   "found": true,
+   "vw": 390,
+   "tableWidth": 1180,
+   "cells": 8,
+   "visibleCells": 3,
+   "figureInView": true,
+   "firstTwo": [
+    "",
+    "Breakfast Pancakes | Cloud View Demo Hotel · Breakfast | Available 19 · Sold 6"
+   ]
+  }
+ }
+}

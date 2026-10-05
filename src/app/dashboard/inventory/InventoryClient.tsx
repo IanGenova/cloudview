@@ -2347,8 +2347,19 @@ export function InventoryClient({
                               <p className="font-semibold text-neutral-950">
                                 {item.name}
                               </p>
-                              <p className="mt-1 text-xs font-bold text-neutral-500">
+                              <p className="mt-1 text-xs font-semibold text-neutral-500">
                                 {item.hotelName} · {item.categoryName}
+                              </p>
+                              {/*
+                                A11Y-9: this table is 1180px wide, so on a phone
+                                the stock figure — the only reason to open
+                                inventory — sat off the right edge behind a
+                                sideways scroll. It travels with the name until
+                                the real columns fit.
+                              */}
+                              <p className="mt-2 text-xs font-semibold tabular-nums text-neutral-700 lg:hidden">
+                                {item.isDerivedStock ? 'Can sell' : 'Available'}{' '}
+                                {item.availableQty} · Sold {item.soldQty}
                               </p>
                             </td>
 
@@ -2652,8 +2663,14 @@ export function InventoryClient({
                               <p className="font-semibold text-neutral-950">
                                 {item.name}
                               </p>
-                              <p className="mt-1 text-xs font-bold text-neutral-500">
+                              <p className="mt-1 text-xs font-semibold text-neutral-500">
                                 {item.hotelName} · {item.category}
+                              </p>
+                              {/* A11Y-9, as above: the figures travel with the name on a phone. */}
+                              <p className="mt-2 text-xs font-semibold tabular-nums text-neutral-700 lg:hidden">
+                                {item.inventoryTracked
+                                  ? `Available ${item.availableQty} · Used ${item.usedQty}`
+                                  : 'Not stock-tracked'}
                               </p>
                               {item.code ? (
                                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">

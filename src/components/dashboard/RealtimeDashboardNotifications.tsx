@@ -1087,8 +1087,12 @@ function addNotificationToCenter({
 
 
 function getKitchenNotificationHref(orderCode: string) {
+  /*
+   * No mode: a notification points at an order, it does not decide how the
+   * cook wants the board laid out. This forced rush on every arrival, which
+   * is how the dense layout became the kitchen's effective default.
+   */
   const query = new URLSearchParams({
-    mode: 'rush',
     focusOrder: orderCode,
   });
 

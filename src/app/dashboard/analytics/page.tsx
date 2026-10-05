@@ -546,18 +546,23 @@ function DonutChart({
 
           return (
             <div key={segment.label} className="bg-neutral-50 p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
+              {/*
+                A11Y-7: the series name was here all along but `truncate`
+                inside a narrow flex row cut it to one character and an
+                ellipsis -- "P", "A…", "P…" -- leaving the dot as the only
+                differentiator, and three of the six dots were the same
+                colour. Let the name wrap instead of disappear.
+              */}
+              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <div className="flex min-w-0 items-baseline gap-2">
                   <span
-                    className="size-3 shrink-0 rounded-dot"
+                    className="size-3 shrink-0 translate-y-0.5 rounded-dot"
                     style={{ backgroundColor: segment.color }}
                   />
-                  <p className="truncate text-sm font-semibold">
-                    {segment.label}
-                  </p>
+                  <p className="text-sm font-semibold">{segment.label}</p>
                 </div>
 
-                <p className="shrink-0 text-sm font-semibold">
+                <p className="shrink-0 text-sm font-semibold tabular-nums">
                   {segment.value} · {percentage}%
                 </p>
               </div>

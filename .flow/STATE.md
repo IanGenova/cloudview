@@ -460,13 +460,14 @@ inherits that without 92 files being rewritten in one commit.
       from: UIUX-2026-10-02 § The verdict — five causes, cause 1
 - [x] S3 `shadow-soft` is no longer a 60px glow. by test: config assertion.
       from: UIUX-2026-10-02 § The verdict — five causes, cause 1
-- [x] S4 EB Garamond and Instrument Sans load through `next/font`, exposed as
-      `--cv-serif` / `--cv-sans`, with real fallback stacks. next/font cannot be imported
-      outside a Next build, so this is not provable by unit test and the criterion says so:
-      by test: `npm run build` compiles; by artifact: a capture showing the serif rendering.
+- [x] S4 EB Garamond and Instrument Sans load through the Next font loader in
+      `src/app/fonts.ts`, exposed as `--cv-serif` / `--cv-sans`, with real fallback stacks.
+      That loader cannot be imported outside a Next build, so this is not provable by unit
+      test and the criterion says so:
+      by test: `npm run build` compiles;
+      by artifact: `.flow/uiux/2026-10-02/applied/A-manifest.json`, which records the
+      computed family per capture — `interfaceSans` and `displaySerif` on both surfaces.
       `src/app/fonts.ts` added to `.flow/tdd-exempt` for the same reason as next.config.mjs.
-      Proven: build green, and `interfaceSans` is the computed family on both surfaces in
-      `.flow/uiux/2026-10-02/applied/A-manifest.json`.
       from: artifact § Six decisions, decision 1
 - [x] S5 One pure module builds every primitive's classes, tested: no radius class, no
       weight above 600, a visible `focus-visible` ring at 2px/2px offset that does not
@@ -482,7 +483,8 @@ inherits that without 92 files being rewritten in one commit.
       **1,579 -> 240**, weight-900 elements **1,475 -> 2**, both faces loading on both
       surfaces. The 80 remaining radius kinds and the 11 glows on the cart are arbitrary
       Tailwind values that bypass the scale — the sweep phase edits those, as framed.
-      by artifact: `.flow/uiux/2026-10-02/applied/A-*.png`.
+      by artifact: `.flow/uiux/2026-10-02/applied/A-d02-orders--desktop--light.png`, with
+      the whole set and its numbers beside it in `A-manifest.json`.
       from: artifact § Five groups — Group A
 
 ### Tasks
@@ -650,5 +652,111 @@ hero card: the dashboard home, rewards, services, backups and NFC tags.
 
 Section headings that carry their own information stay — "Stored Archives", "Recovery
 Activity", "Recommended services". The rule is one header per screen, not one heading.
+
+Wakes since commit: 0.
+
+## Phase: uiux-C3-console-truth (5 October 2026) — Full
+
+Owner: "continue with the rest of group C". The six findings group C still had open after
+the confirmation gate, the tile strips and the hero cards: the queue that ignored the
+filter, the kitchen's own sizing, the word on a cancelled dish, Mark Paid's prominence,
+the detail modal's action order, and the stock figure a phone could not reach.
+
+### Acceptance criteria
+- [x] C1 The Focus Queue is drawn from the filtered list. With `zzzznothing` in the search
+      box, measured on the same database at the same moment: badge **6 -> 0**, the panel's
+      order list **six codes -> none**, "Nothing urgent in this filter." in place of "No
+      urgent order right now.", and a "Within the current filters" line under the heading
+      so the empty panel is not read as an empty board. The main list said "No orders
+      found." in both builds. by artifact: `.flow/uiux/2026-10-02/applied/C2-measured.json`.
+      from: UIUX-2026-10-02 § Interaction design — IX-9
+- [x] C2 The kitchen renders its own readable layout by default. The page parsed
+      `mode === 'tv' ? 'tv' : 'rush'`, so every arrival landed in the densest mode and the
+      `'normal'` branches the cards were written for were unreachable code. Measured
+      before -> after on the live screen: order code **9px -> 18px**, dish lines
+      **10px -> 14px**. `?mode=rush` still gives 9px/10px, so nothing was removed.
+      by artifact: `.flow/uiux/2026-10-02/applied/C2-measured.json`.
+      from: UIUX-2026-10-02 § Visual hierarchy — VH-9
+- [x] C3 Two consequences of that default, found while fixing it and fixed with it: the
+      "Rush Mode" button rendered permanently engaged and linked to the mode it was
+      already in — it now reads "Exit Rush" and carries `aria-pressed`; and a kitchen
+      notification's deep link forced `mode=rush`, which is how the dense layout became
+      the effective default. A notification points at an order; it does not decide how
+      the cook wants the board laid out.
+- [x] C4 A cancelled dish carries a word in the dense lane. Proven by cancelling one
+      through the product's own form and reading both builds back: before **0** occurrences
+      of "CANCELLED" with the strikethrough alone carrying the state; after **1**, plus the
+      strikethrough and the dot's `aria-label`. The audit's claim that the state was only a
+      dot was partly inaccurate — red, a strikethrough and an `aria-label` were already
+      there — so the fix is the missing word, not the whole treatment.
+      by artifact: `.flow/uiux/2026-10-02/applied/C2-measured-modal-and-cancelled.json`.
+      from: UIUX-2026-10-02 § Accessibility — A11Y-8
+- [x] C5 Mark Paid is no longer the loudest control. On an order card, measured:
+      **328px wide, `rgb(5, 150, 105)` filled -> 160px, white, hairline**, and it now
+      names the amount it would settle ("Mark Paid · ₱707.60") on the control rather than
+      only in the confirmation that follows the click. Reject went from a filled
+      `rgb(220, 38, 38)` slab to a transparent hairline. One filled control remains per
+      card: the workflow move. The forward action also stopped changing colour with the
+      status — it was black, then amber, then amber, then emerald for one decision.
+      by artifact: `.flow/uiux/2026-10-02/applied/C2-measured.json`.
+      from: UIUX-2026-10-02 § Visual hierarchy — VH-4
+- [x] C6 The detail modal's aside reads **Accept & Prepare -> Reject -> Mark Paid ·
+      ₱707.60 -> Print Summary**, one filled control, and the last thing against the
+      modal's bottom edge is Print Summary rather than Reject.
+      by artifact: `.flow/uiux/2026-10-02/applied/C2-measured-modal-and-cancelled.json`.
+      from: UIUX-2026-10-02 § Interaction design — IX-11
+- [x] C7 The stock figure reaches a phone. The inventory table is 1,180px wide in a 390px
+      viewport, so three of eight cells are in view; the figures sat behind a sideways
+      scroll. They now travel with the item name below `lg`: measured `figureInView`
+      **false -> true**, the name cell reading "Breakfast Pancakes | Cloud View Demo Hotel
+      · Breakfast | Available 19 · Sold 6". The table keeps its full detail for anyone who
+      scrolls. by artifact: `.flow/uiux/2026-10-02/applied/C2-c06-inventory--mobile--light.png`
+      from: UIUX-2026-10-02 § Accessibility — A11Y-9
+- [x] C8 Readable type does not fit a layout built for 9px, and the first capture of C2
+      proved it: the kitchen lane's grid used the default `auto` track, which grows to its
+      widest item's min-content, so the card ran 389px inside a 335px lane and clipped the
+      timer and the Reject button against the edge. `minmax(0,1fr)` caps the track — card
+      307px in a 335px lane, nothing overflowing. The first attempt at that then truncated
+      the order code to "CVDHF…" to make room for the status and the timer, which is worse
+      than clipping on a ticket, so outside rush the code takes the whole line and the
+      badges sit beneath it. Measured and looked at, not assumed.
+      by artifact: `.flow/uiux/2026-10-02/applied/C2-c04-kitchen--desktop--light.png`
+- [x] C9 Six `<th>` elements on the analytics stock table were still rendering at 700 —
+      a bare `th` takes the browser's own `bold`, the same leak as `b, strong { bolder }`
+      from the group-A phase, through a different door. Capped in the same base layer.
+      Across the 21 captures, elements above weight 600: **3,688 -> 0**.
+      by artifact: `.flow/uiux/2026-10-02/applied/C2-manifest.json`
+- [x] C10 Machine stage green: `tsc --noEmit` clean, 238 tests pass across 23 files, the
+      production build compiles, every captured route HTTP 200 (21/21 on both servers).
+      The three standing greps return only documented exceptions — 21 `rounded-dot`, and
+      every remaining `font-black` / `shadow-soft` is a test or a comment naming the thing
+      it replaced. Measured across the same 21 captures, before -> after: radius-bearing
+      elements **3,238 -> 48** (all `9999px` status dots), distinct radius values
+      **158 -> 6**, tap targets under 44px **294 -> 280**.
+
+### What this phase did not touch
+`A11Y-7` was closed in the same round before this record was framed: the analytics donut
+legends had the series names in the markup all along, but `truncate` inside a narrow flex
+row cut them to "P", "A…", "P…" while three of six dots shared a colour. The row wraps now.
+
+Making TV Mode the kitchen's default is decision 5 and still the owner's — this phase made
+the *readable* mode the default, which is not the same thing and needed no decision. Group
+E remains blocked on the owner's own words.
+
+### Deviation
+The audit measured the kitchen's "default" type sizes as 14px/12px. They are 9px and 10px:
+the screen it measured was rush mode, because rush was the default. The finding was right
+about the defect and wrong about the numbers, and the cause was one ternary.
+
+### Measurement notes
+The first pass of the group-C assertion script reported the inventory fix as absent. It
+sliced each cell's text to 48 characters before testing it for a digit, and the figure sits
+past that point — the probe was measuring its own truncation. Corrected and re-run before
+anything was recorded.
+
+The clipping in C8 was not caught by any number. Every probe was green — one `<h1>`, no
+radii, no weight above 600, no overflowing document — while the timer read "LAT" and the
+Reject button was cut in half. It was caught by looking at the capture, which is what the
+captures are for.
 
 Wakes since commit: 0.

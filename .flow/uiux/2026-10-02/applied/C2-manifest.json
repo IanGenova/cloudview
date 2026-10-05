@@ -1,0 +1,4127 @@
+[
+ {
+  "id": "c01-orders",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c01-orders--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 9,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     250
+    ],
+    [
+     "400",
+     212
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(120, 53, 15)",
+     120
+    ],
+    [
+     "rgb(23, 23, 23)",
+     80
+    ],
+    [
+     "rgb(163, 163, 163)",
+     48
+    ],
+    [
+     "rgb(10, 10, 10)",
+     38
+    ],
+    [
+     "rgb(255, 255, 255)",
+     31
+    ],
+    [
+     "rgb(185, 28, 28)",
+     28
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(64, 64, 64)",
+     26
+    ]
+   ],
+   "textColorKinds": 20,
+   "bgColorKinds": 20,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 7",
+     "w": 56,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 7",
+     "w": 97,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 118,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 20,
+   "imgsNoAlt": 0,
+   "docHeight": 2138,
+   "elements": 659,
+   "textLength": 2865,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear"
+  },
+  "ok": true
+ },
+ {
+  "id": "c02-orders-nomatch",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c02-orders-nomatch--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 3,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     78
+    ],
+    [
+     "400",
+     71
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     45
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(255, 255, 255)",
+     24
+    ],
+    [
+     "rgb(64, 64, 64)",
+     13
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgb(115, 115, 115)",
+     7
+    ],
+    [
+     "rgb(163, 163, 163)",
+     6
+    ],
+    [
+     "rgb(10, 10, 10)",
+     6
+    ]
+   ],
+   "textColorKinds": 17,
+   "bgColorKinds": 15,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 7",
+     "w": 56,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 7",
+     "w": 97,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 118,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 17,
+   "imgsNoAlt": 0,
+   "docHeight": 938,
+   "elements": 240,
+   "textLength": 928,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear"
+  },
+  "ok": true
+ },
+ {
+  "id": "c03-order-detail",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c03-order-detail--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    },
+    {
+     "tag": "H2",
+     "text": "CVDHFO000007"
+    }
+   ],
+   "headingCount": 10,
+   "radii": [
+    [
+     "9999px",
+     1
+    ]
+   ],
+   "radiusKinds": 1,
+   "radiusElements": 1,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     289
+    ],
+    [
+     "400",
+     265
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     142
+    ],
+    [
+     "rgb(120, 53, 15)",
+     120
+    ],
+    [
+     "rgb(163, 163, 163)",
+     52
+    ],
+    [
+     "rgb(10, 10, 10)",
+     42
+    ],
+    [
+     "rgb(185, 28, 28)",
+     34
+    ],
+    [
+     "rgb(255, 255, 255)",
+     32
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(64, 64, 64)",
+     27
+    ]
+   ],
+   "textColorKinds": 22,
+   "bgColorKinds": 25,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 7",
+     "w": 56,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 7",
+     "w": 97,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 118,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 22,
+   "imgsNoAlt": 0,
+   "docHeight": 2138,
+   "elements": 774,
+   "textLength": 3756,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear"
+  },
+  "ok": true
+ },
+ {
+  "id": "c04-kitchen",
+  "surface": "dashboard",
+  "path": "/dashboard/kitchen",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c04-kitchen--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/kitchen",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Kitchen Display"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Kitchen Display"
+    },
+    {
+     "tag": "H2",
+     "text": "Pending"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000001"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H2",
+     "text": "Preparing"
+    },
+    {
+     "tag": "H2",
+     "text": "Serving"
+    }
+   ],
+   "headingCount": 11,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     202
+    ],
+    [
+     "600",
+     164
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(10, 10, 10)",
+     201
+    ],
+    [
+     "rgb(255, 255, 255)",
+     38
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(4, 120, 87)",
+     20
+    ],
+    [
+     "rgb(82, 82, 82)",
+     15
+    ],
+    [
+     "rgb(23, 23, 23)",
+     12
+    ],
+    [
+     "rgb(115, 115, 115)",
+     12
+    ],
+    [
+     "rgb(185, 28, 28)",
+     12
+    ]
+   ],
+   "textColorKinds": 17,
+   "bgColorKinds": 20,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 7,
+   "imgsNoAlt": 0,
+   "docHeight": 1041,
+   "elements": 479,
+   "textLength": 2063,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Kitchen Display Live kitchen workflow for verified orders only. Review, prepare, mark read"
+  },
+  "ok": true
+ },
+ {
+  "id": "c05-kitchen-rush",
+  "surface": "dashboard",
+  "path": "/dashboard/kitchen?mode=rush",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c05-kitchen-rush--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/kitchen?mode=rush",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Kitchen Display"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Kitchen Display"
+    },
+    {
+     "tag": "H2",
+     "text": "Pending"
+    },
+    {
+     "tag": "H2",
+     "text": "Preparing"
+    },
+    {
+     "tag": "H2",
+     "text": "Serving"
+    }
+   ],
+   "headingCount": 4,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     196
+    ],
+    [
+     "600",
+     123
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(10, 10, 10)",
+     181
+    ],
+    [
+     "rgb(255, 255, 255)",
+     39
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(64, 64, 64)",
+     14
+    ],
+    [
+     "rgb(23, 23, 23)",
+     12
+    ],
+    [
+     "rgb(185, 28, 28)",
+     12
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgb(82, 82, 82)",
+     8
+    ]
+   ],
+   "textColorKinds": 17,
+   "bgColorKinds": 23,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Reject",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Reject",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Reject",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    }
+   ],
+   "smallTargetCount": 21,
+   "imgsNoAlt": 0,
+   "docHeight": 1041,
+   "elements": 432,
+   "textLength": 1667,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Kitchen Display Live kitchen workflow for verified orders only. Review, prepare, mark read"
+  },
+  "ok": true
+ },
+ {
+  "id": "c06-inventory",
+  "surface": "dashboard",
+  "path": "/dashboard/inventory",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c06-inventory--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/inventory",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Inventory Management"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Inventory Management"
+    },
+    {
+     "tag": "H2",
+     "text": "Food Menu Stock Availability"
+    }
+   ],
+   "headingCount": 2,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     119
+    ],
+    [
+     "400",
+     99
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     76
+    ],
+    [
+     "rgb(255, 255, 255)",
+     28
+    ],
+    [
+     "rgb(115, 115, 115)",
+     28
+    ],
+    [
+     "rgb(216, 202, 167)",
+     21
+    ],
+    [
+     "rgb(82, 82, 82)",
+     12
+    ],
+    [
+     "rgb(163, 163, 163)",
+     12
+    ],
+    [
+     "rgb(10, 10, 10)",
+     11
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ]
+   ],
+   "textColorKinds": 18,
+   "bgColorKinds": 19,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Select all 4 filtered single i",
+     "w": 232,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Update Selected",
+     "w": 150,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Select single items on this pa",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Menu Item",
+     "w": 224,
+     "h": 24
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Type / Status",
+     "w": 125,
+     "h": 24
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Available",
+     "w": 85,
+     "h": 24
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Sold",
+     "w": 56,
+     "h": 24
+    }
+   ],
+   "smallTargetCount": 29,
+   "imgsNoAlt": 0,
+   "docHeight": 1142,
+   "elements": 367,
+   "textLength": 1584,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE SALES & STOCK Menu Inventory POS Terminal ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Inventory Management Manage manual stock changes and review automatic order deductions, cancellation restores, and rollback movements. Foo"
+  },
+  "ok": true
+ },
+ {
+  "id": "c07-analytics",
+  "surface": "dashboard",
+  "path": "/dashboard/analytics",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c07-analytics--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/analytics",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Business Intelligence Center"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Business Intelligence Center"
+    },
+    {
+     "tag": "H2",
+     "text": "A clearer pulse of hotel performance."
+    },
+    {
+     "tag": "H2",
+     "text": "Revenue Performance"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Status Mix"
+    },
+    {
+     "tag": "H2",
+     "text": "Payment Status"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Destination Mix"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Stock Health"
+    },
+    {
+     "tag": "H2",
+     "text": "Popular Menu Items"
+    },
+    {
+     "tag": "H2",
+     "text": "Guest Service Demand"
+    },
+    {
+     "tag": "H2",
+     "text": "Revenue by Payment Status"
+    },
+    {
+     "tag": "H2",
+     "text": "Stock Usage from Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Operational Scoreboard"
+    },
+    {
+     "tag": "H2",
+     "text": "Menu Stock Availability"
+    },
+    {
+     "tag": "H2",
+     "text": "Recent Stock Movements"
+    }
+   ],
+   "headingCount": 14,
+   "radii": [
+    [
+     "9999px",
+     15
+    ]
+   ],
+   "radiusKinds": 1,
+   "radiusElements": 15,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     322
+    ],
+    [
+     "600",
+     288
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     315
+    ],
+    [
+     "rgb(255, 255, 255)",
+     46
+    ],
+    [
+     "rgb(115, 115, 115)",
+     41
+    ],
+    [
+     "rgb(10, 10, 10)",
+     39
+    ],
+    [
+     "rgb(163, 163, 163)",
+     34
+    ],
+    [
+     "rgb(4, 120, 87)",
+     25
+    ],
+    [
+     "rgb(82, 82, 82)",
+     20
+    ],
+    [
+     "rgb(216, 202, 167)",
+     15
+    ]
+   ],
+   "textColorKinds": 23,
+   "bgColorKinds": 38,
+   "blurred": 7,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "TOP",
+     "w": 50,
+     "h": 29
+    },
+    {
+     "tag": "A",
+     "label": "MENU ITEM",
+     "w": 160,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "HOTEL",
+     "w": 176,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "AVAILABLE",
+     "w": 94,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "SOLD",
+     "w": 61,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "STATUS",
+     "w": 77,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "UPDATED",
+     "w": 141,
+     "h": 17
+    }
+   ],
+   "smallTargetCount": 15,
+   "imgsNoAlt": 0,
+   "docHeight": 4706,
+   "elements": 882,
+   "textLength": 4124,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Business Intelligence Center Revenue, operations, guest service, menu demand, and inventory intelligence in one decision-ready dashboard. HOTEL SCOPE All Hotels Cloud"
+  },
+  "ok": true
+ },
+ {
+  "id": "c01-orders",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c01-orders--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 9,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     234
+    ],
+    [
+     "400",
+     185
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(120, 53, 15)",
+     120
+    ],
+    [
+     "rgb(23, 23, 23)",
+     82
+    ],
+    [
+     "rgb(163, 163, 163)",
+     48
+    ],
+    [
+     "rgb(10, 10, 10)",
+     38
+    ],
+    [
+     "rgb(185, 28, 28)",
+     28
+    ],
+    [
+     "rgb(64, 64, 64)",
+     26
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ],
+    [
+     "rgb(115, 115, 115)",
+     17
+    ]
+   ],
+   "textColorKinds": 15,
+   "bgColorKinds": 12,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 34,
+   "imgsNoAlt": 0,
+   "docHeight": 5622,
+   "elements": 549,
+   "textLength": 2731,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with Xendit refund and stock-restoration details. All 7 PENDING 7 PREPARING 0 READY 0 DELIVERED 0 CANCELLED 0 SEARCH ORDERS PA"
+  },
+  "ok": true
+ },
+ {
+  "id": "c02-orders-nomatch",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c02-orders-nomatch--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 3,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     62
+    ],
+    [
+     "400",
+     44
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     47
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ],
+    [
+     "rgb(64, 64, 64)",
+     13
+    ],
+    [
+     "rgb(115, 115, 115)",
+     7
+    ],
+    [
+     "rgb(163, 163, 163)",
+     6
+    ],
+    [
+     "rgb(10, 10, 10)",
+     6
+    ],
+    [
+     "rgb(255, 255, 255)",
+     3
+    ],
+    [
+     "rgb(82, 82, 82)",
+     2
+    ]
+   ],
+   "textColorKinds": 12,
+   "bgColorKinds": 7,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 31,
+   "imgsNoAlt": 0,
+   "docHeight": 1382,
+   "elements": 130,
+   "textLength": 794,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with Xendit refund and stock-restoration details. All 7 PENDING 7 PREPARING 0 READY 0 DELIVERED 0 CANCELLED 0 SEARCH ORDERS PA"
+  },
+  "ok": true
+ },
+ {
+  "id": "c03-order-detail",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c03-order-detail--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    },
+    {
+     "tag": "H2",
+     "text": "CVDHFO000007"
+    }
+   ],
+   "headingCount": 10,
+   "radii": [
+    [
+     "9999px",
+     1
+    ]
+   ],
+   "radiusKinds": 1,
+   "radiusElements": 1,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     273
+    ],
+    [
+     "400",
+     238
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     144
+    ],
+    [
+     "rgb(120, 53, 15)",
+     120
+    ],
+    [
+     "rgb(163, 163, 163)",
+     52
+    ],
+    [
+     "rgb(10, 10, 10)",
+     42
+    ],
+    [
+     "rgb(185, 28, 28)",
+     34
+    ],
+    [
+     "rgb(64, 64, 64)",
+     27
+    ],
+    [
+     "rgb(115, 115, 115)",
+     25
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ]
+   ],
+   "textColorKinds": 17,
+   "bgColorKinds": 17,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 36,
+   "imgsNoAlt": 0,
+   "docHeight": 5622,
+   "elements": 664,
+   "textLength": 3622,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with Xendit refund and stock-restoration details. All 7 PENDING 7 PREPARING 0 READY 0 DELIVERED 0 CANCELLED 0 SEARCH ORDERS PA"
+  },
+  "ok": true
+ },
+ {
+  "id": "c04-kitchen",
+  "surface": "dashboard",
+  "path": "/dashboard/kitchen",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c04-kitchen--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/kitchen",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Kitchen Display"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Kitchen Display"
+    },
+    {
+     "tag": "H2",
+     "text": "Pending"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000001"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H2",
+     "text": "Preparing"
+    },
+    {
+     "tag": "H2",
+     "text": "Serving"
+    }
+   ],
+   "headingCount": 11,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     175
+    ],
+    [
+     "600",
+     148
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(10, 10, 10)",
+     201
+    ],
+    [
+     "rgb(4, 120, 87)",
+     20
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ],
+    [
+     "rgb(255, 255, 255)",
+     17
+    ],
+    [
+     "rgb(82, 82, 82)",
+     15
+    ],
+    [
+     "rgb(23, 23, 23)",
+     14
+    ],
+    [
+     "rgb(115, 115, 115)",
+     12
+    ],
+    [
+     "rgb(185, 28, 28)",
+     12
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 12,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 21,
+   "imgsNoAlt": 0,
+   "docHeight": 1001,
+   "elements": 369,
+   "textLength": 1929,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Kitchen Display Live kitchen workflow for verified orders only. Review, prepare, mark ready, deliver, or cancel with automatic stock and refund handling. Refresh Fullscreen TV Mode Scheduled Orders History Rush Mode Pending "
+  },
+  "ok": true
+ },
+ {
+  "id": "c05-kitchen-rush",
+  "surface": "dashboard",
+  "path": "/dashboard/kitchen?mode=rush",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c05-kitchen-rush--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/kitchen?mode=rush",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Kitchen Display"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Kitchen Display"
+    },
+    {
+     "tag": "H2",
+     "text": "Pending"
+    },
+    {
+     "tag": "H2",
+     "text": "Preparing"
+    },
+    {
+     "tag": "H2",
+     "text": "Serving"
+    }
+   ],
+   "headingCount": 4,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     169
+    ],
+    [
+     "600",
+     107
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(10, 10, 10)",
+     181
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ],
+    [
+     "rgb(255, 255, 255)",
+     18
+    ],
+    [
+     "rgb(23, 23, 23)",
+     14
+    ],
+    [
+     "rgb(64, 64, 64)",
+     14
+    ],
+    [
+     "rgb(185, 28, 28)",
+     12
+    ],
+    [
+     "rgb(82, 82, 82)",
+     8
+    ],
+    [
+     "rgb(115, 115, 115)",
+     5
+    ]
+   ],
+   "textColorKinds": 12,
+   "bgColorKinds": 15,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 35,
+   "imgsNoAlt": 0,
+   "docHeight": 1001,
+   "elements": 322,
+   "textLength": 1533,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Kitchen Display Live kitchen workflow for verified orders only. Review, prepare, mark ready, deliver, or cancel with automatic stock and refund handling. Refresh Fullscreen TV Mode Scheduled Orders History Exit Rush Pending "
+  },
+  "ok": true
+ },
+ {
+  "id": "c06-inventory",
+  "surface": "dashboard",
+  "path": "/dashboard/inventory",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c06-inventory--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/inventory",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Inventory Management"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Inventory Management"
+    },
+    {
+     "tag": "H2",
+     "text": "Food Menu Stock Availability"
+    }
+   ],
+   "headingCount": 2,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     113
+    ],
+    [
+     "400",
+     72
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     78
+    ],
+    [
+     "rgb(115, 115, 115)",
+     28
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ],
+    [
+     "rgb(82, 82, 82)",
+     12
+    ],
+    [
+     "rgb(163, 163, 163)",
+     12
+    ],
+    [
+     "rgb(10, 10, 10)",
+     11
+    ],
+    [
+     "rgb(38, 38, 38)",
+     7
+    ],
+    [
+     "rgb(255, 255, 255)",
+     7
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 11,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 45,
+   "imgsNoAlt": 0,
+   "docHeight": 1673,
+   "elements": 273,
+   "textLength": 1586,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Inventory Management Manage manual stock changes and review automatic order deductions, cancellation restores, and rollback movements. Food Menu Inventory Service Request Inventory Food Menu Stock Availability Control stock "
+  },
+  "ok": true
+ },
+ {
+  "id": "c07-analytics",
+  "surface": "dashboard",
+  "path": "/dashboard/analytics",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c07-analytics--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/analytics",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Business Intelligence Center"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Business Intelligence Center"
+    },
+    {
+     "tag": "H2",
+     "text": "A clearer pulse of hotel performance."
+    },
+    {
+     "tag": "H2",
+     "text": "Revenue Performance"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Status Mix"
+    },
+    {
+     "tag": "H2",
+     "text": "Payment Status"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Destination Mix"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Stock Health"
+    },
+    {
+     "tag": "H2",
+     "text": "Popular Menu Items"
+    },
+    {
+     "tag": "H2",
+     "text": "Guest Service Demand"
+    },
+    {
+     "tag": "H2",
+     "text": "Revenue by Payment Status"
+    },
+    {
+     "tag": "H2",
+     "text": "Stock Usage from Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Operational Scoreboard"
+    },
+    {
+     "tag": "H2",
+     "text": "Menu Stock Availability"
+    },
+    {
+     "tag": "H2",
+     "text": "Recent Stock Movements"
+    }
+   ],
+   "headingCount": 14,
+   "radii": [
+    [
+     "9999px",
+     15
+    ]
+   ],
+   "radiusKinds": 1,
+   "radiusElements": 15,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     296
+    ],
+    [
+     "600",
+     284
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(23, 23, 23)",
+     317
+    ],
+    [
+     "rgb(115, 115, 115)",
+     41
+    ],
+    [
+     "rgb(10, 10, 10)",
+     39
+    ],
+    [
+     "rgb(163, 163, 163)",
+     34
+    ],
+    [
+     "rgb(255, 255, 255)",
+     26
+    ],
+    [
+     "rgb(4, 120, 87)",
+     25
+    ],
+    [
+     "rgb(82, 82, 82)",
+     20
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ]
+   ],
+   "textColorKinds": 20,
+   "bgColorKinds": 30,
+   "blurred": 6,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 62,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 58,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 65,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 70,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 51,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 71,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 29,
+   "imgsNoAlt": 0,
+   "docHeight": 10326,
+   "elements": 809,
+   "textLength": 4066,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Business Intelligence Center Revenue, operations, guest service, menu demand, and inventory intelligence in one decision-ready dashboard. HOTEL SCOPE All Hotels Cloud View Demo Hotel ANALYSIS PERIOD Last 7 days Last 14 days "
+  },
+  "ok": true
+ },
+ {
+  "id": "c01-orders",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c01-orders--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 9,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     250
+    ],
+    [
+     "400",
+     212
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(252, 211, 77)",
+     122
+    ],
+    [
+     "rgb(250, 250, 250)",
+     91
+    ],
+    [
+     "rgb(163, 163, 163)",
+     80
+    ],
+    [
+     "rgb(245, 245, 245)",
+     63
+    ],
+    [
+     "rgb(255, 255, 255)",
+     35
+    ],
+    [
+     "rgb(252, 165, 165)",
+     28
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 22,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 7",
+     "w": 56,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 7",
+     "w": 97,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 118,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 20,
+   "imgsNoAlt": 0,
+   "docHeight": 2138,
+   "elements": 655,
+   "textLength": 2864,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear "
+  },
+  "ok": true
+ },
+ {
+  "id": "c02-orders-nomatch",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c02-orders-nomatch--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 3,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     78
+    ],
+    [
+     "400",
+     71
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(245, 245, 245)",
+     40
+    ],
+    [
+     "rgb(255, 255, 255)",
+     28
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(250, 250, 250)",
+     22
+    ],
+    [
+     "rgb(163, 163, 163)",
+     16
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgb(255, 242, 201)",
+     2
+    ],
+    [
+     "rgb(9, 8, 6)",
+     2
+    ]
+   ],
+   "textColorKinds": 12,
+   "bgColorKinds": 17,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 7",
+     "w": 56,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 7",
+     "w": 97,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 118,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 17,
+   "imgsNoAlt": 0,
+   "docHeight": 938,
+   "elements": 236,
+   "textLength": 927,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear "
+  },
+  "ok": true
+ },
+ {
+  "id": "c03-order-detail",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c03-order-detail--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    },
+    {
+     "tag": "H2",
+     "text": "CVDHFO000007"
+    }
+   ],
+   "headingCount": 10,
+   "radii": [
+    [
+     "9999px",
+     1
+    ]
+   ],
+   "radiusKinds": 1,
+   "radiusElements": 1,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     289
+    ],
+    [
+     "400",
+     265
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(252, 211, 77)",
+     123
+    ],
+    [
+     "rgb(245, 245, 245)",
+     122
+    ],
+    [
+     "rgb(250, 250, 250)",
+     101
+    ],
+    [
+     "rgb(163, 163, 163)",
+     93
+    ],
+    [
+     "rgb(255, 255, 255)",
+     36
+    ],
+    [
+     "rgb(252, 165, 165)",
+     34
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 26,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 7",
+     "w": 56,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 7",
+     "w": 97,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 112,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 118,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 22,
+   "imgsNoAlt": 0,
+   "docHeight": 2138,
+   "elements": 770,
+   "textLength": 3755,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear "
+  },
+  "ok": true
+ },
+ {
+  "id": "c04-kitchen",
+  "surface": "dashboard",
+  "path": "/dashboard/kitchen",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c04-kitchen--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/kitchen",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Kitchen Display"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Kitchen Display"
+    },
+    {
+     "tag": "H2",
+     "text": "Pending"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000001"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000002"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000003"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000004"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000005"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000006"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000007"
+    },
+    {
+     "tag": "H2",
+     "text": "Preparing"
+    },
+    {
+     "tag": "H2",
+     "text": "Serving"
+    }
+   ],
+   "headingCount": 11,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     202
+    ],
+    [
+     "600",
+     164
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(250, 250, 250)",
+     204
+    ],
+    [
+     "rgb(255, 255, 255)",
+     37
+    ],
+    [
+     "rgb(163, 163, 163)",
+     28
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(110, 231, 183)",
+     21
+    ],
+    [
+     "rgb(252, 165, 165)",
+     12
+    ],
+    [
+     "rgb(0, 0, 0)",
+     10
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 21,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 7,
+   "imgsNoAlt": 0,
+   "docHeight": 1041,
+   "elements": 475,
+   "textLength": 2062,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Kitchen Display Live kitchen workflow for verified orders only. Review, prepare, mark ready"
+  },
+  "ok": true
+ },
+ {
+  "id": "c05-kitchen-rush",
+  "surface": "dashboard",
+  "path": "/dashboard/kitchen?mode=rush",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c05-kitchen-rush--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/kitchen?mode=rush",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Kitchen Display"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Kitchen Display"
+    },
+    {
+     "tag": "H2",
+     "text": "Pending"
+    },
+    {
+     "tag": "H2",
+     "text": "Preparing"
+    },
+    {
+     "tag": "H2",
+     "text": "Serving"
+    }
+   ],
+   "headingCount": 4,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     196
+    ],
+    [
+     "600",
+     123
+    ],
+    [
+     "500",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(250, 250, 250)",
+     198
+    ],
+    [
+     "rgb(255, 255, 255)",
+     36
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(163, 163, 163)",
+     14
+    ],
+    [
+     "rgb(252, 165, 165)",
+     12
+    ],
+    [
+     "rgb(0, 0, 0)",
+     11
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgb(245, 245, 245)",
+     7
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 24,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Reject",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Reject",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Reject",
+     "w": 163,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Accept",
+     "w": 163,
+     "h": 32
+    }
+   ],
+   "smallTargetCount": 21,
+   "imgsNoAlt": 0,
+   "docHeight": 1041,
+   "elements": 428,
+   "textLength": 1666,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Kitchen Display Live kitchen workflow for verified orders only. Review, prepare, mark ready"
+  },
+  "ok": true
+ },
+ {
+  "id": "c06-inventory",
+  "surface": "dashboard",
+  "path": "/dashboard/inventory",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c06-inventory--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/inventory",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Inventory Management"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Inventory Management"
+    },
+    {
+     "tag": "H2",
+     "text": "Food Menu Stock Availability"
+    }
+   ],
+   "headingCount": 2,
+   "radii": [],
+   "radiusKinds": 0,
+   "radiusElements": 0,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "600",
+     119
+    ],
+    [
+     "400",
+     99
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(250, 250, 250)",
+     59
+    ],
+    [
+     "rgb(163, 163, 163)",
+     53
+    ],
+    [
+     "rgb(245, 245, 245)",
+     33
+    ],
+    [
+     "rgb(255, 255, 255)",
+     32
+    ],
+    [
+     "rgb(216, 202, 167)",
+     21
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgb(110, 231, 183)",
+     5
+    ],
+    [
+     "rgb(255, 242, 201)",
+     2
+    ]
+   ],
+   "textColorKinds": 12,
+   "bgColorKinds": 21,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Select all 4 filtered single i",
+     "w": 232,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Update Selected",
+     "w": 150,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Select single items on this pa",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Menu Item",
+     "w": 224,
+     "h": 24
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Type / Status",
+     "w": 125,
+     "h": 24
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Available",
+     "w": 85,
+     "h": 24
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Sold",
+     "w": 56,
+     "h": 24
+    }
+   ],
+   "smallTargetCount": 29,
+   "imgsNoAlt": 0,
+   "docHeight": 1142,
+   "elements": 363,
+   "textLength": 1583,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE SALES & STOCK Menu Inventory POS Terminal ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Inventory Management Manage manual stock changes and review automatic order deductions, cancellation restores, and rollback movements. Food"
+  },
+  "ok": true
+ },
+ {
+  "id": "c07-analytics",
+  "surface": "dashboard",
+  "path": "/dashboard/analytics",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-C2\\c07-analytics--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3008/dashboard/analytics",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Business Intelligence Center"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Business Intelligence Center"
+    },
+    {
+     "tag": "H2",
+     "text": "A clearer pulse of hotel performance."
+    },
+    {
+     "tag": "H2",
+     "text": "Revenue Performance"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Status Mix"
+    },
+    {
+     "tag": "H2",
+     "text": "Payment Status"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Destination Mix"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Stock Health"
+    },
+    {
+     "tag": "H2",
+     "text": "Popular Menu Items"
+    },
+    {
+     "tag": "H2",
+     "text": "Guest Service Demand"
+    },
+    {
+     "tag": "H2",
+     "text": "Revenue by Payment Status"
+    },
+    {
+     "tag": "H2",
+     "text": "Stock Usage from Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Operational Scoreboard"
+    },
+    {
+     "tag": "H2",
+     "text": "Menu Stock Availability"
+    },
+    {
+     "tag": "H2",
+     "text": "Recent Stock Movements"
+    }
+   ],
+   "headingCount": 14,
+   "radii": [
+    [
+     "9999px",
+     15
+    ]
+   ],
+   "radiusKinds": 1,
+   "radiusElements": 15,
+   "fonts": [
+    "interfaceSans"
+   ],
+   "weights": [
+    [
+     "400",
+     322
+    ],
+    [
+     "600",
+     288
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(245, 245, 245)",
+     274
+    ],
+    [
+     "rgb(163, 163, 163)",
+     96
+    ],
+    [
+     "rgb(250, 250, 250)",
+     92
+    ],
+    [
+     "rgb(255, 255, 255)",
+     50
+    ],
+    [
+     "rgb(110, 231, 183)",
+     32
+    ],
+    [
+     "rgb(216, 202, 167)",
+     15
+    ],
+    [
+     "rgb(252, 211, 77)",
+     14
+    ],
+    [
+     "rgb(201, 156, 56)",
+     9
+    ]
+   ],
+   "textColorKinds": 17,
+   "bgColorKinds": 37,
+   "blurred": 7,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 77,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 105,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "TOP",
+     "w": 50,
+     "h": 29
+    },
+    {
+     "tag": "A",
+     "label": "MENU ITEM",
+     "w": 160,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "HOTEL",
+     "w": 176,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "AVAILABLE",
+     "w": 94,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "SOLD",
+     "w": 61,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "STATUS",
+     "w": 77,
+     "h": 17
+    },
+    {
+     "tag": "A",
+     "label": "UPDATED",
+     "w": 141,
+     "h": 17
+    }
+   ],
+   "smallTargetCount": 15,
+   "imgsNoAlt": 0,
+   "docHeight": 4706,
+   "elements": 878,
+   "textLength": 4123,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Business Intelligence Center Revenue, operations, guest service, menu demand, and inventory intelligence in one decision-ready dashboard. HOTEL SCOPE All Hotels Cloud "
+  },
+  "ok": true
+ }
+]
