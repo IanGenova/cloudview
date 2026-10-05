@@ -491,7 +491,7 @@ export function GuestPaymentStatus({
 
       <div className="relative z-10">
         <div
-          className={`mx-auto grid size-24 place-items-center rounded-full border shadow-[0_0_48px_rgba(0,0,0,0.22)] ${classes.ring}`}
+          className={`mx-auto grid size-24 place-items-center border ${classes.ring}`}
         >
           <Icon
             className={`size-10 ${presentation.spinning ? 'animate-spin' : ''}`}
@@ -500,7 +500,7 @@ export function GuestPaymentStatus({
         </div>
 
         <span
-          className={`mt-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.17em] ${classes.pill}`}
+          className={`mt-6 inline-flex items-center gap-2 border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.17em] ${classes.pill}`}
         >
           <ShieldCheck className="size-3.5" />
           Xendit secure status
@@ -514,10 +514,10 @@ export function GuestPaymentStatus({
           {presentation.description}
         </p>
 
-        <section className="mt-7 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 text-left shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <section className="mt-7 border border-white/10 bg-white/[0.04] p-5 text-left backdrop-blur-xl">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-black/25 p-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
+            <div className="bg-black/25 p-4">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 Amount
               </p>
               <p className="mt-1 font-serif text-xl text-gold">
@@ -525,17 +525,17 @@ export function GuestPaymentStatus({
               </p>
             </div>
 
-            <div className="rounded-2xl bg-black/25 p-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/35">
+            <div className="bg-black/25 p-4">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/35">
                 Status
               </p>
-              <p className="mt-1 text-sm font-black text-white">
+              <p className="mt-1 text-sm font-semibold text-white">
                 {label(status)}
               </p>
             </div>
           </div>
 
-          <div className="mt-3 rounded-2xl border border-white/8 bg-black/20 p-4 text-xs font-medium leading-5 text-white/50">
+          <div className="mt-3 border border-white/8 bg-black/20 p-4 text-xs font-medium leading-5 text-white/50">
             <p>
               <b className="text-white/75">Reference:</b>{' '}
               {referenceCode || paymentSessionId}
@@ -567,13 +567,13 @@ export function GuestPaymentStatus({
           </div>
 
           {errorMessage ? (
-            <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-semibold leading-6 text-red-200">
+            <div className="mt-3 border border-red-400/20 bg-red-500/10 p-4 text-sm font-semibold leading-6 text-red-200">
               {errorMessage}
             </div>
           ) : null}
 
           {automaticPollingStopped && !isTerminal(status) ? (
-            <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold leading-6 text-amber-100">
+            <div className="mt-3 border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold leading-6 text-amber-100">
               Payment confirmation is taking longer than expected. This does not
               mean the payment failed. Refresh the status or contact the front
               desk with this reference.
@@ -584,7 +584,7 @@ export function GuestPaymentStatus({
             {status === 'COMPLETED' ? (
               <Link
                 href={completionHref}
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gold px-5 text-sm font-black text-black"
+                className="inline-flex min-h-12 items-center justify-center bg-gold px-5 text-sm font-semibold text-black"
               >
                 View Confirmation
               </Link>
@@ -593,7 +593,7 @@ export function GuestPaymentStatus({
             {status === 'PENDING' && checkoutUrl ? (
               <a
                 href={checkoutUrl}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-sm font-black text-black"
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-5 text-sm font-semibold text-black"
               >
                 Continue Xendit Payment
                 <ExternalLink className="size-4" />
@@ -605,7 +605,7 @@ export function GuestPaymentStatus({
                 type="button"
                 onClick={refreshStatus}
                 disabled={isRefreshing}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.05] px-5 text-sm font-black text-white disabled:opacity-50"
+                className="inline-flex min-h-12 items-center justify-center gap-2 border border-white/12 bg-white/[0.05] px-5 text-sm font-semibold text-white disabled:opacity-50"
               >
                 <RefreshCw
                   className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`}
@@ -619,7 +619,7 @@ export function GuestPaymentStatus({
                 type="button"
                 onClick={cancelPendingCheckout}
                 disabled={isRefreshing}
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-red-400/20 bg-red-500/10 px-5 text-sm font-black text-red-200 disabled:opacity-50"
+                className="inline-flex min-h-12 items-center justify-center border border-red-400/20 bg-red-500/10 px-5 text-sm font-semibold text-red-200 disabled:opacity-50"
               >
                 Cancel Checkout
               </button>
@@ -628,7 +628,7 @@ export function GuestPaymentStatus({
             {isTerminal(status) && status !== 'COMPLETED' ? (
               <Link
                 href={returnHref}
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-gold px-5 text-sm font-black text-black"
+                className="inline-flex min-h-12 items-center justify-center bg-gold px-5 text-sm font-semibold text-black"
               >
                 {status === 'CANCELLED' || status === 'FAILED' || status === 'EXPIRED'
                   ? 'Return and Try Again'
@@ -638,7 +638,7 @@ export function GuestPaymentStatus({
 
             <Link
               href={activityHref}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] px-5 text-sm font-black text-white"
+              className="inline-flex min-h-12 items-center justify-center border border-white/12 bg-white/[0.04] px-5 text-sm font-semibold text-white"
             >
               {flow === 'FOOD_ORDER' ? 'View My Orders' : 'View My Requests'}
             </Link>

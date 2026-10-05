@@ -82,15 +82,15 @@ function Modal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-5">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-5">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[#fff8e7] text-[#b88938]">
+            <span className="grid size-10 shrink-0 place-items-center bg-[#fff8e7] text-[#b88938]">
               <Icon className="size-5" />
             </span>
 
             <div>
-              <h2 className="text-xl font-black text-[#11100b]">{title}</h2>
+              <h2 className="text-xl font-semibold text-[#11100b]">{title}</h2>
               <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
                 {description}
               </p>
@@ -100,7 +100,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+            className="grid size-10 shrink-0 place-items-center bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-5" />
@@ -128,14 +128,14 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-20 items-center gap-3 rounded-[1.35rem] border border-neutral-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-[#b88938]/40 hover:shadow-[0_18px_45px_rgba(184,137,56,0.14)]"
+      className="group flex min-h-20 items-center gap-3 border border-neutral-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-[#b88938]/40"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#fff8e7] text-[#b88938] transition group-hover:bg-[#b88938] group-hover:text-white">
+      <span className="grid size-11 shrink-0 place-items-center bg-[#fff8e7] text-[#b88938] transition group-hover:bg-[#b88938] group-hover:text-white">
         <Icon className="size-5" />
       </span>
 
       <span className="min-w-0">
-        <span className="block text-sm font-black text-[#11100b]">{title}</span>
+        <span className="block text-sm font-semibold text-[#11100b]">{title}</span>
         <span className="mt-1 block text-xs font-semibold leading-5 text-neutral-500">
           {description}
         </span>
@@ -153,7 +153,7 @@ function FieldLabel({
 }) {
   return (
     <label className="grid gap-1">
-      <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
         {label}
       </span>
       {children}
@@ -162,13 +162,13 @@ function FieldLabel({
 }
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 const textAreaClass =
-  'min-h-24 w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'min-h-24 w-full resize-none border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 const selectClass =
-  'h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 export function RewardsActionModals({
   hotels,
@@ -246,18 +246,18 @@ export function RewardsActionModals({
     <>
       <RewardsToast message={toast} onClose={() => setToast(null)} />
 
-      <section className="rounded-[1.75rem] border border-neutral-200 bg-white p-4 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <section className="border border-neutral-200 bg-white p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
               Quick Actions
             </p>
-            <h2 className="mt-1 text-lg font-black text-[#11100b]">
+            <h2 className="mt-1 text-lg font-semibold text-[#11100b]">
               Rewards Operations
             </h2>
           </div>
 
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#fff8e7] px-3 py-1 text-xs font-black text-[#9d741f]">
+          <span className="inline-flex items-center gap-1 bg-[#fff8e7] px-3 py-1 text-xs font-semibold text-[#9d741f]">
             <Plus className="size-3.5" />
             Create / Adjust
           </span>
@@ -353,7 +353,7 @@ export function RewardsActionModals({
           <button
             type="submit"
             disabled={isPending}
-            className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
+            className="h-11 w-full bg-[#11100b] text-sm font-semibold text-white disabled:opacity-60"
           >
             {isPending ? 'Saving...' : 'Create Member'}
           </button>
@@ -378,7 +378,7 @@ export function RewardsActionModals({
           }
           className="space-y-3"
         >
-          <div className="rounded-2xl border border-[#c99c38]/25 bg-[#fff8e7] p-3 text-xs font-bold leading-5 text-[#8a641d]">
+          <div className="border border-[#c99c38]/25 bg-[#fff8e7] p-3 text-xs font-bold leading-5 text-[#8a641d]">
             This reward will be created for all active hotels. Hotel-specific
             rewards are intentionally hidden from this global console.
           </div>
@@ -466,7 +466,7 @@ export function RewardsActionModals({
           ) : null}
 
           {rewardType === 'CUSTOM' ? (
-            <div className="rounded-2xl bg-[#fff8e7] p-3 text-sm font-bold text-[#8a641d]">
+            <div className="bg-[#fff8e7] p-3 text-sm font-bold text-[#8a641d]">
               Custom rewards do not need discount fields. Describe the benefit
               clearly in the description box.
             </div>
@@ -485,7 +485,7 @@ export function RewardsActionModals({
           <button
             type="submit"
             disabled={isPending}
-            className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
+            className="h-11 w-full bg-[#11100b] text-sm font-semibold text-white disabled:opacity-60"
           >
             {isPending ? 'Saving...' : 'Save Global Reward'}
           </button>
@@ -540,7 +540,7 @@ export function RewardsActionModals({
           </FieldLabel>
 
           {!filteredMembers.length ? (
-            <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-700">
+            <div className="bg-amber-50 p-4 text-sm font-bold text-amber-700">
               No guests found for this hotel yet.
             </div>
           ) : null}
@@ -566,7 +566,7 @@ export function RewardsActionModals({
           <button
             type="submit"
             disabled={isPending || !filteredMembers.length}
-            className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
+            className="h-11 w-full bg-[#11100b] text-sm font-semibold text-white disabled:opacity-60"
           >
             {isPending ? 'Applying...' : 'Apply Adjustment'}
           </button>

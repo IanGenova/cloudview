@@ -47,23 +47,23 @@ export default async function HelpSupportPage({
         <div className="mb-7 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
             href={`/t/${tagCode}/contact`}
-            className="grid size-11 place-items-center rounded-full text-white hover:bg-white/10"
+            className="grid size-11 place-items-center text-white hover:bg-white/10"
             aria-label="Back"
           >
             <ChevronLeft className="size-6" />
           </Link>
 
           <div className="text-center">
-            <h1 className="text-xl font-black">Help & Support</h1>
+            <h1 className="text-xl font-semibold">Help & Support</h1>
             <p className="text-sm text-white/45">{location}</p>
           </div>
 
           <div />
         </div>
 
-        <section className="rounded-[2rem] border border-gold/20 bg-gold/10 p-5">
+        <section className="border border-gold/20 bg-gold/10 p-5">
           <div className="flex items-start gap-4">
-            <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold">
+            <div className="grid size-12 shrink-0 place-items-center bg-gold/15 text-gold">
               <HelpCircle className="size-6" />
             </div>
 
@@ -71,7 +71,7 @@ export default async function HelpSupportPage({
               <p className="text-sm font-bold text-white/50">
                 Need assistance?
               </p>
-              <h2 className="mt-1 text-2xl font-black text-white">
+              <h2 className="mt-1 text-2xl font-semibold text-white">
                 We are here to help
               </h2>
               <p className="mt-2 text-sm leading-6 text-white/50">
@@ -124,10 +124,10 @@ export default async function HelpSupportPage({
           />
         </section>
 
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/5 p-5">
+        <section className="mt-6 border border-white/10 bg-white/5 p-5">
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="size-5 text-gold" />
-            <h2 className="font-black">Urgent Concerns</h2>
+            <h2 className="font-semibold">Urgent Concerns</h2>
           </div>
 
           <div className="space-y-3">
@@ -151,10 +151,10 @@ export default async function HelpSupportPage({
           </div>
         </section>
 
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/5 p-5">
+        <section className="mt-6 border border-white/10 bg-white/5 p-5">
           <div className="mb-4 flex items-center gap-2">
             <HelpCircle className="size-5 text-gold" />
-            <h2 className="font-black">Quick FAQ</h2>
+            <h2 className="font-semibold">Quick FAQ</h2>
           </div>
 
           <div className="space-y-3">
@@ -182,7 +182,7 @@ export default async function HelpSupportPage({
 
         <Link
           href={`/t/${tagCode}/contact`}
-          className="mt-6 block rounded-2xl bg-white/8 p-4 text-center font-black text-sand"
+          className="mt-6 block bg-white/8 p-4 text-center font-semibold text-sand"
         >
           Back to Profile
         </Link>
@@ -211,22 +211,22 @@ function SupportAction({
       href={href}
       className={
         strong
-          ? 'grid grid-cols-[44px_1fr_24px] items-center gap-3 rounded-[1.5rem] bg-gold p-4 text-ink'
-          : 'grid grid-cols-[44px_1fr_24px] items-center gap-3 rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-white hover:bg-white/10'
+          ? 'grid grid-cols-[44px_1fr_24px] items-center gap-3 bg-gold p-4 text-ink'
+          : 'grid grid-cols-[44px_1fr_24px] items-center gap-3 border border-white/10 bg-white/5 p-4 text-white hover:bg-white/10'
       }
     >
       <div
         className={
           strong
-            ? 'grid size-11 place-items-center rounded-2xl bg-black/10'
-            : 'grid size-11 place-items-center rounded-2xl bg-white/5 text-gold'
+            ? 'grid size-11 place-items-center bg-black/10'
+            : 'grid size-11 place-items-center bg-white/5 text-gold'
         }
       >
         <Icon className="size-5" />
       </div>
 
       <div>
-        <p className="font-black">{title}</p>
+        <p className="font-semibold">{title}</p>
         <p
           className={
             strong
@@ -255,11 +255,11 @@ function HelpCard({
   body: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white/5 p-4">
+    <div className="bg-white/5 p-4">
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 size-5 shrink-0 text-gold" />
         <div>
-          <p className="font-black">{title}</p>
+          <p className="font-semibold">{title}</p>
           <p className="mt-1 text-sm leading-6 text-white/45">{body}</p>
         </div>
       </div>
@@ -275,8 +275,8 @@ function FaqItem({
   answer: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white/5 p-4">
-      <p className="font-black">{question}</p>
+    <div className="bg-white/5 p-4">
+      <p className="font-semibold">{question}</p>
       <p className="mt-2 text-sm leading-6 text-white/45">{answer}</p>
     </div>
   );

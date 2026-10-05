@@ -43,12 +43,12 @@ export function GuestLogo({
           alt={hotel.name}
           width={compact ? 34 : 54}
           height={compact ? 34 : 54}
-          className="rounded-2xl bg-white object-cover"
+          className="bg-white object-cover"
         />
       ) : (
         <div
           className={cn(
-            'grid place-items-center rounded-2xl border border-gold/40 bg-black/20 text-gold',
+            'grid place-items-center border border-gold/40 bg-black/20 text-gold',
             compact ? 'size-9' : 'size-14'
           )}
         >
@@ -59,7 +59,7 @@ export function GuestLogo({
       <div>
         <p
           className={cn(
-            'font-black uppercase tracking-[0.25em]',
+            'font-semibold uppercase tracking-[0.25em]',
             compact ? 'text-[10px]' : 'text-xs'
           )}
         >
@@ -101,7 +101,7 @@ export function GuestTopBar({
         <Link
           href={backHref}
           className={cn(
-            'grid size-11 place-items-center rounded-full',
+            'grid size-11 place-items-center',
             dark ? 'hover:bg-white/10' : 'hover:bg-black/5'
           )}
           aria-label="Go back"
@@ -113,7 +113,7 @@ export function GuestTopBar({
       )}
 
       <div className="min-w-0 text-center">
-        <h1 className="truncate font-black leading-tight">{title}</h1>
+        <h1 className="truncate font-semibold leading-tight">{title}</h1>
         {subtitle ? (
           <p
             className={cn(
@@ -129,7 +129,7 @@ export function GuestTopBar({
       <button
         type="button"
         className={cn(
-          'grid size-11 place-items-center rounded-full',
+          'grid size-11 place-items-center',
           dark ? 'hover:bg-white/10' : 'hover:bg-black/5'
         )}
         aria-label="Notifications"
@@ -168,7 +168,7 @@ export function GuestShell({
     >
       <div
         className={cn(
-          'mx-auto min-h-dvh w-full max-w-md shadow-soft',
+          'mx-auto min-h-dvh w-full max-w-md',
           dark ? 'bg-black' : 'bg-[#f8f3ec]'
         )}
       >
@@ -292,7 +292,7 @@ export function GuestBottomNav({
     >
       <div
         className={cn(
-          'grid grid-cols-4 gap-1 rounded-[1.4rem] border p-1.5 shadow-soft backdrop-blur-xl sm:rounded-[1.75rem] sm:p-2',
+          'grid grid-cols-4 gap-1 border p-1.5 backdrop-blur-xl sm:p-2',
           dark
             ? 'border-white/10 bg-neutral-950/90 text-white'
             : 'border-black/5 bg-white/95 text-neutral-500'
@@ -308,7 +308,7 @@ export function GuestBottomNav({
               href={item.href(tagCode)}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'grid min-h-14 min-w-0 place-items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition active:scale-95 min-[360px]:text-[10px] sm:rounded-2xl sm:px-2',
+                'grid min-h-14 min-w-0 place-items-center gap-1 px-1 py-2 text-[9px] font-bold transition min-[360px]:text-[10px] sm:px-2',
                 isActive
                   ? dark
                     ? 'bg-white/[0.04] text-gold'

@@ -414,6 +414,17 @@ every dashboard route captured the login page. The evidence gate had already ref
 commit for ticking S4 with no artifact on disk; this is the same failure one step later.
 Re-driven against a live database and a fresh session.
 
+### What CHECK caught
+
+Capping the weight scale at 600 made every `<strong>` in the product render **heavier**
+than before. Tailwind preflight sets `b, strong { font-weight: bolder }`, and CSS maps
+`bolder` from an inherited 600 straight to 900 — so four elements in the cart drawer came
+back at 900 wearing no weight class at all. Pinned `b, strong` to 600 in the base layer.
+The sweep itself also needed four passes: the first skipped any string containing a brace
+(so it missed every template literal), the second missed arbitrary variants like
+`[&_button]:rounded-lg` and class strings spanning lines, and the third kept `rounded-dot`
+on progress-bar tracks, which are pills rather than dots.
+
 Wakes since commit: 0.
 
 ## Phase: uiux-A-system (5 October 2026) — Full
@@ -485,5 +496,41 @@ inherits that without 92 files being rewritten in one commit.
 Deferred to A-sweep (the next phase, not this one): deleting the now-inert `rounded-*`,
 `font-black` and `shadow-soft` class names from the 92 files, and the arbitrary-value
 radii (`rounded-[2rem]` ×145) which bypass the scale and must be edited.
+
+Wakes since commit: 0.
+
+## Phase: uiux-A-sweep (5 October 2026) — Quick
+
+Group A made every radius and weight inert at the Tailwind scale. This removes the dead
+class names and the arbitrary values that bypass the scale, so the source says what the
+product does.
+
+### Acceptance criteria
+- [x] W1 `grep -rE "rounded-|font-black|shadow-soft" src/` returns only documented
+      exceptions: `rounded-dot` on status dots and spinners, and the three files that
+      assert on these names (`ui-classes.ts`, `ui-classes.test.ts`, `design-tokens.test.ts`).
+      by test: a check script counts them. from: UIUX-2026-10-02 § The verdict, cause 1
+- [x] W2 The 463 arbitrary radii (`rounded-[2rem]` ×144, `rounded-[1.5rem]` ×143 and 12
+      more values) are gone — these bypass the scale and are why 240 elements were still
+      round after group A. by test: the same check.
+      from: UIUX-2026-10-02 § Findings — VH-7
+- [x] W3 Decorative glow shadows go (`shadow-soft` ×19 and the arbitrary blurs of 18px and
+      above); the 1px inset hairline highlights stay, and `shadow-float` remains for things
+      that genuinely float. by test: the same check.
+      from: UIUX-2026-10-02 § The verdict, cause 1
+- [x] W4 `active:scale-*` ×70 is gone — nothing in the product bounces or scales.
+      by test: the same check. from: artifact § Where the brief was right
+- [x] W5 tsc clean, 222 tests, production build green, 31 captures at HTTP 200. Measured
+      across the ten routes at both widths: radius-bearing elements **1,579 -> 6** (the six
+      are status dots), distinct radii **141 -> 2**, elements at weight 900 **1,475 -> 0**.
+      by artifact: `.flow/uiux/2026-10-02/applied/W-*.png`.
+      from: artifact § Five groups — Group A
+
+Not in this sweep, and why: `backdrop-blur` ×130 stays. Some of those are a scrim holding
+text legible over a photograph — A11Y-2 is that there are not *enough* scrims — so which
+ones go is a per-screen judgement in groups B and C, not a regex. `font-black` becomes
+`font-semibold`, the new ceiling; deciding which of those 1,484 elements should actually
+be 400 or 500 is the per-screen work in B through E, and this phase does not pretend to
+have done it.
 
 Wakes since commit: 0.

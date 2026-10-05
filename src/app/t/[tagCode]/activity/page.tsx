@@ -83,7 +83,7 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-white/15 bg-white/[0.03] p-6 text-center">
+    <div className="border border-dashed border-white/15 bg-white/[0.03] p-6 text-center">
       <p className="text-[15px] font-serif font-medium tracking-wide text-white">{title}</p>
       <p className="mt-1 text-xs font-medium leading-5 text-white/50">
         {description}
@@ -145,13 +145,13 @@ export default async function GuestActivityPage({
       <section className="mx-auto w-full max-w-5xl space-y-6">
         <Link
           href={`/t/${tagCode}`}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold tracking-wide text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+          className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold tracking-wide text-white/70 transition hover:bg-white/[0.08] hover:text-white"
         >
           <ArrowLeft className="size-4" />
           Back to Portal
         </Link>
 
-        <section className="overflow-hidden rounded-[2rem] border border-[#c99c38]/25 bg-gradient-to-br from-[#171107] via-[#0f0d09] to-[#070604] p-6 shadow-2xl">
+        <section className="overflow-hidden border border-[#c99c38]/25 bg-gradient-to-br from-[#171107] via-[#0f0d09] to-[#070604] p-6 shadow-2xl">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-[#c99c38]">
@@ -168,7 +168,7 @@ export default async function GuestActivityPage({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+              <div className="border border-white/10 bg-white/[0.05] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                   Active Orders
                 </p>
@@ -177,7 +177,7 @@ export default async function GuestActivityPage({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+              <div className="border border-white/10 bg-white/[0.05] p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                   Active Requests
                 </p>
@@ -190,7 +190,7 @@ export default async function GuestActivityPage({
 
           {activity.guestStay ? (
             <div className="mt-6 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl bg-black/25 p-4">
+              <div className="bg-black/25 p-4">
                 <div className="flex items-center gap-2 text-[#c99c38]">
                   <BedDouble className="size-4" />
                   <p className="text-[10px] font-semibold uppercase tracking-widest">Current Stay</p>
@@ -200,7 +200,7 @@ export default async function GuestActivityPage({
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-black/25 p-4">
+              <div className="bg-black/25 p-4">
                 <div className="flex items-center gap-2 text-[#c99c38]">
                   <Clock className="size-4" />
                   <p className="text-[10px] font-semibold uppercase tracking-widest">Check-in</p>
@@ -210,7 +210,7 @@ export default async function GuestActivityPage({
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-black/25 p-4">
+              <div className="bg-black/25 p-4">
                 <div className="flex items-center gap-2 text-[#c99c38]">
                   <UserCircle className="size-4" />
                   <p className="text-[10px] font-semibold uppercase tracking-widest">Devices</p>
@@ -225,7 +225,7 @@ export default async function GuestActivityPage({
         </section>
 
         {recentXenditPayments.length ? (
-          <section className="rounded-[2rem] border border-[#c99c38]/20 bg-white/[0.035] p-5">
+          <section className="border border-[#c99c38]/20 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <CreditCard className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">
@@ -237,7 +237,7 @@ export default async function GuestActivityPage({
               {recentXenditPayments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="rounded-[1.5rem] border border-white/10 bg-black/25 p-4"
+                  className="border border-white/10 bg-black/25 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -248,7 +248,7 @@ export default async function GuestActivityPage({
                         {formatDateTime(payment.createdAt)}
                       </p>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(payment.status)}`}>
+                    <span className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(payment.status)}`}>
                       {formatStatus(payment.status)}
                     </span>
                   </div>
@@ -260,7 +260,7 @@ export default async function GuestActivityPage({
                   {payment.orderCode ? (
                     <Link
                       href={`/t/${tagCode}/track/${payment.orderCode}`}
-                      className="mt-3 inline-flex text-xs font-black text-[#c99c38]"
+                      className="mt-3 inline-flex text-xs font-semibold text-[#c99c38]"
                     >
                       Track {payment.orderCode}
                     </Link>
@@ -278,7 +278,7 @@ export default async function GuestActivityPage({
         ) : null}
 
         <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
+          <div className="border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ShoppingBag className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Current Stay Orders</h2>
@@ -289,7 +289,7 @@ export default async function GuestActivityPage({
                 <Link
                   key={order.id}
                   href={`/t/${tagCode}/track/${order.orderCode}`}
-                  className="block rounded-[1.5rem] border border-white/10 bg-black/25 p-4 transition hover:border-[#c99c38]/45 hover:bg-black/35"
+                  className="block border border-white/10 bg-black/25 p-4 transition hover:border-[#c99c38]/45 hover:bg-black/35"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -300,9 +300,9 @@ export default async function GuestActivityPage({
                     </div>
 
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
-                        order.status
-                      )}`}
+                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+ order.status
+ )}`}
                     >
                       {formatStatus(order.status)}
                     </span>
@@ -340,7 +340,7 @@ export default async function GuestActivityPage({
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
+          <div className="border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ConciergeBell className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Current Service Requests</h2>
@@ -350,7 +350,7 @@ export default async function GuestActivityPage({
               {activity.currentServiceRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="rounded-[1.5rem] border border-white/10 bg-black/25 p-4"
+                  className="border border-white/10 bg-black/25 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -364,9 +364,9 @@ export default async function GuestActivityPage({
                     </div>
 
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
-                        request.status
-                      )}`}
+                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+ request.status
+ )}`}
                     >
                       {formatStatus(request.status)}
                     </span>
@@ -391,7 +391,7 @@ export default async function GuestActivityPage({
         </section>
 
         {activity.orderAgainItems.length > 0 ? (
-          <section className="rounded-[2rem] border border-[#c99c38]/25 bg-[#120e07] p-5">
+          <section className="border border-[#c99c38]/25 bg-[#120e07] p-5">
             <div className="mb-4 flex items-center gap-2">
               <Repeat2 className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Order Again</h2>
@@ -402,7 +402,7 @@ export default async function GuestActivityPage({
                 <Link
                   key={item.productId}
                   href={`/t/${tagCode}/menu`}
-                  className="rounded-[1.5rem] border border-white/10 bg-black/25 p-4 transition hover:border-[#c99c38]/45"
+                  className="border border-white/10 bg-black/25 p-4 transition hover:border-[#c99c38]/45"
                 >
                   <Sparkles className="size-5 text-[#c99c38]" />
                   <p className="mt-3 font-serif font-medium tracking-wide text-[15px]">{item.productName}</p>
@@ -419,7 +419,7 @@ export default async function GuestActivityPage({
         ) : null}
 
         <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5">
+          <div className="border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <History className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Past Orders</h2>
@@ -429,7 +429,7 @@ export default async function GuestActivityPage({
               {activity.pastOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4"
+                  className="border border-white/10 bg-black/20 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -440,9 +440,9 @@ export default async function GuestActivityPage({
                     </div>
 
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
-                        order.status
-                      )}`}
+                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+ order.status
+ )}`}
                     >
                       {formatStatus(order.status)}
                     </span>
@@ -471,7 +471,7 @@ export default async function GuestActivityPage({
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-5">
+          <div className="border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ReceiptText className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Past Service Requests</h2>
@@ -481,7 +481,7 @@ export default async function GuestActivityPage({
               {activity.pastServiceRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4"
+                  className="border border-white/10 bg-black/20 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -495,9 +495,9 @@ export default async function GuestActivityPage({
                     </div>
 
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
-                        request.status
-                      )}`}
+                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+ request.status
+ )}`}
                     >
                       {formatStatus(request.status)}
                     </span>

@@ -47,8 +47,8 @@ export function POSXenditReturnClient({
 
   return (
     <main className="grid min-h-screen place-items-center bg-[#0b0905] px-5 text-white">
-      <section className="w-full max-w-lg rounded-[2rem] border border-[#c99c38]/25 bg-[#151108] p-7 text-center shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
-        <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-[#c99c38]/15 text-[#e0b64f]">
+      <section className="w-full max-w-lg border border-[#c99c38]/25 bg-[#151108] p-7 text-center">
+        <span className="mx-auto grid size-16 place-items-center bg-[#c99c38]/15 text-[#e0b64f]">
           {redirecting ? (
             <LoaderCircle className="size-7 animate-spin" />
           ) : (
@@ -56,7 +56,7 @@ export function POSXenditReturnClient({
           )}
         </span>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.22em] text-[#c99c38]">
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.22em] text-[#c99c38]">
           Secure payment return
         </p>
         <h1 className="mt-3 font-serif text-3xl font-normal">
@@ -73,7 +73,7 @@ export function POSXenditReturnClient({
             setRedirecting(false);
             window.location.assign(loginTarget);
           }}
-          className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#c99c38] px-5 text-sm font-black text-black transition hover:bg-[#e0b64f]"
+          className="mt-7 inline-flex h-12 items-center justify-center gap-2 bg-[#c99c38] px-5 text-sm font-semibold text-black transition hover:bg-[#e0b64f]"
         >
           Continue to POS
           <ArrowRight className="size-4" />

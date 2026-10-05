@@ -299,7 +299,7 @@ function SortableTableHeader({
 
   return (
     <th scope="col"
-      className="px-4 py-3 text-xs font-black uppercase text-neutral-500"
+      className="px-4 py-3 text-xs font-semibold uppercase text-neutral-500"
       aria-sort={
         isActive
           ? direction === 'asc'
@@ -311,7 +311,7 @@ function SortableTableHeader({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`group inline-flex w-full items-center gap-1.5 rounded-lg py-1 transition hover:text-neutral-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a62a]/50 ${alignmentClass}`}
+        className={`group inline-flex w-full items-center gap-1.5 py-1 transition hover:text-neutral-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d4a62a]/50 ${alignmentClass}`}
         title={`Sort by ${label}`}
       >
         <span>{label}</span>
@@ -358,15 +358,15 @@ function Toast({
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div
           className={
             message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {message.type === 'success' ? (
@@ -377,7 +377,7 @@ function Toast({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === 'success' ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -386,7 +386,7 @@ function Toast({
         <button
           type="button"
           onClick={onClose}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -529,11 +529,11 @@ function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`max-h-[calc(100dvh-1.5rem)] w-full ${maxWidth} overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6`}
+        className={`max-h-[calc(100dvh-1.5rem)] w-full ${maxWidth} overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6`}
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black">{title}</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             {description ? (
               <p className="mt-1 text-sm text-neutral-500">{description}</p>
             ) : null}
@@ -542,7 +542,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            className="grid size-9 shrink-0 place-items-center bg-neutral-100 text-sm font-semibold hover:bg-neutral-200"
             aria-label="Close modal"
           >
             ✕
@@ -567,16 +567,16 @@ function Metric({
   small?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-neutral-50 p-3">
-      <p className="text-[10px] font-black uppercase text-neutral-400">
+    <div className="bg-neutral-50 p-3">
+      <p className="text-[10px] font-semibold uppercase text-neutral-400">
         {label}
       </p>
       <p
         className={
           small
-            ? 'mt-1 text-sm font-black text-neutral-700'
+            ? 'mt-1 text-sm font-semibold text-neutral-700'
             : strong
-              ? 'mt-1 text-lg font-black text-neutral-950'
+              ? 'mt-1 text-lg font-semibold text-neutral-950'
               : 'mt-1 text-lg font-bold text-neutral-700'
         }
       >
@@ -594,11 +594,11 @@ function MovementMetric({
   value: string | number;
 }) {
   return (
-    <div className="rounded-2xl bg-neutral-50 p-3">
-      <p className="text-[10px] font-black uppercase text-neutral-400">
+    <div className="bg-neutral-50 p-3">
+      <p className="text-[10px] font-semibold uppercase text-neutral-400">
         {label}
       </p>
-      <p className="mt-1 text-sm font-black text-neutral-800">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-neutral-800">{value}</p>
     </div>
   );
 }
@@ -616,12 +616,12 @@ function SummaryCard({
     <div
       className={
         tone === 'green'
-          ? 'rounded-3xl border border-emerald-200 bg-emerald-50 p-5'
+          ? 'border border-emerald-200 bg-emerald-50 p-5'
           : tone === 'red'
-            ? 'rounded-3xl border border-red-200 bg-red-50 p-5'
+            ? 'border border-red-200 bg-red-50 p-5'
             : tone === 'blue'
-              ? 'rounded-3xl border border-blue-200 bg-blue-50 p-5'
-              : 'rounded-3xl border border-neutral-200 bg-white p-5'
+              ? 'border border-blue-200 bg-blue-50 p-5'
+              : 'border border-neutral-200 bg-white p-5'
       }
     >
       <p
@@ -637,7 +637,7 @@ function SummaryCard({
       >
         {label}
       </p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="mt-2 text-3xl font-semibold">{value}</p>
     </div>
   );
 }
@@ -666,10 +666,10 @@ function PaginationControls({
     <div className="flex flex-col gap-3 border-t border-neutral-200 bg-neutral-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-xs font-bold text-neutral-600">
-          Showing <span className="font-black text-neutral-950">{startItem}</span>
+          Showing <span className="font-semibold text-neutral-950">{startItem}</span>
           {'–'}
-          <span className="font-black text-neutral-950">{endItem}</span> of{' '}
-          <span className="font-black text-neutral-950">{totalItems}</span> items
+          <span className="font-semibold text-neutral-950">{endItem}</span> of{' '}
+          <span className="font-semibold text-neutral-950">{totalItems}</span> items
         </p>
 
         <label className="flex items-center gap-2 text-xs font-bold text-neutral-600">
@@ -679,7 +679,7 @@ function PaginationControls({
             onChange={(event) =>
               onPageSizeChange(Number(event.target.value) as InventoryPageSize)
             }
-            className="h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-800 outline-none focus:border-neutral-400"
+            className="h-9 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-800 outline-none focus:border-neutral-400"
             aria-label="Rows per page"
           >
             <option value={10}>10</option>
@@ -691,7 +691,7 @@ function PaginationControls({
       </div>
 
       <div className="flex items-center justify-between gap-2 sm:justify-end">
-        <span className="mr-1 text-xs font-black text-neutral-600">
+        <span className="mr-1 text-xs font-semibold text-neutral-600">
           Page {safePage} of {totalPages}
         </span>
 
@@ -699,7 +699,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(1)}
           disabled={safePage <= 1}
-          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="First page"
         >
           <ChevronsLeft className="size-4" />
@@ -709,7 +709,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(safePage - 1)}
           disabled={safePage <= 1}
-          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Previous page"
         >
           <ChevronLeft className="size-4" />
@@ -719,7 +719,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(safePage + 1)}
           disabled={safePage >= totalPages}
-          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Next page"
         >
           <ChevronRight className="size-4" />
@@ -729,7 +729,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(totalPages)}
           disabled={safePage >= totalPages}
-          className="grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Last page"
         >
           <ChevronsRight className="size-4" />
@@ -753,11 +753,11 @@ function BundleDerivedStockModal({
       onClose={onClose}
       maxWidth="max-w-3xl"
     >
-      <div className="mb-5 rounded-3xl bg-amber-50 p-4">
-        <p className="text-xs font-black uppercase text-amber-700">
+      <div className="mb-5 bg-amber-50 p-4">
+        <p className="text-xs font-semibold uppercase text-amber-700">
           Bundle Menu Item
         </p>
-        <h3 className="mt-1 text-xl font-black text-neutral-950">
+        <h3 className="mt-1 text-xl font-semibold text-neutral-950">
           {item.name}
         </h3>
         <p className="mt-1 text-sm font-semibold text-amber-800">
@@ -776,8 +776,8 @@ function BundleDerivedStockModal({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-amber-200 bg-white p-4">
-        <p className="font-black text-neutral-950">Bundle Components</p>
+      <div className="border border-amber-200 bg-white p-4">
+        <p className="font-semibold text-neutral-950">Bundle Components</p>
         <p className="mt-1 text-sm text-neutral-500">
           Each bundle sold deducts stock from these component items.
         </p>
@@ -786,11 +786,11 @@ function BundleDerivedStockModal({
           {item.bundleComponents.map((component) => (
             <div
               key={component.id}
-              className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4"
+              className="border border-neutral-200 bg-neutral-50 p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-black text-neutral-950">
+                  <p className="font-semibold text-neutral-950">
                     {component.name}
                   </p>
                   <p className="mt-1 text-sm text-neutral-500">
@@ -801,8 +801,8 @@ function BundleDerivedStockModal({
                 <span
                   className={
                     component.isSoldOut
-                      ? 'rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700'
-                      : 'rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700'
+                      ? 'bg-red-100 px-3 py-1 text-xs font-semibold text-red-700'
+                      : 'bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700'
                   }
                 >
                   {component.isSoldOut ? 'Limiting / Sold Out' : 'Available'}
@@ -827,8 +827,8 @@ function BundleDerivedStockModal({
           ))}
 
           {!item.bundleComponents.length ? (
-            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-6 text-center">
-              <p className="font-black text-amber-900">
+            <div className="border border-dashed border-amber-300 bg-amber-50 p-6 text-center">
+              <p className="font-semibold text-amber-900">
                 No bundle components yet.
               </p>
               <p className="mt-1 text-sm text-amber-800">
@@ -864,11 +864,11 @@ function ControlMenuStockModal({
       description="Set, add, remove, sell out, or reopen this menu item. The database transaction rolls back automatically when saving fails."
       onClose={onClose}
     >
-      <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
-        <p className="text-xs font-black uppercase text-neutral-400">
+      <div className="mb-5 bg-neutral-50 p-4">
+        <p className="text-xs font-semibold uppercase text-neutral-400">
           Menu Item
         </p>
-        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
+        <h3 className="mt-1 text-xl font-semibold">{item.name}</h3>
         <p className="mt-1 text-sm text-neutral-500">{item.hotelName}</p>
 
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -882,7 +882,7 @@ function ControlMenuStockModal({
         <input type="hidden" name="productId" value={item.id} />
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Stock Operation
           </label>
           <Select
@@ -908,7 +908,7 @@ function ControlMenuStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Quantity
           </label>
           <Input
@@ -924,7 +924,7 @@ function ControlMenuStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Reason / Note for Movement
           </label>
           <Input
@@ -934,7 +934,7 @@ function ControlMenuStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Internal Stock Note
           </label>
           <Input
@@ -948,7 +948,7 @@ function ControlMenuStockModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -994,18 +994,18 @@ function BulkControlMenuStockModal({
       onClose={onClose}
       maxWidth="max-w-3xl"
     >
-      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+      <div className="border border-amber-200 bg-amber-50 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
               Selected Menu Items
             </p>
-            <p className="mt-1 text-2xl font-black text-neutral-950">
+            <p className="mt-1 text-2xl font-semibold text-neutral-950">
               {items.length} item{items.length === 1 ? '' : 's'}
             </p>
           </div>
 
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-amber-800">
+          <span className="bg-white px-3 py-1 text-xs font-semibold text-amber-800">
             Single items only
           </span>
         </div>
@@ -1014,14 +1014,14 @@ function BulkControlMenuStockModal({
           {items.slice(0, 8).map((item) => (
             <span
               key={item.id}
-              className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-neutral-700"
+              className="border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-neutral-700"
             >
               {item.name}
             </span>
           ))}
 
           {items.length > 8 ? (
-            <span className="rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-black text-amber-800">
+            <span className="border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-800">
               +{items.length - 8} more
             </span>
           ) : null}
@@ -1039,7 +1039,7 @@ function BulkControlMenuStockModal({
         ))}
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Bulk Operation
           </label>
           <Select
@@ -1070,7 +1070,7 @@ function BulkControlMenuStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Quantity
           </label>
           <Input
@@ -1102,7 +1102,7 @@ function BulkControlMenuStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Movement Reason
           </label>
           <Input
@@ -1112,7 +1112,7 @@ function BulkControlMenuStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Internal Stock Note
           </label>
           <Input
@@ -1121,7 +1121,7 @@ function BulkControlMenuStockModal({
           />
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm font-semibold leading-6 text-neutral-600">
+        <div className="border border-neutral-200 bg-neutral-50 p-4 text-sm font-semibold leading-6 text-neutral-600">
           Bundle quantities are not directly edited because they are calculated
           from their component items. Updating the selected single items will
           automatically recalculate any related bundles.
@@ -1132,7 +1132,7 @@ function BulkControlMenuStockModal({
             type="button"
             onClick={onClose}
             disabled={pending}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -1172,11 +1172,11 @@ function ControlServiceStockModal({
       description="Set, add, remove, sell out, or reopen this service item. Failed saves are rolled back automatically."
       onClose={onClose}
     >
-      <div className="mb-5 rounded-3xl bg-neutral-50 p-4">
-        <p className="text-xs font-black uppercase text-neutral-400">
+      <div className="mb-5 bg-neutral-50 p-4">
+        <p className="text-xs font-semibold uppercase text-neutral-400">
           Service Item
         </p>
-        <h3 className="mt-1 text-xl font-black">{item.name}</h3>
+        <h3 className="mt-1 text-xl font-semibold">{item.name}</h3>
         <p className="mt-1 text-sm text-neutral-500">
           {item.hotelName} · {item.category}
         </p>
@@ -1192,7 +1192,7 @@ function ControlServiceStockModal({
         <input type="hidden" name="serviceId" value={item.id} />
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Stock Operation
           </label>
           <Select
@@ -1218,7 +1218,7 @@ function ControlServiceStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Quantity
           </label>
           <Input
@@ -1234,7 +1234,7 @@ function ControlServiceStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Reason / Note for Movement
           </label>
           <Input
@@ -1244,7 +1244,7 @@ function ControlServiceStockModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Internal Stock Note
           </label>
           <Input
@@ -1258,7 +1258,7 @@ function ControlServiceStockModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1286,14 +1286,14 @@ function MovementCard({
   reason: string;
 }) {
   return (
-    <div className="rounded-3xl border border-neutral-200 bg-white p-4">
+    <div className="border border-neutral-200 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-black">{title}</p>
+          <p className="font-semibold">{title}</p>
           <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
         </div>
 
-        <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-700">
+        <span className="bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700">
           Balance: {balanceAfter}
         </span>
       </div>
@@ -1305,7 +1305,7 @@ function MovementCard({
       </div>
 
       {reason ? (
-        <p className="mt-3 rounded-2xl bg-neutral-50 p-3 text-sm text-neutral-600">
+        <p className="mt-3 bg-neutral-50 p-3 text-sm text-neutral-600">
           {reason}
         </p>
       ) : null}
@@ -1315,8 +1315,8 @@ function MovementCard({
 
 function EmptyMovementState() {
   return (
-    <div className="rounded-3xl border border-dashed border-neutral-300 p-8 text-center">
-      <p className="font-black">No movements yet.</p>
+    <div className="border border-dashed border-neutral-300 p-8 text-center">
+      <p className="font-semibold">No movements yet.</p>
       <p className="mt-1 text-sm text-neutral-500">
         Stock changes will appear here.
       </p>
@@ -2031,15 +2031,15 @@ export function InventoryClient({
         }}
       />
 
-      <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-3 shadow-sm md:flex-row">
+      <div className="mb-6 flex flex-col gap-3 border border-neutral-200 bg-white p-3 shadow-sm md:flex-row">
         <Link
           href="/dashboard/inventory?tab=menu"
           replace
           scroll={false}
           className={
             activeTab === 'menu'
-              ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
-              : 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+              ? 'inline-flex h-12 flex-1 items-center justify-center bg-black px-5 text-sm font-semibold text-white'
+              : 'inline-flex h-12 flex-1 items-center justify-center border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50'
           }
         >
           Food Menu Inventory
@@ -2051,8 +2051,8 @@ export function InventoryClient({
           scroll={false}
           className={
             activeTab === 'services'
-              ? 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl bg-black px-5 text-sm font-black text-white'
-              : 'inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50'
+              ? 'inline-flex h-12 flex-1 items-center justify-center bg-black px-5 text-sm font-semibold text-white'
+              : 'inline-flex h-12 flex-1 items-center justify-center border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50'
           }
         >
           Service Request Inventory
@@ -2088,7 +2088,7 @@ export function InventoryClient({
             <CardContent>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-black">
+                  <h2 className="text-xl font-semibold">
                     Food Menu Stock Availability
                   </h2>
                   <p className="mt-1 text-sm text-neutral-500">
@@ -2102,7 +2102,7 @@ export function InventoryClient({
                     <button
                       type="submit"
                       disabled={pendingAction === 'initialize-menu'}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {pendingAction === 'initialize-menu' ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -2120,7 +2120,7 @@ export function InventoryClient({
                       selectedMenuItems.length === 0 ||
                       pendingAction === 'bulk-control-menu'
                     }
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#d4a62a] px-5 text-sm font-black text-black transition hover:bg-[#e3b83d] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex h-11 items-center justify-center gap-2 bg-[#d4a62a] px-5 text-sm font-semibold text-black transition hover:bg-[#e3b83d] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {pendingAction === 'bulk-control-menu' ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -2133,7 +2133,7 @@ export function InventoryClient({
                   <button
                     type="button"
                     onClick={() => setShowMenuMovements(true)}
-                    className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+                    className="h-11 bg-black px-5 text-sm font-semibold text-white hover:bg-neutral-800"
                   >
                     View Recent Movements
                   </button>
@@ -2142,7 +2142,7 @@ export function InventoryClient({
 
               <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_220px]">
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
                     Search Menu
                   </label>
                   <Input
@@ -2154,7 +2154,7 @@ export function InventoryClient({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
                     Category
                   </label>
                   <select
@@ -2163,7 +2163,7 @@ export function InventoryClient({
                     onChange={(event) =>
                       setMenuCategoryFilter(event.target.value)
                     }
-                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+                    className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
                   >
                     <option value="ALL">All Categories</option>
                     {menuCategories.map((category) => (
@@ -2175,7 +2175,7 @@ export function InventoryClient({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
                     Filter Status
                   </label>
                   <select
@@ -2184,7 +2184,7 @@ export function InventoryClient({
                     onChange={(event) =>
                       setMenuFilter(event.target.value as MenuFilterValue)
                     }
-                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+                    className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
                   >
                     <option value="ALL">All Items</option>
                     <option value="AVAILABLE">Available</option>
@@ -2196,13 +2196,13 @@ export function InventoryClient({
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#d4a62a]/30 bg-[#fff8e5] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-4 flex flex-col gap-3 border border-[#d4a62a]/30 bg-[#fff8e5] p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={toggleAllFilteredMenuItems}
                     disabled={selectableFilteredMenuItems.length === 0}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#d4a62a]/35 bg-white px-4 text-xs font-black text-neutral-800 transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 items-center gap-2 border border-[#d4a62a]/35 bg-white px-4 text-xs font-semibold text-neutral-800 transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {allFilteredMenuItemsSelected ? (
                       <CheckSquare2 className="size-4 text-[#b68510]" />
@@ -2215,7 +2215,7 @@ export function InventoryClient({
                   </button>
 
                   <div>
-                    <p className="text-sm font-black text-neutral-900">
+                    <p className="text-sm font-semibold text-neutral-900">
                       {selectedMenuItems.length} selected
                     </p>
                     <p className="text-xs font-semibold text-neutral-500">
@@ -2229,7 +2229,7 @@ export function InventoryClient({
                     <button
                       type="button"
                       onClick={() => setSelectedMenuIds(new Set<string>())}
-                      className="h-10 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+                      className="h-10 border border-neutral-200 bg-white px-4 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
                     >
                       Clear Selection
                     </button>
@@ -2239,7 +2239,7 @@ export function InventoryClient({
                     type="button"
                     onClick={() => setShowBulkMenuControl(true)}
                     disabled={selectedMenuItems.length === 0}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-black px-4 text-xs font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 items-center gap-2 bg-black px-4 text-xs font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Boxes className="size-4 text-[#d4a62a]" />
                     Update Selected
@@ -2247,7 +2247,7 @@ export function InventoryClient({
                 </div>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white">
+              <div className="mt-5 overflow-hidden border border-neutral-200 bg-white">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[1180px] text-left">
                     <thead className="bg-neutral-50">
@@ -2257,7 +2257,7 @@ export function InventoryClient({
                             type="button"
                             onClick={toggleCurrentMenuPageItems}
                             disabled={selectableCurrentMenuPageItems.length === 0}
-                            className="inline-grid size-8 place-items-center rounded-xl text-[#b68510] transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-35"
+                            className="inline-grid size-8 place-items-center text-[#b68510] transition hover:bg-[#fff2c9] disabled:cursor-not-allowed disabled:opacity-35"
                             aria-label={
                               allCurrentMenuPageItemsSelected
                                 ? 'Unselect single items on this page'
@@ -2315,7 +2315,7 @@ export function InventoryClient({
                           direction={menuSort.direction}
                           onSort={handleMenuSort}
                         />
-                        <th scope="col" className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase text-neutral-500">
                           Action
                         </th>
                       </tr>
@@ -2337,7 +2337,7 @@ export function InventoryClient({
                             <td className="px-4 py-4 text-center">
                               {item.isDerivedStock ? (
                                 <span
-                                  className="inline-grid size-8 place-items-center rounded-xl bg-amber-100 text-[10px] font-black text-amber-700"
+                                  className="inline-grid size-8 place-items-center bg-amber-100 text-[10px] font-semibold text-amber-700"
                                   title="Bundle stock is derived from component items"
                                 >
                                   —
@@ -2346,7 +2346,7 @@ export function InventoryClient({
                                 <button
                                   type="button"
                                   onClick={() => toggleMenuSelection(item.id)}
-                                  className="inline-grid size-8 place-items-center rounded-xl text-[#b68510] transition hover:bg-[#fff2c9]"
+                                  className="inline-grid size-8 place-items-center text-[#b68510] transition hover:bg-[#fff2c9]"
                                   aria-label={
                                     selectedMenuIds.has(item.id)
                                       ? `Unselect ${item.name}`
@@ -2363,7 +2363,7 @@ export function InventoryClient({
                             </td>
 
                             <td className="px-4 py-4">
-                              <p className="font-black text-neutral-950">
+                              <p className="font-semibold text-neutral-950">
                                 {item.name}
                               </p>
                               <p className="mt-1 text-xs font-bold text-neutral-500">
@@ -2374,17 +2374,17 @@ export function InventoryClient({
                             <td className="px-4 py-4">
                               <div className="flex flex-col items-start gap-2">
                                 <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getProductTypeClass(
-                                    item
-                                  )}`}
+                                  className={`inline-flex px-3 py-1 text-[10px] font-semibold ${getProductTypeClass(
+ item
+ )}`}
                                 >
                                   {getProductTypeLabel(item)}
                                 </span>
 
                                 <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                                    status
-                                  )}`}
+                                  className={`inline-flex px-3 py-1 text-[10px] font-semibold ${getStatusClass(
+ status
+ )}`}
                                 >
                                   {status}
                                 </span>
@@ -2392,19 +2392,19 @@ export function InventoryClient({
                             </td>
 
                             <td className="px-4 py-4 text-center">
-                              <p className="text-2xl font-black text-neutral-950">
+                              <p className="text-2xl font-semibold text-neutral-950">
                                 {item.availableQty}
                               </p>
-                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                              <p className="text-[10px] font-semibold uppercase text-neutral-400">
                                 {item.isDerivedStock ? 'Can Sell' : 'Available'}
                               </p>
                             </td>
 
                             <td className="px-4 py-4 text-center">
-                              <p className="text-2xl font-black text-neutral-800">
+                              <p className="text-2xl font-semibold text-neutral-800">
                                 {item.soldQty}
                               </p>
-                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                              <p className="text-[10px] font-semibold uppercase text-neutral-400">
                                 Sold
                               </p>
                             </td>
@@ -2412,7 +2412,7 @@ export function InventoryClient({
                             <td className="max-w-sm px-4 py-4">
                               {item.isDerivedStock ? (
                                 <div className="space-y-1">
-                                  <p className="text-xs font-black uppercase text-amber-700">
+                                  <p className="text-xs font-semibold uppercase text-amber-700">
                                     {item.bundleComponents.length} component
                                     {item.bundleComponents.length === 1
                                       ? ''
@@ -2448,7 +2448,7 @@ export function InventoryClient({
                                   )}
 
                                   {item.limitingComponentName ? (
-                                    <p className="rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-900">
+                                    <p className="bg-white px-3 py-2 text-xs font-semibold text-amber-900">
                                       Limiting item:{' '}
                                       {item.limitingComponentName}
                                     </p>
@@ -2475,8 +2475,8 @@ export function InventoryClient({
                                 onClick={() => setControllingMenuItem(item)}
                                 className={
                                   item.isDerivedStock
-                                    ? 'inline-flex h-9 items-center justify-center rounded-full bg-amber-500 px-4 text-xs font-black text-white hover:bg-amber-600'
-                                    : 'inline-flex h-9 items-center justify-center rounded-full bg-black px-4 text-xs font-black text-white hover:bg-neutral-800'
+                                    ? 'inline-flex h-9 items-center justify-center bg-amber-500 px-4 text-xs font-semibold text-white hover:bg-amber-600'
+                                    : 'inline-flex h-9 items-center justify-center bg-black px-4 text-xs font-semibold text-white hover:bg-neutral-800'
                                 }
                               >
                                 {item.isDerivedStock
@@ -2494,7 +2494,7 @@ export function InventoryClient({
                             colSpan={8}
                             className="px-5 py-12 text-center"
                           >
-                            <p className="font-black">No menu items found.</p>
+                            <p className="font-semibold">No menu items found.</p>
                             <p className="mt-1 text-sm text-neutral-500">
                               Try changing your search or filter.
                             </p>
@@ -2557,7 +2557,7 @@ export function InventoryClient({
             <CardContent>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-black">
+                  <h2 className="text-xl font-semibold">
                     Service Request Inventory
                   </h2>
                   <p className="mt-1 text-sm text-neutral-500">
@@ -2571,7 +2571,7 @@ export function InventoryClient({
                     <button
                       type="submit"
                       disabled={pendingAction === 'initialize-services'}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {pendingAction === 'initialize-services' ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -2585,7 +2585,7 @@ export function InventoryClient({
                   <button
                     type="button"
                     onClick={() => setShowServiceMovements(true)}
-                    className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+                    className="h-11 bg-black px-5 text-sm font-semibold text-white hover:bg-neutral-800"
                   >
                     View Service Movements
                   </button>
@@ -2594,7 +2594,7 @@ export function InventoryClient({
 
               <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
                     Search Services
                   </label>
                   <Input
@@ -2605,7 +2605,7 @@ export function InventoryClient({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+                  <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
                     Filter Status
                   </label>
                   <select
@@ -2613,7 +2613,7 @@ export function InventoryClient({
                     onChange={(event) =>
                       setServiceFilter(event.target.value as ServiceFilterValue)
                     }
-                    className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+                    className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
                   >
                     <option value="ALL">All Services</option>
                     <option value="TRACKED">Tracked Only</option>
@@ -2625,7 +2625,7 @@ export function InventoryClient({
                 </div>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white">
+              <div className="mt-5 overflow-hidden border border-neutral-200 bg-white">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[1180px] text-left">
                     <thead className="bg-neutral-50">
@@ -2674,7 +2674,7 @@ export function InventoryClient({
                           direction={serviceSort.direction}
                           onSort={handleServiceSort}
                         />
-                        <th scope="col" className="px-4 py-3 text-right text-xs font-black uppercase text-neutral-500">
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase text-neutral-500">
                           Actions
                         </th>
                       </tr>
@@ -2694,14 +2694,14 @@ export function InventoryClient({
                             }
                           >
                             <td className="px-4 py-4">
-                              <p className="font-black text-neutral-950">
+                              <p className="font-semibold text-neutral-950">
                                 {item.name}
                               </p>
                               <p className="mt-1 text-xs font-bold text-neutral-500">
                                 {item.hotelName} · {item.category}
                               </p>
                               {item.code ? (
-                                <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-neutral-400">
+                                <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                                   Code: {item.code}
                                 </p>
                               ) : null}
@@ -2712,8 +2712,8 @@ export function InventoryClient({
                                 <span
                                   className={
                                     item.inventoryTracked
-                                      ? 'inline-flex rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700'
-                                      : 'inline-flex rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600'
+                                      ? 'inline-flex bg-blue-100 px-3 py-1 text-[10px] font-semibold text-blue-700'
+                                      : 'inline-flex bg-neutral-100 px-3 py-1 text-[10px] font-semibold text-neutral-600'
                                   }
                                 >
                                   {item.inventoryTracked
@@ -2722,9 +2722,9 @@ export function InventoryClient({
                                 </span>
 
                                 <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getBillingClass(
-                                    item.billingMode
-                                  )}`}
+                                  className={`inline-flex px-3 py-1 text-[10px] font-semibold ${getBillingClass(
+ item.billingMode
+ )}`}
                                 >
                                   {getBillingLabel(item.billingMode)}
                                   {item.billingMode ===
@@ -2734,9 +2734,9 @@ export function InventoryClient({
                                 </span>
 
                                 <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                                    status
-                                  )}`}
+                                  className={`inline-flex px-3 py-1 text-[10px] font-semibold ${getStatusClass(
+ status
+ )}`}
                                 >
                                   {status}
                                 </span>
@@ -2744,21 +2744,21 @@ export function InventoryClient({
                             </td>
 
                             <td className="px-4 py-4 text-center">
-                              <p className="text-2xl font-black text-neutral-950">
+                              <p className="text-2xl font-semibold text-neutral-950">
                                 {item.inventoryTracked
                                   ? item.availableQty
                                   : '—'}
                               </p>
-                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                              <p className="text-[10px] font-semibold uppercase text-neutral-400">
                                 Available
                               </p>
                             </td>
 
                             <td className="px-4 py-4 text-center">
-                              <p className="text-2xl font-black text-neutral-800">
+                              <p className="text-2xl font-semibold text-neutral-800">
                                 {item.inventoryTracked ? item.usedQty : '—'}
                               </p>
-                              <p className="text-[10px] font-black uppercase text-neutral-400">
+                              <p className="text-[10px] font-semibold uppercase text-neutral-400">
                                 Used
                               </p>
                             </td>
@@ -2792,7 +2792,7 @@ export function InventoryClient({
                                       onClick={() =>
                                         setControllingServiceItem(item)
                                       }
-                                      className="inline-flex h-9 items-center justify-center rounded-full bg-black px-4 text-xs font-black text-white hover:bg-neutral-800"
+                                      className="inline-flex h-9 items-center justify-center bg-black px-4 text-xs font-semibold text-white hover:bg-neutral-800"
                                     >
                                       Control Stock
                                     </button>
@@ -2809,7 +2809,7 @@ export function InventoryClient({
                                           pendingAction ===
                                           `disable-service:${item.id}`
                                         }
-                                        className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="inline-flex h-9 items-center justify-center gap-2 border border-neutral-200 bg-white px-4 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
                                       >
                                         {pendingAction ===
                                         `disable-service:${item.id}` ? (
@@ -2835,7 +2835,7 @@ export function InventoryClient({
                                         pendingAction ===
                                         `enable-service:${item.id}`
                                       }
-                                      className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-blue-600 px-4 text-xs font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="inline-flex h-9 items-center justify-center gap-2 bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       {pendingAction ===
                                       `enable-service:${item.id}` ? (
@@ -2860,7 +2860,7 @@ export function InventoryClient({
                             colSpan={7}
                             className="px-5 py-12 text-center"
                           >
-                            <p className="font-black">No service items found.</p>
+                            <p className="font-semibold">No service items found.</p>
                             <p className="mt-1 text-sm text-neutral-500">
                               Try changing your search or filter.
                             </p>

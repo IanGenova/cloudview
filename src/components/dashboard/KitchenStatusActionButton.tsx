@@ -48,7 +48,7 @@ export function KitchenStatusActionButton({
       disabled={pending}
       onClick={handleClick}
       className={cn(
-        'min-h-10 w-full rounded-xl border px-3 py-2 text-xs font-black shadow-sm transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-60',
+        'min-h-10 w-full border px-3 py-2 text-xs font-semibold shadow-sm transition disabled:cursor-wait disabled:opacity-60',
         tone === 'dark' &&
           'border-black bg-black text-white hover:bg-neutral-800 dark:border-gold dark:bg-gold dark:text-black dark:hover:bg-gold/80',
         tone === 'danger' &&

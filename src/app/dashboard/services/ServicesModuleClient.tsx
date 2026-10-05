@@ -143,16 +143,16 @@ function FloatingToast({
       <div
         className={
           isSuccess
-            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
-            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+            ? 'border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div className="flex items-start gap-3">
           <div
             className={
               isSuccess
-                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
-                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+                ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center bg-red-100 text-red-700'
             }
           >
             {isSuccess ? (
@@ -163,17 +163,17 @@ function FloatingToast({
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
               {isSuccess ? 'Success' : 'Error'}
             </p>
 
-            <p className="mt-1 text-sm font-black">{toast.text}</p>
+            <p className="mt-1 text-sm font-semibold">{toast.text}</p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            className="grid size-8 shrink-0 place-items-center bg-white/70 text-current transition hover:bg-white"
             aria-label="Close notification"
           >
             <X className="size-4" />
@@ -197,10 +197,10 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black">{title}</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             {description ? (
               <p className="mt-1 text-sm text-neutral-500">{description}</p>
             ) : null}
@@ -209,7 +209,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            className="grid size-9 shrink-0 place-items-center bg-neutral-100 text-sm font-semibold hover:bg-neutral-200"
           >
             ✕
           </button>
@@ -243,7 +243,7 @@ function CreateServiceModal({
     >
       <form action={action} className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Hotel
           </label>
           <Select
@@ -261,25 +261,25 @@ function CreateServiceModal({
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Service Name
             </label>
             <input
               name="name"
               required
               placeholder="Extra Towels"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Code
             </label>
             <input
               name="code"
               placeholder="EXTRA_TOWELS"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold uppercase outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold uppercase outline-none focus:border-neutral-400"
             />
             <p className="mt-1 text-xs text-neutral-500">
               Leave blank to generate from service name.
@@ -289,7 +289,7 @@ function CreateServiceModal({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Category
             </label>
             <Select name="category" defaultValue="Housekeeping">
@@ -302,7 +302,7 @@ function CreateServiceModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Icon
             </label>
             <Select name="iconKey" defaultValue="ConciergeBell">
@@ -315,7 +315,7 @@ function CreateServiceModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Billing Mode
             </label>
             <Select name="billingMode" defaultValue="FREE">
@@ -330,7 +330,7 @@ function CreateServiceModal({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Unit Price
             </label>
             <input
@@ -339,23 +339,23 @@ function CreateServiceModal({
               min="0"
               step="0.01"
               defaultValue="0"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Unit Label
             </label>
             <input
               name="unitLabel"
               placeholder="per set"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Sort Order
             </label>
             <input
@@ -363,20 +363,20 @@ function CreateServiceModal({
               type="number"
               step="1"
               defaultValue="0"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Description
           </label>
           <textarea
             name="description"
             rows={3}
             placeholder="Describe what the guest will receive."
-            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
+            className="w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
@@ -395,7 +395,7 @@ function CreateServiceModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -427,33 +427,33 @@ function EditServiceModal({
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Service Name
             </label>
             <input
               name="name"
               defaultValue={service.name}
               required
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Code
             </label>
             <input
               name="code"
               defaultValue={service.code}
               required
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold uppercase outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold uppercase outline-none focus:border-neutral-400"
             />
           </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Category
             </label>
             <Select name="category" defaultValue={service.category}>
@@ -466,7 +466,7 @@ function EditServiceModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Icon
             </label>
             <Select name="iconKey" defaultValue={service.iconKey}>
@@ -479,7 +479,7 @@ function EditServiceModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Billing Mode
             </label>
             <Select name="billingMode" defaultValue={service.billingMode}>
@@ -494,7 +494,7 @@ function EditServiceModal({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Unit Price
             </label>
             <input
@@ -503,24 +503,24 @@ function EditServiceModal({
               min="0"
               step="0.01"
               defaultValue={String(service.unitPrice)}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Unit Label
             </label>
             <input
               name="unitLabel"
               defaultValue={service.unitLabel}
               placeholder="per set"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Sort Order
             </label>
             <input
@@ -528,20 +528,20 @@ function EditServiceModal({
               type="number"
               step="1"
               defaultValue={service.sortOrder}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Description
           </label>
           <textarea
             name="description"
             rows={3}
             defaultValue={service.description}
-            className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
+            className="w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
@@ -560,7 +560,7 @@ function EditServiceModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -828,19 +828,19 @@ function handleDeleteServiceConfirm() {
       <FloatingToast toast={toast} onClose={() => setToast(null)} />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_370px]">
-        <section className="overflow-hidden rounded-[2.25rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
+        <section className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
           <div className="relative p-6">
-            <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#c99c38]/25 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-24 -top-24 size-72 bg-[#c99c38]/25 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-24 left-10 size-72 bg-emerald-500/10 blur-3xl" />
 
             <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+                <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
                   <ConciergeBell className="size-4" />
                   Guest Portal Catalog
                 </p>
 
-                <h2 className="mt-5 text-3xl font-black tracking-tight lg:text-4xl">
+                <h2 className="mt-5 text-3xl font-semibold tracking-tight lg:text-4xl">
                   Services & Room Add-ons
                 </h2>
 
@@ -853,7 +853,7 @@ function handleDeleteServiceConfirm() {
               <button
                 type="button"
                 onClick={() => setCreatingService(true)}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#d6a738] px-5 py-3 text-sm font-black text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d6a738] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
               >
                 <PackagePlus className="size-4" />
                 Create Service / Add-on
@@ -863,40 +863,40 @@ function handleDeleteServiceConfirm() {
 
           <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
             <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
                 Total Items
               </p>
-              <p className="mt-1 text-3xl font-black">{serviceStats.total}</p>
+              <p className="mt-1 text-3xl font-semibold">{serviceStats.total}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Full catalog
               </p>
             </div>
 
             <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
                 Active
               </p>
-              <p className="mt-1 text-3xl font-black">{serviceStats.active}</p>
+              <p className="mt-1 text-3xl font-semibold">{serviceStats.active}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Visible in portal
               </p>
             </div>
 
             <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
                 Hidden
               </p>
-              <p className="mt-1 text-3xl font-black">{serviceStats.hidden}</p>
+              <p className="mt-1 text-3xl font-semibold">{serviceStats.hidden}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Not guest-visible
               </p>
             </div>
 
             <div className="p-5">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
                 Paid / Confirm
               </p>
-              <p className="mt-1 text-3xl font-black">
+              <p className="mt-1 text-3xl font-semibold">
                 {serviceStats.paid + serviceStats.confirmation}
               </p>
               <p className="mt-1 text-xs font-semibold text-white/45">
@@ -906,17 +906,17 @@ function handleDeleteServiceConfirm() {
           </div>
         </section>
 
-        <section className="rounded-[2.25rem] border border-[#c99c38]/25 bg-[#fffaf0] p-5 shadow-sm">
+        <section className="border border-[#c99c38]/25 bg-[#fffaf0] p-5 shadow-sm">
           <div className="flex items-start gap-3">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d6a738] text-black">
+            <span className="grid size-12 shrink-0 place-items-center bg-[#d6a738] text-black">
               <Sparkles className="size-5" />
             </span>
 
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9a6b18]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a6b18]">
                 Default Setup
               </p>
-              <h2 className="mt-1 text-xl font-black text-[#11100b]">
+              <h2 className="mt-1 text-xl font-semibold text-[#11100b]">
                 Recommended services
               </h2>
               <p className="mt-1 text-sm font-semibold leading-6 text-neutral-600">
@@ -927,7 +927,7 @@ function handleDeleteServiceConfirm() {
 
           <form action={handleSeedDefaultServices} className="mt-5 space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-black uppercase tracking-wide text-neutral-500">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Hotel
               </label>
               <Select
@@ -948,20 +948,20 @@ function handleDeleteServiceConfirm() {
             </Button>
           </form>
 
-          <p className="mt-4 rounded-2xl border border-[#c99c38]/20 bg-white/70 p-4 text-xs font-bold leading-5 text-[#8a641d]">
+          <p className="mt-4 border border-[#c99c38]/20 bg-white/70 p-4 text-xs font-bold leading-5 text-[#8a641d]">
             Tip: run this once per hotel, then customize pricing, labels, and visibility below.
           </p>
         </section>
       </div>
 
-      <section className="mt-5 rounded-[2.25rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <section className="mt-5 border border-neutral-200 bg-white">
         <div className="border-b border-neutral-100 p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
                 Service Catalog
               </p>
-              <h2 className="mt-1 text-2xl font-black text-[#11100b]">
+              <h2 className="mt-1 text-2xl font-semibold text-[#11100b]">
                 Existing Services
               </h2>
               <p className="mt-1 text-sm font-medium text-neutral-500">
@@ -970,17 +970,17 @@ function handleDeleteServiceConfirm() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2 text-xs font-black text-neutral-700">
+              <span className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-700">
                 <ConciergeBell className="size-4 text-[#b88938]" />
                 {filteredServices.length} shown
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-xs font-black text-emerald-700">
+              <span className="inline-flex items-center gap-2 bg-emerald-100 px-4 py-2 text-xs font-semibold text-emerald-700">
                 {serviceStats.free} free
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-xs font-black text-amber-700">
+              <span className="inline-flex items-center gap-2 bg-amber-100 px-4 py-2 text-xs font-semibold text-amber-700">
                 {serviceStats.confirmation} confirm price
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-4 py-2 text-xs font-black text-neutral-600">
+              <span className="inline-flex items-center gap-2 bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-600">
                 <EyeOff className="size-4" />
                 {serviceStats.hidden} hidden
               </span>
@@ -994,19 +994,19 @@ function handleDeleteServiceConfirm() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search service, code, hotel, category, or description..."
-                className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-12 w-full border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               />
             </label>
 
             <label className="grid gap-1">
-              <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 <Filter className="size-3.5" />
                 Category
               </span>
               <select
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-12 border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               >
                 <option value="ALL">All Categories</option>
                 {availableCategories.map((category) => (
@@ -1018,7 +1018,7 @@ function handleDeleteServiceConfirm() {
             </label>
 
             <label className="grid gap-1">
-              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Status
               </span>
               <select
@@ -1026,7 +1026,7 @@ function handleDeleteServiceConfirm() {
                 onChange={(event) =>
                   setStatusFilter(event.target.value as 'ALL' | 'ACTIVE' | 'HIDDEN')
                 }
-                className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-12 border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               >
                 <option value="ALL">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -1035,7 +1035,7 @@ function handleDeleteServiceConfirm() {
             </label>
 
             <label className="grid gap-1">
-              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Billing
               </span>
               <select
@@ -1043,7 +1043,7 @@ function handleDeleteServiceConfirm() {
                 onChange={(event) =>
                   setBillingFilter(event.target.value as 'ALL' | ServiceBillingMode)
                 }
-                className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-12 border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               >
                 <option value="ALL">All Billing Modes</option>
                 <option value="FREE">Free</option>
@@ -1059,17 +1059,17 @@ function handleDeleteServiceConfirm() {
             {groupedServices.map((group) => (
               <section key={group.groupName}>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-black uppercase tracking-wide text-neutral-500">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
                     {group.groupName}
                   </h3>
 
-                  <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600">
+                  <span className="bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">
                     {group.items.length} item{group.items.length === 1 ? '' : 's'}
                   </span>
                 </div>
 
-                <div className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white">
-                  <div className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-neutral-500 xl:grid xl:grid-cols-[minmax(260px,1.3fr)_minmax(200px,0.9fr)_180px_130px_90px_220px] xl:items-center xl:gap-4">
+                <div className="overflow-hidden border border-neutral-200 bg-white">
+                  <div className="hidden border-b border-neutral-100 bg-neutral-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500 xl:grid xl:grid-cols-[minmax(260px,1.3fr)_minmax(200px,0.9fr)_180px_130px_90px_220px] xl:items-center xl:gap-4">
                     <span>Service</span>
                     <span>Hotel / Category</span>
                     <span>Billing</span>
@@ -1084,15 +1084,15 @@ function handleDeleteServiceConfirm() {
                       className="grid gap-4 border-t border-neutral-100 p-4 first:border-t-0 xl:grid-cols-[minmax(260px,1.3fr)_minmax(200px,0.9fr)_180px_130px_90px_220px] xl:items-center"
                     >
                       <div className="flex min-w-0 items-start gap-3">
-                        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#fff8e7] text-[#9a6b18]">
+                        <span className="grid size-11 shrink-0 place-items-center bg-[#fff8e7] text-[#9a6b18]">
                           <ConciergeBell className="size-5" />
                         </span>
 
                         <div className="min-w-0">
-                          <p className="truncate text-base font-black text-[#11100b]">
+                          <p className="truncate text-base font-semibold text-[#11100b]">
                             {service.name}
                           </p>
-                          <p className="mt-1 truncate text-xs font-black uppercase tracking-wide text-neutral-500">
+                          <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-neutral-500">
                             {service.code}
                           </p>
                           <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-neutral-500">
@@ -1102,23 +1102,23 @@ function handleDeleteServiceConfirm() {
                       </div>
 
                       <div>
-                        <p className="text-sm font-black text-[#11100b]">
+                        <p className="text-sm font-semibold text-[#11100b]">
                           {service.hotelName}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-black uppercase text-neutral-600">
+                          <span className="bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold uppercase text-neutral-600">
                             {service.category}
                           </span>
-                          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-black text-neutral-600">
+                          <span className="bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
                             {service.iconKey}
                           </span>
                         </div>
                       </div>
 
                       <span
-                        className={`w-fit rounded-full px-3 py-1.5 text-[11px] font-black ${getBillingBadgeClass(
-                          service
-                        )}`}
+                        className={`w-fit px-3 py-1.5 text-[11px] font-semibold ${getBillingBadgeClass(
+ service
+ )}`}
                       >
                         {getBillingLabel(service)}
                       </span>
@@ -1126,14 +1126,14 @@ function handleDeleteServiceConfirm() {
                       <span
                         className={
                           service.isActive
-                            ? 'w-fit rounded-full bg-emerald-100 px-3 py-1.5 text-[11px] font-black text-emerald-700'
-                            : 'w-fit rounded-full bg-neutral-100 px-3 py-1.5 text-[11px] font-black text-neutral-500'
+                            ? 'w-fit bg-emerald-100 px-3 py-1.5 text-[11px] font-semibold text-emerald-700'
+                            : 'w-fit bg-neutral-100 px-3 py-1.5 text-[11px] font-semibold text-neutral-500'
                         }
                       >
                         {service.isActive ? 'ACTIVE' : 'HIDDEN'}
                       </span>
 
-                      <p className="text-sm font-black text-neutral-700">
+                      <p className="text-sm font-semibold text-neutral-700">
                         {service.sortOrder}
                       </p>
 
@@ -1141,7 +1141,7 @@ function handleDeleteServiceConfirm() {
                         <button
                           type="button"
                           onClick={() => setEditingService(service)}
-                          className="h-10 rounded-2xl border border-neutral-200 text-sm font-black text-neutral-700 transition hover:bg-neutral-50"
+                          className="h-10 border border-neutral-200 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
                         >
                           Edit
                         </button>
@@ -1150,7 +1150,7 @@ function handleDeleteServiceConfirm() {
                           type="button"
                           disabled={pendingAction === `delete:${service.id}` || isPending}
                           onClick={() => setDeleteService(service)}
-                          className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-10 w-full items-center justify-center gap-1.5 bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {pendingAction === `delete:${service.id}` ? (
                             <Loader2 className="size-4 animate-spin" />
@@ -1167,8 +1167,8 @@ function handleDeleteServiceConfirm() {
             ))}
 
             {!filteredServices.length ? (
-              <div className="rounded-[1.75rem] border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
-                <p className="text-lg font-black text-[#11100b]">
+              <div className="border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
+                <p className="text-lg font-semibold text-[#11100b]">
                   No matching services found.
                 </p>
                 <p className="mt-2 text-sm font-semibold text-neutral-500">
@@ -1200,15 +1200,15 @@ function handleDeleteServiceConfirm() {
 
       {deleteService ? (
   <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
-    <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem]">
+    <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
       <div className="border-b border-red-100 bg-red-50 p-4 sm:p-6">
         <div className="flex items-start gap-4">
-          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700">
+          <div className="grid size-12 shrink-0 place-items-center bg-red-100 text-red-700">
             <Trash2 className="size-5" />
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xl font-black text-neutral-950">
+            <p className="text-xl font-semibold text-neutral-950">
               Delete Service Item?
             </p>
 
@@ -1221,7 +1221,7 @@ function handleDeleteServiceConfirm() {
           <button
             type="button"
             onClick={() => setDeleteService(null)}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-white/70 text-neutral-500 transition hover:bg-white"
+            className="grid size-9 shrink-0 place-items-center bg-white/70 text-neutral-500 transition hover:bg-white"
             aria-label="Close confirmation"
           >
             <X className="size-4" />
@@ -1230,12 +1230,12 @@ function handleDeleteServiceConfirm() {
       </div>
 
       <div className="p-4 sm:p-6">
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+        <div className="border border-neutral-200 bg-neutral-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
             Selected Service
           </p>
 
-          <p className="mt-2 truncate text-lg font-black text-neutral-950">
+          <p className="mt-2 truncate text-lg font-semibold text-neutral-950">
             {deleteService.name}
           </p>
 
@@ -1248,7 +1248,7 @@ function handleDeleteServiceConfirm() {
           <button
             type="button"
             onClick={() => setDeleteService(null)}
-            className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 transition hover:bg-neutral-100"
+            className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
           >
             Cancel
           </button>
@@ -1256,7 +1256,7 @@ function handleDeleteServiceConfirm() {
           <button
             type="button"
             onClick={handleDeleteServiceConfirm}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700"
+            className="inline-flex h-11 items-center justify-center gap-2 bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700"
           >
             <Trash2 className="size-4" />
             Delete

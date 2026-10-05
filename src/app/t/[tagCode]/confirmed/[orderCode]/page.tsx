@@ -90,13 +90,13 @@ export default async function OrderConfirmedPage({
 
           <div className="relative z-10">
             <div
-              className={`mx-auto grid size-24 place-items-center rounded-full border shadow-[0_0_40px_rgba(214,167,56,0.15)] ${
-                isCancelled || isRefunding
-                  ? 'border-amber-400/20 bg-amber-400/10 text-amber-300'
-                  : isRefunded
-                    ? 'border-blue-400/20 bg-blue-400/10 text-blue-300'
-                    : 'border-gold/20 bg-gold/5 text-gold'
-              }`}
+              className={`mx-auto grid size-24 place-items-center border ${
+ isCancelled || isRefunding
+ ? 'border-amber-400/20 bg-amber-400/10 text-amber-300'
+ : isRefunded
+ ? 'border-blue-400/20 bg-blue-400/10 text-blue-300'
+ : 'border-gold/20 bg-gold/5 text-gold'
+ }`}
             >
               {isRefunding ? (
                 <RotateCcw className="size-9" />
@@ -125,10 +125,10 @@ export default async function OrderConfirmedPage({
                     : 'Your order has been received. You can track it in real time from confirmation to delivery.'}
             </p>
 
-            <div className="mx-auto mt-8 w-full max-w-xs rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 text-left shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+            <div className="mx-auto mt-8 w-full max-w-xs border border-white/10 bg-white/[0.04] p-6 text-left backdrop-blur-xl">
               {!isCancelled && !isRefunding && !isRefunded ? (
                 <div className="flex items-start gap-4">
-                  <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
+                  <div className="grid size-12 shrink-0 place-items-center bg-gold/20 text-gold">
                     <Clock3 className="size-5" />
                   </div>
                   <div>
@@ -142,7 +142,7 @@ export default async function OrderConfirmedPage({
                 </div>
               ) : null}
 
-              <div className="mt-6 rounded-[1.25rem] border border-white/10 bg-black/40 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+              <div className="mt-6 border border-white/10 bg-black/40 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 <div className="flex items-center gap-2 font-serif text-[15px] font-medium tracking-wide text-white">
                   <ReceiptText className="size-4 text-gold" />
                   Order {order.orderCode}
@@ -186,14 +186,14 @@ export default async function OrderConfirmedPage({
 
               <Link
                 href={`/t/${tagCode}/track/${order.orderCode}`}
-                className="mt-6 block rounded-[1.25rem] bg-gold px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110 active:scale-[0.98]"
+                className="mt-6 block bg-gold px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110"
               >
                 Track Order
               </Link>
 
               {order.paymentMethod === PaymentMethod.XENDIT &&
               payment?.refundErrorMessage ? (
-                <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold leading-5 text-red-200">
+                <p className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold leading-5 text-red-200">
                   Refund review: {payment.refundErrorMessage}
                 </p>
               ) : null}

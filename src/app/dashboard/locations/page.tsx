@@ -60,7 +60,7 @@ function FormField({
 }) {
   return (
     <label className={`grid gap-2 ${className}`}>
-      <span className="text-sm font-black text-neutral-800">{label}</span>
+      <span className="text-sm font-semibold text-neutral-800">{label}</span>
       {children}
       {helper ? (
         <span className="text-xs font-medium leading-relaxed text-neutral-500">
@@ -87,11 +87,11 @@ function Modal({
   return (
     <dialog
       id={id}
-      className={`w-[calc(100%-1.5rem)] ${size} rounded-[2rem] border border-neutral-200 bg-white p-0 shadow-2xl backdrop:bg-black/50`}
+      className={`w-[calc(100%-1.5rem)] ${size} border border-neutral-200 bg-white p-0 shadow-2xl backdrop:bg-black/50`}
     >
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-100 bg-white p-5">
         <div>
-          <h2 className="text-2xl font-black">{title}</h2>
+          <h2 className="text-2xl font-semibold">{title}</h2>
           {description ? (
             <p className="mt-1 text-sm text-neutral-500">{description}</p>
           ) : null}
@@ -99,7 +99,7 @@ function Modal({
 
         <form method="dialog">
           <button
-            className="grid size-10 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            className="grid size-10 place-items-center bg-neutral-100 hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-5" />
@@ -128,15 +128,15 @@ function Toast({
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
         }
       >
         <div
           className={
             message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {message.type === 'success' ? (
@@ -147,7 +147,7 @@ function Toast({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === 'success' ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -157,7 +157,7 @@ function Toast({
           href={closeHref}
           replace
           scroll={false}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -213,14 +213,14 @@ function buildDirectoryHref(
 
 function tabClassName(isActive: boolean) {
   return isActive
-    ? 'inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white shadow-sm'
-    : 'inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50';
+    ? 'inline-flex h-12 items-center justify-center gap-2 bg-black px-5 text-sm font-semibold text-white shadow-sm'
+    : 'inline-flex h-12 items-center justify-center gap-2 border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50';
 }
 
 function countBadgeClassName(isActive: boolean) {
   return isActive
-    ? 'rounded-full bg-white px-2 py-0.5 text-xs font-black text-black'
-    : 'rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-black text-neutral-700';
+    ? 'bg-white px-2 py-0.5 text-xs font-semibold text-black'
+    : 'bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-700';
 }
 
 function CompactDetailRow({
@@ -231,9 +231,9 @@ function CompactDetailRow({
   value: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs">
-      <span className="shrink-0 font-black text-neutral-500">{label}</span>
-      <span className="min-w-0 truncate text-right font-black text-neutral-900">
+    <div className="flex min-w-0 items-center justify-between gap-3 bg-white px-3 py-2 text-xs">
+      <span className="shrink-0 font-semibold text-neutral-500">{label}</span>
+      <span className="min-w-0 truncate text-right font-semibold text-neutral-900">
         {value}
       </span>
     </div>
@@ -435,17 +435,17 @@ export default async function RoomsAndLocationsPage({
         description="Create and manage guest rooms, pool areas, lobby panels, restaurants, amenities, and other NFC destinations."
       />
 
-      <div className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft">
+      <div className="mb-6 border border-neutral-200 bg-white p-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h2 className="text-xl font-black">Room & Location Directory</h2>
+            <h2 className="text-xl font-semibold">Room & Location Directory</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Use the tabs to manage rooms or non-room locations in a full-width
               workspace.
             </p>
 
             {selectedHotel ? (
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#c99c38]/25 bg-[#fffaf0] px-3 py-1.5 text-xs font-black text-[#8b641c]">
+              <div className="mt-3 inline-flex items-center gap-2 border border-[#c99c38]/25 bg-[#fffaf0] px-3 py-1.5 text-xs font-semibold text-[#8b641c]">
                 <Building2 className="size-3.5" />
                 Managing: {selectedHotel.name}
               </div>
@@ -479,7 +479,7 @@ export default async function RoomsAndLocationsPage({
           </div>
         </div>
 
-        <div className="mt-5 rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-3">
+        <div className="mt-5 border border-neutral-200 bg-neutral-50 p-3">
           {user.role === 'SUPER_ADMIN' ? (
             <DirectoryHotelFilter
               hotels={hotels}
@@ -488,15 +488,15 @@ export default async function RoomsAndLocationsPage({
               searchQuery={searchQuery}
             />
           ) : (
-            <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3">
-              <span className="grid size-10 place-items-center rounded-xl bg-[#f7f1e5] text-[#a8781d]">
+            <div className="flex items-center gap-3 bg-white px-4 py-3">
+              <span className="grid size-10 place-items-center bg-[#f7f1e5] text-[#a8781d]">
                 <Building2 className="size-5" />
               </span>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-neutral-400">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
                   Hotel / Property
                 </p>
-                <p className="mt-0.5 text-sm font-black text-neutral-900">
+                <p className="mt-0.5 text-sm font-semibold text-neutral-900">
                   {selectedHotel?.name || 'No hotel assigned'}
                 </p>
               </div>
@@ -505,7 +505,7 @@ export default async function RoomsAndLocationsPage({
         </div>
 
        <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col gap-2 rounded-[1.5rem] bg-neutral-50 p-2 sm:flex-row">
+            <div className="flex flex-col gap-2 bg-neutral-50 p-2 sm:flex-row">
               <Link
                 href={buildDirectoryHref('rooms', searchQuery, selectedHotelId)}
                 replace
@@ -543,7 +543,7 @@ export default async function RoomsAndLocationsPage({
               <input type="hidden" name="tab" value={activeTab} />
               <input type="hidden" name="hotelId" value={selectedHotelId} />
 
-              <div className="flex h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+              <div className="flex h-12 min-w-0 flex-1 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4">
                 <Search className="size-4 shrink-0 text-neutral-400" />
                 <input
                   name="q"
@@ -559,7 +559,7 @@ export default async function RoomsAndLocationsPage({
 
               <button
                 type="submit"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800"
+                className="inline-flex h-12 items-center justify-center gap-2 bg-black px-5 text-sm font-semibold text-white hover:bg-neutral-800"
               >
                 <Search className="size-4" />
                 Search
@@ -570,7 +570,7 @@ export default async function RoomsAndLocationsPage({
                   href={buildDirectoryHref(activeTab, undefined, selectedHotelId)}
                   replace
                   scroll={false}
-                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50"
+                  className="inline-flex h-12 items-center justify-center border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                 >
                   Clear
                 </Link>
@@ -578,7 +578,7 @@ export default async function RoomsAndLocationsPage({
             </form>
           </div>
         {searchQuery ? (
-          <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+          <div className="mt-4 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
             Showing results for “{searchQuery}” in{' '}
             {selectedHotel?.name || 'the selected hotel'}.
           </div>
@@ -589,13 +589,13 @@ export default async function RoomsAndLocationsPage({
         <section>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-black">Rooms</h2>
+              <h2 className="text-2xl font-semibold">Rooms</h2>
               <p className="text-sm text-neutral-500">
                 Guest rooms that can be connected to room-type NFC tags.
               </p>
             </div>
 
-            <span className="w-fit rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+            <span className="w-fit bg-black px-4 py-2 text-sm font-semibold text-white">
               {searchQuery
                 ? `${rooms.length} of ${roomsRaw.length} rooms`
                 : `${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}`}
@@ -604,8 +604,8 @@ export default async function RoomsAndLocationsPage({
 
          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5">
             {rooms.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
-                <p className="font-black text-neutral-600">
+              <div className="border border-dashed border-neutral-200 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
+                <p className="font-semibold text-neutral-600">
                   {searchQuery ? 'No matching rooms found' : 'No rooms yet'}
                 </p>
                 <p className="mt-1 text-sm text-neutral-500">
@@ -622,13 +622,13 @@ export default async function RoomsAndLocationsPage({
               return (
                <article
                   key={room.id}
-                  className="overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
+                  className="overflow-hidden border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
                   <div className="border-b border-neutral-100 bg-neutral-50 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-base font-black">
+                          <h3 className="truncate text-base font-semibold">
                             {room.name}
                           </h3>
 
@@ -648,7 +648,7 @@ export default async function RoomsAndLocationsPage({
                   </div>
 
                   <div className="space-y-3 p-3">
-                    <div className="grid gap-1.5 rounded-xl bg-neutral-50 p-2">
+                    <div className="grid gap-1.5 bg-neutral-50 p-2">
                       <CompactDetailRow label="Room No." value={room.number} />
                       <CompactDetailRow label="Display" value={room.name} />
                       <CompactDetailRow label="Floor" value={room.floor || 'Not set'} />
@@ -658,7 +658,7 @@ export default async function RoomsAndLocationsPage({
                     <div className="grid grid-cols-2 gap-2">
                       <ModalOpenButton
                         modalId={editModalId}
-                        className="h-9 gap-1.5 rounded-xl border border-neutral-200 bg-white text-xs font-black text-black hover:bg-neutral-100"
+                        className="h-9 gap-1.5 border border-neutral-200 bg-white text-xs font-semibold text-black hover:bg-neutral-100"
                       >
                         <Pencil className="size-3.5" />
                         Edit
@@ -671,7 +671,7 @@ export default async function RoomsAndLocationsPage({
                             itemType="room"
                             action={deleteRoomAction}
                             successMessage="Room successfully deleted."
-                            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-red-600 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                           />
                     </div>
                   </div>
@@ -698,7 +698,7 @@ export default async function RoomsAndLocationsPage({
                         label="Hotel / Property"
                         helper="Rooms are managed within the currently selected hotel."
                       >
-                        <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+                        <div className="flex h-11 items-center border border-neutral-200 bg-neutral-50 px-4 text-sm font-semibold text-neutral-700">
                           {room.hotel.name}
                         </div>
                       </FormField>
@@ -719,7 +719,7 @@ export default async function RoomsAndLocationsPage({
                         <Input name="floor" defaultValue={room.floor || ''} />
                       </FormField>
 
-                      <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+                      <label className="flex items-center gap-3 bg-neutral-50 p-3 md:col-span-2">
                         <input
                           name="isActive"
                           type="checkbox"
@@ -727,7 +727,7 @@ export default async function RoomsAndLocationsPage({
                           className="size-4 accent-black"
                         />
                         <span>
-                          <span className="block text-sm font-black">
+                          <span className="block text-sm font-semibold">
                             Available / Active
                           </span>
                           <span className="text-xs font-medium text-neutral-500">
@@ -753,14 +753,14 @@ export default async function RoomsAndLocationsPage({
         <section>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-black">Locations</h2>
+              <h2 className="text-2xl font-semibold">Locations</h2>
               <p className="text-sm text-neutral-500">
                 Non-room areas such as pool, lobby, restaurant, parking, or
                 amenities.
               </p>
             </div>
 
-            <span className="w-fit rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+            <span className="w-fit bg-black px-4 py-2 text-sm font-semibold text-white">
               {searchQuery
                 ? `${locations.length} of ${locationsRaw.length} locations`
                 : `${locations.length} ${
@@ -771,8 +771,8 @@ export default async function RoomsAndLocationsPage({
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5">
             {locations.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
-                <p className="font-black text-neutral-600">
+              <div className="border border-dashed border-neutral-200 bg-white p-10 text-center md:col-span-2 2xl:col-span-3">
+                <p className="font-semibold text-neutral-600">
                   {searchQuery
                     ? 'No matching locations found'
                     : 'No locations yet'}
@@ -791,13 +791,13 @@ export default async function RoomsAndLocationsPage({
               return (
                 <article
                   key={location.id}
-                  className="overflow-hidden rounded-[1.35rem] border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
+                  className="overflow-hidden border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
                   <div className="border-b border-neutral-100 bg-neutral-50 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-base font-black">
+                          <h3 className="truncate text-base font-semibold">
                             {location.name}
                           </h3>
 
@@ -816,7 +816,7 @@ export default async function RoomsAndLocationsPage({
                   </div>
 
                   <div className="space-y-3 p-3">
-                    <div className="grid gap-1.5 rounded-xl bg-neutral-50 p-2">
+                    <div className="grid gap-1.5 bg-neutral-50 p-2">
                       <CompactDetailRow label="Name" value={location.name} />
                       <CompactDetailRow label="Type" value={location.type} />
                       <CompactDetailRow label="NFC Tags" value={location.nfcTags.length} />
@@ -829,7 +829,7 @@ export default async function RoomsAndLocationsPage({
                     <div className="grid grid-cols-2 gap-2">
                       <ModalOpenButton
                         modalId={editModalId}
-                        className="h-9 gap-1.5 rounded-xl border border-neutral-200 bg-white text-xs font-black text-black hover:bg-neutral-100"
+                        className="h-9 gap-1.5 border border-neutral-200 bg-white text-xs font-semibold text-black hover:bg-neutral-100"
                       >
                         <Pencil className="size-3.5" />
                         Edit
@@ -842,7 +842,7 @@ export default async function RoomsAndLocationsPage({
                             itemType="location"
                             action={deleteLocationAction}
                             successMessage="Location successfully deleted."
-                            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-red-600 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                           />
                     </div>
                   </div>
@@ -873,7 +873,7 @@ export default async function RoomsAndLocationsPage({
                         label="Hotel / Property"
                         helper="Locations are managed within the currently selected hotel."
                       >
-                        <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+                        <div className="flex h-11 items-center border border-neutral-200 bg-neutral-50 px-4 text-sm font-semibold text-neutral-700">
                           {location.hotel.name}
                         </div>
                       </FormField>
@@ -910,7 +910,7 @@ export default async function RoomsAndLocationsPage({
                         />
                       </FormField>
 
-                      <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+                      <label className="flex items-center gap-3 bg-neutral-50 p-3 md:col-span-2">
                         <input
                           name="isActive"
                           type="checkbox"
@@ -918,7 +918,7 @@ export default async function RoomsAndLocationsPage({
                           className="size-4 accent-black"
                         />
                         <span>
-                          <span className="block text-sm font-black">
+                          <span className="block text-sm font-semibold">
                             Available / Active
                           </span>
                           <span className="text-xs font-medium text-neutral-500">
@@ -958,7 +958,7 @@ export default async function RoomsAndLocationsPage({
             label="Hotel / Property"
             helper="The room will be added to the hotel currently selected in the filter."
           >
-            <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+            <div className="flex h-11 items-center border border-neutral-200 bg-neutral-50 px-4 text-sm font-semibold text-neutral-700">
               {selectedHotel?.name || 'No hotel selected'}
             </div>
           </FormField>
@@ -1003,7 +1003,7 @@ export default async function RoomsAndLocationsPage({
             label="Hotel / Property"
             helper="The location will be added to the hotel currently selected in the filter."
           >
-            <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+            <div className="flex h-11 items-center border border-neutral-200 bg-neutral-50 px-4 text-sm font-semibold text-neutral-700">
               {selectedHotel?.name || 'No hotel selected'}
             </div>
           </FormField>

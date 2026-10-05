@@ -73,32 +73,32 @@ export function MenuPageToast({
       <div
         className={
           isSuccess
-            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
-            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+            ? 'border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div className="flex items-start gap-3">
           <div
             className={
               isSuccess
-                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
-                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+                ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center bg-red-100 text-red-700'
             }
           >
             {isSuccess ? <CheckCircle2 className="size-5" /> : <X className="size-5" />}
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
               {isSuccess ? 'Success' : 'Action failed'}
             </p>
-            <p className="mt-1 text-sm font-black">{toast.text}</p>
+            <p className="mt-1 text-sm font-semibold">{toast.text}</p>
           </div>
 
           <button
             type="button"
             onClick={() => setToast(null)}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            className="grid size-8 shrink-0 place-items-center bg-white/70 text-current transition hover:bg-white"
             aria-label="Close notification"
           >
             <X className="size-4" />
@@ -222,32 +222,32 @@ export function MenuToastListener() {
       <div
         className={
           isSuccess
-            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
-            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+            ? 'border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div className="flex items-start gap-3">
           <div
             className={
               isSuccess
-                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
-                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+                ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center bg-red-100 text-red-700'
             }
           >
             {isSuccess ? <CheckCircle2 className="size-5" /> : <X className="size-5" />}
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
               {isSuccess ? 'Success' : 'Action failed'}
             </p>
-            <p className="mt-1 text-sm font-black">{toast.text}</p>
+            <p className="mt-1 text-sm font-semibold">{toast.text}</p>
           </div>
 
           <button
             type="button"
             onClick={() => setToast(null)}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            className="grid size-8 shrink-0 place-items-center bg-white/70 text-current transition hover:bg-white"
             aria-label="Close notification"
           >
             <X className="size-4" />
@@ -329,15 +329,15 @@ export function MenuConfirmDeleteButton({
 
       {confirmOpen ? (
         <div className="fixed inset-0 z-[160] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
-          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem]">
+          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="border-b border-red-100 bg-red-50 p-4 sm:p-6">
               <div className="flex items-start gap-4">
-                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700">
+                <div className="grid size-12 shrink-0 place-items-center bg-red-100 text-red-700">
                   <Trash2 className="size-5" />
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-xl font-black text-neutral-950">
+                  <p className="text-xl font-semibold text-neutral-950">
                     Delete {itemType === 'product' ? 'Product' : 'Category'}?
                   </p>
 
@@ -350,7 +350,7 @@ export function MenuConfirmDeleteButton({
                 <button
                   type="button"
                   onClick={() => setConfirmOpen(false)}
-                  className="grid size-9 shrink-0 place-items-center rounded-full bg-white/70 text-neutral-500 transition hover:bg-white"
+                  className="grid size-9 shrink-0 place-items-center bg-white/70 text-neutral-500 transition hover:bg-white"
                   aria-label="Close confirmation"
                 >
                   <X className="size-4" />
@@ -359,12 +359,12 @@ export function MenuConfirmDeleteButton({
             </div>
 
             <div className="p-4 sm:p-6">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+              <div className="border border-neutral-200 bg-neutral-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
                   Selected {itemType}
                 </p>
 
-                <p className="mt-2 truncate text-lg font-black text-neutral-950">
+                <p className="mt-2 truncate text-lg font-semibold text-neutral-950">
                   {itemName}
                 </p>
               </div>
@@ -374,7 +374,7 @@ export function MenuConfirmDeleteButton({
                   type="button"
                   onClick={() => setConfirmOpen(false)}
                   disabled={isPending}
-                  className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -383,7 +383,7 @@ export function MenuConfirmDeleteButton({
                   type="button"
                   onClick={runDelete}
                   disabled={isPending}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-11 items-center justify-center gap-2 bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -797,15 +797,15 @@ export function MenuBulkImportForm({
       action={handleAction}
       className="space-y-5"
     >
-      <div className="rounded-[1.75rem] border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5">
+      <div className="border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-black text-amber-400">
+            <span className="grid size-12 shrink-0 place-items-center bg-black text-amber-400">
               <FileSpreadsheet className="size-5" />
             </span>
 
             <div>
-              <h3 className="text-lg font-black text-neutral-950">
+              <h3 className="text-lg font-semibold text-neutral-950">
                 CSV bulk menu importer
               </h3>
               <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-neutral-600">
@@ -819,7 +819,7 @@ export function MenuBulkImportForm({
           <button
             type="button"
             onClick={downloadBulkMenuTemplate}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-amber-300 bg-white px-4 py-2 text-xs font-black text-amber-900 transition hover:bg-amber-100"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 border border-amber-300 bg-white px-4 py-2 text-xs font-semibold text-amber-900 transition hover:bg-amber-100"
           >
             <Download className="size-4" />
             Download Template
@@ -829,7 +829,7 @@ export function MenuBulkImportForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2">
-          <span className="text-sm font-black text-neutral-800">
+          <span className="text-sm font-semibold text-neutral-800">
             Hotel / Property
           </span>
 
@@ -838,7 +838,7 @@ export function MenuBulkImportForm({
               name="hotelId"
               defaultValue={defaultHotelId}
               required
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
             >
               <option value="">Select a hotel</option>
               {hotels.map((hotel) => (
@@ -850,7 +850,7 @@ export function MenuBulkImportForm({
           ) : (
             <>
               <input type="hidden" name="hotelId" value={defaultHotelId} />
-              <div className="flex h-11 items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-4 text-sm font-black text-neutral-700">
+              <div className="flex h-11 items-center border border-neutral-200 bg-neutral-50 px-4 text-sm font-semibold text-neutral-700">
                 {hotels.find((hotel) => hotel.id === defaultHotelId)?.name ??
                   'Assigned hotel'}
               </div>
@@ -863,14 +863,14 @@ export function MenuBulkImportForm({
         </label>
 
         <label className="grid gap-2">
-          <span className="text-sm font-black text-neutral-800">
+          <span className="text-sm font-semibold text-neutral-800">
             Existing product behavior
           </span>
 
           <select
             name="duplicateMode"
             defaultValue="UPSERT"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           >
             <option value="UPSERT">
               Update matching products, create new products
@@ -889,7 +889,7 @@ export function MenuBulkImportForm({
         </label>
       </div>
 
-      <label className="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+      <label className="flex items-start gap-3 border border-neutral-200 bg-neutral-50 p-4">
         <input
           type="checkbox"
           name="createMissingCategories"
@@ -898,7 +898,7 @@ export function MenuBulkImportForm({
         />
 
         <span>
-          <span className="block text-sm font-black text-neutral-900">
+          <span className="block text-sm font-semibold text-neutral-900">
             Create missing categories automatically
           </span>
           <span className="mt-1 block text-xs font-medium leading-5 text-neutral-500">
@@ -909,17 +909,17 @@ export function MenuBulkImportForm({
       </label>
 
       <label className="grid gap-2">
-        <span className="text-sm font-black text-neutral-800">
+        <span className="text-sm font-semibold text-neutral-800">
           Menu CSV file
         </span>
 
-        <div className="rounded-[1.5rem] border-2 border-dashed border-neutral-300 bg-neutral-50 p-5 transition focus-within:border-[#c99c38] focus-within:bg-[#fffaf0]">
+        <div className="border-2 border-dashed border-neutral-300 bg-neutral-50 p-5 transition focus-within:border-[#c99c38] focus-within:bg-[#fffaf0]">
           <div className="flex flex-col items-center text-center">
-            <span className="grid size-12 place-items-center rounded-2xl bg-black text-[#c99c38]">
+            <span className="grid size-12 place-items-center bg-black text-[#c99c38]">
               <UploadCloud className="size-5" />
             </span>
 
-            <p className="mt-3 text-sm font-black text-neutral-900">
+            <p className="mt-3 text-sm font-semibold text-neutral-900">
               {fileName || 'Choose your completed CSV template'}
             </p>
             <p className="mt-1 text-xs font-medium text-neutral-500">
@@ -932,23 +932,23 @@ export function MenuBulkImportForm({
               accept=".csv,text/csv"
               required
               onChange={handleFileChange}
-              className="mt-4 block w-full max-w-xl rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold file:mr-4 file:rounded-xl file:border-0 file:bg-black file:px-4 file:py-2 file:text-xs file:font-black file:text-white"
+              className="mt-4 block w-full max-w-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold file:mr-4 file:border-0 file:bg-black file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white"
             />
           </div>
         </div>
       </label>
 
       {clientError ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
+        <div className="flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800">
           <AlertTriangle className="mt-0.5 size-5 shrink-0" />
-          <p className="text-sm font-black">{clientError}</p>
+          <p className="text-sm font-semibold">{clientError}</p>
         </div>
       ) : null}
 
       {preview ? (
-        <section className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white">
+        <section className="overflow-hidden border border-neutral-200 bg-white">
           <div className="border-b border-neutral-100 bg-neutral-50 px-5 py-4">
-            <h4 className="font-black text-neutral-950">
+            <h4 className="font-semibold text-neutral-950">
               Import preview
             </h4>
             <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -965,10 +965,10 @@ export function MenuBulkImportForm({
               ['Categories', preview.categories],
             ].map(([label, value]) => (
               <div key={String(label)} className="bg-white p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-neutral-400">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
                   {label}
                 </p>
-                <p className="mt-1 text-2xl font-black text-neutral-950">
+                <p className="mt-1 text-2xl font-semibold text-neutral-950">
                   {value}
                 </p>
               </div>
@@ -980,7 +980,7 @@ export function MenuBulkImportForm({
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 size-5 shrink-0 text-red-600" />
                 <div>
-                  <p className="text-sm font-black text-red-800">
+                  <p className="text-sm font-semibold text-red-800">
                     Fix these CSV issues before importing
                   </p>
                   <ul className="mt-2 space-y-1 text-xs font-semibold leading-5 text-red-700">
@@ -992,25 +992,25 @@ export function MenuBulkImportForm({
               </div>
             </div>
           ) : (
-            <div className="border-t border-emerald-100 bg-emerald-50 p-4 text-sm font-black text-emerald-800">
+            <div className="border-t border-emerald-100 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
               CSV structure looks ready for server validation.
             </div>
           )}
         </section>
       ) : null}
 
-      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+      <div className="border border-neutral-200 bg-neutral-50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
           Bundle components format
         </p>
         <p className="mt-2 text-sm font-semibold leading-6 text-neutral-700">
-          Separate components with <code className="rounded bg-white px-1.5 py-0.5">|</code>.
+          Separate components with <code className="bg-white px-1.5 py-0.5">|</code>.
           Use{' '}
-          <code className="rounded bg-white px-1.5 py-0.5">
+          <code className="bg-white px-1.5 py-0.5">
             Category::Product Name::Quantity
           </code>.
         </p>
-        <p className="mt-2 rounded-xl bg-white p-3 font-mono text-xs text-neutral-700">
+        <p className="mt-2 bg-white p-3 font-mono text-xs text-neutral-700">
           Breakfast::Classic Pancakes::1|Drinks::Iced Tea::1
         </p>
       </div>
@@ -1018,7 +1018,7 @@ export function MenuBulkImportForm({
       <button
         type="submit"
         disabled={isPending || hasBlockingErrors}
-        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? (
           <Loader2 className="size-4 animate-spin" />

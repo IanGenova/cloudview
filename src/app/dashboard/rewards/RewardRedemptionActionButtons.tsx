@@ -73,7 +73,7 @@ export function RewardRedemptionActionButtons({
               action: 'used',
             })
           }
-          className="rounded-full bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-60"
+          className="bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
         >
           <span className="inline-flex items-center gap-1">
             <CheckCircle2 className="size-3" />
@@ -92,7 +92,7 @@ export function RewardRedemptionActionButtons({
               action: 'refunded',
             })
           }
-          className="rounded-full bg-red-600 px-3 py-2 text-xs font-black text-white disabled:opacity-60"
+          className="bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
         >
           <span className="inline-flex items-center gap-1">
             <X className="size-3" />

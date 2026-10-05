@@ -108,7 +108,7 @@ function FormField({
 }) {
   return (
     <label className="grid gap-2">
-      <span className="text-sm font-black text-neutral-800">{label}</span>
+      <span className="text-sm font-semibold text-neutral-800">{label}</span>
       {children}
       {helper ? (
         <span className="text-xs font-medium leading-relaxed text-neutral-500">
@@ -132,10 +132,10 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white p-4 sm:gap-4 sm:p-5">
           <div className="min-w-0">
-            <h2 className="text-2xl font-black">{title}</h2>
+            <h2 className="text-2xl font-semibold">{title}</h2>
             {description ? (
               <p className="mt-1 text-sm leading-6 text-neutral-500">
                 {description}
@@ -146,7 +146,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            className="grid size-10 shrink-0 place-items-center bg-neutral-100 hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-5" />
@@ -316,21 +316,21 @@ function SessionModePreview({
 
   return (
     <div
-      className={`rounded-2xl border p-4 text-sm ${sessionMode.containerClass}`}
+      className={` border p-4 text-sm ${sessionMode.containerClass}`}
     >
       <div className="flex items-start gap-3">
         <span
-          className={`grid size-10 shrink-0 place-items-center rounded-2xl ${sessionMode.iconClass}`}
+          className={`grid size-10 shrink-0 place-items-center ${sessionMode.iconClass}`}
         >
           <Icon className="size-5" />
         </span>
 
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
             Session Mode
           </p>
 
-          <p className="mt-1 text-base font-black">{sessionMode.label}</p>
+          <p className="mt-1 text-base font-semibold">{sessionMode.label}</p>
 
           <p className="mt-1 text-xs font-bold leading-5 opacity-75">
             {sessionMode.description}
@@ -377,20 +377,20 @@ function NfcMetricCard({
             : 'bg-white text-[#b88938]';
 
   return (
-    <div className={`rounded-[1.75rem] border p-5 ${className}`}>
+    <div className={` border p-5 ${className}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide opacity-70">
+          <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
             {label}
           </p>
 
-          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-2 text-3xl font-semibold">{value}</p>
 
           <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
         </div>
 
         <span
-          className={`grid size-11 shrink-0 place-items-center rounded-2xl ${iconClassName}`}
+          className={`grid size-11 shrink-0 place-items-center ${iconClassName}`}
         >
           {icon}
         </span>
@@ -416,7 +416,7 @@ function NfcActionConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
-      <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem]">
+      <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950 sm:max-h-[calc(100dvh-2rem)]">
         <div
           className={
             isDelete
@@ -428,8 +428,8 @@ function NfcActionConfirmDialog({
             <div
               className={
                 isDelete
-                  ? 'grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200'
-                  : 'grid size-12 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
+                  ? 'grid size-12 shrink-0 place-items-center bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200'
+                  : 'grid size-12 shrink-0 place-items-center bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
               }
             >
               {isDelete ? (
@@ -440,7 +440,7 @@ function NfcActionConfirmDialog({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xl font-black text-neutral-950 dark:text-white">
+              <p className="text-xl font-semibold text-neutral-950 dark:text-white">
                 {dialog.title}
               </p>
 
@@ -452,7 +452,7 @@ function NfcActionConfirmDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="grid size-9 shrink-0 place-items-center rounded-full bg-white/70 text-neutral-500 transition hover:bg-white dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
+              className="grid size-9 shrink-0 place-items-center bg-white/70 text-neutral-500 transition hover:bg-white dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
               aria-label="Close confirmation"
             >
               <X className="size-4" />
@@ -461,12 +461,12 @@ function NfcActionConfirmDialog({
         </div>
 
         <div className="p-4 sm:p-6">
-          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+          <div className="border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
               NFC Tag
             </p>
 
-            <p className="mt-2 truncate text-lg font-black text-neutral-950 dark:text-white">
+            <p className="mt-2 truncate text-lg font-semibold text-neutral-950 dark:text-white">
               {dialog.tag.label}
             </p>
 
@@ -479,7 +479,7 @@ function NfcActionConfirmDialog({
             <button
               type="button"
               onClick={onCancel}
-              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+              className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
             >
               Cancel
             </button>
@@ -489,8 +489,8 @@ function NfcActionConfirmDialog({
               onClick={onConfirm}
               className={
                 isDelete
-                  ? 'h-11 rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700'
-                  : 'h-11 rounded-2xl bg-amber-500 text-sm font-black text-white transition hover:bg-amber-600'
+                  ? 'h-11 bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700'
+                  : 'h-11 bg-amber-500 text-sm font-semibold text-white transition hover:bg-amber-600'
               }
             >
               {dialog.confirmLabel}
@@ -528,7 +528,7 @@ function CopyButton({
     <button
       type="button"
       onClick={copyValue}
-      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-[11px] font-black text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+      className="inline-flex h-8 items-center justify-center gap-1.5 border border-neutral-200 bg-white px-2.5 text-[11px] font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
     >
       <Copy className="size-3.5" />
       {copied ? 'Copied' : label}
@@ -544,9 +544,9 @@ function NfcUrlBox({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="border border-neutral-200 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <p className="truncate text-[9px] font-black uppercase tracking-[0.14em] text-neutral-500 dark:text-neutral-400">
+        <p className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-500 dark:text-neutral-400">
           {label}
         </p>
 
@@ -557,7 +557,7 @@ function NfcUrlBox({
             href={value}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-black px-2.5 text-[11px] font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
+            className="inline-flex h-8 items-center justify-center gap-1.5 bg-black px-2.5 text-[11px] font-semibold text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
           >
             <ExternalLink className="size-3" />
             Open
@@ -605,13 +605,13 @@ function GeneratedCodeInput({
           value={code}
           readOnly
           required
-          className="bg-neutral-50 font-black uppercase tracking-[0.18em] text-neutral-700"
+          className="bg-neutral-50 font-semibold uppercase tracking-[0.18em] text-neutral-700"
         />
 
         <button
           type="button"
           onClick={onRegenerate}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 px-4 text-sm font-black hover:bg-neutral-50"
+          className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-200 px-4 text-sm font-semibold hover:bg-neutral-50"
         >
           <RefreshCw className="size-4" />
           Regenerate
@@ -964,7 +964,7 @@ function EditTagForm({
       />
     </div>
 
-      <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800 md:col-span-2 xl:col-span-3">
+      <div className="bg-amber-50 p-4 text-sm font-bold text-amber-800 md:col-span-2 xl:col-span-3">
         Updating the Unique Tag ID changes the NFC guest URL. After saving,
         reprint the QR/NFC launch link or rewrite the physical NFC card.
       </div>
@@ -1300,19 +1300,19 @@ return (
     <>
 
 
-     <section className="mb-6 overflow-hidden rounded-[2.25rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
+     <section className="mb-6 overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
   <div className="relative p-4 sm:p-6">
-    <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-[#c99c38]/25 blur-3xl" />
-    <div className="pointer-events-none absolute -bottom-24 left-10 size-64 rounded-full bg-emerald-500/10 blur-3xl" />
+    <div className="pointer-events-none absolute -right-20 -top-20 size-64 bg-[#c99c38]/25 blur-3xl" />
+    <div className="pointer-events-none absolute -bottom-24 left-10 size-64 bg-emerald-500/10 blur-3xl" />
 
     <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
       <div>
-        <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+        <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
           <RadioTower className="size-4" />
           NFC Access Control
         </p>
 
-        <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
+        <h2 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
           NFC Tag Management
         </h2>
 
@@ -1325,7 +1325,7 @@ return (
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#d6a738] px-5 py-3 text-sm font-black text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
+        className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d6a738] px-5 py-3 text-sm font-semibold text-black shadow-[0_16px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
       >
         <Plus className="size-4" />
         Create NFC Tag
@@ -1335,40 +1335,40 @@ return (
 
   <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
     <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
         Total Tags
       </p>
-      <p className="mt-1 text-3xl font-black">{localTags.length}</p>
+      <p className="mt-1 text-3xl font-semibold">{localTags.length}</p>
       <p className="mt-1 text-xs font-semibold text-white/45">
         Registered NFC access points
       </p>
     </div>
 
     <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
         Active
       </p>
-      <p className="mt-1 text-3xl font-black">{activeTagCount}</p>
+      <p className="mt-1 text-3xl font-semibold">{activeTagCount}</p>
       <p className="mt-1 text-xs font-semibold text-white/45">
         Currently scannable
       </p>
     </div>
 
     <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
         Room Tags
       </p>
-      <p className="mt-1 text-3xl font-black">{roomTagCount}</p>
+      <p className="mt-1 text-3xl font-semibold">{roomTagCount}</p>
       <p className="mt-1 text-xs font-semibold text-white/45">
         Private room access
       </p>
     </div>
 
     <div className="p-5">
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
         Never Scanned
       </p>
-      <p className="mt-1 text-3xl font-black">{neverScannedCount}</p>
+      <p className="mt-1 text-3xl font-semibold">{neverScannedCount}</p>
       <p className="mt-1 text-xs font-semibold text-white/45">
         Needs testing or deployment
       </p>
@@ -1409,14 +1409,14 @@ return (
   />
 </section>
 
-<section className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+<section className="mb-6 border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
   <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
         Search & Filters
       </p>
 
-      <h3 className="mt-1 text-xl font-black text-[#11100b] dark:text-white">
+      <h3 className="mt-1 text-xl font-semibold text-[#11100b] dark:text-white">
         Find NFC Access Points
       </h3>
 
@@ -1425,7 +1425,7 @@ return (
       </p>
     </div>
 
-    <span className="w-fit rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+    <span className="w-fit bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
       Showing {filteredTags.length} of {localTags.length}
     </span>
   </div>
@@ -1438,11 +1438,11 @@ return (
     }
   >
     <label className="grid gap-1">
-      <span className="text-xs font-black uppercase text-neutral-500 dark:text-neutral-400">
+      <span className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
         Search NFC Tags
       </span>
 
-      <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="flex h-12 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
         <Search className="size-4 shrink-0 text-neutral-400" />
 
         <input
@@ -1456,14 +1456,14 @@ return (
 
     {canChangeHotel ? (
       <label className="grid gap-1">
-        <span className="text-xs font-black uppercase text-neutral-500 dark:text-neutral-400">
+        <span className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
           Hotel
         </span>
 
         <select
           value={hotelFilter}
           onChange={(event) => setHotelFilter(event.target.value)}
-          className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+          className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
         >
           <option value="ALL">All Hotels</option>
           {hotels.map((hotel) => (
@@ -1476,14 +1476,14 @@ return (
     ) : null}
 
     <label className="grid gap-1">
-      <span className="text-xs font-black uppercase text-neutral-500 dark:text-neutral-400">
+      <span className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
         Type
       </span>
 
       <select
         value={typeFilter}
         onChange={(event) => setTypeFilter(event.target.value)}
-        className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+        className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
       >
         <option value="ALL">All Types</option>
         {tagTypes.map((tagType) => (
@@ -1495,14 +1495,14 @@ return (
     </label>
 
     <label className="grid gap-1">
-      <span className="text-xs font-black uppercase text-neutral-500 dark:text-neutral-400">
+      <span className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
         Status
       </span>
 
       <select
         value={statusFilter}
         onChange={(event) => setStatusFilter(event.target.value)}
-        className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+        className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
       >
         <option value="ALL">All Status</option>
         {tagStatuses.map((status) => (
@@ -1524,7 +1524,7 @@ return (
           setTypeFilter('ALL');
           setStatusFilter('ALL');
         }}
-        className="rounded-full bg-black px-4 py-2 text-xs font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
+        className="bg-black px-4 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
       >
         Clear Filters
       </button>
@@ -1549,13 +1549,13 @@ return (
         return (
   <article
     key={tag.id}
-    className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
+    className="overflow-hidden border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
   >
     <div className="border-b border-neutral-100 bg-neutral-50 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-lg font-black text-[#11100b] dark:text-white">
+            <h3 className="truncate text-lg font-semibold text-[#11100b] dark:text-white">
               {tag.label}
             </h3>
 
@@ -1570,8 +1570,8 @@ return (
         <span
           className={
             tag.status === 'ACTIVE'
-              ? 'grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700'
-              : 'grid size-10 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'
+              ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+              : 'grid size-10 shrink-0 place-items-center bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'
           }
         >
           <RadioTower className="size-4" />
@@ -1581,57 +1581,57 @@ return (
 
     <div className="space-y-3 p-4">
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-neutral-400">
+        <div className="bg-neutral-50 p-3 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
             Tag ID
           </p>
-          <p className="mt-1 truncate text-sm font-black tracking-[0.14em] text-[#11100b] dark:text-white">
+          <p className="mt-1 truncate text-sm font-semibold tracking-[0.14em] text-[#11100b] dark:text-white">
             {tag.code}
           </p>
         </div>
 
-        <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-neutral-400">
+        <div className="bg-neutral-50 p-3 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
             Assignment
           </p>
-          <p className="mt-1 truncate text-sm font-black text-[#11100b] dark:text-white">
+          <p className="mt-1 truncate text-sm font-semibold text-[#11100b] dark:text-white">
             {getAssignmentLabel(tag)}
           </p>
         </div>
 
-        <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-neutral-400">
+        <div className="bg-neutral-50 p-3 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
             Type
           </p>
-          <p className="mt-1 truncate text-sm font-black text-[#11100b] dark:text-white">
+          <p className="mt-1 truncate text-sm font-semibold text-[#11100b] dark:text-white">
             {tag.tagType.replaceAll('_', ' ')}
           </p>
         </div>
 
-        <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-neutral-400">
+        <div className="bg-neutral-50 p-3 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
             Last Scan
           </p>
-          <p className="mt-1 truncate text-xs font-black text-[#11100b] dark:text-white">
+          <p className="mt-1 truncate text-xs font-semibold text-[#11100b] dark:text-white">
             {formatDate(tag.lastScannedAt)}
           </p>
         </div>
       </div>
 
-      <div className={`rounded-xl border p-3 text-xs ${sessionMode.containerClass}`}>
+      <div className={` border p-3 text-xs ${sessionMode.containerClass}`}>
         <div className="flex items-start gap-2.5">
           <span
-            className={`grid size-9 shrink-0 place-items-center rounded-xl ${sessionMode.iconClass}`}
+            className={`grid size-9 shrink-0 place-items-center ${sessionMode.iconClass}`}
           >
             <SessionIcon className="size-4" />
           </span>
 
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.14em] opacity-70">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">
               Session Mode
             </p>
 
-            <p className="mt-0.5 truncate font-black">
+            <p className="mt-0.5 truncate font-semibold">
               {sessionMode.label}
             </p>
 
@@ -1656,8 +1656,8 @@ return (
             onClick={() => handleToggleTagStatus(tag)}
             className={
               tag.status === 'ACTIVE'
-                ? 'inline-flex h-9 w-full items-center justify-center rounded-xl bg-neutral-900 text-xs font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:hover:bg-neutral-700'
-                : 'inline-flex h-9 w-full items-center justify-center rounded-xl bg-emerald-600 text-xs font-black text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50'
+                ? 'inline-flex h-9 w-full items-center justify-center bg-neutral-900 text-xs font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:hover:bg-neutral-700'
+                : 'inline-flex h-9 w-full items-center justify-center bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50'
             }
           >
             {pendingTagAction === `toggle:${tag.id}`
@@ -1670,7 +1670,7 @@ return (
         <button
           type="button"
           onClick={() => setEditingTag(tag)}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-neutral-200 text-xs font-black hover:bg-neutral-50 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-950"
+          className="inline-flex h-9 items-center justify-center gap-1.5 border border-neutral-200 text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-950"
         >
           <Pencil className="size-3.5" />
           Edit
@@ -1680,7 +1680,7 @@ return (
         type="button"
         disabled={pendingTagAction === `rotate:${tag.id}` || isMutating}
         onClick={() => handleRotateTagSecret(tag)}
-        className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 text-xs font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-amber-500 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <RotateCcw className="size-3.5" />
         {pendingTagAction === `rotate:${tag.id}` ? 'Rotating...' : 'Rotate'}
@@ -1690,7 +1690,7 @@ return (
             type="button"
             disabled={pendingTagAction === `delete:${tag.id}` || isMutating}
             onClick={() => handleDeleteTag(tag)}
-            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-red-600 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="size-3.5" />
             {pendingTagAction === `delete:${tag.id}` ? 'Deleting...' : 'Delete'}
@@ -1703,10 +1703,10 @@ return (
 );
         })}
         {!filteredTags.length ? (
-          <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center md:col-span-2 2xl:col-span-3 dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="border border-dashed border-neutral-300 bg-white p-10 text-center md:col-span-2 2xl:col-span-3 dark:border-neutral-800 dark:bg-neutral-900">
             <RadioTower className="mx-auto size-10 text-neutral-300 dark:text-neutral-600" />
 
-            <p className="mt-4 font-black text-[#11100b] dark:text-white">
+            <p className="mt-4 font-semibold text-[#11100b] dark:text-white">
               No NFC tags found.
             </p>
 
@@ -1717,7 +1717,7 @@ return (
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
+              className="mt-5 inline-flex h-11 items-center justify-center gap-2 bg-black px-5 text-sm font-semibold text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
             >
               <Plus className="size-4" />
               Create NFC Tag
@@ -1768,8 +1768,8 @@ return (
     <div
       className={
         toast.type === 'success'
-          ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-sm font-black text-emerald-800 shadow-2xl backdrop-blur-xl'
-          : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-sm font-black text-red-800 shadow-2xl backdrop-blur-xl'
+          ? 'border border-emerald-200 bg-emerald-50/95 p-4 text-sm font-semibold text-emerald-800 shadow-2xl backdrop-blur-xl'
+          : 'border border-red-200 bg-red-50/95 p-4 text-sm font-semibold text-red-800 shadow-2xl backdrop-blur-xl'
       }
     >
       <div className="flex items-start justify-between gap-3">
@@ -1783,7 +1783,7 @@ return (
         <button
           type="button"
           onClick={() => setToast(null)}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 text-current transition hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />

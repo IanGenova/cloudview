@@ -153,8 +153,8 @@ function NoticeBox({
     <div
       className={
         notice.type === 'success'
-          ? 'mb-5 flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800'
-          : 'mb-5 flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800'
+          ? 'mb-5 flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800'
+          : 'mb-5 flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800'
       }
     >
       {notice.type === 'success' ? (
@@ -170,7 +170,7 @@ function NoticeBox({
       <button
         type="button"
         onClick={onClose}
-        className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70"
+        className="grid size-8 shrink-0 place-items-center bg-white/70"
         aria-label="Close message"
       >
         <X className="size-4" />
@@ -385,15 +385,15 @@ export function BackupManagerClient({
     <>
       <NoticeBox notice={notice} onClose={() => setNotice(null)} />
 
-      <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
+      <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
         <div className="bg-[radial-gradient(circle_at_top_right,rgba(184,137,56,0.26),transparent_38%),linear-gradient(145deg,#18150e,#090908)] p-6 text-white">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#f1c66a]">
+              <p className="inline-flex items-center gap-2 border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#f1c66a]">
                 <ShieldCheck className="size-4" />
                 Backup Health
               </p>
-              <h2 className="mt-5 text-3xl font-black">
+              <h2 className="mt-5 text-3xl font-semibold">
                 {selectedHotel?.name || 'Select a hotel'}
               </h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/60">
@@ -406,7 +406,7 @@ export function BackupManagerClient({
               type="button"
               onClick={refreshPage}
               disabled={pending}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 text-sm font-black text-white hover:bg-white/15 disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 border border-white/15 bg-white/10 px-5 text-sm font-semibold text-white hover:bg-white/15 disabled:opacity-50"
             >
               <RefreshCcw className="size-4" />
               Refresh
@@ -415,33 +415,33 @@ export function BackupManagerClient({
         </div>
 
         <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-neutral-400">
+          <div className="border border-neutral-200 bg-neutral-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
               Stored Backups
             </p>
-            <p className="mt-2 text-3xl font-black">{summary.total}</p>
+            <p className="mt-2 text-3xl font-semibold">{summary.total}</p>
           </div>
-          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-emerald-600">
+          <div className="border border-emerald-200 bg-emerald-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
               Valid
             </p>
-            <p className="mt-2 text-3xl font-black text-emerald-900">
+            <p className="mt-2 text-3xl font-semibold text-emerald-900">
               {summary.valid}
             </p>
           </div>
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-red-600">
+          <div className="border border-red-200 bg-red-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-red-600">
               Needs Review
             </p>
-            <p className="mt-2 text-3xl font-black text-red-900">
+            <p className="mt-2 text-3xl font-semibold text-red-900">
               {summary.failed}
             </p>
           </div>
-          <div className="rounded-3xl border border-blue-200 bg-blue-50 p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-blue-600">
+          <div className="border border-blue-200 bg-blue-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
               Total Size
             </p>
-            <p className="mt-2 text-3xl font-black text-blue-950">
+            <p className="mt-2 text-3xl font-semibold text-blue-950">
               {formatBytes(String(summary.bytes))}
             </p>
           </div>
@@ -449,13 +449,13 @@ export function BackupManagerClient({
       </section>
 
       <section className="mt-6 grid gap-5 xl:grid-cols-2">
-        <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#fff5dc] text-[#b88938]">
+            <span className="grid size-12 shrink-0 place-items-center bg-[#fff5dc] text-[#b88938]">
               <Database className="size-5" />
             </span>
             <div>
-              <h3 className="text-xl font-black">Create Backup</h3>
+              <h3 className="text-xl font-semibold">Create Backup</h3>
               <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
                 Full backups include configuration and operational history.
                 Configuration backups contain reusable hotel setup.
@@ -465,7 +465,7 @@ export function BackupManagerClient({
 
           {isSuperAdmin ? (
             <label className="mt-5 grid gap-2">
-              <span className="text-xs font-black uppercase text-neutral-500">
+              <span className="text-xs font-semibold uppercase text-neutral-500">
                 Hotel
               </span>
               <select
@@ -477,7 +477,7 @@ export function BackupManagerClient({
                     )}`
                   );
                 }}
-                className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
+                className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold"
               >
                 {hotels.map((hotel) => (
                   <option key={hotel.id} value={hotel.id}>
@@ -489,7 +489,7 @@ export function BackupManagerClient({
           ) : null}
 
           <label className="mt-4 grid gap-2">
-            <span className="text-xs font-black uppercase text-neutral-500">
+            <span className="text-xs font-semibold uppercase text-neutral-500">
               Backup Type
             </span>
             <select
@@ -499,7 +499,7 @@ export function BackupManagerClient({
                   event.target.value as 'FULL_HOTEL' | 'CONFIGURATION'
                 )
               }
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold"
+              className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold"
             >
               <option value="FULL_HOTEL">Full Hotel Backup</option>
               <option value="CONFIGURATION">Configuration Backup</option>
@@ -510,20 +510,20 @@ export function BackupManagerClient({
             type="button"
             onClick={createBackup}
             disabled={pending || !selectedHotelId}
-            className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800 disabled:opacity-50"
+            className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 bg-black text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
           >
             <HardDriveDownload className="size-4" />
             {pending ? 'Working...' : 'Create and Verify Backup'}
           </button>
         </div>
 
-        <div className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-700">
+            <span className="grid size-12 shrink-0 place-items-center bg-blue-50 text-blue-700">
               <Upload className="size-5" />
             </span>
             <div>
-              <h3 className="text-xl font-black">Upload Existing Backup</h3>
+              <h3 className="text-xl font-semibold">Upload Existing Backup</h3>
               <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
                 Uploaded archives are validated before they are registered.
                 Files belonging to another hotel are rejected.
@@ -535,7 +535,7 @@ export function BackupManagerClient({
             ref={fileInputRef}
             type="file"
             accept=".zip,application/zip"
-            className="mt-5 block w-full rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm font-bold"
+            className="mt-5 block w-full border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm font-bold"
             onChange={(event) => {
               const file = event.target.files?.[0];
 
@@ -545,7 +545,7 @@ export function BackupManagerClient({
             }}
           />
 
-          <div className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-800">
+          <div className="mt-4 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-800">
             Authentication secrets, NFC access tokens, active device tokens,
             private scan secrets, and integration secrets are intentionally not
             included.
@@ -553,15 +553,15 @@ export function BackupManagerClient({
         </div>
       </section>
 
-      <section className="mt-6 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
+      <section className="mt-6 border border-neutral-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88938]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b88938]">
               Backup History
             </p>
-            <h3 className="mt-1 text-xl font-black">Stored Archives</h3>
+            <h3 className="mt-1 text-xl font-semibold">Stored Archives</h3>
           </div>
-          <span className="rounded-full bg-neutral-100 px-4 py-2 text-xs font-black text-neutral-600">
+          <span className="bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-600">
             Newest first
           </span>
         </div>
@@ -579,19 +579,19 @@ export function BackupManagerClient({
             return (
               <article
                 key={backup.id}
-                className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4"
+                className="border border-neutral-200 bg-neutral-50 p-4"
               >
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <FileArchive className="size-5 text-[#b88938]" />
-                      <h4 className="break-all text-base font-black">
+                      <h4 className="break-all text-base font-semibold">
                         {backup.filename || 'Backup is being prepared'}
                       </h4>
                       <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-black ${statusClass(
-                          backup.status
-                        )}`}
+                        className={` px-3 py-1 text-[10px] font-semibold ${statusClass(
+ backup.status
+ )}`}
                       >
                         {label(backup.status)}
                       </span>
@@ -613,7 +613,7 @@ export function BackupManagerClient({
                     ) : null}
 
                     {backup.errorMessage ? (
-                      <p className="mt-3 rounded-xl bg-red-100 p-3 text-xs font-bold leading-5 text-red-700">
+                      <p className="mt-3 bg-red-100 p-3 text-xs font-bold leading-5 text-red-700">
                         {backup.errorMessage}
                       </p>
                     ) : null}
@@ -623,7 +623,7 @@ export function BackupManagerClient({
                     {backup.status === 'VALID' ? (
                       <a
                         href={`/api/backups/${backup.id}/download`}
-                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-black px-4 text-xs font-black text-white hover:bg-neutral-800"
+                        className="inline-flex h-10 items-center gap-2 bg-black px-4 text-xs font-semibold text-white hover:bg-neutral-800"
                       >
                         <Download className="size-3.5" />
                         Download
@@ -634,7 +634,7 @@ export function BackupManagerClient({
                       type="button"
                       onClick={() => verifyBackup(backup.id)}
                       disabled={pending}
-                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black hover:bg-neutral-50 disabled:opacity-50"
+                      className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-4 text-xs font-semibold hover:bg-neutral-50 disabled:opacity-50"
                     >
                       <ShieldCheck className="size-3.5" />
                       Verify
@@ -644,7 +644,7 @@ export function BackupManagerClient({
                       type="button"
                       onClick={() => loadPreview(backup.id)}
                       disabled={pending || backup.status !== 'VALID'}
-                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black hover:bg-neutral-50 disabled:opacity-50"
+                      className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-4 text-xs font-semibold hover:bg-neutral-50 disabled:opacity-50"
                     >
                       <Eye className="size-3.5" />
                       Preview
@@ -662,7 +662,7 @@ export function BackupManagerClient({
                           ? undefined
                           : 'Only valid full backups can run a full restore.'
                       }
-                      className="inline-flex h-10 items-center gap-2 rounded-xl bg-amber-500 px-4 text-xs font-black text-black hover:bg-amber-400 disabled:opacity-40"
+                      className="inline-flex h-10 items-center gap-2 bg-amber-500 px-4 text-xs font-semibold text-black hover:bg-amber-400 disabled:opacity-40"
                     >
                       <RotateCcw className="size-3.5" />
                       Restore
@@ -672,7 +672,7 @@ export function BackupManagerClient({
                       type="button"
                       onClick={() => deleteBackup(backup.id)}
                       disabled={pending}
-                      className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-700 disabled:opacity-50"
+                      className="inline-flex h-10 items-center gap-2 bg-red-600 px-4 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                     >
                       <Trash2 className="size-3.5" />
                       Delete
@@ -684,9 +684,9 @@ export function BackupManagerClient({
           })}
 
           {!backups.length ? (
-            <div className="rounded-[1.5rem] border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
+            <div className="border border-dashed border-neutral-300 bg-neutral-50 p-10 text-center">
               <FileArchive className="mx-auto size-10 text-neutral-300" />
-              <p className="mt-4 font-black">No backups yet.</p>
+              <p className="mt-4 font-semibold">No backups yet.</p>
               <p className="mt-1 text-sm font-semibold text-neutral-500">
                 Create the first full hotel backup above.
               </p>
@@ -695,11 +695,11 @@ export function BackupManagerClient({
         </div>
       </section>
 
-      <section className="mt-6 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88938]">
+      <section className="mt-6 border border-neutral-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b88938]">
           Restore History
         </p>
-        <h3 className="mt-1 text-xl font-black">Recovery Activity</h3>
+        <h3 className="mt-1 text-xl font-semibold">Recovery Activity</h3>
 
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -722,9 +722,9 @@ export function BackupManagerClient({
                   <td className="px-3 py-3">{label(restore.mode)}</td>
                   <td className="px-3 py-3">
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-black ${statusClass(
-                        restore.status
-                      )}`}
+                      className={` px-3 py-1 text-[10px] font-semibold ${statusClass(
+ restore.status
+ )}`}
                     >
                       {label(restore.status)}
                     </span>
@@ -761,13 +761,13 @@ export function BackupManagerClient({
 
       {preview ? (
         <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 sm:items-center sm:p-4">
-          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem] sm:p-6">
+          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88938]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b88938]">
                   Restore Preview
                 </p>
-                <h2 className="mt-1 text-2xl font-black">
+                <h2 className="mt-1 text-2xl font-semibold">
                   {preview.hotelName}
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -777,7 +777,7 @@ export function BackupManagerClient({
               <button
                 type="button"
                 onClick={() => setPreview(null)}
-                className="grid size-10 place-items-center rounded-full bg-neutral-100"
+                className="grid size-10 place-items-center bg-neutral-100"
               >
                 <X className="size-5" />
               </button>
@@ -806,8 +806,8 @@ export function BackupManagerClient({
                           item.difference === 0
                             ? 'px-3 py-3 text-neutral-400'
                             : item.difference > 0
-                              ? 'px-3 py-3 font-black text-emerald-700'
-                              : 'px-3 py-3 font-black text-red-700'
+                              ? 'px-3 py-3 font-semibold text-emerald-700'
+                              : 'px-3 py-3 font-semibold text-red-700'
                         }
                       >
                         {item.difference > 0 ? '+' : ''}
@@ -824,13 +824,13 @@ export function BackupManagerClient({
 
       {restoreBackup ? (
         <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-3 py-3 sm:items-center sm:p-4">
-          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem] sm:p-6">
+          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-xl overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700">
+              <span className="grid size-12 shrink-0 place-items-center bg-red-100 text-red-700">
                 <AlertTriangle className="size-5" />
               </span>
               <div>
-                <h2 className="text-xl font-black">Confirm Full Restore</h2>
+                <h2 className="text-xl font-semibold">Confirm Full Restore</h2>
                 <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
                   Current hotel data will be replaced by{' '}
                   <b>{restoreBackup.filename}</b>. CloudView creates a safety
@@ -839,20 +839,20 @@ export function BackupManagerClient({
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+            <div className="mt-5 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
               Active browser sessions, device authorizations, NFC access
               sessions, and stay passcodes are not restored. Restored active
               stays are marked expired for safety.
             </div>
 
             <label className="mt-5 grid gap-2">
-              <span className="text-xs font-black uppercase text-neutral-500">
+              <span className="text-xs font-semibold uppercase text-neutral-500">
                 Type RESTORE to continue
               </span>
               <input
                 value={confirmation}
                 onChange={(event) => setConfirmation(event.target.value)}
-                className="h-12 rounded-2xl border border-neutral-200 px-4 text-sm font-black outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                className="h-12 border border-neutral-200 px-4 text-sm font-semibold outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100"
                 placeholder="RESTORE"
               />
             </label>
@@ -864,7 +864,7 @@ export function BackupManagerClient({
                   setRestoreBackup(null);
                   setConfirmation('');
                 }}
-                className="h-12 rounded-2xl border border-neutral-200 bg-white text-sm font-black"
+                className="h-12 border border-neutral-200 bg-white text-sm font-semibold"
               >
                 Cancel
               </button>
@@ -872,7 +872,7 @@ export function BackupManagerClient({
                 type="button"
                 onClick={restoreSelectedBackup}
                 disabled={pending || confirmation !== 'RESTORE'}
-                className="h-12 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700 disabled:opacity-40"
+                className="h-12 bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
               >
                 {pending ? 'Restoring...' : 'Restore Data'}
               </button>

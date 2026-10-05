@@ -100,7 +100,7 @@ export function ProductTypeField({
 
   return (
     <label className="grid gap-2">
-      <span className="text-sm font-black text-neutral-800">
+      <span className="text-sm font-semibold text-neutral-800">
         Product Type
       </span>
 
@@ -111,7 +111,7 @@ export function ProductTypeField({
         onChange={(event) =>
           setProductType(event.target.value as ProductTypeValue)
         }
-        className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+        className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
       >
         <option value="SINGLE">Single Item</option>
         <option value="BUNDLE">Bundle / Combo</option>
@@ -233,16 +233,16 @@ export function DynamicBundleComponentFields({
 
   return (
     <section className="md:col-span-2">
-      <div className="overflow-hidden rounded-[1.75rem] border border-[#c99c38]/35 bg-[#fff8e7] shadow-sm">
+      <div className="overflow-hidden border border-[#c99c38]/35 bg-[#fff8e7] shadow-sm">
         <div className="border-b border-[#c99c38]/20 bg-gradient-to-r from-[#fff3cf] to-white px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#11100b] text-[#c99c38]">
+              <span className="grid size-11 shrink-0 place-items-center bg-[#11100b] text-[#c99c38]">
                 <PackagePlus className="size-5" />
               </span>
 
               <div>
-                <p className="text-sm font-black text-neutral-950">
+                <p className="text-sm font-semibold text-neutral-950">
                   Bundle Components
                 </p>
                 <p className="mt-1 text-xs font-bold leading-relaxed text-neutral-600">
@@ -255,7 +255,7 @@ export function DynamicBundleComponentFields({
             <button
               type="button"
               onClick={addRow}
-              className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#11100b] px-4 text-xs font-black text-white transition hover:bg-black"
+              className="inline-flex h-10 items-center gap-2 bg-[#11100b] px-4 text-xs font-semibold text-white transition hover:bg-black"
             >
               <Plus className="size-4 text-[#c99c38]" />
               Add Component
@@ -265,7 +265,7 @@ export function DynamicBundleComponentFields({
 
         <div className="p-5">
           {availableComponentOptions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#c99c38]/40 bg-white p-5 text-sm font-bold text-neutral-700">
+            <div className="border border-dashed border-[#c99c38]/40 bg-white p-5 text-sm font-bold text-neutral-700">
               Create single menu items first before creating a bundle.
             </div>
           ) : (
@@ -273,10 +273,10 @@ export function DynamicBundleComponentFields({
               {rows.map((row, index) => (
                 <div
                   key={row.rowKey}
-                  className="grid gap-3 rounded-2xl border border-[#c99c38]/20 bg-white p-3 md:grid-cols-[minmax(0,1fr)_120px_44px] md:items-end"
+                  className="grid gap-3 border border-[#c99c38]/20 bg-white p-3 md:grid-cols-[minmax(0,1fr)_120px_44px] md:items-end"
                 >
                   <label className="grid gap-1">
-                    <span className="text-xs font-black uppercase tracking-[0.14em] text-[#9d741f]">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d741f]">
                       Component Item {index + 1}
                     </span>
 
@@ -290,7 +290,7 @@ export function DynamicBundleComponentFields({
                           event.target.value
                         )
                       }
-                      className="h-11 min-w-0 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+                      className="h-11 min-w-0 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
                     >
                       <option value="">Select component</option>
                       {availableComponentOptions.map((option) => (
@@ -304,7 +304,7 @@ export function DynamicBundleComponentFields({
                   </label>
 
                   <label className="grid gap-1">
-                    <span className="text-xs font-black uppercase tracking-[0.14em] text-[#9d741f]">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d741f]">
                       Qty
                     </span>
 
@@ -317,14 +317,14 @@ export function DynamicBundleComponentFields({
                       onChange={(event) =>
                         updateRow(row.rowKey, 'quantity', event.target.value)
                       }
-                      className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+                      className="h-11 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
                     />
                   </label>
 
                   <button
                     type="button"
                     onClick={() => removeRow(row.rowKey)}
-                    className="grid size-11 place-items-center rounded-2xl border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
+                    className="grid size-11 place-items-center border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100"
                     aria-label={`Remove component ${index + 1}`}
                   >
                     <Trash2 className="size-4" />
@@ -334,9 +334,9 @@ export function DynamicBundleComponentFields({
             </div>
           )}
 
-          <div className="mt-4 grid gap-3 rounded-2xl bg-white p-4 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="mt-4 grid gap-3 bg-white p-4 md:grid-cols-[1fr_auto] md:items-center">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9d741f]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9d741f]">
                 Bundle Preview
               </p>
 
@@ -361,17 +361,17 @@ export function DynamicBundleComponentFields({
               )}
             </div>
 
-            <div className="rounded-2xl bg-[#11100b] px-5 py-3 text-right">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#c99c38]">
+            <div className="bg-[#11100b] px-5 py-3 text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#c99c38]">
                 Normal Total
               </p>
-              <p className="mt-1 text-lg font-black text-white">
+              <p className="mt-1 text-lg font-semibold text-white">
                 {formatMoney(normalTotalCents)}
               </p>
             </div>
           </div>
 
-          <p className="mt-3 rounded-2xl border border-[#c99c38]/20 bg-white/70 p-3 text-xs font-bold leading-relaxed text-neutral-600">
+          <p className="mt-3 border border-[#c99c38]/20 bg-white/70 p-3 text-xs font-bold leading-relaxed text-neutral-600">
             Example: Breakfast Combo can include 1 Breakfast Pancakes and 1
             Iced Tea. When a guest orders 2 combos, the system can deduct 2
             Pancakes and 2 Iced Tea in inventory.

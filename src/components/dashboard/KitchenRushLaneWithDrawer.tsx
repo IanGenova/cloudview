@@ -163,8 +163,8 @@ function KitchenRushItemLine({
     <div
       className={
         isCancelled
-          ? 'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
-          : 'rounded-xl bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-950'
+          ? 'border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
+          : 'bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-950'
       }
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -179,22 +179,22 @@ function KitchenRushItemLine({
         </b>
 
         {item.isBundleSnapshot ? (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+          <span className="bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
             Bundle
           </span>
         ) : null}
 
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getItemStatusClass(
-            item
-          )}`}
+          className={` px-2 py-0.5 text-[10px] font-semibold ${getItemStatusClass(
+ item
+ )}`}
         >
           {item.status.replaceAll('_', ' ')}
         </span>
       </div>
 
       {item.cancelledQty > 0 ? (
-        <p className="mt-1 text-[11px] font-black text-red-700 dark:text-red-200">
+        <p className="mt-1 text-[11px] font-semibold text-red-700 dark:text-red-200">
           Cancelled qty: {item.cancelledQty}
         </p>
       ) : null}
@@ -215,15 +215,15 @@ function KitchenRushItemLine({
         <div
           className={
             isCancelled
-              ? 'mt-2 rounded-lg bg-red-100/80 p-2 dark:bg-red-500/10'
-              : 'mt-2 rounded-lg bg-amber-50 p-2 dark:bg-amber-500/10'
+              ? 'mt-2 bg-red-100/80 p-2 dark:bg-red-500/10'
+              : 'mt-2 bg-amber-50 p-2 dark:bg-amber-500/10'
           }
         >
           <p
             className={
               isCancelled
-                ? 'text-[10px] font-black uppercase tracking-[0.14em] text-red-700 dark:text-red-200'
-                : 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-700 dark:text-amber-200'
+                ? 'text-[10px] font-semibold uppercase tracking-[0.14em] text-red-700 dark:text-red-200'
+                : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700 dark:text-amber-200'
             }
           >
             Includes
@@ -291,12 +291,12 @@ function KitchenRushOrderDrawer({
         <div className="shrink-0 border-b border-neutral-200 bg-neutral-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
                 Kitchen Order Details
               </p>
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-black text-neutral-950 dark:text-white">
+                <h2 className="text-2xl font-semibold text-neutral-950 dark:text-white">
                   {order.orderCode}
                 </h2>
 
@@ -313,7 +313,7 @@ function KitchenRushOrderDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-neutral-500 shadow-sm hover:bg-neutral-100 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-800"
+              className="grid size-10 shrink-0 place-items-center bg-white text-neutral-500 shadow-sm hover:bg-neutral-100 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-800"
               aria-label="Close drawer"
             >
               <X className="size-5" />
@@ -321,32 +321,32 @@ function KitchenRushOrderDrawer({
           </div>
 
           <div className="mt-5 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-white p-3 text-center dark:bg-neutral-950">
+            <div className="bg-white p-3 text-center dark:bg-neutral-950">
               <ReceiptText className="mx-auto size-4 text-gold" />
-              <p className="mt-1 text-[10px] font-black uppercase text-neutral-400">
+              <p className="mt-1 text-[10px] font-semibold uppercase text-neutral-400">
                 Items
               </p>
-              <p className="text-xl font-black text-neutral-950 dark:text-white">
+              <p className="text-xl font-semibold text-neutral-950 dark:text-white">
                 {activeItemCount}
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-3 text-center dark:bg-neutral-950">
+            <div className="bg-white p-3 text-center dark:bg-neutral-950">
               <Clock3 className="mx-auto size-4 text-gold" />
-              <p className="mt-1 text-[10px] font-black uppercase text-neutral-400">
+              <p className="mt-1 text-[10px] font-semibold uppercase text-neutral-400">
                 Order Time
               </p>
-              <p className="text-sm font-black text-neutral-950 dark:text-white">
+              <p className="text-sm font-semibold text-neutral-950 dark:text-white">
                 {formatTime(order.createdAt)}
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-3 text-center dark:bg-neutral-950">
+            <div className="bg-white p-3 text-center dark:bg-neutral-950">
               <X className="mx-auto size-4 text-red-500" />
-              <p className="mt-1 text-[10px] font-black uppercase text-neutral-400">
+              <p className="mt-1 text-[10px] font-semibold uppercase text-neutral-400">
                 Cancelled
               </p>
-              <p className="text-xl font-black text-neutral-950 dark:text-white">
+              <p className="text-xl font-semibold text-neutral-950 dark:text-white">
                 {cancelledItemCount}
               </p>
             </div>
@@ -355,28 +355,28 @@ function KitchenRushOrderDrawer({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="grid gap-3">
-            <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900">
+            <div className="bg-neutral-50 p-4 dark:bg-neutral-900">
               <div className="flex items-center gap-3">
                 <UserRound className="size-5 text-gold" />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-neutral-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
                     Guest
                   </p>
-                  <p className="font-black text-neutral-950 dark:text-white">
+                  <p className="font-semibold text-neutral-950 dark:text-white">
                     {guestName}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900">
+            <div className="bg-neutral-50 p-4 dark:bg-neutral-900">
               <div className="flex items-center gap-3">
                 <MapPin className="size-5 text-gold" />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-neutral-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
                     Location
                   </p>
-                  <p className="font-black text-neutral-950 dark:text-white">
+                  <p className="font-semibold text-neutral-950 dark:text-white">
                     {roomOrLocation(order)}
                   </p>
                 </div>
@@ -385,7 +385,7 @@ function KitchenRushOrderDrawer({
           </div>
 
           <section className="mt-5">
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
               Full Item List
             </p>
 
@@ -398,11 +398,11 @@ function KitchenRushOrderDrawer({
 
           {guestNote ? (
             <section className="mt-5">
-              <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
                 Guest Note
               </p>
 
-              <div className="whitespace-pre-line rounded-2xl bg-yellow-50 p-4 text-sm font-semibold leading-6 text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200">
+              <div className="whitespace-pre-line bg-yellow-50 p-4 text-sm font-semibold leading-6 text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-200">
                 {guestNote}
               </div>
             </section>
@@ -421,7 +421,7 @@ function KitchenRushOrderDrawer({
                       status: 'PREPARING',
                     })
                   }
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-11 items-center justify-center bg-black text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pendingAction === `${order.id}:PREPARING` ? 'Accepting...' : 'Accept'}
                 </button>
@@ -435,7 +435,7 @@ function KitchenRushOrderDrawer({
                       status: 'CANCELLED',
                     })
                   }
-                  className="inline-flex h-11 items-center justify-center rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-11 items-center justify-center bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pendingAction === `${order.id}:CANCELLED` ? 'Rejecting...' : 'Reject'}
                 </button>
@@ -452,7 +452,7 @@ function KitchenRushOrderDrawer({
                     status: 'READY',
                   })
                 }
-                className="col-span-2 inline-flex h-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="col-span-2 inline-flex h-11 items-center justify-center bg-black text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {pendingAction === `${order.id}:READY` ? 'Marking ready...' : 'Done / Ready'}
               </button>
@@ -468,7 +468,7 @@ function KitchenRushOrderDrawer({
                     status: 'DELIVERED',
                   })
                 }
-                className="col-span-2 inline-flex h-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="col-span-2 inline-flex h-11 items-center justify-center bg-black text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {pendingAction === `${order.id}:DELIVERED` ? 'Delivering...' : 'Mark Delivered'}
               </button>
@@ -502,14 +502,14 @@ function KitchenRushOrderRow({
       type="button"
       onClick={onOpen}
       className={cn(
-        'w-full rounded-2xl border border-neutral-200 border-l-4 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-neutral-50 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-950',
+        'w-full border border-neutral-200 border-l-4 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-neutral-50 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-950',
         getLaneAccent(type)
       )}
     >
       <div className="grid grid-cols-[1fr_auto] items-start gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-black text-neutral-950 dark:text-white">
+            <h3 className="truncate text-sm font-semibold text-neutral-950 dark:text-white">
               {order.orderCode}
             </h3>
 
@@ -526,29 +526,29 @@ function KitchenRushOrderRow({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl bg-neutral-50 px-2 py-2 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase text-neutral-400">
+        <div className="bg-neutral-50 px-2 py-2 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase text-neutral-400">
             Items
           </p>
-          <p className="text-sm font-black text-neutral-950 dark:text-white">
+          <p className="text-sm font-semibold text-neutral-950 dark:text-white">
             {activeItemCount}
           </p>
         </div>
 
-        <div className="rounded-xl bg-neutral-50 px-2 py-2 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase text-neutral-400">
+        <div className="bg-neutral-50 px-2 py-2 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase text-neutral-400">
             Cancelled
           </p>
-          <p className="text-sm font-black text-neutral-950 dark:text-white">
+          <p className="text-sm font-semibold text-neutral-950 dark:text-white">
             {cancelledItemCount}
           </p>
         </div>
 
-        <div className="rounded-xl bg-neutral-50 px-2 py-2 dark:bg-neutral-950">
-          <p className="text-[9px] font-black uppercase text-neutral-400">
+        <div className="bg-neutral-50 px-2 py-2 dark:bg-neutral-950">
+          <p className="text-[9px] font-semibold uppercase text-neutral-400">
             Time
           </p>
-          <p className="text-xs font-black text-neutral-950 dark:text-white">
+          <p className="text-xs font-semibold text-neutral-950 dark:text-white">
             {formatTime(order.createdAt)}
           </p>
         </div>
@@ -602,16 +602,16 @@ function KitchenRushToast({
       <div
         className={
           isSuccess
-            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
-            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+            ? 'border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div className="flex items-start gap-3">
           <div
             className={
               isSuccess
-                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
-                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+                ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center bg-red-100 text-red-700'
             }
           >
             {isSuccess ? (
@@ -622,17 +622,17 @@ function KitchenRushToast({
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
               {isSuccess ? 'Success' : 'Action failed'}
             </p>
 
-            <p className="mt-1 text-sm font-black">{toast.text}</p>
+            <p className="mt-1 text-sm font-semibold">{toast.text}</p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            className="grid size-8 shrink-0 place-items-center bg-white/70 text-current transition hover:bg-white"
             aria-label="Close notification"
           >
             <X className="size-4" />
@@ -734,14 +734,14 @@ function runRushStatusAction({
   return (
     <>
       <section
-        className={`flex min-h-[520px] flex-col overflow-hidden rounded-[2rem] border ${getLaneClass(
-          type
-        )}`}
+        className={`flex min-h-[520px] flex-col overflow-hidden border ${getLaneClass(
+ type
+ )}`}
       >
         <div className="shrink-0 border-b border-black/5 px-4 py-4 dark:border-white/10">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-black text-neutral-950 dark:text-white">
+              <h2 className="text-2xl font-semibold text-neutral-950 dark:text-white">
                 {title}
               </h2>
 
@@ -750,7 +750,7 @@ function runRushStatusAction({
               </p>
             </div>
 
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-black text-sm font-black text-white dark:bg-gold dark:text-black">
+            <span className="grid size-10 shrink-0 place-items-center bg-black text-sm font-semibold text-white dark:bg-gold dark:text-black">
               {orders.length}
             </span>
           </div>
@@ -758,8 +758,8 @@ function runRushStatusAction({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
           {orders.length === 0 ? (
-            <div className="grid h-full min-h-52 place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-5 text-center dark:border-neutral-800 dark:bg-neutral-950">
-              <p className="font-black text-neutral-500 dark:text-neutral-400">
+            <div className="grid h-full min-h-52 place-items-center border border-dashed border-neutral-200 bg-white p-5 text-center dark:border-neutral-800 dark:bg-neutral-950">
+              <p className="font-semibold text-neutral-500 dark:text-neutral-400">
                 No {title.toLowerCase()} orders
               </p>
             </div>

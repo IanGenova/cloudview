@@ -36,7 +36,7 @@ export function DashboardRangeSelect({
       <select
         value={value}
         onChange={(event) => handleChange(event.target.value)}
-        className="h-11 min-w-44 appearance-none rounded-2xl border border-neutral-200 bg-white pl-11 pr-10 text-sm font-black text-neutral-700 shadow-sm outline-none transition hover:border-[#c99c38]/60 focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+        className="h-11 min-w-44 appearance-none border border-neutral-200 bg-white pl-11 pr-10 text-sm font-semibold text-neutral-700 shadow-sm outline-none transition hover:border-[#c99c38]/60 focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -121,8 +121,8 @@ function ActionLink({
   primary?: boolean;
 }) {
   const className = primary
-    ? "inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#e6c873]/30 bg-[linear-gradient(135deg,#dfba5d,#b78329)] px-5 py-3 text-xs font-bold uppercase tracking-[0.13em] text-[#17130b] shadow-[0_14px_35px_rgba(181,132,40,0.24)] transition hover:brightness-110 active:scale-[0.98]"
-    : "inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-5 py-3 text-xs font-bold uppercase tracking-[0.13em] text-white/80 backdrop-blur transition hover:border-[#d5ad55]/40 hover:text-[#d5ad55] active:scale-[0.98]";
+    ? "inline-flex min-h-12 items-center justify-center gap-2 border border-[#e6c873]/30 bg-[linear-gradient(135deg,#dfba5d,#b78329)] px-5 py-3 text-xs font-bold uppercase tracking-[0.13em] text-[#17130b] shadow-[0_14px_35px_rgba(181,132,40,0.24)] transition hover:brightness-110"
+    : "inline-flex min-h-12 items-center justify-center gap-2 border border-white/10 bg-white/[0.05] px-5 py-3 text-xs font-bold uppercase tracking-[0.13em] text-white/80 backdrop-blur transition hover:border-[#d5ad55]/40 hover:text-[#d5ad55]";
 
   if (href.startsWith("http://") || href.startsWith("https://")) {
     return (
@@ -160,9 +160,9 @@ function AtAGlanceCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.2)]">
+    <div className="border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.2)]">
       <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
+        <span className="grid size-10 shrink-0 place-items-center border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
           <Icon className="size-[18px]" />
         </span>
         <div className="min-w-0">
@@ -189,7 +189,7 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-start gap-3 border-b border-white/[0.07] py-3.5 last:border-b-0">
-      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#d5ad55]/10 text-[#d5ad55]">
+      <span className="grid size-9 shrink-0 place-items-center bg-[#d5ad55]/10 text-[#d5ad55]">
         <Icon className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
@@ -217,7 +217,7 @@ function GuideItemCard({
   const mapHref = resolveHref(tagCode, item.mapUrl);
 
   return (
-    <article className="overflow-hidden rounded-[1.85rem] border border-white/[0.08] bg-[#141411] shadow-[0_24px_65px_rgba(0,0,0,0.3)]">
+    <article className="overflow-hidden border border-white/[0.08] bg-[#141411]">
       {imageUrl ? (
         <div className="relative h-60 overflow-hidden bg-[#0d0d0b]">
           <img
@@ -227,7 +227,7 @@ function GuideItemCard({
           />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05),rgba(0,0,0,0.18)_45%,rgba(10,10,8,0.96))]" />
           <div className="absolute inset-x-4 top-4 flex items-start justify-between gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.22em] text-[#e5bd63] backdrop-blur-xl">
+            <span className="inline-flex items-center gap-2 border border-white/15 bg-black/40 px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.22em] text-[#e5bd63] backdrop-blur-xl">
               <Icon className="size-3.5" />
               Detail {String(index + 1).padStart(2, "0")}
             </span>
@@ -246,7 +246,7 @@ function GuideItemCard({
       <div className="p-5">
         {!imageUrl ? (
           <div className="mb-4 flex items-center justify-between gap-3">
-            <span className="grid size-11 place-items-center rounded-2xl border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
+            <span className="grid size-11 place-items-center border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
               <Icon className="size-5" />
             </span>
 
@@ -272,7 +272,7 @@ function GuideItemCard({
         ) : null}
 
         {item.hours || item.location || item.contact ? (
-          <div className="mt-5 rounded-[1.25rem] border border-white/[0.07] bg-black/20 px-4">
+          <div className="mt-5 border border-white/[0.07] bg-black/20 px-4">
             {item.hours ? (
               <DetailRow icon={Clock} label="Hours" value={item.hours} />
             ) : null}
@@ -335,14 +335,14 @@ function RelatedGuideCard({
   return (
     <Link
       href={`/t/${tagCode}/guide/${createGuideSlug(section.title)}`}
-      className="group grid grid-cols-[82px_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-[1.3rem] border border-white/[0.08] bg-white/[0.04] p-2.5 transition hover:border-[#d5ad55]/35 hover:bg-[#d5ad55]/[0.06]"
+      className="group grid grid-cols-[82px_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden border border-white/[0.08] bg-white/[0.04] p-2.5 transition hover:border-[#d5ad55]/35 hover:bg-[#d5ad55]/[0.06]"
     >
       <div
-        className="relative h-[72px] overflow-hidden rounded-[1rem] bg-cover bg-center"
+        className="relative h-[72px] overflow-hidden bg-cover bg-center"
         style={{ backgroundImage: `url(${getSectionImage(section)})` }}
       >
         <div className="absolute inset-0 bg-black/15" />
-        <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-lg bg-black/50 text-[#d5ad55] backdrop-blur">
+        <span className="absolute left-2 top-2 grid size-7 place-items-center bg-black/50 text-[#d5ad55] backdrop-blur">
           <Icon className="size-3.5" />
         </span>
       </div>
@@ -356,7 +356,7 @@ function RelatedGuideCard({
         </p>
       </div>
 
-      <span className="grid size-8 place-items-center rounded-full border border-white/10 text-[#d5ad55] transition group-hover:bg-[#d5ad55] group-hover:text-black">
+      <span className="grid size-8 place-items-center border border-white/10 text-[#d5ad55] transition group-hover:bg-[#d5ad55] group-hover:text-black">
         <ChevronRight className="size-4" />
       </span>
     </Link>
@@ -436,7 +436,7 @@ export default async function GuideSectionDetailPage({
       variant="dark"
     >
       <div className="relative -mx-5 -mt-4 min-h-screen overflow-hidden bg-[#080806] px-5 pb-32 pt-5 text-white">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#9f7425]/10 blur-[110px]" />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 bg-[#9f7425]/10 blur-[110px]" />
 
         <div className="relative mx-auto max-w-xl">
           {/*
@@ -449,7 +449,7 @@ export default async function GuideSectionDetailPage({
             The photograph stays, at a size that sets tone without displacing
             content.
           */}
-          <section className="relative mb-5 h-[168px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#11110e] shadow-[0_20px_50px_rgba(0,0,0,0.38)]">
+          <section className="relative mb-5 h-[168px] overflow-hidden border border-white/10 bg-[#11110e]">
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${heroImage})` }}
@@ -533,7 +533,7 @@ export default async function GuideSectionDetailPage({
               </div>
             </section>
           ) : (
-            <section className="mt-8 rounded-[1.8rem] border border-dashed border-white/10 bg-white/[0.035] p-8 text-center">
+            <section className="mt-8 border border-dashed border-white/10 bg-white/[0.035] p-8 text-center">
               <Info className="mx-auto size-8 text-[#d5ad55]" />
               <h2 className="mt-4 font-serif text-xl text-[#f7f2e8]">
                 More details are being prepared

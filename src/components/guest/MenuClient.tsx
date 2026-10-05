@@ -116,7 +116,7 @@ const orderTypeLabels: Record<OrderType, string> = {
 };
 
 const checkoutFieldClass =
-  'w-full rounded-2xl border border-white/15 !bg-[#0b0b0b] px-4 text-[15px] font-medium !text-white caret-gold outline-none placeholder:!text-white/30 transition focus:border-gold/60 focus:ring-4 focus:ring-gold/10';
+  'w-full border border-white/15 !bg-[#0b0b0b] px-4 text-[15px] font-medium !text-white caret-gold outline-none placeholder:!text-white/30 transition focus:border-gold/60 focus:ring-4 focus:ring-gold/10';
 
 const checkoutFieldStyle = {
   backgroundColor: '#0b0b0b',
@@ -148,7 +148,7 @@ function TapButton({
         }
       }}
       className={cn(
-        'inline-flex shrink-0 touch-manipulation select-none items-center justify-center transition active:scale-95 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40',
+        'inline-flex shrink-0 touch-manipulation select-none items-center justify-center transition disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40',
         className
       )}
     >
@@ -209,9 +209,9 @@ function ProductImage({
         )}
         aria-label={`${product.name} image placeholder`}
       >
-        <span className="absolute -right-8 -top-8 size-24 rounded-full border border-gold/10" />
-        <span className="absolute -bottom-10 -left-8 size-28 rounded-full border border-white/5" />
-        <span className="relative grid size-12 place-items-center rounded-full border border-white/10 bg-black/25 text-gold backdrop-blur">
+        <span className="absolute -right-8 -top-8 size-24 border border-gold/10" />
+        <span className="absolute -bottom-10 -left-8 size-28 border border-white/5" />
+        <span className="relative grid size-12 place-items-center border border-white/10 bg-black/25 text-gold backdrop-blur">
           <Utensils className="size-5" strokeWidth={1.6} />
         </span>
       </div>
@@ -254,8 +254,8 @@ function BundleIncludes({
       <p
         className={
           light
-            ? 'mt-2 rounded-2xl bg-amber-50 p-3 text-xs font-bold text-amber-800'
-            : 'mt-2 rounded-2xl bg-amber-400/10 p-3 text-xs font-bold text-amber-100'
+            ? 'mt-2 bg-amber-50 p-3 text-xs font-bold text-amber-800'
+            : 'mt-2 bg-amber-400/10 p-3 text-xs font-bold text-amber-100'
         }
       >
         No bundle components yet.
@@ -267,15 +267,15 @@ function BundleIncludes({
     <div
       className={
         light
-          ? 'mt-2 rounded-2xl bg-amber-50 p-3'
-          : 'mt-2 rounded-2xl bg-amber-400/10 p-3'
+          ? 'mt-2 bg-amber-50 p-3'
+          : 'mt-2 bg-amber-400/10 p-3'
       }
     >
       <p
         className={
           light
-            ? 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-700'
-            : 'text-[10px] font-black uppercase tracking-[0.14em] text-amber-200'
+            ? 'text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700'
+            : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200'
         }
       >
         Includes
@@ -336,16 +336,16 @@ function BundleSavings({
     <div
       className={
         light
-          ? 'mt-2 flex flex-wrap gap-2 text-xs font-black'
-          : 'mt-2 flex flex-wrap gap-2 text-xs font-black'
+          ? 'mt-2 flex flex-wrap gap-2 text-xs font-semibold'
+          : 'mt-2 flex flex-wrap gap-2 text-xs font-semibold'
       }
     >
       {normalTotal > 0 ? (
         <span
           className={
             light
-              ? 'rounded-full bg-neutral-100 px-3 py-1 text-neutral-600'
-              : 'rounded-full bg-white/10 px-3 py-1 text-white/65'
+              ? 'bg-neutral-100 px-3 py-1 text-neutral-600'
+              : 'bg-white/10 px-3 py-1 text-white/65'
           }
         >
           Normal: {simpleMoney(normalTotal, currency)}
@@ -356,8 +356,8 @@ function BundleSavings({
         <span
           className={
             light
-              ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
-              : 'rounded-full bg-emerald-400/15 px-3 py-1 text-emerald-200'
+              ? 'bg-emerald-100 px-3 py-1 text-emerald-700'
+              : 'bg-emerald-400/15 px-3 py-1 text-emerald-200'
           }
         >
           Save {simpleMoney(savings, currency)}
@@ -1279,14 +1279,14 @@ const [scheduledNote, setScheduledNote] = useState('');
           <button
             type="button"
             onClick={() => setScreen('menu')}
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/75 transition hover:bg-white/10 hover:text-white"
+            className="grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white/75 transition hover:bg-white/10 hover:text-white"
             aria-label="Back to menu"
           >
             <ArrowLeft className="size-5" />
           </button>
 
           <div className="min-w-0 flex-1 text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
               Final step
             </p>
             <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
@@ -1301,7 +1301,7 @@ const [scheduledNote, setScheduledNote] = useState('');
             <button
               type="button"
               onClick={clearCart}
-              className="grid size-11 shrink-0 place-items-center rounded-full border border-red-400/15 bg-red-500/10 text-red-200 transition hover:bg-red-500/20"
+              className="grid size-11 shrink-0 place-items-center border border-red-400/15 bg-red-500/10 text-red-200 transition hover:bg-red-500/20"
               aria-label="Clear cart"
             >
               <Trash2 className="size-4.5" />
@@ -1312,9 +1312,9 @@ const [scheduledNote, setScheduledNote] = useState('');
         </div>
 
         {cart.length === 0 ? (
-          <section className="grid min-h-[62vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 text-center shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+          <section className="grid min-h-[62vh] place-items-center border border-white/10 bg-white/[0.035] p-8 text-center">
             <div>
-              <div className="mx-auto grid size-20 place-items-center rounded-full border border-gold/20 bg-gold/10 text-gold">
+              <div className="mx-auto grid size-20 place-items-center border border-gold/20 bg-gold/10 text-gold">
                 <ShoppingBag className="size-8" strokeWidth={1.5} />
               </div>
               <h3 className="mt-6 font-serif text-3xl font-normal tracking-wide text-white">
@@ -1326,7 +1326,7 @@ const [scheduledNote, setScheduledNote] = useState('');
               <button
                 type="button"
                 onClick={() => setScreen('menu')}
-                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-6 text-sm font-black text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-6 text-sm font-semibold text-black transition hover:brightness-110"
               >
                 Browse Menu
                 <ChevronRight className="size-4" />
@@ -1335,17 +1335,17 @@ const [scheduledNote, setScheduledNote] = useState('');
           </section>
         ) : (
           <>
-            <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_70px_rgba(0,0,0,0.25)]">
+            <section className="overflow-hidden border border-white/10 bg-white/[0.04]">
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                     Selected dishes
                   </p>
                   <p className="mt-1 text-sm font-semibold text-white/55">
                     Adjust quantities before checkout
                   </p>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white/70">
+                <span className="bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
                   {itemCount}
                 </span>
               </div>
@@ -1364,7 +1364,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                     >
                       <ProductImage
                         product={product}
-                        className="size-[76px] rounded-2xl border border-white/10"
+                        className="size-[76px] border border-white/10"
                       />
 
                       <div className="min-w-0">
@@ -1373,28 +1373,28 @@ const [scheduledNote, setScheduledNote] = useState('');
                             {product.name}
                           </h3>
                           {isBundleProduct(product) ? (
-                            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-gold">
+                            <span className="bg-gold/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-gold">
                               Bundle
                             </span>
                           ) : null}
                         </div>
 
-                        <p className="mt-1 text-sm font-black text-gold">
+                        <p className="mt-1 text-sm font-semibold text-gold">
                           {simpleMoney(product.priceCents, currency)}
                         </p>
 
-                        <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-black/30 p-1">
+                        <div className="mt-3 inline-flex items-center border border-white/10 bg-black/30 p-1">
                           <TapButton
                             onTap={() =>
                               updateQty(item.productId, item.quantity - 1)
                             }
-                            className="grid size-8 place-items-center rounded-full text-white/65 transition hover:bg-white/10 hover:text-white"
+                            className="grid size-8 place-items-center text-white/65 transition hover:bg-white/10 hover:text-white"
                             aria-label={`Decrease ${product.name}`}
                           >
                             <Minus className="size-3.5" />
                           </TapButton>
 
-                          <span className="min-w-8 text-center text-sm font-black text-white">
+                          <span className="min-w-8 text-center text-sm font-semibold text-white">
                             {item.quantity}
                           </span>
 
@@ -1403,7 +1403,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                               updateQty(item.productId, item.quantity + 1)
                             }
                             disabled={!canIncrease}
-                            className="grid size-8 place-items-center rounded-full text-white/65 transition hover:bg-white/10 hover:text-white"
+                            className="grid size-8 place-items-center text-white/65 transition hover:bg-white/10 hover:text-white"
                             aria-label={`Increase ${product.name}`}
                           >
                             <Plus className="size-3.5" />
@@ -1414,12 +1414,12 @@ const [scheduledNote, setScheduledNote] = useState('');
                       <div className="flex flex-col items-end justify-between gap-3">
                         <TapButton
                           onTap={() => updateQty(item.productId, 0)}
-                          className="grid size-9 place-items-center rounded-full text-white/35 transition hover:bg-red-500/10 hover:text-red-200"
+                          className="grid size-9 place-items-center text-white/35 transition hover:bg-red-500/10 hover:text-red-200"
                           aria-label={`Remove ${product.name}`}
                         >
                           <X className="size-4" />
                         </TapButton>
-                        <p className="text-sm font-black text-white">
+                        <p className="text-sm font-semibold text-white">
                           {money(product.priceCents * item.quantity, currency)}
                         </p>
                       </div>
@@ -1429,13 +1429,13 @@ const [scheduledNote, setScheduledNote] = useState('');
               </div>
             </section>
 
-            <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.2)]">
+            <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
               <div className="mb-5 flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
+                <span className="grid size-11 place-items-center bg-gold/15 text-gold">
                   <ReceiptText className="size-5" />
                 </span>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                     Guest details
                   </p>
                   <h3 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
@@ -1446,7 +1446,7 @@ const [scheduledNote, setScheduledNote] = useState('');
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="menu-ordered-by" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-ordered-by" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Ordered by
                   </label>
                   <input
@@ -1468,7 +1468,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label htmlFor="menu-phone-number" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-phone-number" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Phone number
                   </label>
                   <div className="relative">
@@ -1492,7 +1492,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label htmlFor="menu-order-type" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-order-type" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Order type
                   </label>
                   <select
@@ -1524,7 +1524,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label htmlFor="menu-order-time" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-order-time" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Order time
                   </label>
                   <select
@@ -1551,10 +1551,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 {fulfillmentTiming === 'SCHEDULED' ? (
-                  <div className="rounded-[1.5rem] border border-gold/20 bg-gold/[0.07] p-4">
+                  <div className="border border-gold/20 bg-gold/[0.07] p-4">
                     <div className="flex items-center gap-2 text-gold">
                       <Clock3 className="size-4" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">
                         Scheduled order
                       </p>
                     </div>
@@ -1603,7 +1603,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 ) : null}
 
                 <div>
-                  <label htmlFor="menu-payment-method" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-payment-method" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Payment method
                   </label>
                   <select
@@ -1642,12 +1642,12 @@ const [scheduledNote, setScheduledNote] = useState('');
                   </select>
 
                   {paymentMethod === 'XENDIT' ? (
-                    <div className="mt-3 flex items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.08] p-4">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
+                    <div className="mt-3 flex items-start gap-3 border border-gold/20 bg-gold/[0.08] p-4">
+                      <span className="grid size-10 shrink-0 place-items-center bg-gold text-black">
                         <CreditCard className="size-5" />
                       </span>
                       <div>
-                        <p className="text-sm font-black text-white">
+                        <p className="text-sm font-semibold text-white">
                           Secure online payment via Xendit
                         </p>
                         <p className="mt-1 text-xs font-medium leading-5 text-white/55">
@@ -1660,17 +1660,17 @@ const [scheduledNote, setScheduledNote] = useState('');
 
                 {isPublicLocation ? (
                   <div className={cn(
-                    'rounded-[1.5rem] border p-4',
+                    'border p-4',
                     requiresRoomVerification
                       ? 'border-gold/35 bg-gold/[0.08]'
                       : 'border-white/10 bg-white/[0.03]'
                   )}>
                     <div className="flex items-start gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
+                      <span className="grid size-10 shrink-0 place-items-center bg-gold text-black">
                         <BedDouble className="size-5" />
                       </span>
                       <div>
-                        <p className="text-sm font-black text-white">Secure room assignment</p>
+                        <p className="text-sm font-semibold text-white">Secure room assignment</p>
                         <p className="mt-1 text-xs font-medium leading-5 text-white/50">
                           {requiresRoomVerification
                             ? 'Room number and passcode are required for room delivery or room charging from this public NFC location.'
@@ -1730,14 +1730,14 @@ const [scheduledNote, setScheduledNote] = useState('');
                   style={checkoutFieldStyle}
                 />
 
-                <label className="flex cursor-pointer items-start gap-3 rounded-[1.5rem] border border-gold/15 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90 transition hover:bg-gold/10">
+                <label className="flex cursor-pointer items-start gap-3 border border-gold/15 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90 transition hover:bg-gold/10">
                   <input
                     type="checkbox"
                     checked={confirmedClause}
                     onChange={(event) =>
                       setConfirmedClause(event.target.checked)
                     }
-                    className="mt-1 size-5 shrink-0 rounded border border-gold/50 bg-black accent-[#d6a738]"
+                    className="mt-1 size-5 shrink-0 border border-gold/50 bg-black accent-[#d6a738]"
                   />
                   <span>
                     I confirm this order is for{' '}
@@ -1747,13 +1747,13 @@ const [scheduledNote, setScheduledNote] = useState('');
               </div>
             </section>
 
-            <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
+            <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
               <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
+                <span className="grid size-11 place-items-center bg-gold/15 text-gold">
                   <Sparkles className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                     CloudView Rewards
                   </p>
                   <p className="mt-1 text-sm font-semibold leading-5 text-white/65">
@@ -1763,14 +1763,14 @@ const [scheduledNote, setScheduledNote] = useState('');
                 <button
                   type="button"
                   onClick={() => router.push(`/t/${tagCode}/rewards`)}
-                  className="shrink-0 rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-black text-gold transition hover:bg-gold/20"
+                  className="shrink-0 border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold transition hover:bg-gold/20"
                 >
                   View
                 </button>
               </div>
             </section>
 
-            <section className="mt-5 rounded-[2rem] border border-gold/20 bg-[linear-gradient(145deg,rgba(214,167,56,0.14),rgba(255,255,255,0.035))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.25)]">
+            <section className="mt-5 border border-gold/20 bg-[linear-gradient(145deg,rgba(214,167,56,0.14),rgba(255,255,255,0.035))] p-5">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between gap-4 text-white/55">
                   <span>Subtotal</span>
@@ -1789,7 +1789,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 <div className="border-t border-white/10 pt-4">
                   <div className="flex items-end justify-between gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                         Total
                       </p>
                       <p className="mt-1 text-xs text-white/40">
@@ -1804,7 +1804,7 @@ const [scheduledNote, setScheduledNote] = useState('');
               </div>
 
               {error ? (
-                <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
+                <p className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
                   {error}
                 </p>
               ) : null}
@@ -1822,7 +1822,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                  * the handler reject the order and say why.
                  */
                 disabled={pending}
-                className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-[15px] font-black text-black shadow-[0_14px_34px_rgba(214,167,56,0.24)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
+                className="mt-5 flex min-h-14 w-full items-center justify-center gap-2 bg-gold px-5 text-[15px] font-semibold text-black shadow-[0_14px_34px_rgba(214,167,56,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {pending ? (
                   paymentMethod === 'XENDIT'
@@ -1875,14 +1875,14 @@ const [scheduledNote, setScheduledNote] = useState('');
         <button
           type="button"
           onClick={() => router.push(`/t/${tagCode}`)}
-          className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/10 hover:text-white"
+          className="grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/10 hover:text-white"
           aria-label="Back"
         >
           <ArrowLeft className="size-5" />
         </button>
 
         <div className="min-w-0 flex-1 px-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
             In-room dining
           </p>
           <p className="mt-1 truncate font-serif text-xl font-normal tracking-wide text-white">
@@ -1893,22 +1893,22 @@ const [scheduledNote, setScheduledNote] = useState('');
         <button
           type="button"
           onClick={openCart}
-          className="relative grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/10"
+          className="relative grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/10"
           aria-label="Open cart"
         >
           <ShoppingBag className="size-5" />
           {itemCount > 0 ? (
-            <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-gold text-[10px] font-black text-black ring-2 ring-black">
+            <span className="absolute -right-1 -top-1 grid size-5 place-items-center bg-gold text-[10px] font-semibold text-black ring-2 ring-black">
               {itemCount}
             </span>
           ) : null}
         </button>
       </div>
 
-      <section className="mb-5 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_34%),linear-gradient(145deg,#161512,#0b0b0a)] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+      <section className="mb-5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_34%),linear-gradient(145deg,#161512,#0b0b0a)] p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+            <div className="inline-flex items-center gap-2 border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
               <ChefHat className="size-3.5" />
               Hotel dining
             </div>
@@ -1920,15 +1920,15 @@ const [scheduledNote, setScheduledNote] = useState('');
             </p>
           </div>
 
-          <span className="grid size-14 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.05] text-gold">
+          <span className="grid size-14 shrink-0 place-items-center border border-white/10 bg-white/[0.05] text-gold">
             <Utensils className="size-6" strokeWidth={1.5} />
           </span>
         </div>
 
       </section>
 
-      <div className="sticky top-[4.5rem] z-40 -mx-1 mb-6 rounded-[1.75rem] border border-white/10 bg-black/85 p-2 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-        <div className="flex h-12 items-center gap-3 rounded-2xl bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
+      <div className="sticky top-[4.5rem] z-40 -mx-1 mb-6 border border-white/10 bg-black/85 p-2 backdrop-blur-xl">
+        <div className="flex h-12 items-center gap-3 bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
           <Search className="size-4.5 shrink-0 text-gold" />
           <input
             value={searchQuery}
@@ -1941,7 +1941,7 @@ const [scheduledNote, setScheduledNote] = useState('');
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="grid size-8 shrink-0 place-items-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white"
+              className="grid size-8 shrink-0 place-items-center text-white/40 transition hover:bg-white/10 hover:text-white"
               aria-label="Clear search"
             >
               <X className="size-4" />
@@ -1964,16 +1964,16 @@ const [scheduledNote, setScheduledNote] = useState('');
                 type="button"
                 onClick={() => setActiveCategory(category)}
                 className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-full border px-4 py-3 text-xs font-black transition active:scale-[0.98]',
+                  'flex shrink-0 items-center gap-2 border px-4 py-3 text-xs font-semibold transition',
                   active
-                    ? 'border-gold bg-gold text-black shadow-[0_8px_22px_rgba(214,167,56,0.18)]'
+                    ? 'border-gold bg-gold text-black'
                     : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
                 )}
               >
                 {category}
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[9px]',
+                    'px-2 py-0.5 text-[9px]',
                     active ? 'bg-black/12 text-black/70' : 'bg-white/10 text-white/45'
                   )}
                 >
@@ -1988,13 +1988,13 @@ const [scheduledNote, setScheduledNote] = useState('');
           <button
             type="button"
             onClick={openCart}
-            className="mt-2 flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-gold px-4 text-black shadow-[0_10px_28px_rgba(214,167,56,0.2)] transition hover:brightness-105 active:scale-[0.99]"
+            className="mt-2 flex min-h-12 w-full items-center justify-between gap-3 bg-gold px-4 text-black shadow-[0_10px_28px_rgba(214,167,56,0.2)] transition hover:brightness-105"
           >
-            <span className="flex items-center gap-2 text-sm font-black">
+            <span className="flex items-center gap-2 text-sm font-semibold">
               <ShoppingBag className="size-4" />
               Review order
             </span>
-            <span className="flex items-center gap-2 text-sm font-black">
+            <span className="flex items-center gap-2 text-sm font-semibold">
               {itemCount} item{itemCount === 1 ? '' : 's'} · {money(total, currency)}
               <ChevronRight className="size-4" />
             </span>
@@ -2006,7 +2006,7 @@ const [scheduledNote, setScheduledNote] = useState('');
         <section className="mb-7">
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
                 Chef’s selection
               </p>
               <h3 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
@@ -2016,7 +2016,7 @@ const [scheduledNote, setScheduledNote] = useState('');
             <Sparkles className="size-5 text-gold" />
           </div>
 
-          <article className="relative isolate overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <article className="relative isolate overflow-hidden border border-white/10 bg-white/[0.045]">
             <div className="relative">
               <ProductImage
                 product={featured}
@@ -2028,11 +2028,11 @@ const [scheduledNote, setScheduledNote] = useState('');
                   <p className="line-clamp-2 font-serif text-2xl font-normal leading-tight tracking-wide text-white">
                     {featured.name}
                   </p>
-                  <p className="mt-1 text-base font-black text-gold">
+                  <p className="mt-1 text-base font-semibold text-gold">
                     {simpleMoney(featured.priceCents, currency)}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full border border-white/15 bg-black/50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white/80 backdrop-blur">
+                <span className="shrink-0 border border-white/15 bg-black/50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/80 backdrop-blur">
                   {featured.categoryName}
                 </span>
               </div>
@@ -2048,17 +2048,17 @@ const [scheduledNote, setScheduledNote] = useState('');
               <div className="mt-4 flex items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   {isBundleProduct(featured) ? (
-                    <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-gold">
+                    <span className="bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                       Bundle
                     </span>
                   ) : (
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/60">
+                    <span className="bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/60">
                       Single item
                     </span>
                   )}
                   <span
                     className={cn(
-                      'rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest',
+                      'px-3 py-1 text-[10px] font-semibold uppercase tracking-widest',
                       isProductSoldOut(featured)
                         ? 'bg-red-500/15 text-red-200'
                         : 'bg-emerald-400/15 text-emerald-200'
@@ -2071,17 +2071,17 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 {getCartQuantity(featured.id) > 0 ? (
-                  <div className="flex shrink-0 items-center rounded-full border border-gold/25 bg-gold/10 p-1">
+                  <div className="flex shrink-0 items-center border border-gold/25 bg-gold/10 p-1">
                     <TapButton
                       onTap={() =>
                         updateQty(featured.id, getCartQuantity(featured.id) - 1)
                       }
-                      className="grid size-9 place-items-center rounded-full text-gold hover:bg-gold/10"
+                      className="grid size-9 place-items-center text-gold hover:bg-gold/10"
                       aria-label={`Decrease ${featured.name}`}
                     >
                       <Minus className="size-4" />
                     </TapButton>
-                    <span className="min-w-8 text-center text-sm font-black text-white">
+                    <span className="min-w-8 text-center text-sm font-semibold text-white">
                       {getCartQuantity(featured.id)}
                     </span>
                     <TapButton
@@ -2091,7 +2091,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                         getCartQuantity(featured.id) >=
                           getProductAvailableQty(featured)
                       }
-                      className="grid size-9 place-items-center rounded-full bg-gold text-black"
+                      className="grid size-9 place-items-center bg-gold text-black"
                       aria-label={`Increase ${featured.name}`}
                     >
                       <Plus className="size-4" />
@@ -2101,7 +2101,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                   <TapButton
                     onTap={() => add(featured.id)}
                     disabled={isProductSoldOut(featured)}
-                    className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-gold px-4 text-xs font-black text-black shadow-[0_10px_25px_rgba(214,167,56,0.2)]"
+                    className="inline-flex min-h-11 shrink-0 items-center gap-2 bg-gold px-4 text-xs font-semibold text-black shadow-[0_10px_25px_rgba(214,167,56,0.2)]"
                     aria-label={`Add ${featured.name}`}
                   >
                     Add
@@ -2120,7 +2120,7 @@ const [scheduledNote, setScheduledNote] = useState('');
       <section>
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
               Explore menu
             </p>
             <h3 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
@@ -2149,7 +2149,7 @@ const [scheduledNote, setScheduledNote] = useState('');
               <article
                 key={product.id}
                 className={cn(
-                  'group relative isolate overflow-hidden rounded-[1.6rem] border bg-white/[0.04] shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
+                  'group relative isolate overflow-hidden border bg-white/[0.04] shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
                   soldOut
                     ? 'border-white/8 opacity-65'
                     : quantity > 0
@@ -2164,12 +2164,12 @@ const [scheduledNote, setScheduledNote] = useState('');
                   />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
 
-                  <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-white/70 backdrop-blur">
+                  <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-1.25rem)] truncate border border-white/10 bg-black/55 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-white/70 backdrop-blur">
                     {product.categoryName}
                   </span>
 
                   {soldOut ? (
-                    <span className="absolute inset-x-2.5 bottom-2.5 rounded-full bg-red-600 px-3 py-1.5 text-center text-[9px] font-black uppercase tracking-widest text-white">
+                    <span className="absolute inset-x-2.5 bottom-2.5 bg-red-600 px-3 py-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-white">
                       Sold out
                     </span>
                   ) : null}
@@ -2181,7 +2181,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                       {product.name}
                     </h4>
                     {isBundleProduct(product) ? (
-                      <span className="mt-0.5 shrink-0 rounded-full bg-gold/15 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gold">
+                      <span className="mt-0.5 shrink-0 bg-gold/15 px-2 py-1 text-[8px] font-semibold uppercase tracking-widest text-gold">
                         Set
                       </span>
                     ) : null}
@@ -2200,7 +2200,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                   <div className="mt-auto pt-3">
                     <div className="flex items-end justify-between gap-2">
                       <div>
-                        <p className="text-[15px] font-black text-gold">
+                        <p className="text-[15px] font-semibold text-gold">
                           {simpleMoney(product.priceCents, currency)}
                         </p>
                         {!soldOut ? (
@@ -2211,15 +2211,15 @@ const [scheduledNote, setScheduledNote] = useState('');
                       </div>
 
                       {quantity > 0 ? (
-                        <div className="flex shrink-0 items-center rounded-full border border-gold/25 bg-gold/10 p-0.5">
+                        <div className="flex shrink-0 items-center border border-gold/25 bg-gold/10 p-0.5">
                           <TapButton
                             onTap={() => updateQty(product.id, quantity - 1)}
-                            className="grid size-8 place-items-center rounded-full text-gold"
+                            className="grid size-8 place-items-center text-gold"
                             aria-label={`Decrease ${product.name}`}
                           >
                             <Minus className="size-3.5" />
                           </TapButton>
-                          <span className="min-w-6 text-center text-xs font-black text-white">
+                          <span className="min-w-6 text-center text-xs font-semibold text-white">
                             {quantity}
                           </span>
                           <TapButton
@@ -2227,7 +2227,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                             disabled={
                               soldOut || quantity >= getProductAvailableQty(product)
                             }
-                            className="grid size-8 place-items-center rounded-full bg-gold text-black"
+                            className="grid size-8 place-items-center bg-gold text-black"
                             aria-label={`Increase ${product.name}`}
                           >
                             <Plus className="size-3.5" />
@@ -2237,7 +2237,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                         <TapButton
                           onTap={() => add(product.id)}
                           disabled={soldOut}
-                          className="grid size-11 shrink-0 place-items-center rounded-full bg-white text-black shadow-lg"
+                          className="grid size-11 shrink-0 place-items-center bg-white text-black shadow-lg"
                           aria-label={`Add ${product.name}`}
                         >
                           <Plus className="size-5" />
@@ -2252,8 +2252,8 @@ const [scheduledNote, setScheduledNote] = useState('');
         </div>
 
         {!filteredProducts.length ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-9 text-center">
-            <div className="mx-auto grid size-16 place-items-center rounded-full bg-white/5 text-white/35">
+          <div className="border border-white/10 bg-white/[0.04] p-9 text-center">
+            <div className="mx-auto grid size-16 place-items-center bg-white/5 text-white/35">
               <Utensils className="size-7" strokeWidth={1.5} />
             </div>
             <h3 className="mt-5 font-serif text-2xl font-normal tracking-wide text-white">
@@ -2269,7 +2269,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                   setSearchQuery('');
                   setActiveCategory('All');
                 }}
-                className="mt-5 rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-black text-white"
+                className="mt-5 border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white"
               >
                 Reset filters
               </button>
@@ -2279,13 +2279,13 @@ const [scheduledNote, setScheduledNote] = useState('');
       </section>
 
       {error ? (
-        <div className="fixed inset-x-5 bottom-44 z-40 mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-red-400/20 bg-red-600/95 px-4 py-3 text-sm font-bold text-white shadow-2xl backdrop-blur">
+        <div className="fixed inset-x-5 bottom-44 z-40 mx-auto flex max-w-md items-start gap-3 border border-red-400/20 bg-red-600/95 px-4 py-3 text-sm font-bold text-white shadow-2xl backdrop-blur">
           <X className="mt-0.5 size-4 shrink-0" />
           <span className="min-w-0 flex-1">{error}</span>
           <button
             type="button"
             onClick={() => setError(null)}
-            className="grid size-7 shrink-0 place-items-center rounded-full bg-black/15"
+            className="grid size-7 shrink-0 place-items-center bg-black/15"
             aria-label="Dismiss error"
           >
             <X className="size-3.5" />
@@ -2297,17 +2297,17 @@ const [scheduledNote, setScheduledNote] = useState('');
         <button
           type="button"
           onClick={openCart}
-          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 rounded-[1.35rem] border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black shadow-[0_18px_45px_rgba(214,167,56,0.28)] transition hover:brightness-105 active:scale-[0.99]"
+          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black transition hover:brightness-105"
         >
           <span className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-xl bg-black/12">
+            <span className="grid size-11 place-items-center bg-black/12">
               <ShoppingBag className="size-4.5" />
             </span>
             <span className="text-left">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-black/55">
+              <span className="block text-[10px] font-semibold uppercase tracking-widest text-black/55">
                 {itemCount} item{itemCount === 1 ? '' : 's'} selected
               </span>
-              <span className="mt-0.5 block text-sm font-black">Review order</span>
+              <span className="mt-0.5 block text-sm font-semibold">Review order</span>
             </span>
           </span>
 

@@ -93,215 +93,215 @@ type StaticInfoCard = {
   body: string;
   iconKey: string;
   /* Words a guest may type that the card's own text does not contain. */
-  keywords: string;
+ keywords: string;
 };
 
 function getSectionHref(tagCode: string, section: GuideSection) {
-  return `/t/${tagCode}/guide/${createGuideSlug(section.title)}`;
+ return `/t/${tagCode}/guide/${createGuideSlug(section.title)}`;
 }
 
 function getSectionImage(section: GuideSection) {
-  return (
-    section.imageUrl ||
-    section.galleryImages.find((image) => image.isActive)?.imageUrl ||
-    fallbackImage
-  );
+ return (
+ section.imageUrl ||
+ section.galleryImages.find((image) => image.isActive)?.imageUrl ||
+ fallbackImage
+ );
 }
 
 function getSectionIcon(section: GuideSection) {
-  return iconMap[section.iconKey] ?? Info;
+ return iconMap[section.iconKey] ?? Info;
 }
 
 function getItemHref(tagCode: string, section: GuideSection, item: GuideItem) {
-  return `${getSectionHref(tagCode, section)}#guide-item-${item.id}`;
+ return `${getSectionHref(tagCode, section)}#guide-item-${item.id}`;
 }
 
 function SectionHeading({
-  eyebrow,
-  title,
-  description,
+ eyebrow,
+ title,
+ description,
 }: {
-  eyebrow: string;
-  title: string;
-  description?: string;
+ eyebrow: string;
+ title: string;
+ description?: string;
 }) {
-  return (
-    <div className="mb-4">
-      <div className="flex items-center gap-3">
-        <span className="h-px w-8 bg-[#d5ad55]" />
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#d5ad55]">
-          {eyebrow}
-        </p>
-      </div>
+ return (
+ <div className="mb-4">
+ <div className="flex items-center gap-3">
+ <span className="h-px w-8 bg-[#d5ad55]" />
+ <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#d5ad55]">
+ {eyebrow}
+ </p>
+ </div>
 
-      <h2 className="mt-2 font-serif text-[1.85rem] font-light leading-tight tracking-[0.01em] text-[#f7f2e8]">
-        {title}
-      </h2>
+ <h2 className="mt-2 font-serif text-[1.85rem] font-light leading-tight tracking-[0.01em] text-[#f7f2e8]">
+ {title}
+ </h2>
 
-      {description ? (
-        <p className="mt-2 max-w-md text-sm leading-6 text-white/48">
-          {description}
-        </p>
-      ) : null}
-    </div>
-  );
+ {description ? (
+ <p className="mt-2 max-w-md text-sm leading-6 text-white/48">
+ {description}
+ </p>
+ ) : null}
+ </div>
+ );
 }
 
 function ServiceAction({
-  href,
-  icon: Icon,
-  label,
-  detail,
+ href,
+ icon: Icon,
+ label,
+ detail,
 }: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-  detail: string;
+ href: string;
+ icon: LucideIcon;
+ label: string;
+ detail: string;
 }) {
-  return (
-    <Link
-      href={href}
-      className="group flex min-h-[92px] items-center gap-3 rounded-[1.35rem] border border-white/[0.08] bg-white/[0.045] p-3.5 transition duration-300 hover:border-[#d5ad55]/45 hover:bg-[#d5ad55]/[0.08] active:scale-[0.985]"
-    >
-      <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#e5bd63] transition group-hover:bg-[#d5ad55] group-hover:text-black">
-        <Icon className="size-[18px]" />
-      </span>
+ return (
+ <Link
+ href={href}
+ className="group flex min-h-[92px] items-center gap-3 border border-white/[0.08] bg-white/[0.045] p-3.5 transition duration-300 hover:border-[#d5ad55]/45 hover:bg-[#d5ad55]/[0.08]"
+ >
+ <span className="grid size-11 shrink-0 place-items-center border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#e5bd63] transition group-hover:bg-[#d5ad55] group-hover:text-black">
+ <Icon className="size-[18px]" />
+ </span>
 
-      <span className="min-w-0 flex-1">
-        <span className="block font-serif text-[15px] tracking-wide text-[#f7f2e8]">
-          {label}
-        </span>
-        <span className="mt-1 block truncate text-xs font-medium uppercase tracking-[0.12em] text-white/60">
-          {detail}
-        </span>
-      </span>
+ <span className="min-w-0 flex-1">
+ <span className="block font-serif text-[15px] tracking-wide text-[#f7f2e8]">
+ {label}
+ </span>
+ <span className="mt-1 block truncate text-xs font-medium uppercase tracking-[0.12em] text-white/60">
+ {detail}
+ </span>
+ </span>
 
-      <ChevronRight className="size-4 shrink-0 text-[#d5ad55]/70 transition group-hover:translate-x-0.5" />
-    </Link>
-  );
+ <ChevronRight className="size-4 shrink-0 text-[#d5ad55]/70 transition group-hover:translate-x-0.5" />
+ </Link>
+ );
 }
 
 function FeaturedGuideCard({
-  tagCode,
-  section,
+ tagCode,
+ section,
 }: {
-  tagCode: string;
-  section: GuideSection;
+ tagCode: string;
+ section: GuideSection;
 }) {
-  const Icon = getSectionIcon(section);
+ const Icon = getSectionIcon(section);
 
-  return (
-    <Link
-      href={getSectionHref(tagCode, section)}
-      className="group relative block min-h-[330px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#171611] shadow-[0_28px_80px_rgba(0,0,0,0.42)] active:scale-[0.99]"
-    >
-      <div
-        className="absolute inset-0 bg-cover bg-center transition duration-1000 ease-out group-hover:scale-[1.04]"
-        style={{ backgroundImage: `url(${getSectionImage(section)})` }}
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.28)_40%,rgba(5,5,4,0.96)_100%)]" />
-      <div className="absolute inset-0 ring-1 ring-inset ring-white/[0.06]" />
+ return (
+ <Link
+ href={getSectionHref(tagCode, section)}
+ className="group relative block min-h-[330px] overflow-hidden border border-white/10 bg-[#171611]"
+ >
+ <div
+ className="absolute inset-0 bg-cover bg-center transition duration-1000 ease-out group-hover:scale-[1.04]"
+ style={{ backgroundImage: `url(${getSectionImage(section)})` }}
+ />
+ <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.28)_40%,rgba(5,5,4,0.96)_100%)]" />
+ <div className="absolute inset-0 ring-1 ring-inset ring-white/[0.06]" />
 
-      <div className="relative z-10 flex min-h-[330px] flex-col justify-between p-5">
-        <div className="flex items-start justify-between gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#e8c66f] backdrop-blur-xl">
-            <Icon className="size-3.5" />
-            Curated guide
-          </span>
+ <div className="relative z-10 flex min-h-[330px] flex-col justify-between p-5">
+ <div className="flex items-start justify-between gap-3">
+ <span className="inline-flex items-center gap-2 border border-[#d5ad55]/45 bg-black/35 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#e8c66f] backdrop-blur-xl">
+ <Icon className="size-3.5" />
+ Curated guide
+ </span>
 
-          <span className="grid size-11 place-items-center rounded-full bg-[#d5ad55] text-black shadow-[0_12px_30px_rgba(213,173,85,0.3)] transition group-hover:rotate-[-6deg] group-hover:scale-105">
-            <ArrowRight className="size-[18px]" />
-          </span>
-        </div>
+ <span className="grid size-11 place-items-center bg-[#d5ad55] text-black shadow-[0_12px_30px_rgba(213,173,85,0.3)] transition group-hover:rotate-[-6deg] group-hover:scale-105">
+ <ArrowRight className="size-[18px]" />
+ </span>
+ </div>
 
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5ad55]">
-            Recommended first
-          </p>
-          <h3 className="mt-2 font-serif text-[2rem] font-light leading-none tracking-wide text-white">
-            {section.title}
-          </h3>
-          <p className="mt-3 line-clamp-2 max-w-sm text-sm leading-6 text-white/65">
-            {section.subtitle ||
-              section.description ||
-              "Discover useful details thoughtfully prepared for your stay."}
-          </p>
+ <div>
+ <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#d5ad55]">
+ Recommended first
+ </p>
+ <h3 className="mt-2 font-serif text-[2rem] font-light leading-none tracking-wide text-white">
+ {section.title}
+ </h3>
+ <p className="mt-3 line-clamp-2 max-w-sm text-sm leading-6 text-white/65">
+ {section.subtitle ||
+ section.description ||
+ "Discover useful details thoughtfully prepared for your stay."}
+ </p>
 
-          {/*
-            One word for one concept: a guide item is a "detail" everywhere in
-            the guest portal, matching the "Detail 01" labels on the section
-            page. Photo counts only appear when there are photos — advertising
-            "0 photos" tells the guest about an absence.
-          */}
-          <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/60">
-            <span>
-              {section.items.length} detail
-              {section.items.length === 1 ? "" : "s"}
-            </span>
-            {section.galleryImages.length ? (
-              <span>
-                {section.galleryImages.length} photo
-                {section.galleryImages.length === 1 ? "" : "s"}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
+ {/*
+ One word for one concept: a guide item is a "detail" everywhere in
+ the guest portal, matching the "Detail 01" labels on the section
+ page. Photo counts only appear when there are photos — advertising
+ "0 photos" tells the guest about an absence.
+ */}
+ <div className="mt-5 flex items-center gap-5 border-t border-white/10 pt-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/60">
+ <span>
+ {section.items.length} detail
+ {section.items.length === 1 ? "" : "s"}
+ </span>
+ {section.galleryImages.length ? (
+ <span>
+ {section.galleryImages.length} photo
+ {section.galleryImages.length === 1 ? "" : "s"}
+ </span>
+ ) : null}
+ </div>
+ </div>
+ </div>
+ </Link>
+ );
 }
 
 function GuideSectionCard({
-  tagCode,
-  section,
+ tagCode,
+ section,
 }: {
-  tagCode: string;
-  section: GuideSection;
+ tagCode: string;
+ section: GuideSection;
 }) {
-  const Icon = getSectionIcon(section);
+ const Icon = getSectionIcon(section);
 
-  return (
-    <Link
-      href={getSectionHref(tagCode, section)}
-      className="group grid min-h-[132px] grid-cols-[116px_minmax(0,1fr)] overflow-hidden rounded-[1.45rem] border border-white/[0.08] bg-[#151512] shadow-[0_16px_45px_rgba(0,0,0,0.22)] transition duration-300 hover:border-[#d5ad55]/35 hover:bg-[#1a1914] active:scale-[0.99]"
-    >
-      <div
-        className="relative bg-cover bg-center"
-        style={{ backgroundImage: `url(${getSectionImage(section)})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-[#151512]/45" />
-        <span className="absolute left-3 top-3 grid size-9 place-items-center rounded-xl border border-white/10 bg-black/50 text-[#d5ad55] backdrop-blur">
-          <Icon className="size-4" />
-        </span>
-      </div>
+ return (
+ <Link
+ href={getSectionHref(tagCode, section)}
+ className="group grid min-h-[132px] grid-cols-[116px_minmax(0,1fr)] overflow-hidden border border-white/[0.08] bg-[#151512] shadow-[0_16px_45px_rgba(0,0,0,0.22)] transition duration-300 hover:border-[#d5ad55]/35 hover:bg-[#1a1914]"
+ >
+ <div
+ className="relative bg-cover bg-center"
+ style={{ backgroundImage: `url(${getSectionImage(section)})` }}
+ >
+ <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-[#151512]/45" />
+ <span className="absolute left-3 top-3 grid size-9 place-items-center border border-white/10 bg-black/50 text-[#d5ad55] backdrop-blur">
+ <Icon className="size-4" />
+ </span>
+ </div>
 
-      <div className="flex min-w-0 items-center gap-3 p-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d5ad55]/80">
-            {section.items.length} detail
-            {section.items.length === 1 ? "" : "s"}
-          </p>
-          <h3 className="mt-1.5 truncate font-serif text-[18px] font-normal tracking-wide text-[#f6f0e4]">
-            {section.title}
-          </h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/42">
-            {section.subtitle ||
-              section.description ||
-              "Open this guide for helpful hotel details."}
-          </p>
-        </div>
+ <div className="flex min-w-0 items-center gap-3 p-4">
+ <div className="min-w-0 flex-1">
+ <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#d5ad55]/80">
+ {section.items.length} detail
+ {section.items.length === 1 ? "" : "s"}
+ </p>
+ <h3 className="mt-1.5 truncate font-serif text-[18px] font-normal tracking-wide text-[#f6f0e4]">
+ {section.title}
+ </h3>
+ <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/42">
+ {section.subtitle ||
+ section.description ||
+ "Open this guide for helpful hotel details."}
+ </p>
+ </div>
 
-        <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-[#d5ad55] transition group-hover:border-[#d5ad55]/40 group-hover:bg-[#d5ad55] group-hover:text-black">
-          <ChevronRight className="size-4" />
-        </span>
-      </div>
-    </Link>
-  );
+ <span className="grid size-9 shrink-0 place-items-center border border-white/10 text-[#d5ad55] transition group-hover:border-[#d5ad55]/40 group-hover:bg-[#d5ad55] group-hover:text-black">
+ <ChevronRight className="size-4" />
+ </span>
+ </div>
+ </Link>
+ );
 }
 
 /*
-  A search hit on an item is the answer itself, so it is shown as one: the
-  card's own title and text, with the section it lives in as the eyebrow, and
+ A search hit on an item is the answer itself, so it is shown as one: the
+ card's own title and text, with the section it lives in as the eyebrow, and
   the link lands on that card rather than on the section's drawer. Before this
   a search for "breakfast" returned the Dining section and left the guest to
   find the hours inside it.
@@ -321,9 +321,9 @@ function SearchResultItemCard({
   return (
     <Link
       href={getItemHref(tagCode, section, item)}
-      className="group flex items-start gap-3 rounded-[1.45rem] border border-white/[0.08] bg-white/[0.045] p-4 transition duration-300 hover:border-[#d5ad55]/45 hover:bg-[#d5ad55]/[0.08] active:scale-[0.985]"
+      className="group flex items-start gap-3 border border-white/[0.08] bg-white/[0.045] p-4 transition duration-300 hover:border-[#d5ad55]/45 hover:bg-[#d5ad55]/[0.08]"
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#d5ad55]/12 text-[#d5ad55]">
+      <span className="grid size-10 shrink-0 place-items-center bg-[#d5ad55]/12 text-[#d5ad55]">
         <Icon className="size-[18px]" />
       </span>
 
@@ -361,9 +361,9 @@ function SearchResultInfoCard({
   icon: LucideIcon;
 }) {
   return (
-    <div className="rounded-[1.45rem] border border-white/[0.08] bg-white/[0.045] p-4">
+    <div className="border border-white/[0.08] bg-white/[0.045] p-4">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#d5ad55]/12 text-[#d5ad55]">
+        <span className="grid size-10 shrink-0 place-items-center bg-[#d5ad55]/12 text-[#d5ad55]">
           <Icon className="size-[18px]" />
         </span>
         <div>
@@ -471,10 +471,10 @@ export function HotelGuideContent({
 
   return (
     <div className="relative -mx-5 -mt-4 min-h-screen overflow-hidden bg-[#080806] px-5 pb-32 pt-5 text-white">
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[#9f7425]/10 blur-[110px]" />
+      <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 bg-[#9f7425]/10 blur-[110px]" />
 
       <div className="relative mx-auto max-w-xl">
-        <section className="relative mb-7 min-h-[400px] overflow-hidden rounded-[2.15rem] border border-white/10 bg-[#11110e] shadow-[0_34px_90px_rgba(0,0,0,0.48)]">
+        <section className="relative mb-7 min-h-[400px] overflow-hidden border border-white/10 bg-[#11110e]">
           <div
             className="absolute inset-0 scale-[1.02] bg-cover bg-center"
             style={{ backgroundImage: `url(${heroImage})` }}
@@ -484,7 +484,7 @@ export function HotelGuideContent({
 
           <div className="relative z-10 flex min-h-[400px] flex-col justify-between p-5">
             <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#e8c66f] backdrop-blur-xl">
+              <span className="inline-flex items-center gap-2 border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#e8c66f] backdrop-blur-xl">
                 <Sparkles className="size-3.5" />
                 Private concierge
               </span>
@@ -507,7 +507,7 @@ export function HotelGuideContent({
                 assistance in one refined guide.
               </p>
 
-              <div className="mt-5 flex h-14 items-center gap-3 rounded-[1.15rem] border border-white/10 bg-black/45 px-4 backdrop-blur-xl transition focus-within:border-[#d5ad55]/55 focus-within:bg-black/60">
+              <div className="mt-5 flex h-14 items-center gap-3 border border-white/10 bg-black/45 px-4 backdrop-blur-xl transition focus-within:border-[#d5ad55]/55 focus-within:bg-black/60">
                 <Search className="size-[18px] shrink-0 text-[#d5ad55]" />
                 <input
                   value={searchQuery}
@@ -519,7 +519,7 @@ export function HotelGuideContent({
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.08] text-white/60"
+                    className="grid size-8 shrink-0 place-items-center bg-white/[0.08] text-white/60"
                     aria-label="Clear search"
                   >
                     <X className="size-4" />
@@ -569,7 +569,7 @@ export function HotelGuideContent({
                 ))}
               </div>
             ) : (
-              <div className="rounded-[1.8rem] border border-white/[0.08] bg-white/[0.045] p-8 text-center">
+              <div className="border border-white/[0.08] bg-white/[0.045] p-8 text-center">
                 <Search className="mx-auto size-8 text-[#d5ad55]" />
                 <h3 className="mt-4 font-serif text-xl text-[#f7f2e8]">
                   Nothing found
@@ -580,7 +580,7 @@ export function HotelGuideContent({
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="mt-5 rounded-full border border-[#d5ad55]/40 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.16em] text-[#e5bd63]"
+                  className="mt-5 border border-[#d5ad55]/40 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.16em] text-[#e5bd63]"
                 >
                   Clear search
                 </button>
@@ -623,10 +623,10 @@ export function HotelGuideContent({
                 title="The details that matter"
               />
 
-              <div className="overflow-hidden rounded-[1.8rem] border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] shadow-[0_22px_60px_rgba(0,0,0,0.26)]">
+              <div className="overflow-hidden border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))]">
                 <div className="p-5">
                   <div className="flex items-start gap-4">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
+                    <span className="grid size-11 shrink-0 place-items-center border border-[#d5ad55]/20 bg-[#d5ad55]/10 text-[#d5ad55]">
                       <Wifi className="size-5" />
                     </span>
 
@@ -656,7 +656,7 @@ export function HotelGuideContent({
                               onClick={() =>
                                 setShowWifiPassword((current) => !current)
                               }
-                              className="grid size-8 place-items-center rounded-full border border-white/10 text-white/45 transition hover:text-white"
+                              className="grid size-8 place-items-center border border-white/10 text-white/45 transition hover:text-white"
                               aria-label={
                                 showWifiPassword
                                   ? "Hide Wi-Fi password"
@@ -672,7 +672,7 @@ export function HotelGuideContent({
                             <button
                               type="button"
                               onClick={copyWifiPassword}
-                              className="grid size-8 place-items-center rounded-full border border-white/10 text-white/45 transition hover:text-white"
+                              className="grid size-8 place-items-center border border-white/10 text-white/45 transition hover:text-white"
                               aria-label="Copy Wi-Fi password"
                             >
                               {copiedWifi ? (
@@ -736,7 +736,7 @@ export function HotelGuideContent({
                   ))}
                 </div>
               ) : !featuredSection ? (
-                <div className="rounded-[1.8rem] border border-dashed border-white/10 bg-white/[0.035] p-8 text-center">
+                <div className="border border-dashed border-white/10 bg-white/[0.035] p-8 text-center">
                   <Info className="mx-auto size-8 text-[#d5ad55]" />
                   <h3 className="mt-4 font-serif text-xl text-[#f7f2e8]">
                     Your guide is being prepared

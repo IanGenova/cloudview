@@ -60,16 +60,16 @@ function FloatingToast({
       <div
         className={
           isSuccess
-            ? 'rounded-3xl border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
-            : 'rounded-3xl border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
+            ? 'border border-emerald-200 bg-emerald-50/95 p-4 text-emerald-800 shadow-2xl backdrop-blur-xl'
+            : 'border border-red-200 bg-red-50/95 p-4 text-red-800 shadow-2xl backdrop-blur-xl'
         }
       >
         <div className="flex items-start gap-3">
           <div
             className={
               isSuccess
-                ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
-                : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700'
+                ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+                : 'grid size-10 shrink-0 place-items-center bg-red-100 text-red-700'
             }
           >
             {isSuccess ? (
@@ -80,16 +80,16 @@ function FloatingToast({
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
               {isSuccess ? 'Success' : 'Error'}
             </p>
-            <p className="mt-1 text-sm font-black">{toast.message}</p>
+            <p className="mt-1 text-sm font-semibold">{toast.message}</p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 text-current transition hover:bg-white"
+            className="grid size-8 shrink-0 place-items-center bg-white/70 text-current transition hover:bg-white"
             aria-label="Close notification"
           >
             <X className="size-4" />
@@ -173,15 +173,15 @@ export function DirectoryHotelFilter({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#f7f1e5] text-[#a8781d]">
+        <span className="grid size-11 shrink-0 place-items-center bg-[#f7f1e5] text-[#a8781d]">
           <Building2 className="size-5" />
         </span>
 
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-neutral-400">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
             Hotel filter
           </p>
-          <p className="mt-0.5 text-sm font-black text-neutral-900">
+          <p className="mt-0.5 text-sm font-semibold text-neutral-900">
             Manage one property at a time
           </p>
         </div>
@@ -193,7 +193,7 @@ export function DirectoryHotelFilter({
           onChange={handleHotelChange}
           disabled={isPending || hotels.length === 0}
           aria-label="Filter rooms and locations by hotel"
-          className="h-12 w-full appearance-none rounded-2xl border border-neutral-200 bg-white px-4 pr-11 text-sm font-black text-neutral-900 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-12 w-full appearance-none border border-neutral-200 bg-white px-4 pr-11 text-sm font-semibold text-neutral-900 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {hotels.length === 0 ? (
             <option value="">No hotels available</option>
@@ -353,15 +353,15 @@ export function DirectoryConfirmButton({
       {mounted && confirmOpen
         ? createPortal(
             <div className="fixed inset-0 z-[160] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
-              <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem]">
+              <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border border-neutral-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
                 <div className="border-b border-red-100 bg-red-50 p-4 sm:p-6">
                   <div className="flex items-start gap-4">
-                    <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700">
+                    <div className="grid size-12 shrink-0 place-items-center bg-red-100 text-red-700">
                       <Trash2 className="size-5" />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-xl font-black text-neutral-950">
+                      <p className="text-xl font-semibold text-neutral-950">
                         Delete {itemType === 'room' ? 'Room' : 'Location'}?
                       </p>
 
@@ -374,7 +374,7 @@ export function DirectoryConfirmButton({
                     <button
                       type="button"
                       onClick={() => setConfirmOpen(false)}
-                      className="grid size-9 shrink-0 place-items-center rounded-full bg-white/70 text-neutral-500 transition hover:bg-white"
+                      className="grid size-9 shrink-0 place-items-center bg-white/70 text-neutral-500 transition hover:bg-white"
                       aria-label="Close confirmation"
                     >
                       <X className="size-4" />
@@ -383,12 +383,12 @@ export function DirectoryConfirmButton({
                 </div>
 
                 <div className="p-4 sm:p-6">
-                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-400">
+                  <div className="border border-neutral-200 bg-neutral-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
                       Selected {itemType}
                     </p>
 
-                    <p className="mt-2 truncate text-lg font-black text-neutral-950">
+                    <p className="mt-2 truncate text-lg font-semibold text-neutral-950">
                       {itemName}
                     </p>
                   </div>
@@ -398,7 +398,7 @@ export function DirectoryConfirmButton({
                       type="button"
                       onClick={() => setConfirmOpen(false)}
                       disabled={isPending}
-                      className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -407,7 +407,7 @@ export function DirectoryConfirmButton({
                       type="button"
                       onClick={runDelete}
                       disabled={isPending}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-11 items-center justify-center gap-2 bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isPending ? (
                         <Loader2 className="size-4 animate-spin" />

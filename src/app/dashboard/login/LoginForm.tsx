@@ -19,22 +19,22 @@ type LoginFormProps = {
 };
 
 const inputClass = `
-  h-[62px] w-full rounded-[1.15rem]
-  border border-[#d8d2c8]
-  bg-white/75
-  px-4
-  text-[15px] font-semibold text-[#17140f]
-  shadow-[0_8px_25px_rgba(49,36,16,0.05),inset_0_1px_0_rgba(255,255,255,0.95)]
-  outline-none backdrop-blur-sm
-  transition-all duration-300
-  placeholder:font-medium placeholder:text-neutral-400
-  hover:border-[#c5b89e]
-  focus:border-[#bd8733]
-  focus:bg-white
-  focus:shadow-[0_10px_30px_rgba(112,74,22,0.10),0_0_0_4px_rgba(201,156,56,0.12)]
-  disabled:cursor-not-allowed
-  disabled:bg-neutral-100/80
-  disabled:text-neutral-500
+ h-[62px] w-full 
+ border border-[#d8d2c8]
+ bg-white/75
+ px-4
+ text-[15px] font-semibold text-[#17140f]
+ 
+ outline-none backdrop-blur-sm
+ transition-all duration-300
+ placeholder:font-medium placeholder:text-neutral-400
+ hover:border-[#c5b89e]
+ focus:border-[#bd8733]
+ focus:bg-white
+ focus:shadow-[0_10px_30px_rgba(112,74,22,0.10),0_0_0_4px_rgba(201,156,56,0.12)]
+ disabled:cursor-not-allowed
+ disabled:bg-neutral-100/80
+ disabled:text-neutral-500
 `;
 
 function LoginToast({
@@ -76,15 +76,15 @@ function LoginToast({
       <div
         className={
           isSuccess
-            ? 'flex items-start gap-3 rounded-[1.4rem] border border-emerald-200/80 bg-emerald-50/95 p-4 text-emerald-900 shadow-[0_24px_70px_rgba(6,78,59,0.18)] backdrop-blur-2xl'
-            : 'flex items-start gap-3 rounded-[1.4rem] border border-red-200/80 bg-red-50/95 p-4 text-red-900 shadow-[0_24px_70px_rgba(127,29,29,0.18)] backdrop-blur-2xl'
+            ? 'flex items-start gap-3 border border-emerald-200/80 bg-emerald-50/95 p-4 text-emerald-900 backdrop-blur-2xl'
+            : 'flex items-start gap-3 border border-red-200/80 bg-red-50/95 p-4 text-red-900 backdrop-blur-2xl'
         }
       >
         <div
           className={
             isSuccess
-              ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-white shadow-lg'
-              : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-red-600 text-white shadow-lg'
+              ? 'grid size-10 shrink-0 place-items-center bg-emerald-600 text-white shadow-lg'
+              : 'grid size-10 shrink-0 place-items-center bg-red-600 text-white shadow-lg'
           }
         >
           {isSuccess ? (
@@ -95,7 +95,7 @@ function LoginToast({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {isSuccess ? 'Signed in successfully' : 'Unable to sign in'}
           </p>
 
@@ -105,7 +105,7 @@ function LoginToast({
         <button
           type="button"
           onClick={() => setVisible(false)}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 transition hover:scale-105 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 transition hover:scale-105 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -152,7 +152,7 @@ export function LoginForm({
         <div>
           <label
             htmlFor="email"
-            className="mb-2.5 block text-[11px] font-black uppercase tracking-[0.16em] text-[#403b34]"
+            className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#403b34]"
           >
             Email address
           </label>
@@ -180,7 +180,7 @@ export function LoginForm({
         <div>
           <label
             htmlFor="password"
-            className="mb-2.5 block text-[11px] font-black uppercase tracking-[0.16em] text-[#403b34]"
+            className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#403b34]"
           >
             Password
           </label>
@@ -205,7 +205,7 @@ export function LoginForm({
               type="button"
               onClick={() => setShowPassword((current) => !current)}
               disabled={pending}
-              className="absolute right-3 top-1/2 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-xl text-neutral-400 transition-all duration-200 hover:bg-[#f3eee5] hover:text-[#8e611e] focus:outline-none focus:ring-2 focus:ring-[#c99c38]/30 disabled:cursor-not-allowed disabled:opacity-50"
+              className="absolute right-3 top-1/2 z-10 grid size-10 -translate-y-1/2 place-items-center text-neutral-400 transition-all duration-200 hover:bg-[#f3eee5] hover:text-[#8e611e] focus:outline-none focus:ring-2 focus:ring-[#c99c38]/30 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
             >
@@ -221,7 +221,7 @@ export function LoginForm({
         <div className="flex items-center gap-2.5 pb-1 pt-0.5">
           <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#c99c38]/30 to-transparent" />
 
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.17em] text-neutral-400">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.17em] text-neutral-400">
             <ShieldCheck className="size-3.5 text-[#b17a28]" />
             Encrypted access
           </div>
@@ -233,23 +233,23 @@ export function LoginForm({
           type="submit"
           disabled={pending || !email.trim() || !password}
           className="
-            group relative inline-flex h-[62px] w-full
-            items-center justify-center gap-2.5
-            overflow-hidden rounded-[1.15rem]
-            border border-[#d2aa62]/40
-            bg-[linear-gradient(135deg,#d6b16a_0%,#ac782c_42%,#754716_100%)]
-            px-5 text-sm font-black text-white
-            shadow-[0_18px_38px_rgba(112,70,20,0.28),inset_0_1px_0_rgba(255,255,255,0.35)]
-            transition-all duration-300
-            hover:-translate-y-0.5
-            hover:shadow-[0_24px_50px_rgba(112,70,20,0.36),inset_0_1px_0_rgba(255,255,255,0.4)]
-            focus:outline-none
-            focus:ring-4
-            focus:ring-[#c99c38]/20
-            disabled:cursor-not-allowed
-            disabled:translate-y-0
-            disabled:opacity-50
-          "
+ group relative inline-flex h-[62px] w-full
+ items-center justify-center gap-2.5
+ overflow-hidden 
+ border border-[#d2aa62]/40
+ bg-[linear-gradient(135deg,#d6b16a_0%,#ac782c_42%,#754716_100%)]
+ px-5 text-sm font-semibold text-white
+ 
+ transition-all duration-300
+ hover:-translate-y-0.5
+ 
+ focus:outline-none
+ focus:ring-4
+ focus:ring-[#c99c38]/20
+ disabled:cursor-not-allowed
+ disabled:translate-y-0
+ disabled:opacity-50
+ "
         >
           <span className="pointer-events-none absolute inset-y-0 left-0 w-24 -translate-x-[150%] skew-x-[-20deg] bg-white/20 blur-sm transition-transform duration-700 group-hover:translate-x-[600%]" />
 
@@ -257,7 +257,7 @@ export function LoginForm({
 
           {pending ? (
             <>
-              <span className="relative size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <span className="relative size-4 animate-spin rounded-dot border-2 border-white/30 border-t-white" />
               <span className="relative">Verifying access...</span>
             </>
           ) : (
@@ -268,8 +268,8 @@ export function LoginForm({
           )}
         </button>
 
-        <div className="flex items-start gap-3.5 rounded-[1.15rem] border border-[#d9b76c]/40 bg-[linear-gradient(135deg,#fffaf0_0%,#fbf4e6_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#c99c38]/15 text-[#976318]">
+        <div className="flex items-start gap-3.5 border border-[#d9b76c]/40 bg-[linear-gradient(135deg,#fffaf0_0%,#fbf4e6_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+          <span className="grid size-9 shrink-0 place-items-center bg-[#c99c38]/15 text-[#976318]">
             <LockKeyhole className="size-4" />
           </span>
 

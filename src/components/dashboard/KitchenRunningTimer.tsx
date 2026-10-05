@@ -48,7 +48,7 @@ export function KitchenRunningTimer({
       suppressHydrationWarning
       title={stale ? 'This order has been open unusually long — check if it is still valid.' : undefined}
       className={cn(
-        'mt-2 rounded-full px-3 py-1 text-center text-[11px] font-black',
+        'mt-2 px-3 py-1 text-center text-[11px] font-semibold',
         stale
           ? 'bg-red-600 text-white dark:bg-red-500 dark:text-white'
           : 'bg-black text-white dark:bg-gold dark:text-black'

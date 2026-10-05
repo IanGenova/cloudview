@@ -153,15 +153,15 @@ function Toast({ message }: { message: Message }) {
       <div
         className={
           message.type === "success"
-            ? "flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl"
-            : "flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl"
+            ? "flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl"
+            : "flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl"
         }
       >
         <div
           className={
             message.type === "success"
-              ? "grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"
-              : "grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white"
+              ? "grid size-9 shrink-0 place-items-center bg-emerald-600 text-white"
+              : "grid size-9 shrink-0 place-items-center bg-red-600 text-white"
           }
         >
           {message.type === "success" ? (
@@ -172,7 +172,7 @@ function Toast({ message }: { message: Message }) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === "success" ? "Success" : "Action failed"}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -181,7 +181,7 @@ function Toast({ message }: { message: Message }) {
         <button
           type="button"
           onClick={() => setVisible(false)}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -204,10 +204,10 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-white p-4 sm:gap-4 sm:p-6">
           <div>
-            <h2 className="text-xl font-black">{title}</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             {description ? (
               <p className="mt-1 text-sm text-neutral-500">{description}</p>
             ) : null}
@@ -216,7 +216,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+            className="grid size-9 shrink-0 place-items-center bg-neutral-100 text-sm font-semibold hover:bg-neutral-200"
             aria-label="Close modal"
           >
             ✕
@@ -254,7 +254,7 @@ function ConfirmDeleteForm({
       <input type="hidden" name={hiddenName} value={hiddenValue} />
       <button
         type="submit"
-        className="h-9 w-full rounded-xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
+        className="h-9 w-full bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
       >
         {label}
       </button>
@@ -314,13 +314,13 @@ function CoverPhotoField({
   const displayImageUrl = previewUrl || imageUrl || "";
 
   return (
-    <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
-      <label className="mb-3 block text-xs font-black uppercase text-neutral-500">
+    <div className="border border-neutral-200 bg-neutral-50 p-4">
+      <label className="mb-3 block text-xs font-semibold uppercase text-neutral-500">
         {label}
       </label>
 
       <div className="grid gap-4 md:grid-cols-[180px_1fr]">
-        <div className="flex h-32 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+        <div className="flex h-32 items-center justify-center overflow-hidden border border-neutral-200 bg-white">
           {displayImageUrl ? (
             <img
               src={displayImageUrl}
@@ -330,7 +330,7 @@ function CoverPhotoField({
           ) : (
             <div className="flex flex-col items-center text-neutral-400">
               <ImageIcon className="size-8" />
-              <span className="mt-2 text-xs font-black">No cover yet</span>
+              <span className="mt-2 text-xs font-semibold">No cover yet</span>
             </div>
           )}
         </div>
@@ -342,7 +342,7 @@ function CoverPhotoField({
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={handleCoverImageChange}
-              className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+              className="block w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-[#c99c38]/50"
             />
 
             <p className="mt-1 text-xs font-bold text-neutral-500">
@@ -351,20 +351,20 @@ function CoverPhotoField({
             </p>
 
             {fileName ? (
-              <p className="mt-2 text-xs font-black text-[#9d741f]">
+              <p className="mt-2 text-xs font-semibold text-[#9d741f]">
                 Selected: {fileName}
               </p>
             ) : null}
 
             {error ? (
-              <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700">
+              <p className="mt-2 border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
                 {error}
               </p>
             ) : null}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Or Paste Cover Image URL
             </label>
             <input
@@ -372,7 +372,7 @@ function CoverPhotoField({
               name="imageUrl"
               defaultValue={imageUrl ?? ""}
               placeholder="https://..."
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
         </div>
@@ -435,10 +435,10 @@ function PanoramaField({
   const displayImageUrl = previewUrl || panoramaImageUrl || "";
 
   return (
-    <div className="rounded-[1.5rem] border border-[#c99c38]/30 bg-[#fffaf0] p-4">
+    <div className="border border-[#c99c38]/30 bg-[#fffaf0] p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <label className="block text-xs font-black uppercase tracking-wide text-[#9d741f]">
+          <label className="block text-xs font-semibold uppercase tracking-wide text-[#9d741f]">
             {label}
           </label>
           <p className="mt-1 text-xs font-bold text-neutral-500">
@@ -446,7 +446,7 @@ function PanoramaField({
           </p>
         </div>
 
-        <label className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/40 bg-white px-3 py-2 text-xs font-black text-neutral-800">
+        <label className="inline-flex items-center gap-2 border border-[#c99c38]/40 bg-white px-3 py-2 text-xs font-semibold text-neutral-800">
           <input
             type="checkbox"
             name="panoramaEnabled"
@@ -459,7 +459,7 @@ function PanoramaField({
       </div>
 
       <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-        <div className="flex h-36 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+        <div className="flex h-36 items-center justify-center overflow-hidden border border-neutral-200 bg-white">
           {displayImageUrl ? (
             <img
               src={displayImageUrl}
@@ -469,7 +469,7 @@ function PanoramaField({
           ) : (
             <div className="flex flex-col items-center text-neutral-400">
               <ImageIcon className="size-8" />
-              <span className="mt-2 text-xs font-black">No 360° image</span>
+              <span className="mt-2 text-xs font-semibold">No 360° image</span>
             </div>
           )}
         </div>
@@ -481,7 +481,7 @@ function PanoramaField({
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={handlePanoramaChange}
-              className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+              className="block w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-[#c99c38]/50"
             />
 
             <p className="mt-1 text-xs font-bold text-neutral-500">
@@ -489,20 +489,20 @@ function PanoramaField({
             </p>
 
             {fileName ? (
-              <p className="mt-2 text-xs font-black text-[#9d741f]">
+              <p className="mt-2 text-xs font-semibold text-[#9d741f]">
                 Selected: {fileName}
               </p>
             ) : null}
 
             {error ? (
-              <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700">
+              <p className="mt-2 border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
                 {error}
               </p>
             ) : null}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Or Paste 360° Panorama URL
             </label>
             <input
@@ -510,7 +510,7 @@ function PanoramaField({
               name="panoramaImageUrl"
               defaultValue={panoramaImageUrl ?? ""}
               placeholder="https://yourdomain.com/pool-360.jpg"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
         </div>
@@ -534,7 +534,7 @@ function SectionFormFields({
     <>
       {!section ? (
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Hotel
           </label>
           <Select
@@ -553,7 +553,7 @@ function SectionFormFields({
 
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Section Title      </label>
           <input
             aria-label="Dining"
@@ -561,12 +561,12 @@ function SectionFormFields({
             required
             defaultValue={section?.title ?? ""}
             placeholder="Dining"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Subtitle
           </label>
           <input
@@ -574,13 +574,13 @@ function SectionFormFields({
             name="subtitle"
             defaultValue={section?.subtitle ?? ""}
             placeholder="Explore our restaurants and bars"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+        <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
           Description
         </label>
         <textarea
@@ -589,7 +589,7 @@ function SectionFormFields({
           rows={3}
           defaultValue={section?.description ?? ""}
           placeholder="Short description for this guide section."
-          className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
+          className="w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
         />
       </div>
 
@@ -605,7 +605,7 @@ function SectionFormFields({
 
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Icon
           </label>
           <Select name="iconKey" defaultValue={section?.iconKey ?? "Info"}>
@@ -618,14 +618,14 @@ function SectionFormFields({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Sort Order   </label>
           <input
             name="sortOrder"
             type="number"
             step="1"
             defaultValue={section?.sortOrder ?? 0}
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
       </div>
@@ -657,7 +657,7 @@ function ItemFormFields({
     <>
       {!item ? (
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Section
           </label>
           <Select
@@ -675,7 +675,7 @@ function ItemFormFields({
 
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Item Title   </label>
           <input
             aria-label="Wi-Fi"
@@ -683,12 +683,12 @@ function ItemFormFields({
             required
             defaultValue={item?.title ?? ""}
             placeholder="Wi-Fi"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Subtitle
           </label>
           <input
@@ -696,13 +696,13 @@ function ItemFormFields({
             name="subtitle"
             defaultValue={item?.subtitle ?? ""}
             placeholder="Guest internet access"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+        <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
           Content
         </label>
         <textarea
@@ -711,13 +711,13 @@ function ItemFormFields({
           rows={5}
           defaultValue={item?.content ?? ""}
           placeholder="Write the guide information here."
-          className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
+          className="w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-neutral-400"
         />
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Type
           </label>
           <Select
@@ -733,7 +733,7 @@ function ItemFormFields({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Icon
           </label>
           <Select name="iconKey" defaultValue={item?.iconKey ?? "Info"}>
@@ -746,21 +746,21 @@ function ItemFormFields({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Sort Order   </label>
           <input
             name="sortOrder"
             type="number"
             step="1"
             defaultValue={item?.sortOrder ?? 0}
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Hours
           </label>
           <input
@@ -768,12 +768,12 @@ function ItemFormFields({
             name="hours"
             defaultValue={item?.hours ?? ""}
             placeholder="e.g. 7:00 AM - 9:00 PM"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Location
           </label>
           <input
@@ -781,12 +781,12 @@ function ItemFormFields({
             name="location"
             defaultValue={item?.location ?? ""}
             placeholder="e.g. Pool Deck, Ground Floor, Lobby"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Contact / Extension
           </label>
           <input
@@ -794,12 +794,12 @@ function ItemFormFields({
             name="contact"
             defaultValue={item?.contact ?? ""}
             placeholder="e.g. Front Desk 0, Housekeeping 102"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Map URL
           </label>
           <input
@@ -807,12 +807,12 @@ function ItemFormFields({
             name="mapUrl"
             defaultValue={item?.mapUrl ?? ""}
             placeholder="Paste Google Maps or internal location link"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Button Label
           </label>
           <input
@@ -820,12 +820,12 @@ function ItemFormFields({
             name="buttonLabel"
             defaultValue={item?.buttonLabel ?? ""}
             placeholder="e.g. View Menu, Request Service, Open Pool Page"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Button Link
           </label>
           <input
@@ -833,13 +833,13 @@ function ItemFormFields({
             name="buttonHref"
             defaultValue={item?.buttonHref ?? ""}
             placeholder="e.g. menu, service, pool, https://..."
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+        <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
           Cover Image URL
         </label>
         <CoverPhotoField
@@ -871,7 +871,7 @@ function ItemFormFields({
 function GalleryPreview({ images }: { images: GuideImage[] }) {
   if (!images.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-neutral-300 p-4 text-center text-xs font-bold text-neutral-400">
+      <div className="border border-dashed border-neutral-300 p-4 text-center text-xs font-bold text-neutral-400">
         No gallery images yet.
       </div>
     );
@@ -882,7 +882,7 @@ function GalleryPreview({ images }: { images: GuideImage[] }) {
       {images.map((image) => (
         <div
           key={image.id}
-          className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+          className="overflow-hidden border border-neutral-200 bg-white"
         >
           <div
             className="h-28 bg-neutral-100 bg-cover bg-center"
@@ -893,15 +893,15 @@ function GalleryPreview({ images }: { images: GuideImage[] }) {
 
           <div className="p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-xs font-black">
+              <p className="truncate text-xs font-semibold">
                 {presentableImageTitle(image.title) || "Untitled photo"}
               </p>
 
               <span
                 className={
                   image.isActive
-                    ? "rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black text-emerald-700"
-                    : "rounded-full bg-neutral-100 px-2 py-1 text-[9px] font-black text-neutral-500"
+                    ? "bg-emerald-100 px-2 py-1 text-[9px] font-semibold text-emerald-700"
+                    : "bg-neutral-100 px-2 py-1 text-[9px] font-semibold text-neutral-500"
                 }
               >
                 {image.isActive ? "ACTIVE" : "HIDDEN"}
@@ -1088,7 +1088,7 @@ function UploadImageModal({
           <input type="hidden" name="sectionId" value={section.id} />
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Section
             </label>
             <Select name="sectionId" defaultValue={sections[0]?.id ?? ""}>
@@ -1101,17 +1101,17 @@ function UploadImageModal({
           </div>
         )}
 
-        <div className="rounded-2xl border border-[#c99c38]/20 bg-[#fffaf0] px-4 py-3">
-          <p className="text-xs font-black uppercase tracking-wide text-[#9d741f]">
+        <div className="border border-[#c99c38]/20 bg-[#fffaf0] px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#9d741f]">
             Upload Target
           </p>
-          <p className="mt-1 text-sm font-black text-neutral-800">
+          <p className="mt-1 text-sm font-semibold text-neutral-800">
             {uploadTargetLabel}
           </p>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Image Files
           </label>
 
@@ -1123,7 +1123,7 @@ function UploadImageModal({
             multiple
             required
             onChange={handleImagesChange}
-            className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:rounded-xl file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:border-[#c99c38]/50"
+            className="block w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold transition file:mr-4 file:border-0 file:bg-[#11100b] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-[#c99c38]/50"
           />
 
           <p className="mt-1 text-xs text-neutral-500">
@@ -1132,20 +1132,20 @@ function UploadImageModal({
           </p>
 
           {previewError ? (
-            <p className="mt-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700">
+            <p className="mt-2 border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
               {previewError}
             </p>
           ) : null}
         </div>
 
         {previews.length ? (
-          <div className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-sm">
+          <div className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                   Image Preview
                 </p>
-                <p className="mt-1 text-sm font-black text-neutral-800">
+                <p className="mt-1 text-sm font-semibold text-neutral-800">
                   {previews.length} image{previews.length === 1 ? "" : "s"}{" "}
                   selected
                 </p>
@@ -1154,7 +1154,7 @@ function UploadImageModal({
               <button
                 type="button"
                 onClick={clearPreviews}
-                className="h-9 rounded-2xl border border-neutral-200 px-4 text-xs font-black hover:bg-neutral-50"
+                className="h-9 border border-neutral-200 px-4 text-xs font-semibold hover:bg-neutral-50"
               >
                 Clear Preview
               </button>
@@ -1164,7 +1164,7 @@ function UploadImageModal({
               {previews.map((preview) => (
                 <div
                   key={preview.id}
-                  className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+                  className="group relative overflow-hidden border border-neutral-200 bg-white"
                 >
                   <button
                     type="button"
@@ -1185,7 +1185,7 @@ function UploadImageModal({
 
                       <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
 
-                      <span className="absolute left-3 top-3 grid size-8 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+                      <span className="absolute left-3 top-3 grid size-8 place-items-center bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
                         <Maximize2 className="size-4" />
                       </span>
                     </div>
@@ -1194,7 +1194,7 @@ function UploadImageModal({
                   <button
                     type="button"
                     onClick={() => removePreview(preview.id)}
-                    className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-700"
+                    className="absolute right-3 top-3 grid size-8 place-items-center bg-red-600 text-white shadow-lg transition hover:bg-red-700"
                     title="Remove from upload"
                     aria-label="Remove from upload"
                   >
@@ -1202,7 +1202,7 @@ function UploadImageModal({
                   </button>
 
                   <div className="p-3">
-                    <p className="truncate text-xs font-black text-neutral-800">
+                    <p className="truncate text-xs font-semibold text-neutral-800">
                       {preview.name}
                     </p>
                     <p className="mt-1 text-xs font-bold text-neutral-500">
@@ -1214,8 +1214,8 @@ function UploadImageModal({
             </div>
           </div>
         ) : (
-          <div className="rounded-[1.5rem] border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
-            <p className="text-sm font-black text-neutral-600">
+          <div className="border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
+            <p className="text-sm font-semibold text-neutral-600">
               No images selected yet.
             </p>
             <p className="mt-1 text-xs font-bold text-neutral-400">
@@ -1226,14 +1226,14 @@ function UploadImageModal({
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Base Image Title
             </label>
             <input
             aria-label="Pool Area"
               name="title"
               placeholder="Pool Area"
-              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+              className="h-11 w-full border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
             />
             <p className="mt-1 text-xs text-neutral-500">
               For multiple images, the system will append a number to this
@@ -1242,14 +1242,14 @@ function UploadImageModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Starting Sort Order
             </label>
             <input
               name="sortOrder"
               type="number"
               defaultValue={0}
-              className="h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+              className="h-11 w-full border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
             />
             <p className="mt-1 text-xs text-neutral-500">
               Each next image increases the sort order by 1.
@@ -1258,7 +1258,7 @@ function UploadImageModal({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Caption
           </label>
           <textarea
@@ -1266,7 +1266,7 @@ function UploadImageModal({
             name="caption"
             rows={3}
             placeholder="Short caption for these images"
-            className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+            className="w-full border border-neutral-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           />
           <p className="mt-1 text-xs text-neutral-500">
             The same caption will be applied to all selected images.
@@ -1288,7 +1288,7 @@ function UploadImageModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1319,15 +1319,15 @@ function StatusPill({ isActive }: { isActive: boolean }) {
     <span
       className={
         isActive
-          ? "inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-700"
-          : "inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black uppercase text-neutral-500"
+          ? "inline-flex items-center gap-1.5 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase text-emerald-700"
+          : "inline-flex items-center gap-1.5 bg-neutral-100 px-3 py-1 text-[10px] font-semibold uppercase text-neutral-500"
       }
     >
       <span
         className={
           isActive
-            ? "size-1.5 rounded-full bg-emerald-500"
-            : "size-1.5 rounded-full bg-neutral-400"
+            ? "size-1.5 rounded-dot bg-emerald-500"
+            : "size-1.5 rounded-dot bg-neutral-400"
         }
       />
       {isActive ? "Active" : "Hidden"}
@@ -1347,17 +1347,17 @@ function SummaryCard({
   icon: typeof Layers;
 }) {
   return (
-    <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+    <div className="border border-neutral-200 bg-white p-5">
       <div className="flex items-center gap-4">
-        <span className="grid size-13 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]">
+        <span className="grid size-13 place-items-center bg-[#f7f1e5] text-[#c99c38]">
           <Icon className="size-6" />
         </span>
 
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             {label}
           </p>
-          <p className="mt-1 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-3xl font-semibold">{value}</p>
           <p className="mt-1 text-xs font-bold text-neutral-500">
             {description}
           </p>
@@ -1383,13 +1383,13 @@ function ImageLightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-5 top-5 grid size-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+        className="absolute right-5 top-5 grid size-11 place-items-center bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
         aria-label="Close full screen preview"
       >
         <X className="size-5" />
       </button>
 
-      <div className="flex max-h-[92dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] bg-black shadow-2xl">
+      <div className="flex max-h-[92dvh] w-full max-w-6xl flex-col overflow-hidden bg-black shadow-2xl">
         <div className="min-h-0 flex-1 bg-black">
           <img
             src={image.imageUrl}
@@ -1401,7 +1401,7 @@ function ImageLightbox({
         {presentableImageTitle(image.title) || image.caption ? (
           <div className="border-t border-white/10 bg-black px-5 py-4 text-white">
             {presentableImageTitle(image.title) ? (
-              <p className="text-sm font-black">
+              <p className="text-sm font-semibold">
                 {presentableImageTitle(image.title)}
               </p>
             ) : null}
@@ -1437,14 +1437,14 @@ function ConfirmDeleteDialog({
 }) {
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+      <div className="w-full max-w-md overflow-hidden bg-white shadow-2xl">
         <div className="flex items-start gap-4 border-b border-neutral-100 p-6">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-red-50 text-red-600">
+          <span className="grid size-12 shrink-0 place-items-center bg-red-50 text-red-600">
             <AlertTriangle className="size-6" />
           </span>
 
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-black text-neutral-950">{title}</h3>
+            <h3 className="text-lg font-semibold text-neutral-950">{title}</h3>
             <p className="mt-2 text-sm font-semibold leading-6 text-neutral-600">
               {message}
             </p>
@@ -1453,7 +1453,7 @@ function ConfirmDeleteDialog({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200"
+            className="grid size-9 shrink-0 place-items-center bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200"
             aria-label="Close confirmation"
           >
             <X className="size-4" />
@@ -1466,14 +1466,14 @@ function ConfirmDeleteDialog({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black text-neutral-700 transition hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            className="h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700"
+            className="h-11 bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700"
           >
             {confirmLabel}
           </button>
@@ -1497,7 +1497,7 @@ function GalleryImageDeleteButton({
       <button
         type="button"
         onClick={() => setConfirmingDelete(true)}
-        className="grid size-8 place-items-center rounded-full bg-red-600 text-white shadow-lg transition hover:bg-red-700"
+        className="grid size-8 place-items-center bg-red-600 text-white shadow-lg transition hover:bg-red-700"
         title="Delete image"
         aria-label="Delete image"
       >
@@ -1534,7 +1534,7 @@ function MiniGallery({ images }: { images: GuideImage[] }) {
         {images.slice(0, 6).map((image) => (
           <div
             key={image.id}
-            className="group relative size-20 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-sm"
+            className="group relative size-20 overflow-hidden border border-neutral-200 bg-neutral-100 shadow-sm"
           >
             <button
               type="button"
@@ -1548,7 +1548,7 @@ function MiniGallery({ images }: { images: GuideImage[] }) {
             >
               <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
 
-              <span className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+              <span className="absolute left-2 top-2 grid size-7 place-items-center bg-black/60 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
                 <Maximize2 className="size-3.5" />
               </span>
             </button>
@@ -1563,7 +1563,7 @@ function MiniGallery({ images }: { images: GuideImage[] }) {
           <button
             type="button"
             onClick={() => setSelectedImage(images[6])}
-            className="grid size-20 place-items-center rounded-2xl border border-neutral-200 bg-neutral-50 text-xs font-black text-neutral-500 transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
+            className="grid size-20 place-items-center border border-neutral-200 bg-neutral-50 text-xs font-semibold text-neutral-500 transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0]"
           >
             +{images.length - 6}
           </button>
@@ -1605,7 +1605,7 @@ function InlineDeleteForm({
       <input type="hidden" name={hiddenName} value={hiddenValue} />
       <button
         type="submit"
-        className="inline-flex h-10 items-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 text-xs font-black text-red-600 transition hover:border-red-200 hover:bg-red-100"
+        className="inline-flex h-10 items-center gap-2 border border-red-100 bg-red-50 px-4 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-100"
       >
         <Trash2 className="size-4" />
         {label}
@@ -1736,17 +1736,17 @@ function GuideItemRow({
   onUpload: (item: GuideItem) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]">
+    <div className="border border-neutral-200 bg-white p-4 transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]">
       <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="size-2 rounded-full bg-[#c99c38]" />
+            <span className="size-2 rounded-dot bg-[#c99c38]" />
 
-            <h4 className="font-black">{item.title}</h4>
+            <h4 className="font-semibold">{item.title}</h4>
 
             <StatusPill isActive={item.isActive} />
 
-            <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-black uppercase text-neutral-500">
+            <span className="bg-neutral-100 px-2 py-1 text-[10px] font-semibold uppercase text-neutral-500">
               Sort {item.sortOrder}
             </span>
           </div>
@@ -1779,7 +1779,7 @@ function GuideItemRow({
           <button
             type="button"
             onClick={() => onEdit(item)}
-            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-neutral-200 px-4 text-xs font-black transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5]"
+            className="inline-flex h-10 items-center gap-2 border border-neutral-200 px-4 text-xs font-semibold transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5]"
           >
             <Pencil className="size-4" />
             Edit
@@ -1788,7 +1788,7 @@ function GuideItemRow({
           <button
             type="button"
             onClick={() => onUpload(item)}
-            className="inline-flex h-10 items-center gap-2 rounded-2xl bg-[#11100b] px-4 text-xs font-black text-white transition hover:bg-black"
+            className="inline-flex h-10 items-center gap-2 bg-[#11100b] px-4 text-xs font-semibold text-white transition hover:bg-black"
           >
             <Upload className="size-4 text-[#c99c38]" />
             Upload Image
@@ -1823,7 +1823,7 @@ function SectionNavigationCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-2xl border p-3 text-left transition",
+        "w-full border p-3 text-left transition",
         selected
           ? "border-[#11100b] bg-[#11100b] text-white shadow-lg"
           : "border-neutral-200 bg-white text-neutral-900 hover:border-[#c99c38]/60 hover:bg-[#fffaf0]",
@@ -1832,7 +1832,7 @@ function SectionNavigationCard({
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl",
+            "mt-0.5 grid size-9 shrink-0 place-items-center",
             selected
               ? "bg-[#d6a738] text-black"
               : "bg-[#f7f1e5] text-[#a8781d]",
@@ -1843,7 +1843,7 @@ function SectionNavigationCard({
 
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
-            <span className="truncate text-sm font-black">{section.title}</span>
+            <span className="truncate text-sm font-semibold">{section.title}</span>
             <ChevronRight
               className={cn(
                 "size-4 shrink-0",
@@ -1863,7 +1863,7 @@ function SectionNavigationCard({
 
           <span
             className={cn(
-              "mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-black uppercase tracking-wide",
+              "mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold uppercase tracking-wide",
               selected ? "text-white/45" : "text-neutral-400",
             )}
           >
@@ -1903,9 +1903,9 @@ function SelectedSectionWorkspace({
 
   return (
     <div className="min-w-0">
-      <section className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-sm">
+      <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
         <div className="grid gap-5 p-5 xl:grid-cols-[190px_minmax(0,1fr)]">
-          <div className="relative h-40 overflow-hidden rounded-2xl bg-neutral-100 xl:h-full xl:min-h-44">
+          <div className="relative h-40 overflow-hidden bg-neutral-100 xl:h-full xl:min-h-44">
             {coverImage ? (
               <img
                 src={coverImage}
@@ -1918,7 +1918,7 @@ function SelectedSectionWorkspace({
               </div>
             )}
 
-            <span className="absolute left-3 top-3 rounded-full bg-black/65 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur">
+            <span className="absolute left-3 top-3 bg-black/65 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur">
               Section
             </span>
           </div>
@@ -1927,7 +1927,7 @@ function SelectedSectionWorkspace({
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-black text-neutral-950">
+                  <h2 className="text-2xl font-semibold text-neutral-950">
                     {section.title}
                   </h2>
                   <StatusPill isActive={section.isActive} />
@@ -1937,14 +1937,14 @@ function SelectedSectionWorkspace({
                   {section.subtitle || "No subtitle added"}
                 </p>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black text-neutral-500">
-                  <span className="rounded-full bg-neutral-100 px-3 py-1.5">
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-neutral-500">
+                  <span className="bg-neutral-100 px-3 py-1.5">
                     {section.hotelName}
                   </span>
-                  <span className="rounded-full bg-neutral-100 px-3 py-1.5">
+                  <span className="bg-neutral-100 px-3 py-1.5">
                     Sort {section.sortOrder}
                   </span>
-                  <span className="rounded-full bg-neutral-100 px-3 py-1.5">
+                  <span className="bg-neutral-100 px-3 py-1.5">
                     {section.items.length} guide items
                   </span>
                 </div>
@@ -1965,7 +1965,7 @@ function SelectedSectionWorkspace({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#c99c38]/50 bg-[#fffaf0] px-4 text-xs font-black text-[#8a651f] transition hover:border-[#c99c38] hover:bg-[#fff3d6]"
+                    className="inline-flex h-10 items-center gap-2 border border-[#c99c38]/50 bg-[#fffaf0] px-4 text-xs font-semibold text-[#8a651f] transition hover:border-[#c99c38] hover:bg-[#fff3d6]"
                   >
                     <ExternalLink className="size-4" />
                     View as guest
@@ -1975,7 +1975,7 @@ function SelectedSectionWorkspace({
                 <button
                   type="button"
                   onClick={() => onEditSection(section)}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black transition hover:border-[#c99c38]/60 hover:bg-[#fffaf0]"
+                  className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-4 text-xs font-semibold transition hover:border-[#c99c38]/60 hover:bg-[#fffaf0]"
                 >
                   <Pencil className="size-4" />
                   Edit
@@ -1984,7 +1984,7 @@ function SelectedSectionWorkspace({
                 <button
                   type="button"
                   onClick={() => onUploadSection(section)}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#11100b] px-4 text-xs font-black text-white transition hover:bg-black"
+                  className="inline-flex h-10 items-center gap-2 bg-[#11100b] px-4 text-xs font-semibold text-white transition hover:bg-black"
                 >
                   <Upload className="size-4 text-[#d6a738]" />
                   Photos
@@ -2016,13 +2016,13 @@ function SelectedSectionWorkspace({
         </div>
       </section>
 
-      <section className="mt-4 overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-sm">
+      <section className="mt-4 overflow-hidden border border-neutral-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88938]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b88938]">
               Content inside this section
             </p>
-            <h3 className="mt-1 text-lg font-black text-neutral-950">
+            <h3 className="mt-1 text-lg font-semibold text-neutral-950">
               Guide Items ({visibleItems.length})
             </h3>
             <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -2033,7 +2033,7 @@ function SelectedSectionWorkspace({
           <button
             type="button"
             onClick={() => onCreateItem(section.id)}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#d6a738] px-4 py-2 text-xs font-black text-black transition hover:bg-[#e6bd59]"
+            className="inline-flex min-h-10 items-center justify-center gap-2 bg-[#d6a738] px-4 py-2 text-xs font-semibold text-black transition hover:bg-[#e6bd59]"
           >
             <Plus className="size-4" />
             Add Guide Item
@@ -2051,9 +2051,9 @@ function SelectedSectionWorkspace({
           ))}
 
           {!visibleItems.length ? (
-            <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-center">
+            <div className="border border-dashed border-neutral-300 bg-white p-8 text-center">
               <FileText className="mx-auto size-8 text-neutral-300" />
-              <p className="mt-3 font-black text-neutral-700">
+              <p className="mt-3 font-semibold text-neutral-700">
                 No matching guide items
               </p>
               <p className="mt-1 text-sm font-medium text-neutral-500">
@@ -2258,13 +2258,13 @@ export function HotelGuideClient({
       <Toast message={message} />
 
       <div className="space-y-4">
-        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
+        <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-5 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#b88938]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b88938]">
                 Hotel setup · Guest experience
               </p>
-              <h2 className="mt-1 text-3xl font-black tracking-tight text-[#11100b]">
+              <h2 className="mt-1 text-3xl font-semibold tracking-tight text-[#11100b]">
                 Hotel Guide
               </h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-neutral-500">
@@ -2274,7 +2274,7 @@ export function HotelGuideClient({
 
               {selectedHotel ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/30 bg-[#fffaf0] px-3 py-1.5 text-xs font-black text-[#8a651f]">
+                  <div className="inline-flex items-center gap-2 border border-[#c99c38]/30 bg-[#fffaf0] px-3 py-1.5 text-xs font-semibold text-[#8a651f]">
                     <Building2 className="size-4" />
                     Managing: {selectedHotel.name}
                   </div>
@@ -2284,7 +2284,7 @@ export function HotelGuideClient({
                       href={withGuestReturnPath(guestPreviewUrl, "guide")}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-black text-neutral-700 transition hover:border-[#c99c38]/60 hover:bg-[#fffaf0]"
+                      className="inline-flex items-center gap-2 border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:border-[#c99c38]/60 hover:bg-[#fffaf0]"
                     >
                       <ExternalLink className="size-4 text-[#c99c38]" />
                       Open guest guide
@@ -2298,7 +2298,7 @@ export function HotelGuideClient({
               <button
                 type="button"
                 onClick={() => setCreatingSection(true)}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#11100b] px-5 py-3 text-sm font-black text-white transition hover:bg-black"
+                className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#11100b] px-5 py-3 text-sm font-semibold text-white transition hover:bg-black"
               >
                 <Plus className="size-4 text-[#d6a738]" />
                 New Section
@@ -2308,7 +2308,7 @@ export function HotelGuideClient({
                 type="button"
                 onClick={() => openCreateItem(selectedSection?.id)}
                 disabled={!sections.length}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#d6a738] px-5 py-3 text-sm font-black text-black transition hover:bg-[#e6bd59] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#d6a738] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#e6bd59] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="size-4" />
                 New Guide Item
@@ -2318,33 +2318,33 @@ export function HotelGuideClient({
 
           <div className="grid border-t border-neutral-100 bg-neutral-50 sm:grid-cols-4">
             <div className="border-b border-neutral-200 px-5 py-4 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-wide text-neutral-400">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Sections
               </p>
-              <p className="mt-1 text-xl font-black">{sections.length}</p>
+              <p className="mt-1 text-xl font-semibold">{sections.length}</p>
             </div>
             <div className="border-b border-neutral-200 px-5 py-4 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-wide text-neutral-400">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Published
               </p>
-              <p className="mt-1 text-xl font-black">{publishedSections}</p>
+              <p className="mt-1 text-xl font-semibold">{publishedSections}</p>
             </div>
             <div className="border-b border-neutral-200 px-5 py-4 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-wide text-neutral-400">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Guide Items
               </p>
-              <p className="mt-1 text-xl font-black">{totalItems}</p>
+              <p className="mt-1 text-xl font-semibold">{totalItems}</p>
             </div>
             <div className="px-5 py-4">
-              <p className="text-[10px] font-black uppercase tracking-wide text-neutral-400">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Photos
               </p>
-              <p className="mt-1 text-xl font-black">{totalImages}</p>
+              <p className="mt-1 text-xl font-semibold">{totalImages}</p>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+        <section className="border border-neutral-200 bg-white p-4 shadow-sm">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_230px_170px_190px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
@@ -2352,7 +2352,7 @@ export function HotelGuideClient({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search sections, items, hours, location, or content..."
-                className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:bg-white focus:ring-4 focus:ring-[#c99c38]/10"
+                className="h-11 w-full border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:bg-white focus:ring-4 focus:ring-[#c99c38]/10"
               />
             </div>
 
@@ -2362,7 +2362,7 @@ export function HotelGuideClient({
                 value={defaultHotelId}
                 onChange={(event) => handleHotelChange(event.target.value)}
                 disabled={!canChangeHotel || hotels.length <= 1}
-                className="h-11 w-full appearance-none rounded-xl border border-[#c99c38]/35 bg-[#fffaf0] pl-10 pr-9 text-sm font-black text-neutral-900 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
+                className="h-11 w-full appearance-none border border-[#c99c38]/35 bg-[#fffaf0] pl-10 pr-9 text-sm font-semibold text-neutral-900 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500"
                 aria-label="Filter hotel guide by hotel"
               >
                 {hotels.map((hotel) => (
@@ -2380,7 +2380,7 @@ export function HotelGuideClient({
               onChange={(event) =>
                 setStatusFilter(event.target.value as StatusFilter)
               }
-              className="h-11 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-black outline-none focus:border-[#c99c38]"
+              className="h-11 border border-neutral-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#c99c38]"
             >
               <option value="ALL">All status</option>
               <option value="ACTIVE">Published only</option>
@@ -2391,19 +2391,19 @@ export function HotelGuideClient({
             aria-label="Sort order"
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
-              className="h-11 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-black outline-none focus:border-[#c99c38]"
+              className="h-11 border border-neutral-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#c99c38]"
             >
               <option value="custom">Custom order</option>
               <option value="title-asc">Title A–Z</option>
               <option value="items-desc">Most items</option>
             </select>
 
-            <div className="flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+            <div className="flex border border-neutral-200 bg-neutral-50 p-1">
               <button
                 type="button"
                 onClick={() => setViewMode("sections")}
                 className={cn(
-                  "h-9 rounded-lg px-3 text-xs font-black transition",
+                  "h-9 px-3 text-xs font-semibold transition",
                   viewMode === "sections"
                     ? "bg-[#11100b] text-white shadow-sm"
                     : "text-neutral-500 hover:bg-white",
@@ -2415,7 +2415,7 @@ export function HotelGuideClient({
                 type="button"
                 onClick={() => setViewMode("items")}
                 className={cn(
-                  "h-9 rounded-lg px-3 text-xs font-black transition",
+                  "h-9 px-3 text-xs font-semibold transition",
                   viewMode === "items"
                     ? "bg-[#11100b] text-white shadow-sm"
                     : "text-neutral-500 hover:bg-white",
@@ -2442,7 +2442,7 @@ export function HotelGuideClient({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="rounded-lg px-3 py-2 text-xs font-black text-[#9d741f] hover:bg-[#fffaf0]"
+                className="px-3 py-2 text-xs font-semibold text-[#9d741f] hover:bg-[#fffaf0]"
               >
                 Clear filters
               </button>
@@ -2452,19 +2452,19 @@ export function HotelGuideClient({
 
         {viewMode === "sections" ? (
           <section className="grid gap-4 xl:grid-cols-[310px_minmax(0,1fr)] xl:items-start">
-            <aside className="rounded-[1.75rem] border border-neutral-200 bg-white p-3 shadow-sm xl:sticky xl:top-20">
+            <aside className="border border-neutral-200 bg-white p-3 shadow-sm xl:sticky xl:top-20">
               <div className="flex items-center justify-between px-2 pb-3 pt-1">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88938]">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b88938]">
                     Guide structure
                   </p>
-                  <p className="mt-1 text-sm font-black text-neutral-900">
+                  <p className="mt-1 text-sm font-semibold text-neutral-900">
                     {selectedHotel
                       ? `${selectedHotel.name} sections`
                       : "Select a section to manage"}
                   </p>
                 </div>
-                <span className="grid size-9 place-items-center rounded-xl bg-[#f7f1e5] text-[#a8781d]">
+                <span className="grid size-9 place-items-center bg-[#f7f1e5] text-[#a8781d]">
                   <Layers className="size-4" />
                 </span>
               </div>
@@ -2481,8 +2481,8 @@ export function HotelGuideClient({
               </div>
 
               {!visibleSections.length ? (
-                <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
-                  <p className="text-sm font-black text-neutral-700">
+                <div className="border border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
+                  <p className="text-sm font-semibold text-neutral-700">
                     No sections found
                   </p>
                   <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -2500,7 +2500,7 @@ export function HotelGuideClient({
                 that already exists.
               */}
               <details className="mt-3 border-t border-neutral-100 pt-3">
-                <summary className="cursor-pointer list-none rounded-xl px-3 py-2 text-xs font-black text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c99c38]">
+                <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-neutral-500 transition hover:bg-neutral-50 hover:text-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c99c38]">
                   Starter content
                 </summary>
 
@@ -2520,7 +2520,7 @@ export function HotelGuideClient({
                     <input type="hidden" name="hotelId" value={defaultHotelId} />
                     <button
                       type="submit"
-                      className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black hover:bg-neutral-50"
+                      className="h-10 w-full border border-neutral-200 bg-white px-3 text-xs font-semibold hover:bg-neutral-50"
                     >
                       Load starter guide
                     </button>
@@ -2541,7 +2541,7 @@ export function HotelGuideClient({
                     <input type="hidden" name="hotelId" value={defaultHotelId} />
                     <button
                       type="submit"
-                      className="h-10 w-full rounded-xl border border-[#c99c38]/40 bg-[#fffaf0] px-3 text-xs font-black text-[#9d741f] hover:bg-[#f7f1e5]"
+                      className="h-10 w-full border border-[#c99c38]/40 bg-[#fffaf0] px-3 text-xs font-semibold text-[#9d741f] hover:bg-[#f7f1e5]"
                     >
                       Load pool content
                     </button>
@@ -2562,9 +2562,9 @@ export function HotelGuideClient({
                 onUploadItem={setUploadItem}
               />
             ) : (
-              <div className="rounded-[1.75rem] border border-dashed border-neutral-300 bg-white p-12 text-center shadow-sm">
+              <div className="border border-dashed border-neutral-300 bg-white p-12 text-center shadow-sm">
                 <Layers className="mx-auto size-10 text-neutral-300" />
-                <p className="mt-4 text-lg font-black text-neutral-800">
+                <p className="mt-4 text-lg font-semibold text-neutral-800">
                   Create your first guide section
                 </p>
                 <p className="mt-2 text-sm font-semibold text-neutral-500">
@@ -2574,7 +2574,7 @@ export function HotelGuideClient({
                 <button
                   type="button"
                   onClick={() => setCreatingSection(true)}
-                  className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-[#11100b] px-5 text-sm font-black text-white"
+                  className="mt-5 inline-flex h-11 items-center gap-2 bg-[#11100b] px-5 text-sm font-semibold text-white"
                 >
                   <Plus className="size-4 text-[#d6a738]" />
                   Create Section
@@ -2583,13 +2583,13 @@ export function HotelGuideClient({
             )}
           </section>
         ) : (
-          <section className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-sm">
+          <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#b88938]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b88938]">
                   All content
                 </p>
-                <h2 className="mt-1 text-xl font-black">All Guide Items</h2>
+                <h2 className="mt-1 text-xl font-semibold">All Guide Items</h2>
                 <p className="mt-1 text-xs font-semibold text-neutral-500">
                   Edit an individual item without opening its section first.
                 </p>
@@ -2599,7 +2599,7 @@ export function HotelGuideClient({
                 type="button"
                 onClick={() => openCreateItem()}
                 disabled={!sections.length}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#d6a738] px-4 py-2 text-xs font-black text-black disabled:opacity-50"
+                className="inline-flex min-h-10 items-center justify-center gap-2 bg-[#d6a738] px-4 py-2 text-xs font-semibold text-black disabled:opacity-50"
               >
                 <Plus className="size-4" />
                 Add Guide Item
@@ -2618,9 +2618,9 @@ export function HotelGuideClient({
               ))}
 
               {!flatVisibleItems.length ? (
-                <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center">
+                <div className="border border-dashed border-neutral-300 bg-white p-10 text-center">
                   <FileText className="mx-auto size-8 text-neutral-300" />
-                  <p className="mt-3 font-black">No guide items found</p>
+                  <p className="mt-3 font-semibold">No guide items found</p>
                   <p className="mt-1 text-sm text-neutral-500">
                     Adjust your filters or add a new guide item.
                   </p>
@@ -2648,7 +2648,7 @@ export function HotelGuideClient({
               <button
                 type="button"
                 onClick={() => setCreatingSection(false)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
               >
                 Cancel
               </button>
@@ -2674,7 +2674,7 @@ export function HotelGuideClient({
               <button
                 type="button"
                 onClick={closeCreateItem}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
               >
                 Cancel
               </button>
@@ -2703,7 +2703,7 @@ export function HotelGuideClient({
               <button
                 type="button"
                 onClick={() => setEditingSection(null)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
               >
                 Cancel
               </button>
@@ -2727,7 +2727,7 @@ export function HotelGuideClient({
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}
-                className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+                className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
               >
                 Cancel
               </button>

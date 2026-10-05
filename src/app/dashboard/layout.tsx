@@ -49,9 +49,9 @@ export default async function DashboardLayout({
                   Signed in as
                 </p>
 
-                <p className="flex min-w-0 items-center gap-2 truncate text-sm font-black text-[var(--cv-text)] dark:text-white sm:text-base">
+                <p className="flex min-w-0 items-center gap-2 truncate text-sm font-semibold text-[var(--cv-text)] dark:text-white sm:text-base">
                   {user.name}{' '}
-                  <span className="hidden shrink-0 rounded-full bg-[var(--cv-accent-soft)] px-2 py-1 text-xs font-black text-[var(--cv-accent-strong)] sm:inline-flex">
+                  <span className="hidden shrink-0 bg-[var(--cv-accent-soft)] px-2 py-1 text-xs font-semibold text-[var(--cv-accent-strong)] sm:inline-flex">
                     {user.role.replaceAll('_', ' ')}
                   </span>
                 </p>
@@ -65,7 +65,7 @@ export default async function DashboardLayout({
                   href="/dashboard/logout"
                   aria-label="Logout"
                   title="Logout"
-                  className="grid size-10 shrink-0 place-items-center rounded-xl border border-[var(--cv-border)] bg-[var(--cv-card)] text-[var(--cv-text)] transition hover:bg-[var(--cv-card-muted)] dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 sm:flex sm:w-auto sm:gap-2 sm:rounded-2xl sm:px-4 sm:text-sm sm:font-black"
+                  className="grid size-10 shrink-0 place-items-center border border-[var(--cv-border)] bg-[var(--cv-card)] text-[var(--cv-text)] transition hover:bg-[var(--cv-card-muted)] dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 sm:flex sm:w-auto sm:gap-2 sm:px-4 sm:text-sm sm:font-semibold"
                 >
                   <LogOut className="size-4" />
                   <span className="hidden sm:inline">Logout</span>

@@ -81,16 +81,16 @@ function PrimaryActionCard({
         href={href}
         className={
           gold
-            ? 'group block h-full rounded-[1.75rem] bg-gold p-4 text-black shadow-[0_18px_40px_rgba(214,167,56,0.24)] transition hover:shadow-[0_24px_55px_rgba(214,167,56,0.34)] active:scale-[0.99]'
-            : 'group block h-full rounded-[1.75rem] border border-white/10 bg-white/10 p-4 text-white shadow-sm backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]'
+            ? 'group block h-full bg-gold p-4 text-black transition'
+            : 'group block h-full border border-white/10 bg-white/10 p-4 text-white shadow-sm backdrop-blur transition hover:border-gold/50 hover:bg-gold/10'
         }
       >
       <div className="flex items-start justify-between gap-3">
         <span
           className={
             gold
-              ? 'grid size-12 place-items-center rounded-2xl bg-black/10 text-black'
-              : 'grid size-12 place-items-center rounded-2xl bg-gold/20 text-gold'
+              ? 'grid size-12 place-items-center bg-black/10 text-black'
+              : 'grid size-12 place-items-center bg-gold/20 text-gold'
           }
         >
           <Icon className="size-6" />
@@ -142,10 +142,10 @@ function MiniActionCard({
     <GuestPressable className="h-full">
       <Link
         href={href}
-        className="group flex min-h-24 flex-col justify-between rounded-[1.5rem] border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
+        className="group flex min-h-24 flex-col justify-between border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10"
       >
       <div className="flex items-center justify-between">
-        <span className="grid size-11 place-items-center rounded-2xl bg-gold/20 text-gold">
+        <span className="grid size-11 place-items-center bg-gold/20 text-gold">
           <Icon className="size-5" />
         </span>
 
@@ -168,9 +168,9 @@ function StayInfoCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-black/35 p-4 backdrop-blur">
+    <div className="border border-white/10 bg-black/35 p-4 backdrop-blur">
       <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
+        <span className="grid size-10 shrink-0 place-items-center bg-gold/20 text-gold">
           <Icon className="size-5" />
         </span>
 
@@ -203,11 +203,11 @@ function ActivityCard({
     <GuestPressable>
       <Link
         href={href}
-        className="block rounded-[2rem] border border-gold/25 bg-[#11100b] p-5 text-white shadow-xl transition hover:border-gold/45 hover:shadow-[0_24px_60px_rgba(214,167,56,0.18)] active:scale-[0.99]"
+        className="block border border-gold/25 bg-[#11100b] p-5 text-white shadow-xl transition hover:border-gold/45"
       >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
+          <span className="grid size-12 shrink-0 place-items-center bg-gold/20 text-gold">
             <ReceiptText className="size-6" />
           </span>
 
@@ -223,21 +223,21 @@ function ActivityCard({
         </div>
 
         {total > 0 ? (
-          <span className="grid min-w-9 place-items-center rounded-full bg-gold px-3 py-2 text-sm font-serif font-medium text-black">
+          <span className="grid min-w-9 place-items-center bg-gold px-3 py-2 text-sm font-serif font-medium text-black">
             {total}
           </span>
         ) : null}
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-white/8 p-3">
+        <div className="bg-white/8 p-3">
           <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
             Food Orders
           </p>
           <p className="mt-1 text-2xl font-serif font-medium">{activeOrderCount}</p>
         </div>
 
-        <div className="rounded-2xl bg-white/8 p-3">
+        <div className="bg-white/8 p-3">
           <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
             Services
           </p>
@@ -266,9 +266,9 @@ function RecommendedCard({
     <GuestPressable>
       <Link
         href={href}
-        className="group flex items-center gap-4 rounded-[1.5rem] border border-white/10 bg-white/8 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]"
+        className="group flex items-center gap-4 border border-white/10 bg-white/8 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10"
       >
-      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold/20 text-gold">
+      <span className="grid size-12 shrink-0 place-items-center bg-gold/20 text-gold">
         <Icon className="size-5" />
       </span>
 
@@ -311,7 +311,7 @@ function getHotelInitials(hotelName: string) {
 function DynamicHotelLogo({ hotelName }: { hotelName: string }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="grid size-16 place-items-center rounded-[1.5rem] border border-gold/50 bg-black/35 text-2xl font-serif font-medium tracking-wide text-gold shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <div className="grid size-16 place-items-center border border-gold/50 bg-black/35 text-2xl font-serif font-medium tracking-wide text-gold backdrop-blur-md">
         {getHotelInitials(hotelName)}
       </div>
 
@@ -387,8 +387,8 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
-      <div className="mx-auto min-h-screen max-w-md bg-[#050505] shadow-soft">
-        <section className="relative overflow-hidden rounded-b-[2.5rem] px-5 pb-6 pt-7">
+      <div className="mx-auto min-h-screen max-w-md bg-[#050505]">
+        <section className="relative overflow-hidden px-5 pb-6 pt-7">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${heroImage})` }}
@@ -406,13 +406,13 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
               <Link
                 href={`/t/${normalizedTagCode}/activity`}
-                className="absolute right-0 top-3 grid size-11 place-items-center rounded-full border border-white/10 bg-black/35 text-white backdrop-blur transition hover:bg-white/10"
+                className="absolute right-0 top-3 grid size-11 place-items-center border border-white/10 bg-black/35 text-white backdrop-blur transition hover:bg-white/10"
                 aria-label="Guest activity"
               >
                 <Bell className="size-5" />
 
                 {activeActivityCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-semibold text-black">
+                  <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center bg-gold px-1.5 py-0.5 text-[10px] font-semibold text-black">
                     {activeActivityCount}
                   </span>
                 ) : null}
@@ -544,9 +544,9 @@ export default async function GuestHome({ params }: GuestHomeProps) {
         </GuestReveal>
 
         <GuestReveal delay={0.3} className="px-5 pb-32 pt-6">
-          <div className="rounded-[2rem] border border-gold/25 bg-gold p-5 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
+          <div className="border border-gold/25 bg-gold p-5 text-black">
             <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-black/10">
+              <span className="grid size-12 shrink-0 place-items-center bg-black/10">
                 <ShieldCheck className="size-6" />
               </span>
 
@@ -559,7 +559,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
                 <Link
                   href={`/t/${normalizedTagCode}/guide`}
-                  className="mt-4 inline-flex rounded-2xl bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
+                  className="mt-4 inline-flex bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
                 >
                   Explore Hotel Guide
                 </Link>

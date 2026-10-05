@@ -333,11 +333,11 @@ function AnalyticsCard({
   return (
     <section
       id={id}
-      className={`scroll-mt-24 overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft ${className}`}
+      className={`scroll-mt-24 overflow-hidden border border-neutral-200 bg-white ${className}`}
     >
       <div className="flex items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/70 px-5 py-4">
         <div>
-          <h2 className="text-lg font-black text-neutral-950">{title}</h2>
+          <h2 className="text-lg font-semibold text-neutral-950">{title}</h2>
 
           {description ? (
             <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
@@ -381,7 +381,7 @@ function DeltaBadge({ value }: { value: number }) {
       aria-label={deltaLabel}
       title={deltaLabel}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black',
+        'inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold',
         unchanged
           ? 'bg-white/10 text-white/60'
           : positive
@@ -419,19 +419,19 @@ function HeroMetric({
   delta?: number;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
+    <div className="border border-white/10 bg-white/10 p-4 backdrop-blur">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/55">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
           {label}
         </p>
 
-        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gold text-black">
+        <span className="grid size-10 shrink-0 place-items-center bg-gold text-black">
           {icon}
         </span>
       </div>
 
       <div className="mt-4 flex flex-wrap items-end gap-2">
-        <p className="text-2xl font-black tracking-tight text-white">{value}</p>
+        <p className="text-2xl font-semibold tracking-tight text-white">{value}</p>
         {typeof delta === 'number' ? <DeltaBadge value={delta} /> : null}
       </div>
 
@@ -464,17 +464,17 @@ function InsightMetric({
   }[tone];
 
   return (
-    <div className={`rounded-[1.5rem] border p-4 ${styles}`}>
+    <div className={` border p-4 ${styles}`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-black uppercase tracking-[0.12em] opacity-75">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] opacity-75">
           {label}
         </p>
-        <span className="grid size-9 place-items-center rounded-xl bg-white/70">
+        <span className="grid size-9 place-items-center bg-white/70">
           {icon}
         </span>
       </div>
 
-      <p className="mt-3 text-2xl font-black text-neutral-950">{value}</p>
+      <p className="mt-3 text-2xl font-semibold text-neutral-950">{value}</p>
       <p className="mt-1 text-xs font-semibold leading-5 opacity-70">{helper}</p>
     </div>
   );
@@ -530,10 +530,10 @@ function DonutChart({
 
         <div className="absolute inset-0 grid place-items-center text-center">
           <div>
-            <p className="text-3xl font-black text-neutral-950">
+            <p className="text-3xl font-semibold text-neutral-950">
               {centerValue}
             </p>
-            <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-neutral-400">
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
               {centerLabel}
             </p>
           </div>
@@ -545,26 +545,26 @@ function DonutChart({
           const percentage = getPercentage(segment.value, total);
 
           return (
-            <div key={segment.label} className="rounded-2xl bg-neutral-50 p-3">
+            <div key={segment.label} className="bg-neutral-50 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="size-3 shrink-0 rounded-full"
+                    className="size-3 shrink-0 rounded-dot"
                     style={{ backgroundColor: segment.color }}
                   />
-                  <p className="truncate text-sm font-black">
+                  <p className="truncate text-sm font-semibold">
                     {segment.label}
                   </p>
                 </div>
 
-                <p className="shrink-0 text-sm font-black">
+                <p className="shrink-0 text-sm font-semibold">
                   {segment.value} · {percentage}%
                 </p>
               </div>
 
-              <div className="h-2 overflow-hidden rounded-full bg-white">
+              <div className="h-2 overflow-hidden bg-white">
                 <div
-                  className="h-full rounded-full"
+                  className="h-full"
                   style={{
                     width: `${percentage}%`,
                     backgroundColor: segment.color,
@@ -627,7 +627,7 @@ function SalesAreaChart({
 
   return (
     <div>
-      <div className="overflow-hidden rounded-[2rem] bg-neutral-950 p-4">
+      <div className="overflow-hidden bg-neutral-950 p-4">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="h-72 w-full"
@@ -687,7 +687,7 @@ function SalesAreaChart({
         </svg>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2 text-[10px] font-black text-neutral-400">
+      <div className="mt-3 flex items-center justify-between gap-2 text-[10px] font-semibold text-neutral-400">
         {data
           .filter(
             (_, index) =>
@@ -731,11 +731,11 @@ function HorizontalBars({
         return (
           <div
             key={`${item.label}-${index}`}
-            className="rounded-2xl bg-neutral-50 p-3"
+            className="bg-neutral-50 p-3"
           >
             <div className="mb-2 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-black">{item.label}</p>
+                <p className="truncate text-sm font-semibold">{item.label}</p>
                 {item.helper ? (
                   <p className="mt-1 text-xs font-semibold text-neutral-400">
                     {item.helper}
@@ -748,9 +748,9 @@ function HorizontalBars({
               </b>
             </div>
 
-            <div className="h-2.5 overflow-hidden rounded-full bg-white">
+            <div className="h-2.5 overflow-hidden bg-white">
               <div
-                className="h-full rounded-full bg-black"
+                className="h-full bg-black"
                 style={{ width: `${width}%` }}
               />
             </div>
@@ -763,7 +763,7 @@ function HorizontalBars({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-neutral-200 p-5 text-center text-sm font-bold text-neutral-400">
+    <div className="border border-dashed border-neutral-200 p-5 text-center text-sm font-bold text-neutral-400">
       {text}
     </div>
   );
@@ -804,19 +804,19 @@ function Pagination({
                 : { movementPage: currentPage - 1 }
             )}
             scroll={false}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100"
+            className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
           >
             <ChevronLeft className="size-4" />
             Previous
           </Link>
         ) : (
-          <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-300">
+          <span className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-300">
             <ChevronLeft className="size-4" />
             Previous
           </span>
         )}
 
-        <span className="grid h-10 min-w-10 place-items-center rounded-xl bg-black px-3 text-xs font-black text-white">
+        <span className="grid h-10 min-w-10 place-items-center bg-black px-3 text-xs font-semibold text-white">
           {currentPage} / {totalPages}
         </span>
 
@@ -829,13 +829,13 @@ function Pagination({
                 : { movementPage: currentPage + 1 }
             )}
             scroll={false}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 transition hover:bg-neutral-100"
+            className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
           >
             Next
             <ChevronRight className="size-4" />
           </Link>
         ) : (
-          <span className="inline-flex h-10 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-300">
+          <span className="inline-flex h-10 items-center gap-2 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-300">
             Next
             <ChevronRight className="size-4" />
           </span>
@@ -872,9 +872,9 @@ function SortHeader({
         stockPage: 1,
       })}
       scroll={false}
-      className={`inline-flex w-full items-center gap-1.5 font-black hover:text-neutral-950 ${
-        align === 'right' ? 'justify-end text-right' : 'justify-start'
-      } ${active ? 'text-neutral-950' : 'text-neutral-500'}`}
+      className={`inline-flex w-full items-center gap-1.5 font-semibold hover:text-neutral-950 ${
+ align === 'right' ? 'justify-end text-right' : 'justify-start'
+ } ${active ? 'text-neutral-950' : 'text-neutral-500'}`}
     >
       {label}
       <ArrowUpDown className="size-3.5" />
@@ -1665,7 +1665,7 @@ export default async function AnalyticsPage({
         description="Revenue, operations, guest service, menu demand, and inventory intelligence in one decision-ready dashboard."
       />
 
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft">
+      <section className="border border-neutral-200 bg-white p-4">
         <form
           method="get"
           action="/dashboard/analytics"
@@ -1673,13 +1673,13 @@ export default async function AnalyticsPage({
         >
           {user.role === 'SUPER_ADMIN' ? (
             <label className="grid gap-2">
-              <span className="text-[11px] font-black uppercase tracking-[0.12em] text-neutral-500">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
                 Hotel Scope
               </span>
               <select
                 name="hotelId"
                 defaultValue={selectedHotelId}
-                className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 outline-none focus:border-gold"
+                className="h-12 border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-900 outline-none focus:border-gold"
               >
                 <option value="">All Hotels</option>
                 {hotels.map((hotel) => (
@@ -1690,23 +1690,23 @@ export default async function AnalyticsPage({
               </select>
             </label>
           ) : (
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-neutral-400">
+            <div className="border border-neutral-200 bg-neutral-50 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
                 Hotel Scope
               </p>
-              <p className="mt-1 text-sm font-black text-neutral-950">
+              <p className="mt-1 text-sm font-semibold text-neutral-950">
                 {selectedHotelName}
               </p>
             </div>
           )}
 
           <label className="grid gap-2">
-            <span className="text-[11px] font-black uppercase tracking-[0.12em] text-neutral-500">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
               Analysis Period           </span>
             <select
               name="days"
               defaultValue={String(rangeDays)}
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 outline-none focus:border-gold"
+              className="h-12 border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-900 outline-none focus:border-gold"
             >
               {RANGE_OPTIONS.map((daysOption) => (
                 <option key={daysOption} value={daysOption}>
@@ -1719,25 +1719,25 @@ export default async function AnalyticsPage({
           <input type="hidden" name="stockPage" value="1" />
           <input type="hidden" name="movementPage" value="1" />
 
-          <button className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white transition hover:bg-neutral-800">
+          <button className="inline-flex h-12 items-center justify-center gap-2 bg-black px-5 text-sm font-semibold text-white transition hover:bg-neutral-800">
             <Filter className="size-4" />
             Apply Analytics
           </button>
         </form>
       </section>
 
-      <section className="relative overflow-hidden rounded-[2.5rem] bg-neutral-950 p-6 text-white shadow-2xl">
-        <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-gold/30 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-12 size-72 rounded-full bg-emerald-500/20 blur-3xl" />
+      <section className="relative overflow-hidden bg-neutral-950 p-6 text-white shadow-2xl">
+        <div className="pointer-events-none absolute -right-20 -top-20 size-72 bg-gold/30 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-12 size-72 bg-emerald-500/20 blur-3xl" />
 
         <div className="relative z-10 grid gap-6 xl:grid-cols-[1.05fr_1.55fr] xl:items-end">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-gold">
+            <div className="inline-flex items-center gap-2 border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold">
               <Sparkles className="size-4" />
               CloudView Analytics
             </div>
 
-            <h2 className="mt-5 max-w-2xl text-4xl font-black tracking-tight md:text-5xl">
+            <h2 className="mt-5 max-w-2xl text-4xl font-semibold tracking-tight md:text-5xl">
               A clearer pulse of hotel performance.
             </h2>
 
@@ -1863,7 +1863,7 @@ export default async function AnalyticsPage({
           title="Revenue Performance"
           description={`Daily sales movement across the selected ${rangeDays}-day period.`}
           right={
-            <span className="inline-flex items-center gap-2 rounded-full bg-black px-3 py-1 text-xs font-black text-white">
+            <span className="inline-flex items-center gap-2 bg-black px-3 py-1 text-xs font-semibold text-white">
               <BarChart3 className="size-4" />
               {formatMoneyFromCents(totalSalesCents)}
             </span>
@@ -1908,7 +1908,7 @@ export default async function AnalyticsPage({
           title="Order Status Mix"
           description="Distribution of order progress and completion."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-gold/15 text-gold">
+            <span className="grid size-10 place-items-center bg-gold/15 text-gold">
               <PieChart className="size-5" />
             </span>
           }
@@ -1927,7 +1927,7 @@ export default async function AnalyticsPage({
           title="Payment Status"
           description="Paid, unpaid, and refunded order distribution."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <span className="grid size-10 place-items-center bg-emerald-100 text-emerald-700">
               <WalletCards className="size-5" />
             </span>
           }
@@ -1944,7 +1944,7 @@ export default async function AnalyticsPage({
           title="Order Destination Mix"
           description="Where guest orders are being served."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-blue-100 text-blue-700">
+            <span className="grid size-10 place-items-center bg-blue-100 text-blue-700">
               <Hotel className="size-5" />
             </span>
           }
@@ -1961,7 +1961,7 @@ export default async function AnalyticsPage({
           title="Current Stock Health"
           description="Live inventory availability across menu items."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-blue-100 text-blue-700">
+            <span className="grid size-10 place-items-center bg-blue-100 text-blue-700">
               <PackageCheck className="size-5" />
             </span>
           }
@@ -2007,7 +2007,7 @@ export default async function AnalyticsPage({
           title="Popular Menu Items"
           description="Top menu items by ordered quantity."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-gold/15 text-gold">
+            <span className="grid size-10 place-items-center bg-gold/15 text-gold">
               <Utensils className="size-5" />
             </span>
           }
@@ -2023,7 +2023,7 @@ export default async function AnalyticsPage({
           title="Guest Service Demand"
           description="Most requested hotel service types."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-blue-100 text-blue-700">
+            <span className="grid size-10 place-items-center bg-blue-100 text-blue-700">
               <ConciergeBell className="size-5" />
             </span>
           }
@@ -2039,12 +2039,12 @@ export default async function AnalyticsPage({
               {serviceStatusGroups.map((item) => (
                 <div
                   key={item.status}
-                  className="rounded-2xl bg-neutral-50 p-3"
+                  className="bg-neutral-50 p-3"
                 >
-                  <p className="text-xs font-black uppercase text-neutral-400">
+                  <p className="text-xs font-semibold uppercase text-neutral-400">
                     {statusLabel(item.status)}
                   </p>
-                  <p className="mt-1 text-xl font-black">
+                  <p className="mt-1 text-xl font-semibold">
                     {formatNumber(item._count._all)}
                   </p>
                 </div>
@@ -2057,7 +2057,7 @@ export default async function AnalyticsPage({
           title="Revenue by Payment Status"
           description="Order value grouped by current payment state."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <span className="grid size-10 place-items-center bg-emerald-100 text-emerald-700">
               <CircleDollarSign className="size-5" />
             </span>
           }
@@ -2076,7 +2076,7 @@ export default async function AnalyticsPage({
           title="Stock Usage from Orders"
           description="Products with the highest inventory deductions."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-neutral-100 text-neutral-700">
+            <span className="grid size-10 place-items-center bg-neutral-100 text-neutral-700">
               <ShoppingBag className="size-5" />
             </span>
           }
@@ -2096,7 +2096,7 @@ export default async function AnalyticsPage({
           title="Operational Scoreboard"
           description="Order status performance at a glance."
           right={
-            <span className="grid size-10 place-items-center rounded-2xl bg-neutral-100 text-neutral-700">
+            <span className="grid size-10 place-items-center bg-neutral-100 text-neutral-700">
               <Activity className="size-5" />
             </span>
           }
@@ -2113,12 +2113,12 @@ export default async function AnalyticsPage({
               );
 
               return (
-                <div key={status} className="rounded-2xl bg-neutral-50 p-3">
+                <div key={status} className="bg-neutral-50 p-3">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${getOrderStatusTone(
-                        status
-                      )}`}
+                      className={` px-3 py-1 text-xs font-semibold ${getOrderStatusTone(
+ status
+ )}`}
                     >
                       {statusLabel(status)}
                     </span>
@@ -2128,9 +2128,9 @@ export default async function AnalyticsPage({
                     </b>
                   </div>
 
-                  <div className="h-2 overflow-hidden rounded-full bg-white">
+                  <div className="h-2 overflow-hidden bg-white">
                     <div
-                      className="h-full rounded-full bg-black"
+                      className="h-full bg-black"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -2147,7 +2147,7 @@ export default async function AnalyticsPage({
           title="Menu Stock Availability"
           description="Search, sort, and review live menu inventory."
           right={
-            <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600">
+            <span className="bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">
               {formatNumber(stockTableCount)} records
             </span>
           }
@@ -2171,7 +2171,7 @@ export default async function AnalyticsPage({
                 name="stockQuery"
                 defaultValue={stockQuery}
                 placeholder="Search menu item or hotel"
-                className="h-11 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-semibold outline-none focus:border-gold"
+                className="h-11 w-full border border-neutral-200 bg-white pl-11 pr-4 text-sm font-semibold outline-none focus:border-gold"
               />
             </label>
 
@@ -2179,7 +2179,7 @@ export default async function AnalyticsPage({
             aria-label="Rows per page"
               name="stockPageSize"
               defaultValue={String(stockPageSize)}
-              className="h-11 rounded-2xl border border-neutral-200 bg-white px-3 text-sm font-black outline-none focus:border-gold"
+              className="h-11 border border-neutral-200 bg-white px-3 text-sm font-semibold outline-none focus:border-gold"
             >
               {STOCK_PAGE_SIZE_OPTIONS.map((size) => (
                 <option key={size} value={size}>
@@ -2188,12 +2188,12 @@ export default async function AnalyticsPage({
               ))}
             </select>
 
-            <button className="h-11 rounded-2xl bg-black px-5 text-sm font-black text-white">
+            <button className="h-11 bg-black px-5 text-sm font-semibold text-white">
               Apply
             </button>
           </form>
 
-          <div className="overflow-hidden rounded-2xl border border-neutral-100">
+          <div className="overflow-hidden border border-neutral-100">
             <div className="overflow-x-auto">
               <table className="min-w-[900px] w-full border-collapse">
                 <thead>
@@ -2275,7 +2275,7 @@ export default async function AnalyticsPage({
                         className="border-t border-neutral-100 text-sm transition hover:bg-neutral-50/70"
                       >
                         <td className="px-4 py-3">
-                          <p className="font-black text-neutral-950">
+                          <p className="font-semibold text-neutral-950">
                             {stock.product.name}
                           </p>
                           <p className="mt-1 text-xs font-semibold text-neutral-400">
@@ -2289,11 +2289,11 @@ export default async function AnalyticsPage({
                           {stock.hotel.name}
                         </td>
 
-                        <td className="px-4 py-3 text-right font-black">
+                        <td className="px-4 py-3 text-right font-semibold">
                           {formatNumber(Number(stock.availableQty))}
                         </td>
 
-                        <td className="px-4 py-3 text-right font-black">
+                        <td className="px-4 py-3 text-right font-semibold">
                           {formatNumber(Number(stock.soldQty))}
                         </td>
 
@@ -2301,10 +2301,10 @@ export default async function AnalyticsPage({
                           <span
                             className={
                               !available
-                                ? 'rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-black text-red-700'
+                                ? 'bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-700'
                                 : lowStock
-                                  ? 'rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black text-amber-700'
-                                  : 'rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700'
+                                  ? 'bg-amber-100 px-2.5 py-1 text-[10px] font-semibold text-amber-700'
+                                  : 'bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold text-emerald-700'
                             }
                           >
                             {!available
@@ -2349,7 +2349,7 @@ export default async function AnalyticsPage({
           title="Recent Stock Movements"
           description={`Latest inventory activity in the selected ${rangeDays}-day period.`}
           right={
-            <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-black text-neutral-600">
+            <span className="bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">
               {formatNumber(movementCount)}
             </span>
           }
@@ -2358,11 +2358,11 @@ export default async function AnalyticsPage({
             {recentStockMovements.map((movement) => (
               <article
                 key={movement.id}
-                className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4 text-sm"
+                className="border border-neutral-100 bg-neutral-50 p-4 text-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-black text-neutral-950">
+                    <p className="font-semibold text-neutral-950">
                       {statusLabel(movement.type)}
                     </p>
                     <p className="mt-1 truncate font-semibold text-neutral-600">
@@ -2370,7 +2370,7 @@ export default async function AnalyticsPage({
                     </p>
                   </div>
 
-                  <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-neutral-600">
+                  <span className="shrink-0 bg-white px-2.5 py-1 text-[10px] font-semibold text-neutral-600">
                     Balance {formatNumber(Number(movement.balanceAfter))}
                   </span>
                 </div>
@@ -2386,7 +2386,7 @@ export default async function AnalyticsPage({
                   </p>
                 ) : null}
 
-                <p className="mt-2 text-[10px] font-black uppercase tracking-wide text-neutral-400">
+                <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                   {formatDateTime(movement.createdAt)}
                 </p>
               </article>

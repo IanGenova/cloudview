@@ -89,11 +89,11 @@ export default async function ServiceThanksPage({
       >
         <div className="grid min-h-[65vh] place-items-center bg-[#050505] py-10 text-center text-white">
           <div className="w-full max-w-sm">
-            <div className="mx-auto grid size-24 place-items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 text-emerald-300 shadow-[0_0_40px_rgba(16,185,129,0.12)]">
+            <div className="mx-auto grid size-24 place-items-center border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
               <CheckCircle2 className="size-11" />
             </div>
 
-            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+            <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
               Request received
             </p>
 
@@ -106,14 +106,14 @@ export default async function ServiceThanksPage({
               shortly. Keep the reference number below for follow-up.
             </p>
 
-            <section className="mt-7 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 text-left shadow-[0_24px_60px_rgba(0,0,0,0.3)]">
+            <section className="mt-7 border border-white/10 bg-white/[0.04] p-5 text-left">
               <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
+                <span className="grid size-11 place-items-center bg-gold/15 text-gold">
                   <ReceiptText className="size-5" />
                 </span>
 
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.17em] text-white/35">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-white/35">
                     Request Reference
                   </p>
                   <p className="mt-1 font-serif text-xl text-white">
@@ -123,25 +123,25 @@ export default async function ServiceThanksPage({
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-black/25 p-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-white/35">
+                <div className="bg-black/25 p-4">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest text-white/35">
                     Items
                   </p>
-                  <p className="mt-1 text-lg font-black">{requests.length}</p>
+                  <p className="mt-1 text-lg font-semibold">{requests.length}</p>
                 </div>
 
-                <div className="rounded-2xl bg-black/25 p-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-white/35">
+                <div className="bg-black/25 p-4">
+                  <p className="text-[9px] font-semibold uppercase tracking-widest text-white/35">
                     Status
                   </p>
-                  <p className="mt-1 text-sm font-black">
+                  <p className="mt-1 text-sm font-semibold">
                     {label(requests[0].status)}
                   </p>
                 </div>
               </div>
 
               {paidItems.length ? (
-                <div className="mt-3 rounded-2xl border border-gold/15 bg-gold/[0.07] p-4 text-sm">
+                <div className="mt-3 border border-gold/15 bg-gold/[0.07] p-4 text-sm">
                   <div className="flex items-center gap-2 text-gold">
                     <CreditCard className="size-4" />
                     <b>Xendit payment</b>
@@ -176,7 +176,7 @@ export default async function ServiceThanksPage({
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 flex items-start gap-3 rounded-2xl bg-white/[0.04] p-4 text-left text-xs font-medium leading-5 text-white/45">
+                <div className="mt-3 flex items-start gap-3 bg-white/[0.04] p-4 text-left text-xs font-medium leading-5 text-white/45">
                   <Clock3 className="mt-0.5 size-4 shrink-0 text-gold" />
                   No online payment was required. Complimentary and
                   price-on-confirmation requests are sent directly to staff.
@@ -186,14 +186,14 @@ export default async function ServiceThanksPage({
               <div className="mt-5 grid gap-3">
                 <Link
                   href={`/t/${tagCode}/requests`}
-                  className="block rounded-2xl bg-gold p-4 text-center text-sm font-black text-black"
+                  className="block bg-gold p-4 text-center text-sm font-semibold text-black"
                 >
                   View My Requests
                 </Link>
 
                 <Link
                   href={`/t/${tagCode}/service`}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-center text-sm font-black text-white"
+                  className="inline-flex items-center justify-center gap-2 border border-white/12 bg-white/[0.04] p-4 text-center text-sm font-semibold text-white"
                 >
                   <RotateCcw className="size-4" />
                   Make Another Request
@@ -201,14 +201,14 @@ export default async function ServiceThanksPage({
 
                 <Link
                   href={`/t/${tagCode}`}
-                  className="block rounded-2xl border border-white/12 bg-white/[0.04] p-4 text-center text-sm font-black text-white"
+                  className="block border border-white/12 bg-white/[0.04] p-4 text-center text-sm font-semibold text-white"
                 >
                   Back to Home
                 </Link>
               </div>
 
               {firstPayment?.refundErrorMessage ? (
-                <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold leading-5 text-red-200">
+                <p className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold leading-5 text-red-200">
                   Refund review: {firstPayment.refundErrorMessage}
                 </p>
               ) : null}

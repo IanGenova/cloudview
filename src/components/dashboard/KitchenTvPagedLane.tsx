@@ -67,14 +67,14 @@ export function KitchenTvPagedLane({
   return (
     <section
       className={cn(
-        'flex min-h-[calc(100dvh-220px)] flex-col overflow-hidden rounded-[2rem] border',
+        'flex min-h-[calc(100dvh-220px)] flex-col overflow-hidden border',
         getLaneTheme(type)
       )}
     >
       <div className="shrink-0 border-b border-black/5 px-5 py-5 dark:border-white/10">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-4xl font-black text-neutral-950 dark:text-white">
+            <h2 className="text-4xl font-semibold text-neutral-950 dark:text-white">
               {title}
             </h2>
 
@@ -82,14 +82,14 @@ export function KitchenTvPagedLane({
               {description}
             </p>
 
-            <p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-neutral-400">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
               {totalOrders > 0
                 ? `Showing ${showingStart}-${showingEnd} of ${totalOrders}`
                 : 'No orders in queue'}
             </p>
           </div>
 
-          <span className="grid size-14 shrink-0 place-items-center rounded-full bg-black text-2xl font-black text-white dark:bg-gold dark:text-black">
+          <span className="grid size-14 shrink-0 place-items-center bg-black text-2xl font-semibold text-white dark:bg-gold dark:text-black">
             {totalOrders}
           </span>
         </div>
@@ -101,7 +101,7 @@ export function KitchenTvPagedLane({
               onClick={() =>
                 setCurrentPage((page) => (page - 1 + pageCount) % pageCount)
               }
-              className="grid size-9 place-items-center rounded-full bg-white/70 text-neutral-700 shadow-sm hover:bg-white dark:bg-neutral-950 dark:text-white"
+              className="grid size-9 place-items-center bg-white/70 text-neutral-700 shadow-sm hover:bg-white dark:bg-neutral-950 dark:text-white"
               aria-label={`Previous ${title} page`}
             >
               <ChevronLeft className="size-4" />
@@ -114,7 +114,7 @@ export function KitchenTvPagedLane({
                   type="button"
                   onClick={() => setCurrentPage(index)}
                   className={cn(
-                    'h-2.5 rounded-full transition-all',
+                    'h-2.5 transition-all',
                     index === safePage
                       ? 'w-7 bg-black dark:bg-gold'
                       : 'w-2.5 bg-black/20 dark:bg-white/25'
@@ -127,7 +127,7 @@ export function KitchenTvPagedLane({
             <button
               type="button"
               onClick={() => setCurrentPage((page) => (page + 1) % pageCount)}
-              className="grid size-9 place-items-center rounded-full bg-white/70 text-neutral-700 shadow-sm hover:bg-white dark:bg-neutral-950 dark:text-white"
+              className="grid size-9 place-items-center bg-white/70 text-neutral-700 shadow-sm hover:bg-white dark:bg-neutral-950 dark:text-white"
               aria-label={`Next ${title} page`}
             >
               <ChevronRight className="size-4" />
@@ -138,8 +138,8 @@ export function KitchenTvPagedLane({
 
       <div className="min-h-0 flex-1 overflow-hidden p-5">
         {visibleItems.length === 0 ? (
-          <div className="grid h-full min-h-40 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-neutral-950">
-            <p className="text-xl font-black text-neutral-500 dark:text-neutral-400">
+          <div className="grid h-full min-h-40 w-full place-items-center border border-dashed border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-neutral-950">
+            <p className="text-xl font-semibold text-neutral-500 dark:text-neutral-400">
               No {title.toLowerCase()} orders
             </p>
           </div>

@@ -63,7 +63,7 @@ export function ExistingXenditSessionGuard({
         aria-modal="true"
         aria-labelledby="existing-xendit-title"
         className={cn(
-          'max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] border shadow-2xl sm:max-h-[calc(100dvh-4rem)] sm:rounded-[2rem]',
+          'max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto border shadow-2xl sm:max-h-[calc(100dvh-4rem)]',
           dark
             ? 'border-white/12 bg-[#0b0b0b] text-white'
             : 'border-neutral-200 bg-white text-neutral-950'
@@ -80,7 +80,7 @@ export function ExistingXenditSessionGuard({
           <div className="flex items-start gap-4">
             <span
               className={cn(
-                'grid size-12 shrink-0 place-items-center rounded-2xl',
+                'grid size-12 shrink-0 place-items-center',
                 paymentReceived
                   ? 'bg-emerald-500/15 text-emerald-500'
                   : needsReview
@@ -99,10 +99,10 @@ export function ExistingXenditSessionGuard({
             </span>
 
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#b88938]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#b88938]">
                 Existing Xendit session
               </p>
-              <h2 id="existing-xendit-title" className="mt-1 text-xl font-black">
+              <h2 id="existing-xendit-title" className="mt-1 text-xl font-semibold">
                 {title}
               </h2>
               <p
@@ -120,7 +120,7 @@ export function ExistingXenditSessionGuard({
         <div className="p-4 sm:p-6">
           <div
             className={cn(
-              'rounded-2xl border p-4 text-sm',
+              'border p-4 text-sm',
               dark
                 ? 'border-white/10 bg-white/[0.04]'
                 : 'border-neutral-200 bg-neutral-50'
@@ -132,7 +132,7 @@ export function ExistingXenditSessionGuard({
               </span>
               <span
                 className={cn(
-                  'rounded-full px-3 py-1 text-[10px] font-black',
+                  'px-3 py-1 text-[10px] font-semibold',
                   paymentReceived
                     ? 'bg-emerald-100 text-emerald-700'
                     : needsReview
@@ -150,7 +150,7 @@ export function ExistingXenditSessionGuard({
 
           <div
             className={cn(
-              'mt-4 rounded-2xl border p-4 text-xs font-bold leading-5',
+              'mt-4 border p-4 text-xs font-bold leading-5',
               dark
                 ? 'border-amber-400/20 bg-amber-400/10 text-amber-100'
                 : 'border-amber-200 bg-amber-50 text-amber-800'
@@ -167,7 +167,7 @@ export function ExistingXenditSessionGuard({
                 type="button"
                 onClick={onContinue}
                 disabled={busy}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#d6a738] px-5 text-sm font-black text-black disabled:opacity-50"
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#d6a738] px-5 text-sm font-semibold text-black disabled:opacity-50"
               >
                 Continue Existing Payment
                 <ExternalLink className="size-4" />
@@ -177,7 +177,7 @@ export function ExistingXenditSessionGuard({
                 type="button"
                 onClick={onContinue}
                 disabled={busy}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white disabled:opacity-50"
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50"
               >
                 View Payment Progress
                 <CheckCircle2 className="size-4" />
@@ -189,7 +189,7 @@ export function ExistingXenditSessionGuard({
               onClick={onRefresh}
               disabled={busy}
               className={cn(
-                'inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border px-5 text-sm font-black disabled:opacity-50',
+                'inline-flex min-h-12 items-center justify-center gap-2 border px-5 text-sm font-semibold disabled:opacity-50',
                 dark
                   ? 'border-white/12 bg-white/[0.05] text-white'
                   : 'border-neutral-200 bg-white text-neutral-800'
@@ -204,7 +204,7 @@ export function ExistingXenditSessionGuard({
                 type="button"
                 onClick={onCancel}
                 disabled={busy}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-red-400/25 bg-red-500/10 px-5 text-sm font-black text-red-500 disabled:opacity-50"
+                className="inline-flex min-h-12 items-center justify-center gap-2 border border-red-400/25 bg-red-500/10 px-5 text-sm font-semibold text-red-500 disabled:opacity-50"
               >
                 <Ban className="size-4" />
                 Cancel Existing Checkout

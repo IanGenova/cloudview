@@ -30,13 +30,13 @@ type RewardCatalogItem = {
 type RewardStatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
 const inputClass =
-  'h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 const textAreaClass =
-  'min-h-24 w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'min-h-24 w-full resize-none border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 const selectClass =
-  'h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
@@ -75,8 +75,8 @@ function StatusPill({ isActive }: { isActive: boolean }) {
     <span
       className={
         isActive
-          ? 'inline-flex rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700'
-          : 'inline-flex rounded-full bg-neutral-200 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-neutral-600'
+          ? 'inline-flex bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700'
+          : 'inline-flex bg-neutral-200 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600'
       }
     >
       {isActive ? 'Active' : 'Inactive'}
@@ -97,10 +97,10 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/55 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-5">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-5">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black text-[#11100b]">{title}</h2>
+            <h2 className="text-xl font-semibold text-[#11100b]">{title}</h2>
             <p className="mt-1 text-sm font-semibold leading-6 text-neutral-500">
               {description}
             </p>
@@ -109,7 +109,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+            className="grid size-10 shrink-0 place-items-center bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-5" />
@@ -138,7 +138,7 @@ function EditRewardForm({
       <input type="hidden" name="rewardIds" value={reward.rewardIds.join(',')} />
 
       <label className="grid gap-1">
-        <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
           Reward Name
         </span>
         <input
@@ -150,7 +150,7 @@ function EditRewardForm({
       </label>
 
       <label className="grid gap-1">
-        <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
           Description
         </span>
         <textarea
@@ -162,7 +162,7 @@ function EditRewardForm({
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Points Cost
           </span>
           <input
@@ -176,7 +176,7 @@ function EditRewardForm({
         </label>
 
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Reward Type
           </span>
           <select
@@ -195,7 +195,7 @@ function EditRewardForm({
 
       {rewardType === 'DISCOUNT_AMOUNT' ? (
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Discount Amount in Pesos
           </span>
           <input
@@ -214,7 +214,7 @@ function EditRewardForm({
 
       {rewardType === 'DISCOUNT_PERCENT' ? (
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Discount Percent
           </span>
           <input
@@ -231,7 +231,7 @@ function EditRewardForm({
 
       {rewardType === 'FREE_ITEM' ? (
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Free Product ID Optional
           </span>
           <input
@@ -243,14 +243,14 @@ function EditRewardForm({
       ) : null}
 
       {rewardType === 'CUSTOM' ? (
-        <div className="rounded-2xl bg-[#fff8e7] p-3 text-sm font-bold text-[#8a641d]">
+        <div className="bg-[#fff8e7] p-3 text-sm font-bold text-[#8a641d]">
           Custom rewards do not need discount fields.
         </div>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Valid From Optional
           </span>
           <input
@@ -262,7 +262,7 @@ function EditRewardForm({
         </label>
 
         <label className="grid gap-1">
-          <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Valid Until Optional
           </span>
           <input
@@ -274,7 +274,7 @@ function EditRewardForm({
         </label>
       </div>
 
-      <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 text-sm font-bold text-neutral-700">
+      <label className="flex items-center gap-3 bg-neutral-50 p-3 text-sm font-bold text-neutral-700">
         <input
           name="isActive"
           type="checkbox"
@@ -288,7 +288,7 @@ function EditRewardForm({
       <button
         type="submit"
         disabled={isPending}
-        className="h-11 w-full rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
+        className="h-11 w-full bg-[#11100b] text-sm font-semibold text-white disabled:opacity-60"
       >
         {isPending ? 'Saving...' : 'Save Changes'}
       </button>
@@ -414,13 +414,13 @@ export function RewardCatalogManager({
     <>
       <RewardsToast message={toast} onClose={() => setToast(null)} />
 
-      <section className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <section className="overflow-hidden border border-neutral-200 bg-white">
         <div className="flex flex-col gap-4 border-b border-neutral-100 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
               Global Catalog
             </p>
-            <h2 className="mt-1 text-lg font-black text-[#11100b]">
+            <h2 className="mt-1 text-lg font-semibold text-[#11100b]">
               Rewards Broadcasted to Hotels
             </h2>
             <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -429,7 +429,7 @@ export function RewardCatalogManager({
           </div>
 
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
-            <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 md:w-80">
+            <div className="flex h-11 min-w-0 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4 md:w-80">
               <Search className="size-4 shrink-0 text-neutral-400" />
               <input
                 value={query}
@@ -444,7 +444,7 @@ export function RewardCatalogManager({
               onChange={(event) =>
                 setStatusFilter(event.target.value as RewardStatusFilter)
               }
-              className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+              className="h-11 border border-neutral-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
             >
               <option value="ALL">All rewards</option>
               <option value="ACTIVE">Active only</option>
@@ -455,37 +455,37 @@ export function RewardCatalogManager({
 
         <div className="grid border-b border-neutral-100 bg-neutral-50 sm:grid-cols-4">
           <div className="border-b border-neutral-100 px-5 py-3 sm:border-b-0 sm:border-r">
-            <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               Total
             </p>
-            <p className="mt-1 text-xl font-black text-[#11100b]">
+            <p className="mt-1 text-xl font-semibold text-[#11100b]">
               {formatNumber(rewards.length)}
             </p>
           </div>
 
           <div className="border-b border-neutral-100 px-5 py-3 sm:border-b-0 sm:border-r">
-            <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               Active
             </p>
-            <p className="mt-1 text-xl font-black text-emerald-700">
+            <p className="mt-1 text-xl font-semibold text-emerald-700">
               {formatNumber(activeCount)}
             </p>
           </div>
 
           <div className="border-b border-neutral-100 px-5 py-3 sm:border-b-0 sm:border-r">
-            <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               Inactive
             </p>
-            <p className="mt-1 text-xl font-black text-neutral-600">
+            <p className="mt-1 text-xl font-semibold text-neutral-600">
               {formatNumber(inactiveCount)}
             </p>
           </div>
 
           <div className="px-5 py-3">
-            <p className="text-[10px] font-black uppercase tracking-wide text-neutral-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
               Showing
             </p>
-            <p className="mt-1 text-xl font-black text-[#b88938]">
+            <p className="mt-1 text-xl font-semibold text-[#b88938]">
               {formatNumber(filteredRewards.length)}
             </p>
           </div>
@@ -495,25 +495,25 @@ export function RewardCatalogManager({
           <table className="w-full min-w-[1080px] text-left">
             <thead className="bg-white">
               <tr>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Reward
                 </th>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Value / Type
                 </th>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Cost
                 </th>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Hotels
                 </th>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Redemptions
                 </th>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Status
                 </th>
-                <th scope="col" className="px-5 py-3 text-[11px] font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-[11px] font-semibold uppercase text-neutral-500">
                   Actions
                 </th>
               </tr>
@@ -524,12 +524,12 @@ export function RewardCatalogManager({
                 <tr key={reward.id} className="border-t border-neutral-100">
                   <td className="px-5 py-4">
                     <div className="flex items-start gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[#fff8e7] text-[#b88938]">
+                      <span className="grid size-10 shrink-0 place-items-center bg-[#fff8e7] text-[#b88938]">
                         <Gift className="size-5" />
                       </span>
 
                       <div className="min-w-0">
-                        <p className="text-sm font-black text-[#11100b]">
+                        <p className="text-sm font-semibold text-[#11100b]">
                           {reward.name}
                         </p>
                         <p className="mt-1 max-w-[360px] truncate text-xs font-semibold text-neutral-500">
@@ -540,7 +540,7 @@ export function RewardCatalogManager({
                   </td>
 
                   <td className="px-5 py-4">
-                    <p className="text-sm font-black text-[#11100b]">
+                    <p className="text-sm font-semibold text-[#11100b]">
                       {rewardValueText(reward)}
                     </p>
                     <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">
@@ -549,13 +549,13 @@ export function RewardCatalogManager({
                   </td>
 
                   <td className="px-5 py-4">
-                    <span className="rounded-full bg-[#fff8e7] px-3 py-1 text-xs font-black text-[#9d741f]">
+                    <span className="bg-[#fff8e7] px-3 py-1 text-xs font-semibold text-[#9d741f]">
                       {formatNumber(reward.pointsCost)} pts
                     </span>
                   </td>
 
                   <td className="px-5 py-4">
-                    <p className="text-sm font-black text-[#11100b]">
+                    <p className="text-sm font-semibold text-[#11100b]">
                       {reward.hotelCount} hotel
                       {reward.hotelCount === 1 ? '' : 's'}
                     </p>
@@ -564,7 +564,7 @@ export function RewardCatalogManager({
                     </p>
                   </td>
 
-                  <td className="px-5 py-4 text-sm font-black text-neutral-700">
+                  <td className="px-5 py-4 text-sm font-semibold text-neutral-700">
                     {formatNumber(reward.redemptionCount)}
                   </td>
 
@@ -577,7 +577,7 @@ export function RewardCatalogManager({
                       <button
                         type="button"
                         onClick={() => setEditingReward(reward)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#11100b] px-3 text-xs font-black text-white"
+                        className="inline-flex h-9 items-center justify-center gap-2 bg-[#11100b] px-3 text-xs font-semibold text-white"
                       >
                         <Edit3 className="size-3.5" />
                         Edit
@@ -586,7 +586,7 @@ export function RewardCatalogManager({
                       <button
                         type="button"
                         onClick={() => setDeletingReward(reward)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-red-50 px-3 text-xs font-black text-red-700"
+                        className="inline-flex h-9 items-center justify-center gap-2 bg-red-50 px-3 text-xs font-semibold text-red-700"
                       >
                         <Trash2 className="size-3.5" />
                         Delete
@@ -636,7 +636,7 @@ export function RewardCatalogManager({
           }
           onClose={() => setDeletingReward(null)}
         >
-          <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold leading-6 text-red-700">
+          <div className="bg-red-50 p-4 text-sm font-bold leading-6 text-red-700">
             Are you sure you want to remove <b>{deletingReward.name}</b> from
             the global reward catalog across {deletingReward.hotelCount} hotel
             {deletingReward.hotelCount === 1 ? '' : 's'}?
@@ -647,7 +647,7 @@ export function RewardCatalogManager({
               type="button"
               onClick={() => setDeletingReward(null)}
               disabled={isPending}
-              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700"
+              className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700"
             >
               Cancel
             </button>
@@ -656,7 +656,7 @@ export function RewardCatalogManager({
               type="button"
               onClick={handleDeleteReward}
               disabled={isPending}
-              className="h-11 rounded-2xl bg-red-600 text-sm font-black text-white disabled:opacity-60"
+              className="h-11 bg-red-600 text-sm font-semibold text-white disabled:opacity-60"
             >
               {isPending ? 'Deleting...' : 'Confirm Delete'}
             </button>

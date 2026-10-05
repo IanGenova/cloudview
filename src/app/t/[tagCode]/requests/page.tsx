@@ -95,7 +95,7 @@ function ServiceRequestProgress({
   ];
 
   return (
-    <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-black/20 p-4">
+    <div className="mt-4 border border-white/10 bg-black/20 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">
           Live tracking
@@ -124,14 +124,14 @@ function ServiceRequestProgress({
             <span
               className={
                 step.complete
-                  ? 'relative z-10 mx-auto grid size-6 place-items-center rounded-full bg-gold text-black'
-                  : 'relative z-10 mx-auto grid size-6 place-items-center rounded-full border border-white/15 bg-[#111] text-white/35'
+                  ? 'relative z-10 mx-auto grid size-6 place-items-center bg-gold text-black'
+                  : 'relative z-10 mx-auto grid size-6 place-items-center border border-white/15 bg-[#111] text-white/35'
               }
             >
               {step.complete ? (
                 <CheckCircle2 className="size-3.5" />
               ) : (
-                <span className="size-1.5 rounded-full bg-current" />
+                <span className="size-1.5 rounded-dot bg-current" />
               )}
             </span>
 
@@ -149,7 +149,7 @@ function ServiceRequestProgress({
       </div>
 
       {cancelled ? (
-        <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold text-red-200">
+        <div className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-xs font-semibold text-red-200">
           Request cancelled{cancelReason ? ` — ${cancelReason}` : '.'}
         </div>
       ) : status === ServiceRequestStatus.NEW && !assignedToName ? (
@@ -291,7 +291,7 @@ export default async function MyRequestsPage({
         <div className="mb-7 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
             href={`/t/${tagCode}`}
-            className="grid size-11 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="grid size-11 place-items-center text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back"
           >
             <ChevronLeft className="size-6" />
@@ -308,14 +308,14 @@ export default async function MyRequestsPage({
         </div>
 
         {query?.success === 'xendit-completed' ? (
-          <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
+          <div className="mb-5 border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
             Xendit payment confirmed. Your service request is now available to
             the hotel team.
           </div>
         ) : null}
 
         {query?.success === 'request-cancelled' ? (
-          <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
+          <div className="mb-5 border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
             Service request cancelled. Inventory was restored and any eligible
             Xendit refund was submitted.
           </div>
@@ -323,41 +323,41 @@ export default async function MyRequestsPage({
 
 
         {query?.success === 'request-already-cancelled' ? (
-          <div className="mb-5 rounded-2xl border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
+          <div className="mb-5 border border-blue-400/20 bg-blue-400/10 p-4 text-sm font-semibold text-blue-200">
             This service request is already cancelled. No duplicate inventory
             restoration or refund was created.
           </div>
         ) : null}
 
         {query?.error === 'request-not-cancellable' ? (
-          <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold text-amber-200">
+          <div className="mb-5 border border-amber-400/20 bg-amber-400/10 p-4 text-sm font-semibold text-amber-200">
             This request can no longer be cancelled because the hotel has
             already started or completed processing it.
           </div>
         ) : null}
 
         {query?.error === 'request-not-found' ? (
-          <div className="mb-5 rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm font-semibold text-red-200">
+          <div className="mb-5 border border-red-400/20 bg-red-400/10 p-4 text-sm font-semibold text-red-200">
             The service request could not be found. Please refresh the page.
           </div>
         ) : null}
 
         <section className="mb-5 grid grid-cols-3 gap-3">
-          <div className="rounded-[1.5rem] border border-gold/20 bg-gold/10 p-4">
+          <div className="border border-gold/20 bg-gold/10 p-4">
             <MessageCircle className="size-5 text-gold" />
             <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-gold/80">
               Requests
             </p>
             <p className="mt-1 font-serif text-2xl">{requests.length}</p>
           </div>
-          <div className="rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 p-4">
+          <div className="border border-emerald-500/20 bg-emerald-500/10 p-4">
             <CreditCard className="size-5 text-emerald-300" />
             <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-emerald-300/80">
               Xendit
             </p>
             <p className="mt-1 font-serif text-2xl">{xenditCount}</p>
           </div>
-          <div className="rounded-[1.5rem] border border-blue-500/20 bg-blue-500/10 p-4">
+          <div className="border border-blue-500/20 bg-blue-500/10 p-4">
             <ReceiptText className="size-5 text-blue-300" />
             <p className="mt-3 text-[9px] font-semibold uppercase tracking-widest text-blue-300/80">
               Room Bill
@@ -375,7 +375,7 @@ export default async function MyRequestsPage({
             return (
               <article
                 key={request.id}
-                className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 shadow-sm backdrop-blur-md"
+                className="border border-white/10 bg-white/[0.03] p-5 shadow-sm backdrop-blur-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -384,9 +384,9 @@ export default async function MyRequestsPage({
                         {request.requestCode}
                       </h2>
                       <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusBadgeClass(
-                          request.status
-                        )}`}
+                        className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusBadgeClass(
+ request.status
+ )}`}
                       >
                         {requestStatusLabel(
                           request.status,
@@ -413,7 +413,7 @@ export default async function MyRequestsPage({
                   cancelReason={request.cancelReason}
                 />
 
-                <div className="mt-4 rounded-[1.25rem] bg-white/5 p-4">
+                <div className="mt-4 bg-white/5 p-4">
                   <p className="flex items-center gap-2 font-serif text-[15px] font-medium tracking-wide">
                     <ConciergeBell className="size-4 text-gold" />
                     {request.quantity}× {request.type}
@@ -426,16 +426,16 @@ export default async function MyRequestsPage({
                 </div>
 
                 {isXendit ? (
-                  <div className="mt-3 rounded-[1.25rem] border border-gold/20 bg-gold/10 p-4">
+                  <div className="mt-3 border border-gold/20 bg-gold/10 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <QrPaymentIcon />
                       <p className="font-serif text-[15px] font-medium text-gold">
                         Xendit online payment
                       </p>
                       <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
-                          request.paymentStatus
-                        )}`}
+                        className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
+ request.paymentStatus
+ )}`}
                       >
                         {label(request.paymentStatus)}
                       </span>
@@ -459,7 +459,7 @@ export default async function MyRequestsPage({
                     ) : null}
                   </div>
                 ) : charge ? (
-                  <div className="mt-3 rounded-[1.25rem] border border-emerald-500/20 bg-emerald-500/10 p-4">
+                  <div className="mt-3 border border-emerald-500/20 bg-emerald-500/10 p-4">
                     <p className="font-serif text-[15px] font-medium text-emerald-200">
                       Room Add-on Charge
                     </p>
@@ -469,7 +469,7 @@ export default async function MyRequestsPage({
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-[13px] font-medium text-white/50">
+                  <div className="mt-3 border border-white/10 bg-white/5 p-4 text-[13px] font-medium text-white/50">
                     {request.billingModeSnapshot === 'FREE'
                       ? 'Complimentary service — no payment required.'
                       : request.billingModeSnapshot === 'PRICE_ON_CONFIRMATION'
@@ -492,14 +492,14 @@ export default async function MyRequestsPage({
                     />
                     <button
                       type="submit"
-                      className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-400/20 bg-red-500/10 text-sm font-black text-red-200 transition hover:bg-red-500/20"
+                      className="flex h-11 w-full items-center justify-center gap-2 border border-red-400/20 bg-red-500/10 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
                     >
                       <XCircle className="size-4" />
                       Cancel Request
                     </button>
                   </form>
                 ) : request.paymentStatus === PaymentStatus.REFUND_PENDING ? (
-                  <div className="mt-4 flex items-center gap-2 rounded-2xl bg-amber-500/10 p-3 text-xs font-semibold text-amber-200">
+                  <div className="mt-4 flex items-center gap-2 bg-amber-500/10 p-3 text-xs font-semibold text-amber-200">
                     <RotateCcw className="size-4" />
                     Xendit refund is being processed.
                   </div>
@@ -509,9 +509,9 @@ export default async function MyRequestsPage({
           })}
 
           {!requests.length ? (
-            <div className="grid min-h-[50vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 text-center">
+            <div className="grid min-h-[50vh] place-items-center border border-white/10 bg-white/[0.03] p-8 text-center">
               <div>
-                <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-white/5 text-gold">
+                <div className="mx-auto grid size-20 place-items-center bg-white/5 text-gold">
                   <Clock className="size-8" strokeWidth={1.5} />
                 </div>
                 <h2 className="mt-6 font-serif text-2xl font-normal tracking-wide">
@@ -523,7 +523,7 @@ export default async function MyRequestsPage({
                 </p>
                 <Link
                   href={`/t/${tagCode}/service`}
-                  className="mt-8 inline-flex min-h-12 items-center justify-center rounded-[1.25rem] bg-gold px-6 py-3 text-[15px] font-semibold text-black"
+                  className="mt-8 inline-flex min-h-12 items-center justify-center bg-gold px-6 py-3 text-[15px] font-semibold text-black"
                 >
                   Request Service
                 </Link>

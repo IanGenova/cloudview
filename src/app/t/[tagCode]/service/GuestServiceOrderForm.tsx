@@ -131,7 +131,7 @@ const moneyFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 const darkFieldClass =
-  'w-full rounded-2xl border border-white/12 bg-[#0b0b0b] px-4 text-[15px] font-medium text-white caret-gold outline-none placeholder:text-white/30 transition focus:border-gold/60 focus:ring-4 focus:ring-gold/10';
+  'w-full border border-white/12 bg-[#0b0b0b] px-4 text-[15px] font-medium text-white caret-gold outline-none placeholder:text-white/30 transition focus:border-gold/60 focus:ring-4 focus:ring-gold/10';
 
 function money(value: number) {
   return moneyFormatter.format(value);
@@ -310,7 +310,7 @@ function SubmitButton({
       type="submit"
       disabled={disabled || pending}
       size="lg"
-      className="mt-5 h-14 w-full rounded-2xl bg-gold text-[15px] font-black tracking-wide text-black shadow-[0_16px_36px_rgba(214,167,56,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+      className="mt-5 h-14 w-full bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_16px_36px_rgba(214,167,56,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
     >
       {pending
         ? usesXendit
@@ -335,24 +335,24 @@ function QuantityControl({
   onIncrease: () => void;
 }) {
   return (
-    <div className="inline-flex items-center rounded-full border border-gold/25 bg-gold/10 p-1">
+    <div className="inline-flex items-center border border-gold/25 bg-gold/10 p-1">
       <button
         type="button"
         onClick={onDecrease}
-        className="grid size-8 place-items-center rounded-full text-gold transition hover:bg-gold/10 active:scale-95"
+        className="grid size-8 place-items-center text-gold transition hover:bg-gold/10"
         aria-label={`Decrease ${name}`}
       >
         <Minus className="size-3.5" />
       </button>
 
-      <span className="min-w-7 text-center text-sm font-black text-white">
+      <span className="min-w-7 text-center text-sm font-semibold text-white">
         {quantity}
       </span>
 
       <button
         type="button"
         onClick={onIncrease}
-        className="grid size-8 place-items-center rounded-full bg-gold text-black transition hover:brightness-110 active:scale-95"
+        className="grid size-8 place-items-center bg-gold text-black transition hover:brightness-110"
         aria-label={`Increase ${name}`}
       >
         <Plus className="size-3.5" />
@@ -1484,14 +1484,14 @@ export function GuestServiceOrderForm({
           <button
             type="button"
             onClick={() => setScreen('services')}
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back to services"
           >
             <ArrowLeft className="size-5" />
           </button>
 
           <div className="min-w-0 flex-1 text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
               Guest concierge
             </p>
             <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
@@ -1507,7 +1507,7 @@ export function GuestServiceOrderForm({
             <button
               type="button"
               onClick={clearCart}
-              className="grid size-11 shrink-0 place-items-center rounded-full border border-red-400/15 bg-red-500/10 text-red-200 transition hover:bg-red-500/20"
+              className="grid size-11 shrink-0 place-items-center border border-red-400/15 bg-red-500/10 text-red-200 transition hover:bg-red-500/20"
               aria-label="Clear requests"
             >
               <Trash2 className="size-4.5" />
@@ -1518,9 +1518,9 @@ export function GuestServiceOrderForm({
         </div>
 
         {cart.length === 0 ? (
-          <section className="grid min-h-[62vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.035] p-8 text-center">
+          <section className="grid min-h-[62vh] place-items-center border border-white/10 bg-white/[0.035] p-8 text-center">
             <div>
-              <div className="mx-auto grid size-20 place-items-center rounded-full border border-gold/20 bg-gold/10 text-gold">
+              <div className="mx-auto grid size-20 place-items-center border border-gold/20 bg-gold/10 text-gold">
                 <ShoppingBag className="size-8" strokeWidth={1.5} />
               </div>
               <h3 className="mt-6 font-serif text-3xl font-normal tracking-wide">
@@ -1532,7 +1532,7 @@ export function GuestServiceOrderForm({
               <button
                 type="button"
                 onClick={() => setScreen('services')}
-                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-6 text-sm font-black text-black"
+                className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-6 text-sm font-semibold text-black"
               >
                 Browse Services
                 <ChevronRight className="size-4" />
@@ -1583,17 +1583,17 @@ export function GuestServiceOrderForm({
               </div>
             ))}
 
-            <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+            <section className="overflow-hidden border border-white/10 bg-white/[0.04]">
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                     Selected services
                   </p>
                   <p className="mt-1 text-sm font-semibold text-white/50">
                     Adjust quantities before sending
                   </p>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-white/70">
+                <span className="bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
                   {selectedCount}
                 </span>
               </div>
@@ -1608,7 +1608,7 @@ export function GuestServiceOrderForm({
                       key={service.code}
                       className="grid grid-cols-[64px_1fr_auto] gap-3 p-4"
                     >
-                      <div className="grid size-16 place-items-center rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.16),transparent_55%),#0c0c0c] text-gold">
+                      <div className="grid size-16 place-items-center border border-white/10 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.16),transparent_55%),#0c0c0c] text-gold">
                         <Icon className="size-6" strokeWidth={1.6} />
                       </div>
 
@@ -1619,7 +1619,7 @@ export function GuestServiceOrderForm({
                           </h3>
                           <span
                             className={cn(
-                              'rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest',
+                              'border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest',
                               badge.className
                             )}
                           >
@@ -1648,7 +1648,7 @@ export function GuestServiceOrderForm({
                       <button
                         type="button"
                         onClick={() => updateQuantity(service.code, 0)}
-                        className="grid size-9 place-items-center rounded-full text-white/35 transition hover:bg-red-500/10 hover:text-red-200"
+                        className="grid size-9 place-items-center text-white/35 transition hover:bg-red-500/10 hover:text-red-200"
                         aria-label={`Remove ${service.name}`}
                       >
                         <X className="size-4" />
@@ -1659,13 +1659,13 @@ export function GuestServiceOrderForm({
               </div>
             </section>
 
-            <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.2)]">
+            <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
               <div className="mb-5 flex items-center gap-3">
-                <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
+                <span className="grid size-11 place-items-center bg-gold/15 text-gold">
                   <ShieldCheck className="size-5" />
                 </span>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                     Request details
                   </p>
                   <h3 className="mt-1 font-serif text-xl font-normal tracking-wide">
@@ -1676,7 +1676,7 @@ export function GuestServiceOrderForm({
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="svc-requested-by" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="svc-requested-by" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Requested by
                   </label>
                   <input
@@ -1702,7 +1702,7 @@ export function GuestServiceOrderForm({
                 </div>
 
                 <div>
-                  <label htmlFor="svc-phone-number" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="svc-phone-number" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Phone number
                   </label>
                   <div className="relative">
@@ -1727,8 +1727,8 @@ export function GuestServiceOrderForm({
                 </div>
 
                 {isPublicLocation ? (
-                  <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
-                    <label htmlFor="svc-request-destination" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+                  <div className="border border-white/10 bg-black/20 p-4">
+                    <label htmlFor="svc-request-destination" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
                       Request destination
                     </label>
                     <select
@@ -1758,13 +1758,13 @@ export function GuestServiceOrderForm({
                 ) : null}
 
                 {requiresRoomVerification ? (
-                  <div className="rounded-[1.5rem] border border-gold/30 bg-gold/[0.08] p-4">
+                  <div className="border border-gold/30 bg-gold/[0.08] p-4">
                     <div className="flex items-start gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold text-black">
+                      <span className="grid size-10 shrink-0 place-items-center bg-gold text-black">
                         <BedDouble className="size-5" />
                       </span>
                       <div>
-                        <p className="text-sm font-black text-white">Verify guest room</p>
+                        <p className="text-sm font-semibold text-white">Verify guest room</p>
                         <p className="mt-1 text-xs font-medium leading-5 text-white/50">
                           The server will verify the active stay and passcode before assigning or charging this request to the room.
                         </p>
@@ -1820,7 +1820,7 @@ export function GuestServiceOrderForm({
                 />
 
                 <div>
-                  <label htmlFor="svc-request-time" className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="svc-request-time" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
                     Request time
                   </label>
                   <select
@@ -1846,10 +1846,10 @@ export function GuestServiceOrderForm({
                 </div>
 
                 {fulfillmentTiming === 'SCHEDULED' ? (
-                  <div className="rounded-[1.5rem] border border-gold/20 bg-gold/[0.06] p-4">
+                  <div className="border border-gold/20 bg-gold/[0.06] p-4">
                     <div className="flex items-center gap-2 text-gold">
                       <CalendarClock className="size-4" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">
                         Scheduled request
                       </p>
                     </div>
@@ -1894,9 +1894,9 @@ export function GuestServiceOrderForm({
                   </div>
                 ) : null}
 
-                <div className="rounded-[1.5rem] border border-dashed border-white/15 bg-black/20 p-4">
+                <div className="border border-dashed border-white/15 bg-black/20 p-4">
                   <div className="flex items-start gap-3">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.07] text-gold">
+                    <span className="grid size-11 shrink-0 place-items-center bg-white/[0.07] text-gold">
                       <ImagePlus className="size-5" />
                     </span>
                     <div>
@@ -1923,7 +1923,7 @@ export function GuestServiceOrderForm({
                   <button
                     type="button"
                     onClick={() => attachmentInputRef.current?.click()}
-                    className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-gold/25 bg-gold/10 px-5 text-sm font-black text-gold transition hover:bg-gold/15 active:scale-[0.99]"
+                    className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 border border-gold/25 bg-gold/10 px-5 text-sm font-semibold text-gold transition hover:bg-gold/15"
                   >
                     <Camera className="size-4" />
                     Take or Upload Photos
@@ -1934,7 +1934,7 @@ export function GuestServiceOrderForm({
                       {attachments.map((attachment) => (
                         <div
                           key={attachment.id}
-                          className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]"
+                          className="overflow-hidden border border-white/10 bg-white/[0.04]"
                         >
                           <div className="relative aspect-square bg-black/40">
                             <img
@@ -1945,7 +1945,7 @@ export function GuestServiceOrderForm({
                             <button
                               type="button"
                               onClick={() => removeAttachment(attachment.id)}
-                              className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/75 text-white"
+                              className="absolute right-2 top-2 grid size-8 place-items-center bg-black/75 text-white"
                               aria-label={`Remove ${attachment.file.name}`}
                             >
                               <X className="size-4" />
@@ -1964,7 +1964,7 @@ export function GuestServiceOrderForm({
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-4 flex items-center gap-2 rounded-xl bg-white/[0.04] p-3 text-xs font-medium text-white/40">
+                    <div className="mt-4 flex items-center gap-2 bg-white/[0.04] p-3 text-xs font-medium text-white/40">
                       <FileImage className="size-4" />
                       No photos attached
                     </div>
@@ -1972,8 +1972,8 @@ export function GuestServiceOrderForm({
                 </div>
 
                 {hasPayableFixedPrice ? (
-                  <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+                  <div className="border border-white/10 bg-black/20 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
                       Payment method
                     </p>
 
@@ -1986,17 +1986,17 @@ export function GuestServiceOrderForm({
                           setChargeConsent(false);
                         }}
                         className={cn(
-                          'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                          'flex items-center gap-3 border p-4 text-left transition',
                           paymentMethod === 'ROOM_CHARGE'
                             ? 'border-gold/45 bg-gold/10'
                             : 'border-white/10 bg-white/[0.03]'
                         )}
                       >
-                        <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-gold">
+                        <span className="grid size-11 place-items-center bg-white/10 text-gold">
                           <CreditCard className="size-5" />
                         </span>
                         <span>
-                          <span className="block text-sm font-black text-white">
+                          <span className="block text-sm font-semibold text-white">
                             Charge to room
                           </span>
                           <span className="mt-1 block text-xs font-medium text-white/45">
@@ -2012,17 +2012,17 @@ export function GuestServiceOrderForm({
                           setChargeConsent(false);
                         }}
                         className={cn(
-                          'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                          'flex items-center gap-3 border p-4 text-left transition',
                           paymentMethod === 'XENDIT'
                             ? 'border-gold/45 bg-gold/10'
                             : 'border-white/10 bg-white/[0.03]'
                         )}
                       >
-                        <span className="grid size-11 place-items-center rounded-2xl bg-white/10 text-gold">
+                        <span className="grid size-11 place-items-center bg-white/10 text-gold">
                           <QrCode className="size-5" />
                         </span>
                         <span>
-                          <span className="block text-sm font-black text-white">
+                          <span className="block text-sm font-semibold text-white">
                             Card / E-wallet / QR Ph
                           </span>
                           <span className="mt-1 block text-xs font-medium text-white/45">
@@ -2035,7 +2035,7 @@ export function GuestServiceOrderForm({
                 ) : null}
 
                 {hasPayableFixedPrice ? (
-                  <label className="flex cursor-pointer items-start gap-3 rounded-[1.5rem] border border-gold/20 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90">
+                  <label className="flex cursor-pointer items-start gap-3 border border-gold/20 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90">
                     <input
                       name="chargeConsent"
                       value="true"
@@ -2044,7 +2044,7 @@ export function GuestServiceOrderForm({
                       onChange={(event) =>
                         setChargeConsent(event.target.checked)
                       }
-                      className="mt-1 size-5 rounded border-gold/40 bg-black accent-gold"
+                      className="mt-1 size-5 border-gold/40 bg-black accent-gold"
                     />
                     <span>
                       {paymentMethod === 'XENDIT'
@@ -2056,14 +2056,14 @@ export function GuestServiceOrderForm({
                 ) : null}
 
                 {!hasPayableFixedPrice ? (
-                  <div className="rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/[0.08] p-4 text-sm font-semibold leading-6 text-emerald-200">
+                  <div className="border border-emerald-400/20 bg-emerald-400/[0.08] p-4 text-sm font-semibold leading-6 text-emerald-200">
                     No online payment is required. This request will be sent
                     directly to the hotel team.
                   </div>
                 ) : null}
 
                 {hasConfirmationItem ? (
-                  <div className="rounded-[1.5rem] border border-gold/15 bg-gold/[0.06] p-4 text-sm font-semibold leading-6 text-gold/85">
+                  <div className="border border-gold/15 bg-gold/[0.06] p-4 text-sm font-semibold leading-6 text-gold/85">
                     Some services require staff confirmation before pricing or
                     completion.
                   </div>
@@ -2071,7 +2071,7 @@ export function GuestServiceOrderForm({
               </div>
             </section>
 
-            <section className="mt-5 rounded-[2rem] border border-gold/20 bg-[linear-gradient(145deg,rgba(214,167,56,0.14),rgba(255,255,255,0.035))] p-5">
+            <section className="mt-5 border border-gold/20 bg-[linear-gradient(145deg,rgba(214,167,56,0.14),rgba(255,255,255,0.035))] p-5">
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between gap-4 text-white/55">
                   <span>Selected requests</span>
@@ -2090,14 +2090,14 @@ export function GuestServiceOrderForm({
               </div>
 
               {paymentMessage ? (
-                <p className="mt-4 flex items-center gap-2 rounded-2xl border border-gold/20 bg-gold/10 p-3 text-sm font-bold text-gold">
+                <p className="mt-4 flex items-center gap-2 border border-gold/20 bg-gold/10 p-3 text-sm font-bold text-gold">
                   <RefreshCw className="size-4 animate-spin" />
                   {paymentMessage}
                 </p>
               ) : null}
 
               {visibleError ? (
-                <p className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
+                <p className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
                   {visibleError}
                 </p>
               ) : null}
@@ -2146,7 +2146,7 @@ export function GuestServiceOrderForm({
           onCancel={() => void cancelExistingServicePayment()}
         />
       {successMessage ? (
-        <div className="mb-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
+        <div className="mb-5 border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-200">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
             <p>{successMessage}</p>
@@ -2155,13 +2155,13 @@ export function GuestServiceOrderForm({
       ) : null}
 
       {visibleError ? (
-        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
+        <div className="mb-5 flex items-start gap-3 border border-red-400/20 bg-red-500/10 p-4 text-sm font-semibold text-red-200">
           <X className="mt-0.5 size-4 shrink-0" />
           <p className="min-w-0 flex-1">{visibleError}</p>
           <button
             type="button"
             onClick={() => setLocalError(null)}
-            className="grid size-7 shrink-0 place-items-center rounded-full bg-black/15"
+            className="grid size-7 shrink-0 place-items-center bg-black/15"
             aria-label="Dismiss error"
           >
             <X className="size-3.5" />
@@ -2169,10 +2169,10 @@ export function GuestServiceOrderForm({
         </div>
       ) : null}
 
-      <section className="mb-5 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_36%),linear-gradient(145deg,#161512,#0b0b0a)] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+      <section className="mb-5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_36%),linear-gradient(145deg,#161512,#0b0b0a)] p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-gold">
+            <div className="inline-flex items-center gap-2 border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
               <Sparkles className="size-3.5" />
               Private concierge
             </div>
@@ -2187,28 +2187,28 @@ export function GuestServiceOrderForm({
             </p>
           </div>
 
-          <span className="grid size-14 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.05] text-gold">
+          <span className="grid size-14 shrink-0 place-items-center border border-white/10 bg-white/[0.05] text-gold">
             <BellRing className="size-6" strokeWidth={1.5} />
           </span>
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
+        <div className="mt-5 flex items-center justify-between gap-3 border border-white/8 bg-black/20 px-4 py-3">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
               Service location
             </p>
             <p className="mt-1 font-serif text-[17px] font-medium tracking-wide text-white">
               {roomLabel}
             </p>
           </div>
-          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-300">
+          <span className="border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-emerald-300">
             Available
           </span>
         </div>
       </section>
 
-      <section className="mb-5 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-4">
-        <label htmlFor="svc-requesting-as" className="block text-[10px] font-black uppercase tracking-[0.16em] text-gold/85">
+      <section className="mb-5 border border-white/10 bg-white/[0.035] p-4">
+        <label htmlFor="svc-requesting-as" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold/85">
           Requesting as
         </label>
         <input
@@ -2229,8 +2229,8 @@ export function GuestServiceOrderForm({
         </p>
       </section>
 
-      <div className="sticky top-[4.5rem] z-20 -mx-1 mb-7 rounded-[1.75rem] border border-white/10 bg-black/90 p-2 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-        <div className="flex h-12 items-center gap-3 rounded-2xl bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
+      <div className="sticky top-[4.5rem] z-20 -mx-1 mb-7 border border-white/10 bg-black/90 p-2 backdrop-blur-xl">
+        <div className="flex h-12 items-center gap-3 bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
           <Search className="size-4.5 shrink-0 text-gold" />
           <input
             value={searchQuery}
@@ -2243,7 +2243,7 @@ export function GuestServiceOrderForm({
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="grid size-8 shrink-0 place-items-center rounded-full text-white/40 hover:bg-white/10 hover:text-white"
+              className="grid size-8 shrink-0 place-items-center text-white/40 hover:bg-white/10 hover:text-white"
               aria-label="Clear search"
             >
               <X className="size-4" />
@@ -2265,16 +2265,16 @@ export function GuestServiceOrderForm({
                 type="button"
                 onClick={() => setActiveCategory(category)}
                 className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-full border px-4 py-3 text-xs font-black transition active:scale-[0.98]',
+                  'flex shrink-0 items-center gap-2 border px-4 py-3 text-xs font-semibold transition',
                   active
-                    ? 'border-gold bg-gold text-black shadow-[0_8px_22px_rgba(214,167,56,0.18)]'
+                    ? 'border-gold bg-gold text-black'
                     : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
                 )}
               >
                 {category}
                 <span
                   className={cn(
-                    'rounded-full px-2 py-0.5 text-[9px]',
+                    'px-2 py-0.5 text-[9px]',
                     active
                       ? 'bg-black/12 text-black/70'
                       : 'bg-white/10 text-white/45'
@@ -2308,7 +2308,7 @@ export function GuestServiceOrderForm({
               <section key={category}>
                 <div className="mb-4 flex items-end justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
                       Guest services
                     </p>
                     <h3 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
@@ -2332,7 +2332,7 @@ export function GuestServiceOrderForm({
                       <article
                         key={service.code}
                         className={cn(
-                          'flex min-h-[220px] flex-col overflow-hidden rounded-[1.6rem] border bg-white/[0.04] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
+                          'flex min-h-[220px] flex-col overflow-hidden border bg-white/[0.04] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
                           unavailable
                             ? 'border-red-400/15 bg-red-500/[0.04] opacity-70'
                             : quantity > 0
@@ -2341,12 +2341,12 @@ export function GuestServiceOrderForm({
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className="grid size-12 place-items-center rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.18),transparent_58%),#0d0d0d] text-gold">
+                          <span className="grid size-12 place-items-center border border-white/10 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.18),transparent_58%),#0d0d0d] text-gold">
                             <Icon className="size-5.5" strokeWidth={1.6} />
                           </span>
                           <span
                             className={cn(
-                              'max-w-[7rem] truncate rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-widest',
+                              'max-w-[7rem] truncate border px-2.5 py-1 text-[8px] font-semibold uppercase tracking-widest',
                               badge.className
                             )}
                           >
@@ -2381,7 +2381,7 @@ export function GuestServiceOrderForm({
                             <button
                               type="button"
                               disabled
-                              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-red-500/10 text-xs font-black text-red-200"
+                              className="inline-flex h-11 w-full items-center justify-center bg-red-500/10 text-xs font-semibold text-red-200"
                             >
                               Sold out
                             </button>
@@ -2400,7 +2400,7 @@ export function GuestServiceOrderForm({
                             <button
                               type="button"
                               onClick={() => addService(service.code)}
-                              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white text-xs font-black text-black transition hover:bg-gold active:scale-[0.98]"
+                              className="inline-flex h-11 w-full items-center justify-center gap-2 bg-white text-xs font-semibold text-black transition hover:bg-gold"
                             >
                               Add request
                               <Plus className="size-4" />
@@ -2416,8 +2416,8 @@ export function GuestServiceOrderForm({
           })}
 
         {!filteredServices.length ? (
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-9 text-center">
-            <div className="mx-auto grid size-16 place-items-center rounded-full bg-white/5 text-white/35">
+          <div className="border border-white/10 bg-white/[0.04] p-9 text-center">
+            <div className="mx-auto grid size-16 place-items-center bg-white/5 text-white/35">
               <ConciergeBell className="size-7" strokeWidth={1.5} />
             </div>
             <h3 className="mt-5 font-serif text-2xl font-normal tracking-wide">
@@ -2433,7 +2433,7 @@ export function GuestServiceOrderForm({
                   setSearchQuery('');
                   setActiveCategory('All');
                 }}
-                className="mt-5 rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-black text-white"
+                className="mt-5 border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white"
               >
                 Reset filters
               </button>
@@ -2446,17 +2446,17 @@ export function GuestServiceOrderForm({
         <button
           type="button"
           onClick={() => setScreen('cart')}
-          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 rounded-[1.35rem] border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black shadow-[0_18px_45px_rgba(214,167,56,0.28)] transition hover:brightness-105 active:scale-[0.99]"
+          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black transition hover:brightness-105"
         >
           <span className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center rounded-xl bg-black/12">
+            <span className="grid size-11 place-items-center bg-black/12">
               <ShoppingBag className="size-4.5" />
             </span>
             <span className="text-left">
-              <span className="block text-[10px] font-black uppercase tracking-widest text-black/55">
+              <span className="block text-[10px] font-semibold uppercase tracking-widest text-black/55">
                 {selectedCount} request{selectedCount === 1 ? '' : 's'} selected
               </span>
-              <span className="mt-0.5 block text-sm font-black">
+              <span className="mt-0.5 block text-sm font-semibold">
                 Review requests
               </span>
             </span>

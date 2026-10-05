@@ -174,8 +174,8 @@ function InfoStatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[1.45rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
-      <span className="grid size-11 place-items-center rounded-2xl bg-gold/20 text-gold">
+    <div className="border border-white/10 bg-white/10 p-4 backdrop-blur">
+      <span className="grid size-11 place-items-center bg-gold/20 text-gold">
         <Icon className="size-5" />
       </span>
 
@@ -208,16 +208,16 @@ function QuickActionCard({
       href={href}
       className={
         gold
-          ? 'group block rounded-[1.55rem] bg-gold p-4 text-black shadow-[0_18px_40px_rgba(214,167,56,0.22)] active:scale-[0.99]'
-          : 'group block rounded-[1.55rem] border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10 active:scale-[0.99]'
+          ? 'group block bg-gold p-4 text-black'
+          : 'group block border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10'
       }
     >
       <div className="flex items-start justify-between gap-3">
         <span
           className={
             gold
-              ? 'grid size-11 place-items-center rounded-2xl bg-black/10 text-black'
-              : 'grid size-11 place-items-center rounded-2xl bg-gold/20 text-gold'
+              ? 'grid size-11 place-items-center bg-black/10 text-black'
+              : 'grid size-11 place-items-center bg-gold/20 text-gold'
           }
         >
           <Icon className="size-5" />
@@ -257,9 +257,9 @@ function QuickActionCard({
 
 function PoolRuleCard({ rules }: { rules: string[] }) {
   return (
-    <section id="pool-rules" className="rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
+    <section id="pool-rules" className="border border-white/10 bg-white/10 p-5 backdrop-blur">
       <div className="flex items-start gap-3">
-        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold text-black">
+        <span className="grid size-12 shrink-0 place-items-center bg-gold text-black">
           <ShieldCheck className="size-6" />
         </span>
 
@@ -278,9 +278,9 @@ function PoolRuleCard({ rules }: { rules: string[] }) {
         {rules.map((rule, index) => (
           <div
             key={`${rule}-${index}`}
-            className="flex gap-3 rounded-2xl bg-black/25 px-4 py-3 text-[14px] font-medium leading-6 text-white/75"
+            className="flex gap-3 bg-black/25 px-4 py-3 text-[14px] font-medium leading-6 text-white/75"
           >
-            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-gold text-[11px] font-bold text-black">
+            <span className="grid size-6 shrink-0 place-items-center bg-gold text-[11px] font-bold text-black">
               {index + 1}
             </span>
             <span>{rule}</span>
@@ -306,7 +306,7 @@ function PoolGallery({
   }
 
   return (
-    <section className="rounded-[2rem] border border-white/10 bg-white/10 p-4 backdrop-blur">
+    <section className="border border-white/10 bg-white/10 p-4 backdrop-blur">
       <div className="mb-4">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
           Gallery
@@ -320,8 +320,8 @@ function PoolGallery({
             key={image.id}
             className={
               index === 0
-                ? 'col-span-2 overflow-hidden rounded-[1.6rem] border border-white/10 bg-black/30'
-                : 'overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/30'
+                ? 'col-span-2 overflow-hidden border border-white/10 bg-black/30'
+                : 'overflow-hidden border border-white/10 bg-black/30'
             }
           >
             <img
@@ -593,7 +593,7 @@ export default async function PoolPage({
             <div className="grid grid-cols-[40px_1fr_40px] items-center gap-2">
               <Link
                 href={`/t/${tagCode}`}
-                className="grid size-11 place-items-center rounded-full text-white transition hover:bg-white/10"
+                className="grid size-11 place-items-center text-white transition hover:bg-white/10"
                 aria-label="Go back"
               >
                 <ArrowLeft className="size-5" />
@@ -610,7 +610,7 @@ export default async function PoolPage({
 
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="grid size-11 place-items-center rounded-full text-white transition hover:bg-white/10"
+                className="grid size-11 place-items-center text-white transition hover:bg-white/10"
                 aria-label="Contact staff"
               >
                 <Phone className="size-5" />
@@ -619,7 +619,7 @@ export default async function PoolPage({
           </header>
 
           <section className="px-5 py-5">
-            <div className="relative overflow-hidden rounded-[2.4rem] border border-gold/30 bg-neutral-950 shadow-2xl">
+            <div className="relative overflow-hidden border border-gold/30 bg-neutral-950 shadow-2xl">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-65"
                 style={{
@@ -630,7 +630,7 @@ export default async function PoolPage({
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black" />
 
               <div className="relative z-10 flex min-h-[430px] flex-col justify-end p-5">
-                <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
+                <span className="mb-4 inline-flex w-fit items-center gap-2 border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
                   <Sparkles className="size-4" />
                   Pool Experience
                 </span>
@@ -644,11 +644,11 @@ export default async function PoolPage({
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
+                  <span className="bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
                     Open {poolHours}
                   </span>
 
-                  <span className="rounded-full bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-black">
+                  <span className="bg-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-black">
                     Guest Access
                   </span>
                 </div>
@@ -702,9 +702,9 @@ export default async function PoolPage({
           ) : null}
 
           <section className="px-5 pt-6">
-            <div className="rounded-[2rem] border border-gold/30 bg-gold p-6 text-black shadow-[0_20px_50px_rgba(214,167,56,0.22)]">
+            <div className="border border-gold/30 bg-gold p-6 text-black">
               <div className="flex items-start gap-4">
-                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-black/10">
+                <span className="grid size-12 shrink-0 place-items-center bg-black/10">
                   <HelpCircle className="size-6" />
                 </span>
 
@@ -718,14 +718,14 @@ export default async function PoolPage({
                   <div className="mt-5 grid gap-2">
                     <Link
                       href={`/t/${tagCode}/service`}
-                      className="rounded-[1.25rem] bg-black px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-black/80 active:scale-[0.98]"
+                      className="bg-black px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-black/80"
                     >
                       Request Service
                     </Link>
 
                     <Link
                       href={`/t/${tagCode}/menu`}
-                      className="rounded-[1.25rem] border border-black/15 bg-white/40 px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-black transition hover:bg-white/50 active:scale-[0.98]"
+                      className="border border-black/15 bg-white/40 px-4 py-3.5 text-center text-[15px] font-semibold tracking-wide text-black transition hover:bg-white/50"
                     >
                       Order Food & Drinks
                     </Link>

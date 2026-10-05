@@ -307,7 +307,7 @@ function IPhoneFrame({
     >
       <div
         className={cn(
-          'absolute -inset-8 rounded-full blur-[80px]',
+          'absolute -inset-8 blur-[80px]',
           active ? 'bg-[#C9A45C]/28' : 'bg-[#C9A45C]/12'
         )}
       />
@@ -325,11 +325,11 @@ function IPhoneFrame({
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="relative rounded-[2.8rem] border border-[#E7C878]/45 bg-[linear-gradient(135deg,#0b0b0a,#030303)] p-2.5 shadow-[0_42px_130px_rgba(201,164,92,.18)]"
+        className="relative border border-[#E7C878]/45 bg-[linear-gradient(135deg,#0b0b0a,#030303)] p-2.5"
       >
-        <div className="absolute left-1/2 top-2.5 z-20 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
+        <div className="absolute left-1/2 top-2.5 z-20 h-6 w-24 -translate-x-1/2 bg-black" />
 
-        <div className="relative overflow-hidden rounded-[2.25rem] border border-white/10 bg-black">
+        <div className="relative overflow-hidden border border-white/10 bg-black">
           <Image
             src={screen.src}
             alt={screen.title}
@@ -350,7 +350,7 @@ function IPhoneFrame({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.75, delay: 0.25 + index * 0.1, ease }}
-        className="relative mx-auto mt-5 w-fit rounded-full border border-[#E7C878]/25 bg-[#C9A45C]/10 px-4 py-2 text-center backdrop-blur-xl"
+        className="relative mx-auto mt-5 w-fit border border-[#E7C878]/25 bg-[#C9A45C]/10 px-4 py-2 text-center backdrop-blur-xl"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E7C878]">
           {screen.label}
@@ -383,7 +383,7 @@ function GuestPortalShowcaseSection() {
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="absolute right-[-15rem] top-28 size-[520px] rounded-full bg-[#C9A45C]/18 blur-[130px]"
+        className="absolute right-[-15rem] top-28 size-[520px] bg-[#C9A45C]/18 blur-[130px]"
       />
 
       <div className="relative mx-auto w-full max-w-[1760px]">
@@ -406,8 +406,8 @@ function GuestPortalShowcaseSection() {
         </Reveal>
 
         <div className="relative mt-20">
-          <div className="absolute left-1/2 top-1/2 hidden size-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#E7C878]/10 md:block" />
-          <div className="absolute left-1/2 top-1/2 hidden size-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#E7C878]/15 md:block" />
+          <div className="absolute left-1/2 top-1/2 hidden size-[620px] -translate-x-1/2 -translate-y-1/2 border border-[#E7C878]/10 md:block" />
+          <div className="absolute left-1/2 top-1/2 hidden size-[460px] -translate-x-1/2 -translate-y-1/2 border border-[#E7C878]/15 md:block" />
 
           <div className="grid items-end gap-10 md:grid-cols-2 xl:grid-cols-4">
             {guestScreens.map((screen, index) => (
@@ -447,11 +447,11 @@ function GuestPortalShowcaseSection() {
             <Reveal key={item.title} delay={index * 0.06}>
               <motion.div
                 whileHover={{ y: -8 }}
-                className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl"
+                className="relative overflow-hidden border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl"
               >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,164,92,.12),transparent_45%)] opacity-0 transition duration-500 hover:opacity-100" />
 
-                <div className="relative grid size-11 place-items-center rounded-2xl bg-[#C9A45C]/12 text-[#E7C878]">
+                <div className="relative grid size-11 place-items-center bg-[#C9A45C]/12 text-[#E7C878]">
                   {item.icon}
                 </div>
 
@@ -529,9 +529,9 @@ function MagneticButton({
         onMouseMove={handleMove}
         onMouseLeave={handleLeave}
         className={cn(
-          'group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-full px-6 text-sm font-semibold tracking-tight transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#E7C878]/50',
+          'group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden px-6 text-sm font-semibold tracking-tight transition duration-300 focus:outline-none focus:ring-2 focus:ring-[#E7C878]/50',
           variant === 'gold'
-            ? 'bg-[#C9A45C] text-black shadow-[0_22px_70px_rgba(201,164,92,0.35)] hover:bg-[#E7C878]'
+            ? 'bg-[#C9A45C] text-black hover:bg-[#E7C878]'
             : 'border border-white/15 bg-white/[0.06] text-[#F6F1E8] backdrop-blur-2xl hover:bg-white/[0.1]'
         )}
       >
@@ -550,10 +550,10 @@ function BrandMark() {
   return (
     <Link
       href="/"
-      className="group inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.035] py-1.5 pl-1.5 pr-5 backdrop-blur-2xl transition duration-500 hover:border-[#E7C878]/35 hover:bg-white/[0.07]"
+      className="group inline-flex items-center gap-3 border border-white/10 bg-white/[0.035] py-1.5 pl-1.5 pr-5 backdrop-blur-2xl transition duration-500 hover:border-[#E7C878]/35 hover:bg-white/[0.07]"
       aria-label="CloudView Smart Guest Portal"
     >
-      <div className="relative grid size-12 place-items-center overflow-hidden rounded-[1.15rem] border border-[#E7C878]/25 bg-[#C9A45C] shadow-[0_18px_55px_rgba(201,164,92,0.32)]">
+      <div className="relative grid size-12 place-items-center overflow-hidden border border-[#E7C878]/25 bg-[#C9A45C]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,.65),transparent_34%)]" />
 
         <Image
@@ -601,9 +601,9 @@ function FloatingNavbar() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease }}
           className={cn(
-            'mx-auto flex w-full max-w-[1760px] items-center justify-between rounded-full border px-4 py-3 backdrop-blur-2xl transition duration-500',
+            'mx-auto flex w-full max-w-[1760px] items-center justify-between border px-4 py-3 backdrop-blur-2xl transition duration-500',
             scrolled
-              ? 'border-white/12 bg-[#030303]/72 shadow-[0_18px_60px_rgba(0,0,0,0.28)]'
+              ? 'border-white/12 bg-[#030303]/72'
               : 'border-white/8 bg-white/[0.035]'
           )}
         >
@@ -624,14 +624,14 @@ function FloatingNavbar() {
           <div className="hidden items-center gap-3 md:flex">
             <Link
               href="/dashboard/login"
-              className="rounded-full px-4 py-2 text-sm font-semibold text-white/55 transition hover:text-white"
+              className="px-4 py-2 text-sm font-semibold text-white/55 transition hover:text-white"
             >
               Login
             </Link>
 
             <Link
               href="#demo"
-              className="rounded-full bg-[#C9A45C] px-5 py-2.5 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(201,164,92,0.26)] transition hover:bg-[#E7C878]"
+              className="bg-[#C9A45C] px-5 py-2.5 text-sm font-semibold text-black shadow-[0_16px_40px_rgba(201,164,92,0.26)] transition hover:bg-[#E7C878]"
             >
               Request Demo
             </Link>
@@ -640,7 +640,7 @@ function FloatingNavbar() {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white md:hidden"
+            className="grid size-10 place-items-center border border-white/10 bg-white/[0.06] text-white md:hidden"
             aria-label="Open menu"
           >
             <Menu className="size-5" />
@@ -654,14 +654,14 @@ function FloatingNavbar() {
           animate={{ opacity: 1 }}
           className="fixed inset-0 z-[80] bg-black/80 p-4 backdrop-blur-2xl md:hidden"
         >
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
+          <div className="border border-white/10 bg-white/[0.06] p-5">
             <div className="flex items-center justify-between">
               <BrandMark />
 
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                className="grid size-10 place-items-center rounded-full bg-white/10 text-white"
+                className="grid size-10 place-items-center bg-white/10 text-white"
                 aria-label="Close menu"
               >
                 <X className="size-5" />
@@ -674,7 +674,7 @@ function FloatingNavbar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-sm font-semibold text-white"
+                  className="border border-white/10 bg-white/[0.05] px-4 py-4 text-sm font-semibold text-white"
                 >
                   {item.label}
                 </Link>
@@ -683,7 +683,7 @@ function FloatingNavbar() {
               <Link
                 href="#demo"
                 onClick={() => setMenuOpen(false)}
-                className="rounded-2xl bg-[#C9A45C] px-4 py-4 text-center text-sm font-semibold text-black"
+                className="bg-[#C9A45C] px-4 py-4 text-center text-sm font-semibold text-black"
               >
                 Request Demo
               </Link>
@@ -770,7 +770,7 @@ function HeroImage() {
       }}
       className="relative mx-auto w-full max-w-[980px] perspective-[1200px]"
     >
-      <div className="absolute -inset-10 rounded-full bg-[#C9A45C]/20 blur-[110px]" />
+      <div className="absolute -inset-10 bg-[#C9A45C]/20 blur-[110px]" />
 
       <GoldImageFrame
         src={images.hero}
@@ -787,7 +787,7 @@ function HeroImage() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 1, ease }}
-          className="absolute bottom-5 left-5 right-5 rounded-[1.5rem] border border-[#E7C878]/25 bg-black/50 p-4 backdrop-blur-2xl"
+          className="absolute bottom-5 left-5 right-5 border border-[#E7C878]/25 bg-black/50 p-4 backdrop-blur-2xl"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -800,12 +800,12 @@ function HeroImage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="relative grid size-11 place-items-center rounded-2xl bg-[#C9A45C] text-black">
-                <span className="absolute inset-0 rounded-2xl bg-[#C9A45C] opacity-45 blur-md" />
+              <span className="relative grid size-11 place-items-center bg-[#C9A45C] text-black">
+                <span className="absolute inset-0 bg-[#C9A45C] opacity-45 blur-md" />
                 <Wifi className="relative size-5 animate-pulse" />
               </span>
 
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/12 px-3 py-1 text-xs font-semibold text-emerald-100">
+              <span className="border border-emerald-300/20 bg-emerald-300/12 px-3 py-1 text-xs font-semibold text-emerald-100">
                 Live
               </span>
             </div>
@@ -832,7 +832,7 @@ function HeroSection() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease }}
-            className="inline-flex rounded-full border border-[#C9A45C]/24 bg-[#C9A45C]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#E7C878]"
+            className="inline-flex border border-[#C9A45C]/24 bg-[#C9A45C]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#E7C878]"
           >
             NFC-powered guest portal
           </motion.p>
@@ -1069,7 +1069,7 @@ const ringOpacityC = useTransform(
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <motion.div
             style={{ opacity: imageGlowOpacity }}
-            className="absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#C9A45C]/20 blur-[150px]"
+            className="absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 bg-[#C9A45C]/20 blur-[150px]"
           />
 
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_36%,rgba(201,164,92,.14),transparent_26%),linear-gradient(to_bottom,rgba(255,255,255,.025),transparent_22%,transparent_78%,rgba(255,255,255,.025))]" />
@@ -1157,23 +1157,23 @@ const ringOpacityC = useTransform(
                       rotate: imageRotate,
                     }
               }
-              className="relative w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))] p-4 shadow-[0_30px_120px_rgba(0,0,0,.55)] backdrop-blur-xl sm:p-5 lg:p-6"
+              className="relative w-full overflow-hidden border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))] p-4 backdrop-blur-xl sm:p-5 lg:p-6"
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_74%_38%,rgba(231,200,120,.2),transparent_23%),radial-gradient(circle_at_28%_72%,rgba(201,164,92,.08),transparent_24%)]" />
 
               <motion.div
                 style={{ scale: ringScaleA, opacity: ringOpacityA }}
-                className="pointer-events-none absolute right-[16%] top-[15%] h-36 w-36 rounded-full border border-[#E7C878]/45 sm:h-44 sm:w-44"
+                className="pointer-events-none absolute right-[16%] top-[15%] h-36 w-36 border border-[#E7C878]/45 sm:h-44 sm:w-44"
               />
 
               <motion.div
                 style={{ scale: ringScaleB, opacity: ringOpacityB }}
-                className="pointer-events-none absolute right-[12%] top-[12%] h-52 w-52 rounded-full border border-[#E7C878]/20 sm:h-64 sm:w-64"
+                className="pointer-events-none absolute right-[12%] top-[12%] h-52 w-52 border border-[#E7C878]/20 sm:h-64 sm:w-64"
               />
 
               <motion.div
                 style={{ scale: ringScaleC, opacity: ringOpacityC }}
-                className="pointer-events-none absolute right-[8%] top-[8%] h-72 w-72 rounded-full border border-[#E7C878]/10 sm:h-80 sm:w-80"
+                className="pointer-events-none absolute right-[8%] top-[8%] h-72 w-72 border border-[#E7C878]/10 sm:h-80 sm:w-80"
               />
 
               <motion.div
@@ -1181,7 +1181,7 @@ const ringOpacityC = useTransform(
                 className="pointer-events-none absolute inset-y-0 left-0 z-20 w-28 rotate-12 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)] blur-lg"
               />
 
-              <div className="relative overflow-hidden rounded-[1.6rem] border border-white/6 bg-black/45">
+              <div className="relative overflow-hidden border border-white/6 bg-black/45">
                 <Image
                   src="/cloudview/5.png"
                   alt="CloudView NFC workflow"
@@ -1200,7 +1200,7 @@ const ringOpacityC = useTransform(
                       opacity: item.opacity,
                       y: item.y,
                     }}
-                    className="rounded-2xl border border-white/8 bg-white/[0.03] p-4"
+                    className="border border-white/8 bg-white/[0.03] p-4"
                   >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#E7C878]">
                       {item.step}
@@ -1266,11 +1266,11 @@ function TiltCard({
           transformStyle: 'preserve-3d',
         }}
         whileHover={{ y: -8 }}
-        className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.045] p-6 shadow-[0_22px_80px_rgba(0,0,0,.24)] backdrop-blur-2xl"
+        className="group relative overflow-hidden border border-white/10 bg-white/[0.045] p-6 backdrop-blur-2xl"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(201,164,92,.18),transparent_42%)] opacity-0 transition duration-500 group-hover:opacity-100" />
 
-        <div className="relative grid size-12 place-items-center rounded-2xl bg-[#C9A45C]/12 text-[#E7C878]">
+        <div className="relative grid size-12 place-items-center bg-[#C9A45C]/12 text-[#E7C878]">
           {icon}
         </div>
 
@@ -1372,7 +1372,7 @@ function CraftedSection() {
               <motion.div
                 key={item}
                 whileHover={{ x: 8 }}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 backdrop-blur-xl"
+                className="flex items-center gap-3 border border-white/10 bg-white/[0.045] px-4 py-3 backdrop-blur-xl"
               >
                 <CircleDot className="size-4 text-[#E7C878]" />
                 <span className="font-light text-white/72">{item}</span>
@@ -1412,11 +1412,11 @@ function PhonePanel() {
       transition={{ duration: 1, ease }}
       className="relative mx-auto w-full max-w-[330px]"
     >
-      <div className="absolute -inset-8 rounded-full bg-[#C9A45C]/20 blur-[80px]" />
+      <div className="absolute -inset-8 bg-[#C9A45C]/20 blur-[80px]" />
 
-      <div className="relative overflow-hidden rounded-[2.7rem] border border-white/14 bg-black p-3 shadow-[0_40px_120px_rgba(0,0,0,.58)]">
-        <div className="rounded-[2.15rem] bg-[#0B0B0A] p-5">
-          <div className="mx-auto mb-6 h-1.5 w-16 rounded-full bg-white/14" />
+      <div className="relative overflow-hidden border border-white/14 bg-black p-3">
+        <div className="bg-[#0B0B0A] p-5">
+          <div className="mx-auto mb-6 h-1.5 w-16 bg-white/14" />
 
           <p className="text-xs font-light text-white/42">Welcome</p>
           <h3 className="mt-1 text-2xl font-light text-[#F6F1E8]">
@@ -1431,7 +1431,7 @@ function PhonePanel() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.55, delay: 0.25 + index * 0.09, ease }}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3"
+                className="flex items-center justify-between border border-white/10 bg-white/[0.055] px-4 py-3"
               >
                 <span className="flex items-center gap-3 text-sm font-light text-white/75">
                   <span className="text-[#E7C878]">{item.icon}</span>
@@ -1446,8 +1446,8 @@ function PhonePanel() {
       </div>
 
       <div className="absolute left-1/2 top-1/2 -z-10 grid size-56 -translate-x-1/2 -translate-y-1/2 place-items-center">
-        <span className="absolute size-28 animate-ping rounded-full border border-[#E7C878]/25" />
-        <span className="absolute size-40 animate-[ping_3s_ease-in-out_infinite] rounded-full border border-[#E7C878]/15" />
+        <span className="absolute size-28 animate-ping border border-[#E7C878]/25" />
+        <span className="absolute size-40 animate-[ping_3s_ease-in-out_infinite] border border-[#E7C878]/15" />
       </div>
     </motion.div>
   );
@@ -1518,7 +1518,7 @@ function BenefitsSection() {
             <Reveal key={item} delay={index * 0.06}>
               <motion.div
                 whileHover={{ y: -8 }}
-                className="relative min-h-48 overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl"
+                className="relative min-h-48 overflow-hidden border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl"
               >
                 <div className="absolute right-4 top-4 text-5xl font-light text-[#C9A45C]/18">
                   0{index + 1}
@@ -1570,7 +1570,7 @@ function GallerySection() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.55, delay: index * 0.08, ease }}
-                    className="rounded-full border border-white/16 bg-white/10 px-4 py-2 text-sm font-light text-white backdrop-blur-xl"
+                    className="border border-white/16 bg-white/10 px-4 py-2 text-sm font-light text-white backdrop-blur-xl"
                   >
                     {label}
                   </motion.span>
@@ -1621,13 +1621,13 @@ function AdminScreenFrame({
       }}
       className="relative"
     >
-      <div className="absolute -inset-8 rounded-full bg-[#C9A45C]/20 blur-[110px]" />
+      <div className="absolute -inset-8 bg-[#C9A45C]/20 blur-[110px]" />
 
       <motion.div
         aria-hidden="true"
         animate={{ opacity: [0.25, 0.75, 0.25] }}
         transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
-        className="pointer-events-none absolute inset-0 z-20 rounded-[2.25rem] border border-[#E7C878]/30"
+        className="pointer-events-none absolute inset-0 z-20 border border-[#E7C878]/30"
       />
 
       <motion.div
@@ -1635,13 +1635,13 @@ function AdminScreenFrame({
         initial={{ opacity: 0, y: 34, scale: 0.96, filter: 'blur(14px)' }}
         animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
         transition={{ duration: 0.9, ease }}
-       className="group relative overflow-hidden rounded-[2.25rem] border border-[#E7C878]/35 bg-white/[0.05] shadow-[0_60px_180px_rgba(201,164,92,.16)] backdrop-blur-2xl"
+       className="group relative overflow-hidden border border-[#E7C878]/35 bg-white/[0.05] backdrop-blur-2xl"
       >
         <div className="flex items-center justify-between border-b border-white/10 bg-black/55 px-5 py-4 backdrop-blur-xl">
           <div className="flex items-center gap-2">
-            <span className="size-3 rounded-full bg-red-400/80" />
-            <span className="size-3 rounded-full bg-[#E7C878]/80" />
-            <span className="size-3 rounded-full bg-emerald-400/80" />
+            <span className="size-3 rounded-dot bg-red-400/80" />
+            <span className="size-3 rounded-dot bg-[#E7C878]/80" />
+            <span className="size-3 rounded-dot bg-emerald-400/80" />
           </div>
 
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/38">
@@ -1663,7 +1663,7 @@ function AdminScreenFrame({
 
           <div className="pointer-events-none absolute inset-0 -translate-x-full bg-[linear-gradient(110deg,transparent,rgba(231,200,120,.16),transparent)] transition duration-1000 group-hover:translate-x-full" />
 
-          <div className="absolute bottom-5 left-5 right-5 rounded-[1.5rem] border border-white/12 bg-black/58 p-4 backdrop-blur-2xl">
+          <div className="absolute bottom-5 left-5 right-5 border border-white/12 bg-black/58 p-4 backdrop-blur-2xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#E7C878]">
@@ -1679,8 +1679,8 @@ function AdminScreenFrame({
                 </p>
               </div>
 
-              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/12 px-3 py-1 text-xs font-semibold text-emerald-100">
-                <span className="size-2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,.9)]" />
+              <span className="inline-flex w-fit items-center gap-2 border border-emerald-300/20 bg-emerald-300/12 px-3 py-1 text-xs font-semibold text-emerald-100">
+                <span className="size-2 rounded-dot bg-emerald-300" />
                 Live
               </span>
             </div>
@@ -1721,9 +1721,9 @@ function AdminMiniCarousel({
               type="button"
               onClick={() => onSelect(realIndex)}
               className={cn(
-                'group relative h-28 w-48 shrink-0 overflow-hidden rounded-2xl border transition duration-500 md:h-36 md:w-64',
+                'group relative h-28 w-48 shrink-0 overflow-hidden border transition duration-500 md:h-36 md:w-64',
                 active
-                  ? 'border-[#E7C878]/70 shadow-[0_22px_70px_rgba(201,164,92,.2)]'
+                  ? 'border-[#E7C878]/70'
                   : 'border-white/10 opacity-55 hover:opacity-100'
               )}
             >
@@ -1797,7 +1797,7 @@ function PlatformSection() {
 
         <div className="mt-14 grid gap-8 lg:grid-cols-[310px_1fr]">
           <Reveal>
-            <div className="sticky top-28 grid gap-3 rounded-[2rem] border border-white/10 bg-white/[0.045] p-3 backdrop-blur-2xl">
+            <div className="sticky top-28 grid gap-3 border border-white/10 bg-white/[0.045] p-3 backdrop-blur-2xl">
               {adminScreens.map((screen, index) => {
                 const active = index === activeIndex;
 
@@ -1807,7 +1807,7 @@ function PlatformSection() {
                     type="button"
                     onClick={() => setActiveIndex(index)}
                     className={cn(
-                      'group rounded-[1.35rem] border px-4 py-4 text-left transition duration-500',
+                      'group border px-4 py-4 text-left transition duration-500',
                       active
                         ? 'border-[#E7C878]/55 bg-[#C9A45C]/14 shadow-[0_16px_50px_rgba(201,164,92,.14)]'
                         : 'border-white/8 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.06]'
@@ -1825,7 +1825,7 @@ function PlatformSection() {
 
                       <span
                         className={cn(
-                          'grid size-7 place-items-center rounded-full border transition',
+                          'grid size-7 place-items-center border transition',
                           active
                             ? 'border-[#E7C878]/40 bg-[#C9A45C]/20 text-[#E7C878]'
                             : 'border-white/10 text-white/35'
@@ -1888,7 +1888,7 @@ function FaqSection() {
         <div className="mt-12 grid gap-3">
           {faqs.map((faq, index) => (
             <Reveal key={faq.question} delay={index * 0.04}>
-              <details className="group rounded-[1.5rem] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl">
+              <details className="group border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-light">
                   {faq.question}
                   <ChevronDown className="size-5 text-[#E7C878] transition group-open:rotate-180" />
@@ -1912,9 +1912,9 @@ function FinalCTA() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,164,92,.2),transparent_34%)]" />
 
       <div className="pointer-events-none absolute left-1/2 top-1/2 grid size-[520px] -translate-x-1/2 -translate-y-1/2 place-items-center opacity-50">
-        <span className="absolute size-48 animate-ping rounded-full border border-[#E7C878]/16" />
-        <span className="absolute size-72 animate-[ping_3.2s_ease-in-out_infinite] rounded-full border border-[#E7C878]/10" />
-        <span className="absolute size-96 animate-[ping_4.2s_ease-in-out_infinite] rounded-full border border-[#E7C878]/8" />
+        <span className="absolute size-48 animate-ping border border-[#E7C878]/16" />
+        <span className="absolute size-72 animate-[ping_3.2s_ease-in-out_infinite] border border-[#E7C878]/10" />
+        <span className="absolute size-96 animate-[ping_4.2s_ease-in-out_infinite] border border-[#E7C878]/8" />
       </div>
 
       <Reveal className="relative mx-auto max-w-5xl text-center">
@@ -1966,7 +1966,7 @@ function GoldImageFrame({
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.85, ease }}
       className={cn(
-        'group relative overflow-hidden rounded-[2rem] p-[1px] shadow-[0_42px_140px_rgba(0,0,0,.45)]',
+        'group relative overflow-hidden p-[1px]',
         className
       )}
     >
@@ -2002,10 +2002,10 @@ function GoldImageFrame({
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="absolute -inset-4 rounded-[2.35rem] bg-[#C9A45C]/20 blur-2xl"
+        className="absolute -inset-4 bg-[#C9A45C]/20 blur-2xl"
       />
 
-      <div className="relative z-10 h-full w-full overflow-hidden rounded-[calc(2rem-1px)] border border-[#E7C878]/35 bg-[#050505]">
+      <div className="relative z-10 h-full w-full overflow-hidden border border-[#E7C878]/35 bg-[#050505]">
         <Image
           src={src}
           alt={alt}

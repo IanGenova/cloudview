@@ -67,10 +67,10 @@ export function MenuImageUploadPreview({
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif"
         onChange={handleFileChange}
-        className="block w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 outline-none file:mr-4 file:rounded-xl file:border-0 file:bg-neutral-900 file:px-4 file:py-2 file:text-sm file:font-black file:text-white hover:file:bg-neutral-700"
+        className="block w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 outline-none file:mr-4 file:border-0 file:bg-neutral-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-neutral-700"
       />
 
-      <div className="overflow-hidden rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50">
+      <div className="overflow-hidden border border-dashed border-neutral-200 bg-neutral-50">
         {displayImageUrl ? (
           <div className="relative">
             <img
@@ -83,7 +83,7 @@ export function MenuImageUploadPreview({
               className="h-56 w-full object-cover"
             />
 
-            <div className="absolute left-3 top-3 rounded-full bg-black/75 px-3 py-1 text-xs font-black text-white">
+            <div className="absolute left-3 top-3 bg-black/75 px-3 py-1 text-xs font-semibold text-white">
               {hasSelectedFile ? 'New image preview' : 'Current image'}
             </div>
 
@@ -91,7 +91,7 @@ export function MenuImageUploadPreview({
               <button
                 type="button"
                 onClick={clearSelectedFile}
-                className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-white text-black shadow-lg hover:bg-neutral-100"
+                className="absolute right-3 top-3 grid size-9 place-items-center bg-white text-black shadow-lg hover:bg-neutral-100"
                 aria-label="Remove selected image"
               >
                 <X className="size-4" />
@@ -101,10 +101,10 @@ export function MenuImageUploadPreview({
         ) : (
           <div className="grid min-h-56 place-items-center p-6 text-center">
             <div>
-              <div className="mx-auto grid size-14 place-items-center rounded-full bg-white text-neutral-400 shadow-sm">
+              <div className="mx-auto grid size-14 place-items-center bg-white text-neutral-400 shadow-sm">
                 <ImagePlus className="size-7" />
               </div>
-              <p className="mt-3 text-sm font-black text-neutral-700">
+              <p className="mt-3 text-sm font-semibold text-neutral-700">
                 No image selected yet
               </p>
               <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -116,11 +116,11 @@ export function MenuImageUploadPreview({
       </div>
 
       {selectedFile ? (
-        <div className="rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-800">
+        <div className="bg-emerald-50 p-3 text-xs font-bold text-emerald-800">
           Selected: {selectedFile.name} · {formatFileSize(selectedFile.size)}
         </div>
       ) : currentImageUrl ? (
-        <div className="rounded-2xl bg-neutral-50 p-3 text-xs font-bold text-neutral-500">
+        <div className="bg-neutral-50 p-3 text-xs font-bold text-neutral-500">
           The current image will remain unless you choose a new file or enter an Image URL.
         </div>
       ) : null}

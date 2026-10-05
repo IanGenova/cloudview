@@ -49,9 +49,9 @@ export function GuideWifiCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-5">
+    <article className="overflow-hidden border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] p-5">
       <div className="flex items-start gap-4">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-[#d5ad55]/25 bg-black/30 text-[#d5ad55]">
+        <span className="grid size-11 shrink-0 place-items-center border border-[#d5ad55]/25 bg-black/30 text-[#d5ad55]">
           <Wifi className="size-5" />
         </span>
 
@@ -98,7 +98,7 @@ export function GuideWifiCard({
                 aria-label={
                   revealed ? "Hide Wi-Fi password" : "Show Wi-Fi password"
                 }
-                className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/72 transition hover:border-[#d5ad55]/45 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
+                className="inline-flex items-center gap-2 border border-white/12 bg-black/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/72 transition hover:border-[#d5ad55]/45 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
               >
                 {revealed ? (
                   <EyeOff className="size-3.5" />
@@ -112,7 +112,7 @@ export function GuideWifiCard({
                 type="button"
                 onClick={copyPassword}
                 aria-label="Copy Wi-Fi password"
-                className="inline-flex items-center gap-2 rounded-full border border-[#d5ad55]/35 bg-[#d5ad55]/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e8c66f] transition hover:bg-[#d5ad55]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
+                className="inline-flex items-center gap-2 border border-[#d5ad55]/35 bg-[#d5ad55]/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e8c66f] transition hover:bg-[#d5ad55]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
               >
                 {copied ? (
                   <Check className="size-3.5" />

@@ -287,7 +287,7 @@ export function GuideImageGallery({
               <button
                 type="button"
                 onClick={toggleNativeFullscreen}
-                className="grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.07] text-white/80 backdrop-blur-xl transition hover:border-[#d5ad55]/45 hover:text-[#d5ad55] active:scale-95"
+                className="grid size-11 place-items-center border border-white/10 bg-white/[0.07] text-white/80 backdrop-blur-xl transition hover:border-[#d5ad55]/45 hover:text-[#d5ad55]"
                 aria-label={
                   isNativeFullscreen
                     ? "Exit browser full screen"
@@ -306,7 +306,7 @@ export function GuideImageGallery({
               ref={closeButtonRef}
               type="button"
               onClick={() => void closeImage()}
-              className="grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.07] text-white/80 backdrop-blur-xl transition hover:bg-white/15 active:scale-95"
+              className="grid size-11 place-items-center border border-white/10 bg-white/[0.07] text-white/80 backdrop-blur-xl transition hover:bg-white/15"
               aria-label="Close gallery"
             >
               <X className="size-5" />
@@ -335,7 +335,7 @@ export function GuideImageGallery({
             <button
               type="button"
               onClick={goPrevious}
-              className="absolute left-3 top-1/2 z-40 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-white/10 bg-black/45 text-white/80 backdrop-blur-xl transition hover:border-[#d5ad55]/45 hover:text-[#d5ad55] active:scale-95 sm:left-7 sm:size-12"
+              className="absolute left-3 top-1/2 z-40 grid size-11 -translate-y-1/2 place-items-center border border-white/10 bg-black/45 text-white/80 backdrop-blur-xl transition hover:border-[#d5ad55]/45 hover:text-[#d5ad55] sm:left-7 sm:size-12"
               aria-label="Previous image"
             >
               <ChevronLeft className="size-6" />
@@ -344,7 +344,7 @@ export function GuideImageGallery({
             <button
               type="button"
               onClick={goNext}
-              className="absolute right-3 top-1/2 z-40 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-white/10 bg-black/45 text-white/80 backdrop-blur-xl transition hover:border-[#d5ad55]/45 hover:text-[#d5ad55] active:scale-95 sm:right-7 sm:size-12"
+              className="absolute right-3 top-1/2 z-40 grid size-11 -translate-y-1/2 place-items-center border border-white/10 bg-black/45 text-white/80 backdrop-blur-xl transition hover:border-[#d5ad55]/45 hover:text-[#d5ad55] sm:right-7 sm:size-12"
               aria-label="Next image"
             >
               <ChevronRight className="size-6" />
@@ -385,8 +385,8 @@ export function GuideImageGallery({
                     aria-current={index === selectedIndex ? "true" : undefined}
                     className={
                       index === selectedIndex
-                        ? "h-14 w-20 shrink-0 overflow-hidden rounded-xl border border-[#d5ad55] opacity-100 shadow-[0_0_0_2px_rgba(213,173,85,0.15)]"
-                        : "h-14 w-20 shrink-0 overflow-hidden rounded-xl border border-white/10 opacity-40 transition hover:opacity-90"
+                        ? "h-14 w-20 shrink-0 overflow-hidden border border-[#d5ad55] opacity-100 shadow-[0_0_0_2px_rgba(213,173,85,0.15)]"
+                        : "h-14 w-20 shrink-0 overflow-hidden border border-white/10 opacity-40 transition hover:opacity-90"
                     }
                   >
                     <img
@@ -418,8 +418,8 @@ export function GuideImageGallery({
                 onClick={() => setSelectedIndex(index)}
                 className={
                   isHero
-                    ? "group relative col-span-2 h-56 overflow-hidden rounded-[1.55rem] border border-white/10 bg-[#111] text-left active:scale-[0.99]"
-                    : "group relative h-32 overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#111] text-left active:scale-[0.99]"
+                    ? "group relative col-span-2 h-56 overflow-hidden border border-white/10 bg-[#111] text-left"
+                    : "group relative h-32 overflow-hidden border border-white/10 bg-[#111] text-left"
                 }
               >
                 <img
@@ -431,11 +431,11 @@ export function GuideImageGallery({
 
                 {isHero ? (
                   <>
-                    <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white/75 backdrop-blur">
+                    <span className="absolute left-4 top-4 inline-flex items-center gap-2 border border-white/15 bg-black/40 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white/75 backdrop-blur">
                       <Images className="size-3.5 text-[#d5ad55]" />
                       {images.length} photographs
                     </span>
-                    <span className="absolute right-4 top-4 grid size-11 place-items-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur">
+                    <span className="absolute right-4 top-4 grid size-11 place-items-center border border-white/15 bg-black/45 text-white backdrop-blur">
                       <Maximize2 className="size-4" />
                     </span>
                     <span className="absolute inset-x-4 bottom-4">
@@ -476,7 +476,7 @@ export function GuideImageGallery({
               key={image.id}
               type="button"
               onClick={() => setSelectedIndex(index)}
-              className="group relative h-24 w-28 shrink-0 overflow-hidden rounded-[1.1rem] border border-white/10 bg-[#111] transition hover:border-[#d5ad55]/45 active:scale-95"
+              className="group relative h-24 w-28 shrink-0 overflow-hidden border border-white/10 bg-[#111] transition hover:border-[#d5ad55]/45"
             >
               <img
                 src={image.imageUrl}
@@ -484,7 +484,7 @@ export function GuideImageGallery({
                 className="size-full object-cover transition duration-500 group-hover:scale-105"
               />
               <span className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-              <span className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
+              <span className="absolute right-2 top-2 grid size-7 place-items-center bg-black/50 text-white backdrop-blur">
                 <Maximize2 className="size-3" />
               </span>
             </button>

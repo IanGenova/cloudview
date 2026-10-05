@@ -83,7 +83,7 @@ export function GuestAnimatedBackground() {
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="absolute right-[-5rem] top-10 h-52 w-52 rounded-full bg-gold/35 blur-3xl"
+        className="absolute right-[-5rem] top-10 h-52 w-52 bg-gold/35 blur-3xl"
       />
 
       <motion.div
@@ -102,7 +102,7 @@ export function GuestAnimatedBackground() {
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="absolute left-[-6rem] top-36 h-64 w-64 rounded-full bg-white/25 blur-3xl"
+        className="absolute left-[-6rem] top-36 h-64 w-64 bg-white/25 blur-3xl"
       />
 
       <motion.div
@@ -120,7 +120,7 @@ export function GuestAnimatedBackground() {
           repeat: Infinity,
           ease: 'easeInOut',
         }}
-        className="absolute left-1/2 top-10 h-28 w-28 -translate-x-1/2 rounded-full border border-gold/30"
+        className="absolute left-1/2 top-10 h-28 w-28 -translate-x-1/2 border border-gold/30"
       />
     </>
   );

@@ -682,15 +682,15 @@ function Toast({ message }: { message?: Message }) {
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
         }
       >
         <div
           className={
             message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {message.type === 'success' ? (
@@ -701,7 +701,7 @@ function Toast({ message }: { message?: Message }) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === 'success' ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -710,7 +710,7 @@ function Toast({ message }: { message?: Message }) {
         <button
           type="button"
           onClick={() => setVisible(false)}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -733,12 +733,12 @@ function SummaryCard({
     <div
       className={
         tone === 'green'
-          ? 'rounded-3xl border border-emerald-200 bg-emerald-50 p-5'
+          ? 'border border-emerald-200 bg-emerald-50 p-5'
           : tone === 'red'
-            ? 'rounded-3xl border border-red-200 bg-red-50 p-5'
+            ? 'border border-red-200 bg-red-50 p-5'
             : tone === 'blue'
-              ? 'rounded-3xl border border-blue-200 bg-blue-50 p-5'
-              : 'rounded-3xl border border-neutral-200 bg-white p-5'
+              ? 'border border-blue-200 bg-blue-50 p-5'
+              : 'border border-neutral-200 bg-white p-5'
       }
     >
       <p
@@ -754,7 +754,7 @@ function SummaryCard({
       >
         {label}
       </p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="mt-2 text-3xl font-semibold">{value}</p>
     </div>
   );
 }
@@ -779,27 +779,27 @@ function OrderItemsList({
             key={item.id}
             className={
               isCancelled
-                ? 'rounded-2xl bg-red-50 p-3 text-sm opacity-80'
-                : 'rounded-2xl bg-neutral-50 p-3 text-sm'
+                ? 'bg-red-50 p-3 text-sm opacity-80'
+                : 'bg-neutral-50 p-3 text-sm'
             }
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-black text-neutral-950">
+                  <p className="font-semibold text-neutral-950">
                     {activeQty}× {item.productNameSnapshot}
                   </p>
 
                   {item.isBundleSnapshot ? (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                    <span className="bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                       Bundle
                     </span>
                   ) : null}
 
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-black ${getItemStatusClass(
-                      item.status
-                    )}`}
+                    className={` px-2 py-0.5 text-[10px] font-semibold ${getItemStatusClass(
+ item.status
+ )}`}
                   >
                     {label(item.status ?? 'ACTIVE')}
                   </span>
@@ -825,7 +825,7 @@ function OrderItemsList({
               </div>
 
               <div className="flex shrink-0 flex-col items-end gap-2">
-                <p className="font-black">
+                <p className="font-semibold">
                   {money(activeQty * item.unitPriceCents)}
                 </p>
 
@@ -833,7 +833,7 @@ function OrderItemsList({
                   <button
                     type="button"
                     onClick={() => onCancelItem(item)}
-                    className="inline-flex h-8 items-center gap-1 rounded-full bg-red-600 px-3 text-[10px] font-black text-white hover:bg-red-700"
+                    className="inline-flex h-8 items-center gap-1 bg-red-600 px-3 text-[10px] font-semibold text-white hover:bg-red-700"
                   >
                     <Ban className="size-3" />
                     Cancel Item
@@ -843,8 +843,8 @@ function OrderItemsList({
             </div>
 
             {item.isBundleSnapshot ? (
-              <div className="mt-3 rounded-xl bg-amber-50 p-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">
+              <div className="mt-3 bg-amber-50 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
                   Includes
                 </p>
 
@@ -879,8 +879,8 @@ function OrderTimeline({ history }: { history: OrderStatusHistory[] }) {
   }
 
   return (
-    <div className="rounded-2xl bg-neutral-50 p-3">
-      <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-neutral-400">
+    <div className="bg-neutral-50 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400">
         Status History
       </p>
 
@@ -888,7 +888,7 @@ function OrderTimeline({ history }: { history: OrderStatusHistory[] }) {
         {history.map((item) => (
           <div key={item.id} className="text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-black text-neutral-800">
+              <p className="font-semibold text-neutral-800">
                 {label(item.status)}
               </p>
               <p className="font-semibold text-neutral-400">
@@ -913,17 +913,17 @@ function OrderTimeline({ history }: { history: OrderStatusHistory[] }) {
 function RestoreAudit({ movements }: { movements: RestoreMovement[] }) {
   if (!movements.length) {
     return (
-      <div className="rounded-2xl bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
+      <div className="bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
         No stock restore movement was recorded for this cancelled order yet.
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+    <div className="border border-emerald-100 bg-emerald-50 p-4">
       <div className="mb-3 flex items-center gap-2">
         <RotateCcw className="size-4 text-emerald-700" />
-        <p className="text-sm font-black text-emerald-800">
+        <p className="text-sm font-semibold text-emerald-800">
           Stock Restore Audit
         </p>
       </div>
@@ -932,10 +932,10 @@ function RestoreAudit({ movements }: { movements: RestoreMovement[] }) {
         {movements.map((movement) => (
           <div
             key={movement.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/75 p-3 text-sm"
+            className="flex flex-wrap items-center justify-between gap-2 bg-white/75 p-3 text-sm"
           >
             <div>
-              <p className="font-black text-neutral-900">
+              <p className="font-semibold text-neutral-900">
                 +{movement.quantity} {movement.productName}
               </p>
               <p className="mt-0.5 text-xs font-semibold text-neutral-500">
@@ -944,7 +944,7 @@ function RestoreAudit({ movements }: { movements: RestoreMovement[] }) {
               </p>
             </div>
 
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+            <span className="bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
               Balance: {movement.balanceAfter}
             </span>
           </div>
@@ -965,7 +965,7 @@ function CancelSubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className="h-11 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="h-11 bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? 'Cancelling...' : label}
     </button>
@@ -996,10 +996,10 @@ function CancelOrderItemModal({
 
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black">Cancel Food Item</h2>
+            <h2 className="text-xl font-semibold">Cancel Food Item</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Cancel <b>{item.productNameSnapshot}</b> from order{' '}
               <b>{order.orderCode}</b>.
@@ -1009,7 +1009,7 @@ function CancelOrderItemModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            className="grid size-9 place-items-center bg-neutral-100 hover:bg-neutral-200"
             aria-label="Close cancel item modal"
           >
             <X className="size-4" />
@@ -1022,13 +1022,13 @@ function CancelOrderItemModal({
           <input type="hidden" name="reason" value={finalReason} />
 
           <label className="grid gap-2">
-            <span className="text-sm font-black text-neutral-800">
+            <span className="text-sm font-semibold text-neutral-800">
               Cancellation Reason
             </span>
             <select
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+              className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
             >
               {cancelReasons.map((itemReason) => (
                 <option key={itemReason} value={itemReason}>
@@ -1040,19 +1040,19 @@ function CancelOrderItemModal({
 
           {reason === 'Other' ? (
             <label className="grid gap-2">
-              <span className="text-sm font-black text-neutral-800">
+              <span className="text-sm font-semibold text-neutral-800">
                 Custom Reason
               </span>
               <textarea
                 value={customReason}
                 onChange={(event) => setCustomReason(event.target.value)}
                 placeholder="Type reason..."
-                className="min-h-24 resize-none rounded-2xl border border-neutral-200 bg-white p-4 text-sm font-semibold outline-none"
+                className="min-h-24 resize-none border border-neutral-200 bg-white p-4 text-sm font-semibold outline-none"
               />
             </label>
           ) : null}
 
-          <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
+          <div className="bg-red-50 p-4 text-sm font-bold text-red-700">
             This cancels only this food item. Stock is restored automatically.
             For a paid Xendit order, CloudView also requests the matching
             partial refund through Xendit.
@@ -1062,7 +1062,7 @@ function CancelOrderItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
+              className="h-11 border border-neutral-200 bg-white text-sm font-semibold hover:bg-neutral-50"
             >
               Close
             </button>
@@ -1107,10 +1107,10 @@ function CancelOrderModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto bg-white p-4 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black">Cancel / Reject Order</h2>
+            <h2 className="text-xl font-semibold">Cancel / Reject Order</h2>
             <p className="mt-1 text-sm text-neutral-500">
               Please provide a reason for cancelling {order.orderCode}.
             </p>
@@ -1119,7 +1119,7 @@ function CancelOrderModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            className="grid size-9 place-items-center bg-neutral-100 hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-4" />
@@ -1137,13 +1137,13 @@ function CancelOrderModal({
           />
 
           <label className="grid gap-2">
-            <span className="text-sm font-black text-neutral-800">
+            <span className="text-sm font-semibold text-neutral-800">
               Cancellation Reason
             </span>
             <select
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
+              className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none"
             >
               {wholeOrderReasons.map((itemReason) => (
                 <option key={itemReason} value={itemReason}>
@@ -1155,19 +1155,19 @@ function CancelOrderModal({
 
           {reason === 'Other' ? (
             <label className="grid gap-2">
-              <span className="text-sm font-black text-neutral-800">
+              <span className="text-sm font-semibold text-neutral-800">
                 Custom Reason
               </span>
               <textarea
                 value={customReason}
                 onChange={(event) => setCustomReason(event.target.value)}
                 placeholder="Type cancellation reason..."
-                className="min-h-24 resize-none rounded-2xl border border-neutral-200 p-4 text-sm font-bold outline-none"
+                className="min-h-24 resize-none border border-neutral-200 p-4 text-sm font-bold outline-none"
               />
             </label>
           ) : null}
 
-          <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700">
+          <div className="bg-red-50 p-4 text-sm font-bold text-red-700">
             Cancelling this order restores its deducted stock. When the order
             was paid through Xendit, CloudView also requests the remaining
             refundable balance automatically.
@@ -1177,7 +1177,7 @@ function CancelOrderModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
+              className="h-11 border border-neutral-200 bg-white text-sm font-semibold hover:bg-neutral-50"
             >
               Close
             </button>
@@ -1215,34 +1215,34 @@ function OrderDetailsModal({
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-        <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl overflow-y-auto rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+        <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl overflow-y-auto bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
           <div className="sticky top-0 z-10 border-b border-neutral-100 bg-white p-4 sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-black">{order.orderCode}</h2>
+                  <h2 className="text-2xl font-semibold">{order.orderCode}</h2>
 
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${getStatusClass(
-                      order.status
-                    )}`}
+                    className={` px-3 py-1 text-xs font-semibold ${getStatusClass(
+ order.status
+ )}`}
                   >
                     {label(order.status)}
                   </span>
 
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${getPaymentClass(
-                      order.paymentStatus
-                    )}`}
+                    className={` px-3 py-1 text-xs font-semibold ${getPaymentClass(
+ order.paymentStatus
+ )}`}
                   >
                     {label(order.paymentStatus)}
                   </span>
 
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${getOrderAgeClass(
-                      order,
-                      now
-                    )}`}
+                    className={` px-3 py-1 text-xs font-semibold ${getOrderAgeClass(
+ order,
+ now
+ )}`}
                   >
                     {activeOrderStatuses.includes(order.status)
                       ? `Waiting ${getOrderAgeLabel(order, now)}`
@@ -1263,7 +1263,7 @@ function OrderDetailsModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+                className="grid size-10 shrink-0 place-items-center bg-neutral-100 hover:bg-neutral-200"
                 aria-label="Close details"
               >
                 <X className="size-5" />
@@ -1274,14 +1274,14 @@ function OrderDetailsModal({
           <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div className="space-y-4">
               <div>
-                <p className="mb-2 text-sm font-black text-neutral-950">
+                <p className="mb-2 text-sm font-semibold text-neutral-950">
                   Ordered Items
                 </p>
                 <OrderItemsList order={order} onCancelItem={setCancelItem} />
               </div>
 
               {order.guestName || order.guestPhone || order.notes ? (
-                <div className="rounded-2xl bg-neutral-50 p-4 text-sm">
+                <div className="bg-neutral-50 p-4 text-sm">
                   {order.guestName ? (
                     <p>
                       <b>Guest:</b> {order.guestName}
@@ -1310,8 +1310,8 @@ function OrderDetailsModal({
             </div>
 
             <aside className="space-y-3">
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                <p className="text-sm font-black text-blue-950">
+              <div className="border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-950">
                   Staff Review Checklist
                 </p>
                 <p className="mt-1 text-xs font-semibold text-blue-700">
@@ -1322,15 +1322,15 @@ function OrderDetailsModal({
                   {staffReviewItems.map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-xl bg-white/80 p-3 text-xs"
+                      className="bg-white/80 p-3 text-xs"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <b className="text-neutral-900">{item.label}</b>
                         <span
                           className={
                             item.ready
-                              ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700'
-                              : 'rounded-full bg-red-100 px-2 py-1 text-[10px] font-black text-red-700'
+                              ? 'bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700'
+                              : 'bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700'
                           }
                         >
                           {item.ready ? 'READY' : 'REVIEW'}
@@ -1344,8 +1344,8 @@ function OrderDetailsModal({
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-neutral-50 p-4">
-                <p className="text-sm font-black text-neutral-950">
+              <div className="bg-neutral-50 p-4">
+                <p className="text-sm font-semibold text-neutral-950">
                   Price Breakdown
                 </p>
 
@@ -1367,8 +1367,8 @@ function OrderDetailsModal({
 
                   <div className="border-t border-neutral-200 pt-2">
                     <div className="flex justify-between text-base">
-                      <span className="font-black">Total</span>
-                      <span className="font-black">
+                      <span className="font-semibold">Total</span>
+                      <span className="font-semibold">
                         {money(order.totalCents)}
                       </span>
                     </div>
@@ -1377,20 +1377,20 @@ function OrderDetailsModal({
               </div>
 
               {order.paymentMethod === 'XENDIT' ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-black text-amber-900">
+                <div className="border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-900">
                     Xendit online payment
                   </p>
                   <p className="mt-1 text-xs font-bold text-amber-700">
                     Payment: {label(order.paymentStatus)}
                   </p>
                   {order.refundedAmountCents ? (
-                    <p className="mt-2 text-xs font-black text-blue-700">
+                    <p className="mt-2 text-xs font-semibold text-blue-700">
                       Refunded: {money(order.refundedAmountCents)}
                     </p>
                   ) : null}
                   {order.refundErrorMessage ? (
-                    <p className="mt-2 rounded-xl bg-red-100 p-2 text-xs font-bold text-red-700">
+                    <p className="mt-2 bg-red-100 p-2 text-xs font-bold text-red-700">
                       {order.refundErrorMessage}
                     </p>
                   ) : null}
@@ -1400,7 +1400,7 @@ function OrderDetailsModal({
               <button
                 type="button"
                 onClick={() => printOrder(order)}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-sm font-black hover:bg-neutral-50"
+                className="flex h-11 w-full items-center justify-center gap-2 border border-neutral-200 bg-white text-sm font-semibold hover:bg-neutral-50"
               >
                 <Printer className="size-4" />
                 Print Summary
@@ -1412,7 +1412,7 @@ function OrderDetailsModal({
                   <input type="hidden" name="redirectTo" value="orders" />  
                   <button
                     type="submit"
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-black text-white hover:bg-emerald-700"
+                    className="flex h-11 w-full items-center justify-center gap-2 bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
                   >
                     <CreditCard className="size-4" />
                     Mark Paid
@@ -1428,7 +1428,7 @@ function OrderDetailsModal({
                         key={`${order.id}-${action.status}`}
                         type="button"
                         onClick={() => onCancel(order)}
-                        className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black ${action.className}`}
+                        className={`flex h-11 w-full items-center justify-center gap-2 text-sm font-semibold ${action.className}`}
                       >
                         <Ban className="size-4" />
                         {action.label}
@@ -1461,7 +1461,7 @@ function OrderDetailsModal({
                               ? undefined
                               : 'Wait for verified Xendit payment before preparing.'
                           }
-                          className={`flex h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black disabled:cursor-not-allowed disabled:opacity-45 ${action.className}`}
+                          className={`flex h-11 w-full items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${action.className}`}
                         >
                           {action.status === 'ACCEPTED' ? (
                             <CheckCircle2 className="size-4" />
@@ -1481,7 +1481,7 @@ function OrderDetailsModal({
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
+                <div className="bg-neutral-50 p-4 text-sm font-bold text-neutral-500">
                   This order is already {label(order.status).toLowerCase()}.
                 </div>
               )}
@@ -1658,17 +1658,17 @@ function OrderMetricTile({
             : 'bg-[#fff8e7] text-[#b88938]';
 
   return (
-    <div className={`rounded-[1.75rem] border p-4 ${tileClass}`}>
+    <div className={` border p-4 ${tileClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-70">
             {label}
           </p>
-          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-2 text-3xl font-semibold">{value}</p>
           <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
         </div>
 
-        <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${iconClass}`}>
+        <span className={`grid size-10 shrink-0 place-items-center ${iconClass}`}>
           {icon}
         </span>
       </div>
@@ -1679,8 +1679,8 @@ function OrderMetricTile({
 function WorkflowProgress({ status }: { status: OrderStatus }) {
   if (status === 'CANCELLED') {
     return (
-      <div className="rounded-2xl border border-red-100 bg-red-50 p-3">
-        <p className="text-xs font-black text-red-700">Order cancelled</p>
+      <div className="border border-red-100 bg-red-50 p-3">
+        <p className="text-xs font-semibold text-red-700">Order cancelled</p>
       </div>
     );
   }
@@ -1697,15 +1697,15 @@ function WorkflowProgress({ status }: { status: OrderStatus }) {
             <div
               className={
                 isActive
-                  ? `h-1.5 rounded-full ${statusAccentMap[step]}`
-                  : 'h-1.5 rounded-full bg-neutral-200'
+                  ? `h-1.5 ${statusAccentMap[step]}`
+                  : 'h-1.5 bg-neutral-200'
               }
             />
             <p
               className={
                 index === currentIndex
-                  ? 'truncate text-[9px] font-black uppercase text-neutral-900'
-                  : 'truncate text-[9px] font-black uppercase text-neutral-400'
+                  ? 'truncate text-[9px] font-semibold uppercase text-neutral-900'
+                  : 'truncate text-[9px] font-semibold uppercase text-neutral-400'
               }
             >
               {label(step)}
@@ -1774,8 +1774,8 @@ function MarkPaidButton({
         type="submit"
         className={
           compact
-            ? 'inline-flex h-9 items-center justify-center gap-2 rounded-full bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700'
-            : 'inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700'
+            ? 'inline-flex h-9 items-center justify-center gap-2 bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700'
+            : 'inline-flex h-11 w-full items-center justify-center gap-2 bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700'
         }
       >
         <CreditCard className={compact ? 'size-3.5' : 'size-4'} />
@@ -1817,28 +1817,28 @@ function OrderCard({
     <article
       className={
         isAttentionOrder
-          ? `overflow-hidden rounded-[1.75rem] border bg-white shadow-sm ${statusToneMap[order.status]}`
-          : 'overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-sm'
+          ? `overflow-hidden border bg-white shadow-sm ${statusToneMap[order.status]}`
+          : 'overflow-hidden border border-neutral-200 bg-white shadow-sm'
       }
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-xl font-black text-neutral-950">
+              <h3 className="truncate text-xl font-semibold text-neutral-950">
                 {order.orderCode}
               </h3>
 
               <span
-                className={`rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-                  order.status
-                )}`}
+                className={` px-3 py-1 text-[10px] font-semibold ${getStatusClass(
+ order.status
+ )}`}
               >
                 {label(order.status)}
               </span>
             </div>
 
-            <p className="mt-1 truncate text-xs font-black uppercase tracking-wide text-neutral-500">
+            <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-neutral-500">
               {order.roomLabel || 'Guest location'} ·{' '}
               {order.guestName || 'Guest name not provided'}
             </p>
@@ -1849,10 +1849,10 @@ function OrderCard({
           </div>
 
           <span
-            className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-black ${getOrderAgeClass(
-              order,
-              now
-            )}`}
+            className={`shrink-0 px-3 py-1 text-[10px] font-semibold ${getOrderAgeClass(
+ order,
+ now
+ )}`}
           >
             {activeOrderStatuses.includes(order.status)
               ? `Waiting ${waitingLabel}`
@@ -1865,44 +1865,44 @@ function OrderCard({
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl bg-white/70 p-3">
-            <p className="text-[10px] font-black uppercase text-neutral-400">
+          <div className="bg-white/70 p-3">
+            <p className="text-[10px] font-semibold uppercase text-neutral-400">
               Total
             </p>
-            <p className="mt-1 text-sm font-black text-neutral-950">
+            <p className="mt-1 text-sm font-semibold text-neutral-950">
               {money(order.totalCents)}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/70 p-3">
-            <p className="text-[10px] font-black uppercase text-neutral-400">
+          <div className="bg-white/70 p-3">
+            <p className="text-[10px] font-semibold uppercase text-neutral-400">
               Payment
             </p>
-            <p className="mt-1 truncate text-sm font-black text-neutral-950">
+            <p className="mt-1 truncate text-sm font-semibold text-neutral-950">
               {label(order.paymentMethod)}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/70 p-3">
-            <p className="text-[10px] font-black uppercase text-neutral-400">
+          <div className="bg-white/70 p-3">
+            <p className="text-[10px] font-semibold uppercase text-neutral-400">
               Items
             </p>
-            <p className="mt-1 text-sm font-black text-neutral-950">
+            <p className="mt-1 text-sm font-semibold text-neutral-950">
               {itemCount}
             </p>
           </div>
         </div>
 
-        <div className="mt-3 rounded-2xl bg-white/70 p-3">
+        <div className="mt-3 bg-white/70 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-full px-3 py-1 text-[10px] font-black ${getPaymentClass(
-                order.paymentStatus
-              )}`}
+              className={` px-3 py-1 text-[10px] font-semibold ${getPaymentClass(
+ order.paymentStatus
+ )}`}
             >
               {label(order.paymentStatus)}
             </span>
-            <span className="rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-black text-neutral-600">
+            <span className="bg-neutral-100 px-3 py-1 text-[10px] font-semibold text-neutral-600">
               {getOrderFocusLabel(order)}
             </span>
           </div>
@@ -1913,7 +1913,7 @@ function OrderCard({
         </div>
 
         {!canProcess && order.paymentMethod === 'XENDIT' ? (
-          <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
+          <div className="mt-3 border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">
             Kitchen processing is locked until Xendit confirms the payment.
           </div>
         ) : null}
@@ -1926,7 +1926,7 @@ function OrderCard({
             status={nextStatus}
             action={onStatusChange}
             disabled={!canProcess}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 bg-black text-xs font-semibold text-white hover:bg-neutral-800"
           >
             {nextStatus === 'ACCEPTED' ? (
               <CheckCircle2 className="size-4" />
@@ -1943,7 +1943,7 @@ function OrderCard({
           <button
             type="button"
             onClick={onView}
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-black text-xs font-black text-white hover:bg-neutral-800"
+            className="inline-flex h-11 items-center justify-center bg-black text-xs font-semibold text-white hover:bg-neutral-800"
           >
             View Details
           </button>
@@ -1952,7 +1952,7 @@ function OrderCard({
         <button
           type="button"
           onClick={onView}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-xs font-black text-neutral-800 hover:bg-neutral-50"
+          className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-200 bg-white text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
         >
           <ReceiptText className="size-4" />
           Details
@@ -1962,7 +1962,7 @@ function OrderCard({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-red-600 text-xs font-black text-white hover:bg-red-700"
+            className="inline-flex h-11 items-center justify-center gap-2 bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
           >
             <Ban className="size-4" />
             Reject
@@ -1972,7 +1972,7 @@ function OrderCard({
         <button
           type="button"
           onClick={onPrint}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white text-xs font-black text-neutral-800 hover:bg-neutral-50"
+          className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-200 bg-white text-xs font-semibold text-neutral-800 hover:bg-neutral-50"
         >
           <Printer className="size-4" />
           Print
@@ -2009,16 +2009,16 @@ function PriorityQueue({
 
   return (
     <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+      <section className="border border-neutral-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#b88938]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b88938]">
               Focus Queue
             </p>
-            <h3 className="mt-1 text-lg font-black">Needs Attention</h3>
+            <h3 className="mt-1 text-lg font-semibold">Needs Attention</h3>
           </div>
 
-          <span className="rounded-full bg-black px-3 py-1 text-xs font-black text-white">
+          <span className="bg-black px-3 py-1 text-xs font-semibold text-white">
             {priorityOrders.length}
           </span>
         </div>
@@ -2030,22 +2030,22 @@ function PriorityQueue({
                 key={order.id}
                 type="button"
                 onClick={() => onSelectOrder(order)}
-                className="block w-full rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-left transition hover:border-[#c99c38] hover:bg-[#fffaf0]"
+                className="block w-full border border-neutral-200 bg-neutral-50 p-3 text-left transition hover:border-[#c99c38] hover:bg-[#fffaf0]"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-neutral-950">
+                    <p className="truncate text-sm font-semibold text-neutral-950">
                       {order.orderCode}
                     </p>
-                    <p className="mt-1 truncate text-[11px] font-black uppercase tracking-wide text-neutral-500">
+                    <p className="mt-1 truncate text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
                       {order.roomLabel || 'Guest location'}
                     </p>
                   </div>
 
                   <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${getStatusClass(
-                      order.status
-                    )}`}
+                    className={`shrink-0 px-2 py-1 text-[9px] font-semibold ${getStatusClass(
+ order.status
+ )}`}
                   >
                     {label(order.status)}
                   </span>
@@ -2053,18 +2053,18 @@ function PriorityQueue({
 
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span
-                    className={`rounded-full px-2 py-1 text-[9px] font-black ${getPaymentClass(
-                      order.paymentStatus
-                    )}`}
+                    className={` px-2 py-1 text-[9px] font-semibold ${getPaymentClass(
+ order.paymentStatus
+ )}`}
                   >
                     {label(order.paymentStatus)}
                   </span>
 
                   <span
-                    className={`rounded-full px-2 py-1 text-[9px] font-black ${getOrderAgeClass(
-                      order,
-                      now
-                    )}`}
+                    className={` px-2 py-1 text-[9px] font-semibold ${getOrderAgeClass(
+ order,
+ now
+ )}`}
                   >
                     {getOrderAgeLabel(order, now)}
                   </span>
@@ -2072,8 +2072,8 @@ function PriorityQueue({
               </button>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
-              <p className="text-sm font-black text-neutral-700">
+            <div className="border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
+              <p className="text-sm font-semibold text-neutral-700">
                 No urgent order right now.
               </p>
               <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -2084,8 +2084,8 @@ function PriorityQueue({
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-neutral-500">
+      <section className="border border-neutral-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
           Status Breakdown
         </p>
 
@@ -2106,12 +2106,12 @@ function PriorityQueue({
                   }
                 }}
                 disabled={!orders.some((order) => order.status === status)}
-                className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-left disabled:cursor-not-allowed disabled:opacity-40"
+                className="border border-neutral-200 bg-neutral-50 p-3 text-left disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <p className="text-[10px] font-black uppercase text-neutral-400">
+                <p className="text-[10px] font-semibold uppercase text-neutral-400">
                   {label(status)}
                 </p>
-                <p className="mt-1 text-xl font-black text-neutral-950">
+                <p className="mt-1 text-xl font-semibold text-neutral-950">
                   {orders.filter((order) => order.status === status).length}
                 </p>
               </button>
@@ -2439,19 +2439,19 @@ export function OrdersClient({
     <>
       <Toast message={clientMessage ?? message} />
 
-      <section className="overflow-hidden rounded-[2.25rem] border border-neutral-200 bg-white shadow-[0_20px_55px_rgba(0,0,0,0.06)]">
+      <section className="overflow-hidden border border-neutral-200 bg-white">
         <div className="relative overflow-hidden bg-[#11100b] p-4 text-white sm:p-6">
-          <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[#c99c38]/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 left-10 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-24 -top-24 size-72 bg-[#c99c38]/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-10 size-72 bg-emerald-500/10 blur-3xl" />
 
           <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+              <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
                 <ReceiptText className="size-4" />
                 Order Command Center
               </p>
 
-              <h2 className="mt-4 text-3xl font-black tracking-tight sm:mt-5 sm:text-4xl">
+              <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:mt-5 sm:text-4xl">
                 Order Operations Board
               </h2>
 
@@ -2461,20 +2461,20 @@ export function OrdersClient({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 rounded-[1.5rem] border border-white/10 bg-white/10 p-3 text-sm font-bold text-white/75">
-              <div className="rounded-2xl bg-black/20 p-3">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#f1c66a]">
+            <div className="grid grid-cols-2 gap-2 border border-white/10 bg-white/10 p-3 text-sm font-bold text-white/75">
+              <div className="bg-black/20 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#f1c66a]">
                   Attention
                 </p>
-                <p className="mt-1 text-2xl font-black text-white">
+                <p className="mt-1 text-2xl font-semibold text-white">
                   {attentionCount}
                 </p>
               </div>
-              <div className="rounded-2xl bg-black/20 p-3">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#f1c66a]">
+              <div className="bg-black/20 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#f1c66a]">
                   Kitchen Queue
                 </p>
-                <p className="mt-1 text-2xl font-black text-white">
+                <p className="mt-1 text-2xl font-semibold text-white">
                   {kitchenQueueCount}
                 </p>
               </div>
@@ -2517,13 +2517,13 @@ export function OrdersClient({
         </div>
       </section>
 
-      <section className="mt-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm">
+      <section className="mt-6 border border-neutral-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
               Workflow Filters
             </p>
-            <h2 className="mt-1 text-xl font-black">Order Queue</h2>
+            <h2 className="mt-1 text-xl font-semibold">Order Queue</h2>
             <p className="mt-1 text-sm font-semibold text-neutral-500">
               Use one-tap status filters, search, and payment filters before
               opening details.
@@ -2538,8 +2538,8 @@ export function OrdersClient({
                 onClick={() => setStatusFilter(status)}
                 className={
                   statusFilter === status
-                    ? 'shrink-0 rounded-full bg-black px-4 py-2 text-xs font-black text-white'
-                    : 'shrink-0 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 transition hover:bg-neutral-50'
+                    ? 'shrink-0 bg-black px-4 py-2 text-xs font-semibold text-white'
+                    : 'shrink-0 border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50'
                 }
               >
                 {status === 'ALL' ? 'All' : label(status)}{' '}
@@ -2555,10 +2555,10 @@ export function OrdersClient({
 
         <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <label className="grid gap-1">
-            <span className="text-xs font-black uppercase text-neutral-500">
+            <span className="text-xs font-semibold uppercase text-neutral-500">
               Search Orders
             </span>
-            <div className="flex h-12 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4">
+            <div className="flex h-12 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4">
               <Search className="size-4 shrink-0 text-neutral-400" />
               <input
                 value={search}
@@ -2570,7 +2570,7 @@ export function OrdersClient({
           </label>
 
           <label className="grid gap-1">
-            <span className="text-xs font-black uppercase text-neutral-500">
+            <span className="text-xs font-semibold uppercase text-neutral-500">
               Payment Filter
             </span>
             <select
@@ -2578,7 +2578,7 @@ export function OrdersClient({
               onChange={(event) =>
                 setPaymentFilter(event.target.value as PaymentFilter)
               }
-              className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+              className="h-12 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
             >
               <option value="ALL">All Payments</option>
               <option value="PAID">Paid</option>
@@ -2592,7 +2592,7 @@ export function OrdersClient({
         <section id="orders-list" className="scroll-mt-24">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-neutral-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400">
                 {sortedOrders.length
                   ? `Showing ${pageStartIndex + 1}-${pageEndIndex} of ${sortedOrders.length} filtered orders`
                   : 'Showing 0 filtered orders'}
@@ -2600,18 +2600,18 @@ export function OrdersClient({
                   ? ` · ${localOrders.length} total`
                   : ''}
               </p>
-              <h3 className="mt-1 text-lg font-black">Orders</h3>
+              <h3 className="mt-1 text-lg font-semibold">Orders</h3>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-black text-neutral-600">
+              <label className="inline-flex items-center gap-2 border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-600">
                 Per page
                 <select
                   value={ordersPerPage}
                   onChange={(event) =>
                     setOrdersPerPage(Number(event.target.value))
                   }
-                  className="bg-transparent font-black text-neutral-950 outline-none"
+                  className="bg-transparent font-semibold text-neutral-950 outline-none"
                   aria-label="Orders per page"
                 >
                   <option value={6}>6</option>
@@ -2620,14 +2620,14 @@ export function OrdersClient({
                 </select>
               </label>
 
-              <span className="rounded-full bg-neutral-100 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-neutral-500">
+              <span className="bg-neutral-100 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
                 Newest first
               </span>
 
               <button
                 type="button"
                 onClick={() => router.refresh()}
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+                className="inline-flex items-center gap-2 border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 <RefreshCw className="size-3.5" />
                 Refresh latest
@@ -2641,7 +2641,7 @@ export function OrdersClient({
                     setStatusFilter('ALL');
                     setPaymentFilter('ALL');
                   }}
-                  className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-black text-neutral-700 hover:bg-neutral-50"
+                  className="border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
                 >
                   Clear filters
                 </button>
@@ -2664,8 +2664,8 @@ export function OrdersClient({
             ))}
 
             {!sortedOrders.length ? (
-              <div className="rounded-[2rem] border border-dashed border-neutral-300 bg-white p-10 text-center lg:col-span-2">
-                <p className="font-black">No orders found.</p>
+              <div className="border border-dashed border-neutral-300 bg-white p-10 text-center lg:col-span-2">
+                <p className="font-semibold">No orders found.</p>
                 <p className="mt-1 text-sm text-neutral-500">
                   Try changing your search or filters.
                 </p>
@@ -2675,12 +2675,12 @@ export function OrdersClient({
 
           {sortedOrders.length > ordersPerPage ? (
             <nav
-              className="mt-5 flex flex-col gap-3 rounded-[1.5rem] border border-neutral-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+              className="mt-5 flex flex-col gap-3 border border-neutral-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
               aria-label="Orders pagination"
             >
               <p className="text-center text-xs font-bold text-neutral-500 sm:text-left">
-                Page <span className="font-black text-neutral-950">{currentPage}</span>{' '}
-                of <span className="font-black text-neutral-950">{totalPages}</span>
+                Page <span className="font-semibold text-neutral-950">{currentPage}</span>{' '}
+                of <span className="font-semibold text-neutral-950">{totalPages}</span>
               </p>
 
               <div className="grid grid-cols-4 gap-2 sm:flex">
@@ -2688,7 +2688,7 @@ export function OrdersClient({
                   type="button"
                   onClick={() => changePage(1)}
                   disabled={currentPage === 1}
-                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-10 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   First
                 </button>
@@ -2697,7 +2697,7 @@ export function OrdersClient({
                   type="button"
                   onClick={() => changePage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex h-10 items-center justify-center gap-1 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronLeft className="size-4" />
                   Previous
@@ -2707,7 +2707,7 @@ export function OrdersClient({
                   type="button"
                   onClick={() => changePage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-black px-3 text-xs font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex h-10 items-center justify-center gap-1 bg-black px-3 text-xs font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
                   <ChevronRight className="size-4" />
@@ -2717,7 +2717,7 @@ export function OrdersClient({
                   type="button"
                   onClick={() => changePage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-10 border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Last
                 </button>

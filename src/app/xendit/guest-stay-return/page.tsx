@@ -64,8 +64,8 @@ function getGuestStaysFallbackUrl() {
 function ReturnError({ message }: { message: string }) {
   return (
     <main className="grid min-h-screen place-items-center bg-[#0b0905] px-5 text-white">
-      <section className="w-full max-w-lg rounded-[2rem] border border-red-500/25 bg-[#151108] p-7 text-center shadow-[0_30px_100px_rgba(0,0,0,0.55)]">
-        <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-red-500/10 text-red-300">
+      <section className="w-full max-w-lg border border-red-500/25 bg-[#151108] p-7 text-center">
+        <span className="mx-auto grid size-16 place-items-center bg-red-500/10 text-red-300">
           <AlertTriangle className="size-7" />
         </span>
         <h1 className="mt-5 font-serif text-3xl font-normal">
@@ -76,7 +76,7 @@ function ReturnError({ message }: { message: string }) {
         </p>
         <Link
           href={getGuestStaysFallbackUrl()}
-          className="mt-7 inline-flex h-12 items-center justify-center rounded-2xl bg-[#c99c38] px-5 text-sm font-black text-black transition hover:bg-[#e0b64f]"
+          className="mt-7 inline-flex h-12 items-center justify-center bg-[#c99c38] px-5 text-sm font-semibold text-black transition hover:bg-[#e0b64f]"
         >
           Open Guest Stays
         </Link>

@@ -257,8 +257,8 @@ export default async function GuestRewardsPage({
             <div
               className={
                 message.type === 'success'
-                  ? 'mb-4 rounded-[1.25rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-[15px] font-medium text-emerald-200'
-                  : 'mb-4 rounded-[1.25rem] border border-red-400/20 bg-red-500/10 p-4 text-[15px] font-medium text-red-200'
+                  ? 'mb-4 border border-emerald-400/20 bg-emerald-400/10 p-4 text-[15px] font-medium text-emerald-200'
+                  : 'mb-4 border border-red-400/20 bg-red-500/10 p-4 text-[15px] font-medium text-red-200'
               }
             >
               {message.text}
@@ -269,7 +269,7 @@ export default async function GuestRewardsPage({
             <ClaimRewardsCard tagCode={tagCode} hotelName={tag.hotel.name} />
           ) : (
             <>
-              <section className="relative overflow-hidden rounded-[2.4rem] border border-gold/25 bg-white/[0.04] shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+              <section className="relative overflow-hidden border border-gold/25 bg-white/[0.04] backdrop-blur-xl">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.15),transparent_50%)]" />
                 
                 <div className="relative z-10 p-6">
@@ -289,12 +289,12 @@ export default async function GuestRewardsPage({
                       </p>
                     </div>
 
-                    <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold/15 text-gold shadow-sm">
+                    <div className="grid size-14 shrink-0 place-items-center bg-gold/15 text-gold shadow-sm">
                       <Gift className="size-6" />
                     </div>
                   </div>
 
-                  <div className="mt-8 rounded-[1.5rem] bg-black/40 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="mt-8 bg-black/40 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                       Available Points
                     </p>
@@ -305,7 +305,7 @@ export default async function GuestRewardsPage({
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl bg-black/25 p-4">
+                    <div className="bg-black/25 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                         Pending
                       </p>
@@ -314,7 +314,7 @@ export default async function GuestRewardsPage({
                       </p>
                     </div>
 
-                    <div className="rounded-2xl bg-black/25 p-4">
+                    <div className="bg-black/25 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                         Lifetime Earned
                       </p>
@@ -323,7 +323,7 @@ export default async function GuestRewardsPage({
                       </p>
                     </div>
 
-                    <div className="rounded-2xl bg-black/25 p-4">
+                    <div className="bg-black/25 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                         Redeemed
                       </p>
@@ -334,7 +334,7 @@ export default async function GuestRewardsPage({
 
                     <Link
                       href={`/t/${tagCode}/contact`}
-                      className="flex items-center justify-between rounded-2xl bg-gold/10 p-4 transition hover:bg-gold/15 active:scale-[0.98]"
+                      className="flex items-center justify-between bg-gold/10 p-4 transition hover:bg-gold/15"
                     >
                       <span className="font-serif text-[15px] font-medium tracking-wide text-gold">View Profile</span>
                       <ChevronRight className="size-4 text-gold" />
@@ -361,10 +361,10 @@ export default async function GuestRewardsPage({
                     return (
                       <article
                         key={reward.id}
-                        className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md"
+                        className="border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md"
                       >
                         <div className="flex items-start gap-4">
-                          <div className="grid size-12 shrink-0 place-items-center rounded-[1rem] bg-gold/15 text-gold">
+                          <div className="grid size-12 shrink-0 place-items-center bg-gold/15 text-gold">
                             <Ticket className="size-5" />
                           </div>
 
@@ -374,7 +374,7 @@ export default async function GuestRewardsPage({
                                 {reward.name}
                               </h3>
 
-                              <span className="rounded-full bg-gold/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
+                              <span className="bg-gold/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                                 {pointLabel(reward.pointsCost)}
                               </span>
                             </div>
@@ -411,8 +411,8 @@ export default async function GuestRewardsPage({
                             disabled={!canRedeem}
                             className={
                               canRedeem
-                                ? 'h-12 w-full rounded-[1.25rem] bg-gold text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]'
-                                : 'h-12 w-full cursor-not-allowed rounded-[1.25rem] bg-white/5 text-[15px] font-semibold tracking-wide text-white/30'
+                                ? 'h-12 w-full bg-gold text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110'
+                                : 'h-12 w-full cursor-not-allowed bg-white/5 text-[15px] font-semibold tracking-wide text-white/30'
                             }
                           >
                             {canRedeem
@@ -427,7 +427,7 @@ export default async function GuestRewardsPage({
                   })}
 
                   {!rewards.length ? (
-                    <div className="rounded-[1.5rem] border border-dashed border-white/10 p-8 text-center backdrop-blur-sm">
+                    <div className="border border-dashed border-white/10 p-8 text-center backdrop-blur-sm">
                       <Gift className="mx-auto size-8 text-white/30" strokeWidth={1.5} />
                       <h3 className="mt-4 font-serif text-[17px] font-medium tracking-wide text-white">
                         No rewards available yet
@@ -449,7 +449,7 @@ export default async function GuestRewardsPage({
                   {redemptions.map((redemption) => (
                     <div
                       key={redemption.id}
-                      className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md"
+                      className="border border-white/10 bg-white/[0.04] p-5 shadow-sm backdrop-blur-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -466,7 +466,7 @@ export default async function GuestRewardsPage({
                         <CheckCircle2 className="size-5 shrink-0 text-gold" />
                       </div>
 
-                      <div className="mt-4 rounded-2xl bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                      <div className="mt-4 bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
                           Redemption Code
                         </p>
@@ -479,7 +479,7 @@ export default async function GuestRewardsPage({
                   ))}
 
                   {!redemptions.length ? (
-                    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-6 text-center text-[15px] font-medium text-white/50 backdrop-blur-sm">
+                    <div className="border border-white/10 bg-white/[0.03] p-6 text-center text-[15px] font-medium text-white/50 backdrop-blur-sm">
                       No redemptions yet.
                     </div>
                   ) : null}
@@ -503,11 +503,11 @@ function ClaimRewardsCard({
   hotelName: string;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[2.4rem] border border-gold/25 bg-white/[0.04] p-8 shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+    <section className="relative overflow-hidden border border-gold/25 bg-white/[0.04] p-8 backdrop-blur-xl">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.1),transparent_60%)]" />
       
       <div className="relative z-10">
-        <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-gold/15 text-gold shadow-sm">
+        <div className="mx-auto grid size-20 place-items-center bg-gold/15 text-gold shadow-sm">
           <Lock className="size-8" />
         </div>
 
@@ -527,20 +527,20 @@ function ClaimRewardsCard({
             name="name"
             required
             placeholder="Your full name"
-            className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           />
 
           <input
             name="phone"
             placeholder="Phone number"
-            className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           />
 
           <input
             name="email"
             type="email"
             placeholder="Email address"
-            className="h-14 w-full rounded-[1.25rem] border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           />
 
           <p className="pt-2 text-center text-xs font-medium leading-5 text-white/50">
@@ -549,7 +549,7 @@ function ClaimRewardsCard({
 
           <button
             type="submit"
-            className="mt-4 h-14 w-full rounded-[1.25rem] bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110 active:scale-[0.98]"
+            className="mt-4 h-14 w-full bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110"
           >
             Claim Rewards
           </button>

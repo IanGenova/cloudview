@@ -108,7 +108,7 @@ export function ThemeToggle({
 
           updateTheme(nextOption.value);
         }}
-        className="inline-flex h-10 items-center gap-2 rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card)] px-3 text-xs font-black text-[var(--cv-text)] transition hover:bg-[var(--cv-card-muted)] dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
+        className="inline-flex h-10 items-center gap-2 border border-[var(--cv-border)] bg-[var(--cv-card)] px-3 text-xs font-semibold text-[var(--cv-text)] transition hover:bg-[var(--cv-card-muted)] dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
       >
         <ActiveIcon className="size-4 text-[var(--cv-accent)]" />
         {activeOption?.label ?? 'System'}
@@ -117,7 +117,7 @@ export function ThemeToggle({
   }
 
   return (
-    <div className="inline-flex rounded-2xl border border-[var(--cv-border)] bg-[var(--cv-card)] p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="inline-flex border border-[var(--cv-border)] bg-[var(--cv-card)] p-1 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       {options.map((option) => {
         const Icon = option.icon;
         const active = theme === option.value;
@@ -128,7 +128,7 @@ export function ThemeToggle({
             type="button"
             onClick={() => updateTheme(option.value)}
             className={cn(
-              'inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-black transition',
+              'inline-flex h-9 items-center gap-2 px-3 text-xs font-semibold transition',
               active
                 ? 'bg-[var(--cv-ink)] text-white dark:bg-[var(--cv-accent)] dark:text-[var(--cv-on-accent)]'
                 : 'text-[var(--cv-muted)] hover:bg-[var(--cv-card-muted)] dark:text-neutral-400 dark:hover:bg-neutral-800'

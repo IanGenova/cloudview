@@ -216,10 +216,6 @@ body {
     color: #fafafa;
   }
 
-  .dark .cloudview-dashboard-shell .shadow-soft {
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important;
-  }
-
   /*
     Dark-mode fixes for arbitrary (bracket) colour utilities.
 
@@ -377,6 +373,18 @@ body {
     outline-offset: 2px !important;
   }
 
+  /*
+   * Capping the weight scale at 600 had a side effect worth writing down:
+   * Tailwind preflight sets `b, strong { font-weight: bolder }`, and CSS maps
+   * `bolder` from an inherited 600 straight to 900. So the moment everything
+   * became semibold, every <strong> in the product started rendering heavier
+   * than it ever had. Caught in the cart drawer, where four elements came
+   * back at 900 wearing no weight class at all.
+   */
+  b,
+  strong {
+    font-weight: 600;
+  }
   /* Figures line up wherever they are stacked. */
   table, [data-figures] {
     font-variant-numeric: tabular-nums;

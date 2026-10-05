@@ -60,7 +60,7 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#11100b] text-sm font-black text-white shadow-[0_14px_35px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-black disabled:translate-y-0 disabled:opacity-60"
+      className="inline-flex h-12 w-full items-center justify-center gap-2 bg-[#11100b] text-sm font-semibold text-white shadow-[0_14px_35px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-black disabled:translate-y-0 disabled:opacity-60"
     >
       <PlusCircle className="size-4 text-[#c99c38]" />
       {pending ? 'Saving...' : children}
@@ -79,16 +79,16 @@ function MetricCard({
     <div
       className={
         dark
-          ? 'rounded-[1.75rem] border border-[#c99c38]/30 bg-[#11100b] p-5 text-white shadow-[0_18px_45px_rgba(0,0,0,0.18)]'
-          : 'rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.06)]'
+          ? 'border border-[#c99c38]/30 bg-[#11100b] p-5 text-white'
+          : 'border border-neutral-200 bg-white p-5'
       }
     >
       <div className="flex items-center gap-4">
         <span
           className={
             dark
-              ? 'grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[#f1c66a] via-[#c99c38] to-[#8f6820] text-[#090806]'
-              : 'grid size-14 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]'
+              ? 'grid size-14 place-items-center bg-gradient-to-br from-[#f1c66a] via-[#c99c38] to-[#8f6820] text-[#090806]'
+              : 'grid size-14 place-items-center bg-[#f7f1e5] text-[#c99c38]'
           }
         >
           <Icon className="size-6" />
@@ -98,14 +98,14 @@ function MetricCard({
           <p
             className={
               dark
-                ? 'text-xs font-black uppercase tracking-wide text-white/60'
-                : 'text-xs font-black uppercase tracking-wide text-neutral-500'
+                ? 'text-xs font-semibold uppercase tracking-wide text-white/60'
+                : 'text-xs font-semibold uppercase tracking-wide text-neutral-500'
             }
           >
             {label}
           </p>
 
-          <p className="mt-1 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-3xl font-semibold">{value}</p>
 
           <p
             className={
@@ -124,8 +124,8 @@ function MetricCard({
 
 function StatusBadge() {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-      <span className="size-2 rounded-full bg-emerald-500" />
+    <span className="inline-flex items-center gap-2 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+      <span className="size-2 rounded-dot bg-emerald-500" />
       Active
     </span>
   );
@@ -142,14 +142,14 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+      <div role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-4 py-4 sm:px-6 sm:py-5">
-          <h2 className="text-xl font-black">{title}</h2>
+          <h2 className="text-xl font-semibold">{title}</h2>
 
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            className="grid size-10 place-items-center bg-neutral-100 hover:bg-neutral-200"
             aria-label="Close"
           >
             <X className="size-5" />
@@ -172,7 +172,7 @@ function HotelFormFields({
       {hotel ? <input type="hidden" name="hotelId" value={hotel.id} /> : null}
 
       <label className="grid gap-2">
-        <span className="text-sm font-black text-neutral-800">Hotel Name</span>
+        <span className="text-sm font-semibold text-neutral-800">Hotel Name</span>
 
         <div className="relative">
           <Hotel className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
@@ -183,13 +183,13 @@ function HotelFormFields({
             defaultValue={hotel?.name ?? ''}
             placeholder="Enter hotel name"
             required
-            className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+            className="h-12 w-full border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           />
         </div>
       </label>
 
       <label className="grid gap-2">
-        <span className="text-sm font-black text-neutral-800">Hotel Slug</span>
+        <span className="text-sm font-semibold text-neutral-800">Hotel Slug</span>
 
         <div className="relative">
           <LinkIcon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
@@ -200,7 +200,7 @@ function HotelFormFields({
             defaultValue={hotel?.slug ?? ''}
             placeholder="cloud-view-demo"
             required
-            className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+            className="h-12 w-full border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           />
         </div>
 
@@ -211,11 +211,11 @@ function HotelFormFields({
       </label>
 
       <label className="grid gap-2">
-        <span className="text-sm font-black text-neutral-800">Brand Color</span>
+        <span className="text-sm font-semibold text-neutral-800">Brand Color</span>
 
         <div className="relative">
           <span
-            className="absolute left-4 top-1/2 size-5 -translate-y-1/2 rounded-lg ring-1 ring-neutral-200"
+            className="absolute left-4 top-1/2 size-5 -translate-y-1/2 ring-1 ring-neutral-200"
             style={{ backgroundColor: hotel?.brandColor ?? '#111111' }}
           />
 
@@ -224,7 +224,7 @@ function HotelFormFields({
             name="brandColor"
             defaultValue={hotel?.brandColor ?? ''}
             placeholder="#111111"
-            className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-12 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+            className="h-12 w-full border border-neutral-200 bg-white pl-12 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           />
         </div>
 
@@ -234,11 +234,11 @@ function HotelFormFields({
       </label>
 
       <label className="grid gap-2">
-        <span className="text-sm font-black text-neutral-800">Accent Color</span>
+        <span className="text-sm font-semibold text-neutral-800">Accent Color</span>
 
         <div className="relative">
           <span
-            className="absolute left-4 top-1/2 size-5 -translate-y-1/2 rounded-lg ring-1 ring-neutral-200"
+            className="absolute left-4 top-1/2 size-5 -translate-y-1/2 ring-1 ring-neutral-200"
             style={{ backgroundColor: hotel?.accentColor ?? '#B88938' }}
           />
 
@@ -247,7 +247,7 @@ function HotelFormFields({
             name="accentColor"
             defaultValue={hotel?.accentColor ?? ''}
             placeholder="#B88938"
-            className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-12 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+            className="h-12 w-full border border-neutral-200 bg-white pl-12 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
           />
         </div>
 
@@ -284,14 +284,14 @@ function EditHotelModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            className="h-11 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white hover:bg-black"
+            className="h-11 bg-[#11100b] px-5 text-sm font-semibold text-white hover:bg-black"
           >
             Save Changes
           </button>
@@ -321,8 +321,8 @@ function DeleteHotelModal({
       <form action={deleteHotelAction} className="space-y-5">
         <input type="hidden" name="hotelId" value={hotel.id} />
 
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-          This will delete <span className="font-black">{hotel.name}</span>. If
+        <div className="border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+          This will delete <span className="font-semibold">{hotel.name}</span>. If
           the hotel already has connected rooms, orders, tags, or other records,
           the system will block deletion.
         </div>
@@ -331,14 +331,14 @@ function DeleteHotelModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            className="h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white hover:bg-red-700"
+            className="h-11 bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-700"
           >
             Delete Hotel
           </button>
@@ -397,7 +397,7 @@ export function HotelsClient({
       <div className="space-y-7">
         <section className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-[#11100b] sm:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-tight text-[#11100b] sm:text-4xl">
               Hotels / Properties
             </h1>
 
@@ -409,7 +409,7 @@ export function HotelsClient({
           <button
             type="button"
             onClick={() => setCreatingHotel(true)}
-            className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-black"
+            className="inline-flex h-12 items-center gap-2 bg-[#11100b] px-5 text-sm font-semibold text-white shadow-[0_14px_35px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-black"
           >
             <PlusCircle className="size-4 text-[#c99c38]" />
             Add Property
@@ -420,8 +420,8 @@ export function HotelsClient({
           <div
             className={
               message.type === 'success'
-                ? 'rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-black text-emerald-800'
-                : 'rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-black text-red-800'
+                ? 'border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800'
+                : 'border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-800'
             }
           >
             {message.text}
@@ -460,12 +460,12 @@ export function HotelsClient({
         </section>
 
         <section className="grid gap-6">
-  <div className="flex min-h-[620px] flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
+  <div className="flex min-h-[620px] flex-col overflow-hidden border border-neutral-200 bg-white">
 
             <div className="border-b border-neutral-100 p-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-black">Property Directory</h2>
+                  <h2 className="text-xl font-semibold">Property Directory</h2>
                   <p className="mt-1 text-sm font-medium text-neutral-500">
                     Manage registered hotels and operational setup.
                   </p>
@@ -483,7 +483,7 @@ export function HotelsClient({
                       name="q"
                       defaultValue={query}
                       placeholder="Search hotels by name, slug, or admin"
-                      className="h-11 w-80 rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+                      className="h-11 w-80 border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
                     />
                   </div>
 
@@ -494,7 +494,7 @@ export function HotelsClient({
             aria-label="Sort hotels"
                       name="sort"
                       defaultValue={sort}
-                      className="h-11 rounded-2xl border border-neutral-200 bg-white pl-11 pr-10 text-sm font-black text-neutral-700 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
+                      className="h-11 border border-neutral-200 bg-white pl-11 pr-10 text-sm font-semibold text-neutral-700 outline-none transition focus:border-[#c99c38] focus:ring-4 focus:ring-[#c99c38]/10"
                     >
                       <option value="newest">Sort by: Newest</option>
                       <option value="oldest">Sort by: Oldest</option>
@@ -508,7 +508,7 @@ export function HotelsClient({
 
                   <button
                     type="submit"
-                    className="h-11 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-black"
+                    className="h-11 bg-[#11100b] px-5 text-sm font-semibold text-white transition hover:bg-black"
                   >
                     Apply
                   </button>
@@ -516,7 +516,7 @@ export function HotelsClient({
                   {query || sort !== 'newest' ? (
                     <Link
                       href="/dashboard/hotels"
-                      className="h-11 rounded-2xl border border-neutral-200 px-5 py-3 text-sm font-black text-neutral-700 hover:bg-neutral-50"
+                      className="h-11 border border-neutral-200 px-5 py-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
                     >
                       Clear
                     </Link>
@@ -528,7 +528,7 @@ export function HotelsClient({
             <div className="min-h-[390px] flex-1 overflow-x-auto">
               <table className="w-full min-w-[980px] text-left">
                 <thead>
-                  <tr className="border-b border-neutral-100 bg-neutral-50/70 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <tr className="border-b border-neutral-100 bg-neutral-50/70 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     <th scope="col" className="px-6 py-4">Hotel / Property</th>
                     <th scope="col" className="px-6 py-4">Hotel Admin</th>
                     <th scope="col" className="px-6 py-4">Rooms</th>
@@ -547,15 +547,15 @@ export function HotelsClient({
                           <span
                             className={
                               index % 2 === 0
-                                ? 'grid size-10 place-items-center rounded-full bg-[#11100b] text-xs font-black text-white'
-                                : 'grid size-10 place-items-center rounded-full bg-gradient-to-br from-[#f1c66a] to-[#b88938] text-xs font-black text-[#11100b]'
+                                ? 'grid size-10 place-items-center bg-[#11100b] text-xs font-semibold text-white'
+                                : 'grid size-10 place-items-center bg-gradient-to-br from-[#f1c66a] to-[#b88938] text-xs font-semibold text-[#11100b]'
                             }
                           >
                             {getInitials(hotel.name)}
                           </span>
 
                           <div className="min-w-0">
-                            <p className="truncate font-black">{hotel.name}</p>
+                            <p className="truncate font-semibold">{hotel.name}</p>
                             <p className="mt-1 truncate text-xs font-semibold text-neutral-500">
                               /{hotel.slug}
                             </p>
@@ -578,9 +578,9 @@ export function HotelsClient({
                         )}
                       </td>
 
-                      <td className="px-6 py-5 font-black">{hotel.rooms}</td>
-                      <td className="px-6 py-5 font-black">{hotel.nfcTags}</td>
-                      <td className="px-6 py-5 font-black">{hotel.orders}</td>
+                      <td className="px-6 py-5 font-semibold">{hotel.rooms}</td>
+                      <td className="px-6 py-5 font-semibold">{hotel.nfcTags}</td>
+                      <td className="px-6 py-5 font-semibold">{hotel.orders}</td>
 
                       <td className="px-6 py-5">
                         <StatusBadge />
@@ -592,7 +592,7 @@ export function HotelsClient({
                             type="button"
                             onClick={() => setEditingHotel(hotel)}
                             title="Edit hotel"
-                            className="grid size-10 place-items-center rounded-2xl border border-neutral-200 text-neutral-600 transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5] hover:text-[#11100b]"
+                            className="grid size-10 place-items-center border border-neutral-200 text-neutral-600 transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5] hover:text-[#11100b]"
                           >
                             <Pencil className="size-4" />
                           </button>
@@ -605,17 +605,17 @@ export function HotelsClient({
                               )
                             }
                             title="More actions"
-                            className="grid size-10 place-items-center rounded-2xl border border-neutral-200 text-neutral-600 transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5] hover:text-[#11100b]"
+                            className="grid size-10 place-items-center border border-neutral-200 text-neutral-600 transition hover:border-[#c99c38]/50 hover:bg-[#f7f1e5] hover:text-[#11100b]"
                           >
                             <MoreVertical className="size-4" />
                           </button>
 
                           {openMenuId === hotel.id ? (
-                            <div className="absolute right-0 top-12 z-30 w-48 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1 shadow-2xl">
+                            <div className="absolute right-0 top-12 z-30 w-48 overflow-hidden border border-neutral-200 bg-white p-1 shadow-2xl">
                               <button
                                 type="button"
                                 onClick={() => copySlug(hotel.slug)}
-                                className="block w-full rounded-xl px-3 py-2 text-left text-sm font-bold hover:bg-neutral-50"
+                                className="block w-full px-3 py-2 text-left text-sm font-bold hover:bg-neutral-50"
                               >
                                 Copy slug
                               </button>
@@ -626,7 +626,7 @@ export function HotelsClient({
                                   setDeletingHotel(hotel);
                                   setOpenMenuId(null);
                                 }}
-                                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-black text-red-600 hover:bg-red-50"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
                               >
                                 <Trash2 className="size-4" />
                                 Delete hotel
@@ -641,8 +641,8 @@ export function HotelsClient({
                   {!hotels.length ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-12">
-                        <div className="rounded-3xl border border-dashed border-neutral-200 p-8 text-center">
-                          <p className="text-lg font-black">No hotels found.</p>
+                        <div className="border border-dashed border-neutral-200 p-8 text-center">
+                          <p className="text-lg font-semibold">No hotels found.</p>
                           <p className="mt-1 text-sm font-medium text-neutral-500">
                             Try clearing your search or create a new hotel.
                           </p>
@@ -664,19 +664,19 @@ export function HotelsClient({
                 <button
                   type="button"
                   disabled
-                  className="grid size-10 place-items-center rounded-2xl border border-neutral-200 text-sm font-black text-neutral-400"
+                  className="grid size-10 place-items-center border border-neutral-200 text-sm font-semibold text-neutral-400"
                 >
                   ‹
                 </button>
 
-                <span className="grid size-10 place-items-center rounded-2xl bg-gradient-to-br from-[#f1c66a] to-[#b88938] text-sm font-black text-[#11100b]">
+                <span className="grid size-10 place-items-center bg-gradient-to-br from-[#f1c66a] to-[#b88938] text-sm font-semibold text-[#11100b]">
                   1
                 </span>
 
                 <button
                   type="button"
                   disabled
-                  className="grid size-10 place-items-center rounded-2xl border border-neutral-200 text-sm font-black text-neutral-400"
+                  className="grid size-10 place-items-center border border-neutral-200 text-sm font-semibold text-neutral-400"
                 >
                   ›
                 </button>

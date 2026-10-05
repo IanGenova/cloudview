@@ -153,8 +153,8 @@ export default async function GuestMenuPage({
           backHref={`/t/${tagCode}`}
           variant="dark"
         >
-          <div className="rounded-[2.25rem] border border-white/10 bg-white/[0.04] p-8 text-center text-white backdrop-blur-md">
-            <div className="mx-auto grid size-20 place-items-center rounded-[1.5rem] bg-gold/10 text-gold shadow-sm">
+          <div className="border border-white/10 bg-white/[0.04] p-8 text-center text-white backdrop-blur-md">
+            <div className="mx-auto grid size-20 place-items-center bg-gold/10 text-gold shadow-sm">
               <Lock className="size-8" />
             </div>
 
@@ -168,14 +168,14 @@ export default async function GuestMenuPage({
             <div className="mt-8 grid gap-3">
               <Link
                 href={`/t/${tagCode}/guide`}
-                className="rounded-[1.25rem] bg-gold px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="bg-gold px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110"
               >
                 View Hotel Guide
               </Link>
 
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="rounded-[1.25rem] border border-white/15 bg-white/5 px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10 active:scale-[0.98]"
+                className="border border-white/15 bg-white/5 px-5 py-4 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10"
               >
                 Contact Front Desk
               </Link>
@@ -333,7 +333,7 @@ export default async function GuestMenuPage({
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
-        <div className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5 text-white backdrop-blur-md">
+        <div className="mb-5 border border-gold/20 bg-gold/10 p-5 text-white backdrop-blur-md">
           {rewardsContext.guestMember && rewardsContext.pointAccount ? (
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
@@ -352,7 +352,7 @@ export default async function GuestMenuPage({
 
               <Link
                 href={`/t/${tagCode}/rewards`}
-                className="shrink-0 rounded-[1rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="shrink-0 bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110"
               >
                 View
               </Link>
@@ -375,7 +375,7 @@ export default async function GuestMenuPage({
 
               <Link
                 href={`/t/${tagCode}/rewards`}
-                className="shrink-0 rounded-[1rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="shrink-0 bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110"
               >
                 Claim
               </Link>

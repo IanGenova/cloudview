@@ -104,7 +104,7 @@ function getKitchenSuccessCode(status: OrderStatus) {
 
 
 const rushMetaPillClass =
-  'inline-flex max-w-full items-center rounded-full bg-neutral-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200';
+  'inline-flex max-w-full items-center bg-neutral-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200';
 
 function getKitchenDragFormId(orderId: string, targetStatus: OrderStatus) {
   const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -278,15 +278,15 @@ function KitchenToast({
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-100'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-100'
         }
       >
         <div
           className={
             message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {message.type === 'success' ? (
@@ -297,7 +297,7 @@ function KitchenToast({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === 'success' ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -305,7 +305,7 @@ function KitchenToast({
 
         <Link
           href={closeHref}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white dark:bg-white/10 dark:hover:bg-white/20"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white dark:bg-white/10 dark:hover:bg-white/20"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -485,7 +485,7 @@ function OrderActionButton({
       <button
         type="submit"
         className={cn(
-          'min-h-10 w-full rounded-xl border px-3 py-2 text-xs font-black shadow-sm transition active:scale-[0.98]',
+          'min-h-10 w-full border px-3 py-2 text-xs font-semibold shadow-sm transition',
           tone === 'dark' &&
             'border-black bg-black text-white hover:bg-neutral-800 dark:border-gold dark:bg-gold dark:text-black dark:hover:bg-gold/80',
           tone === 'danger' &&
@@ -524,7 +524,7 @@ function KitchenOrderItemLine({
         isCancelled
           ? 'border border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/10'
           : 'bg-neutral-50 dark:bg-neutral-950',
-        compact ? 'rounded-md px-2 py-1 text-[10px]' : 'rounded-xl px-3 py-2 text-xs'
+        compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-2 text-xs'
       )}
     >
       <div className={cn('flex flex-wrap items-center justify-between', compact ? 'gap-0.5' : 'gap-2')}>
@@ -532,7 +532,7 @@ function KitchenOrderItemLine({
           <div className={cn('flex min-w-0 flex-wrap items-center', compact ? 'gap-1' : 'gap-2')}>
             <span
               className={cn(
-                'shrink-0 rounded-full',
+                'shrink-0',
                 compact ? 'size-2' : 'size-2.5',
                 compact
                   ? getRushItemIndicatorClass(item)
@@ -561,7 +561,7 @@ function KitchenOrderItemLine({
             {item.isBundleSnapshot ? (
               <span
                 className={cn(
-                  'rounded-full bg-amber-100 py-0.5 font-black leading-none text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
+                  'bg-amber-100 py-0.5 font-semibold leading-none text-amber-800 dark:bg-amber-500/15 dark:text-amber-200',
                   compact ? 'px-1.5 text-[8px]' : 'px-2 text-[10px]'
                 )}
               >
@@ -572,7 +572,7 @@ function KitchenOrderItemLine({
             {shouldShowItemStatusBadge ? (
               <span
                 className={cn(
-                  'rounded-full py-0.5 font-black leading-none',
+                  'py-0.5 font-semibold leading-none',
                   compact ? 'px-1.5 text-[8px]' : 'px-2 text-[10px]',
                   getItemStatusClass(item)
                 )}
@@ -583,7 +583,7 @@ function KitchenOrderItemLine({
           </div>
 
           {item.cancelledQty > 0 ? (
-            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-black leading-tight text-red-700 dark:text-red-200')}>
+            <p className={cn(compact ? 'mt-0.5' : 'mt-1', 'text-[10px] font-semibold leading-tight text-red-700 dark:text-red-200')}>
               Cancelled qty: {item.cancelledQty}
             </p>
           ) : null}
@@ -606,14 +606,14 @@ function KitchenOrderItemLine({
         <div
           className={cn(
             isCancelled
-              ? 'rounded-md bg-red-100/80 dark:bg-red-500/10'
-              : 'rounded-md bg-amber-50 dark:bg-amber-500/10',
+              ? 'bg-red-100/80 dark:bg-red-500/10'
+              : 'bg-amber-50 dark:bg-amber-500/10',
             compact ? 'mt-1 p-1' : 'mt-2 p-2'
           )}
         >
           <p
             className={cn(
-              'font-black uppercase tracking-[0.12em]',
+              'font-semibold uppercase tracking-[0.12em]',
               compact ? 'text-[8px]' : 'text-[10px]',
               isCancelled
                 ? 'text-red-700 dark:text-red-200'
@@ -638,7 +638,7 @@ function KitchenOrderItemLine({
                 >
                   <span
                     className={cn(
-                      'shrink-0 rounded-full',
+                      'shrink-0',
                       compact ? 'size-1.5' : 'size-1.5',
                       compact
                         ? getRushItemIndicatorClass(item)
@@ -681,11 +681,11 @@ function KitchenRushReadyCard({
       data-kitchen-order-code={order.orderCode}
       data-focused-kitchen-order={isFocused ? 'true' : undefined}
       className={cn(
-        'group rounded-xl border border-neutral-200 bg-white p-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900',
+        'group border border-neutral-200 bg-white p-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-900',
         isFocused && 'ring-4 ring-orange-400/60 shadow-[0_0_0_6px_rgba(251,146,60,0.12)]'
       )}
     >
-      <summary className="list-none cursor-pointer rounded-lg outline-none transition hover:bg-neutral-50 focus-visible:ring-4 focus-visible:ring-emerald-500/15 dark:hover:bg-neutral-800/60 [&::-webkit-details-marker]:hidden">
+      <summary className="list-none cursor-pointer outline-none transition hover:bg-neutral-50 focus-visible:ring-4 focus-visible:ring-emerald-500/15 dark:hover:bg-neutral-800/60 [&::-webkit-details-marker]:hidden">
         <div className="flex min-w-0 items-start justify-between gap-2 p-1">
           <div className="min-w-0 space-y-1">
             <span className={cn(rushMetaPillClass, 'max-w-full')}>
@@ -696,7 +696,7 @@ function KitchenRushReadyCard({
               {roomNumberOnly(order)} · {guestName}
             </span>
 
-            <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700 opacity-80 dark:text-emerald-200">
+            <p className="text-[9px] font-semibold uppercase tracking-wide text-emerald-700 opacity-80 dark:text-emerald-200">
               Tap to view items
             </p>
           </div>
@@ -711,7 +711,7 @@ function KitchenRushReadyCard({
                 <KitchenOrderItemLine key={item.id} item={item} compact />
               ))
             ) : (
-              <p className="rounded-lg bg-neutral-50 px-2 py-1 text-[10px] font-bold text-neutral-500 dark:bg-neutral-950 dark:text-neutral-400">
+              <p className="bg-neutral-50 px-2 py-1 text-[10px] font-bold text-neutral-500 dark:bg-neutral-950 dark:text-neutral-400">
                 No item snapshot.
               </p>
             )}
@@ -719,7 +719,7 @@ function KitchenRushReadyCard({
         </div>
       </div>
 
-      <div className="mt-2 [&_button]:min-h-7 [&_button]:rounded-lg [&_button]:px-2 [&_button]:py-1 [&_button]:text-[10px]">
+      <div className="mt-2 [&_button]:min-h-7 [&_button]:px-2 [&_button]:py-1 [&_button]:text-[10px]">
         <KitchenStatusActionButton
           orderId={order.id}
           status={OrderStatus.DELIVERED}
@@ -783,14 +783,14 @@ function KitchenOrderCard({
       data-order-id={canMoveWithRushGesture ? order.id : undefined}
       data-current-lane={canMoveWithRushGesture ? type : undefined}
       className={cn(
-        'grid w-full overflow-hidden border bg-white shadow-soft transition-transform dark:border-neutral-800 dark:bg-neutral-900',
+        'grid w-full overflow-hidden border bg-white transition-transform dark:border-neutral-800 dark:bg-neutral-900',
         canMoveWithRushGesture &&
           'cursor-grab active:cursor-grabbing [touch-action:pan-y] data-[dragging=true]:opacity-60',
         isTvMode
-          ? 'rounded-[2rem] border-white/10 bg-white/95 shadow-2xl'
+          ? 'border-white/10 bg-white/95 shadow-2xl'
           : isRushMode
-            ? 'rounded-2xl border-neutral-200 shadow-sm'
-            : 'rounded-[1.25rem] border-neutral-200',
+            ? 'border-neutral-200 shadow-sm'
+            : 'border-neutral-200',
         isFocused && 'ring-4 ring-orange-400/60 shadow-[0_0_0_6px_rgba(251,146,60,0.12)]'
       )}
     >
@@ -816,7 +816,7 @@ function KitchenOrderCard({
               <>
                 <h3
                   className={cn(
-                    'truncate font-black text-neutral-950 dark:text-white',
+                    'truncate font-semibold text-neutral-950 dark:text-white',
                     isTvMode ? 'text-3xl' : 'text-sm'
                   )}
                 >
@@ -843,7 +843,7 @@ function KitchenOrderCard({
 
         <div
           className={cn(
-            'grid gap-1 rounded-xl bg-neutral-50 dark:bg-neutral-950',
+            'grid gap-1 bg-neutral-50 dark:bg-neutral-950',
             isTvMode
               ? 'mt-3 p-4 text-base'
               : isRushMode
@@ -853,7 +853,7 @@ function KitchenOrderCard({
         >
           {!isRushMode ? (
             <p className="truncate">
-              <span className="font-black text-neutral-950 dark:text-white">
+              <span className="font-semibold text-neutral-950 dark:text-white">
                 Guest:
               </span>{' '}
               <span className="font-semibold text-neutral-600 dark:text-neutral-400">
@@ -863,7 +863,7 @@ function KitchenOrderCard({
           ) : null}
 
           <p>
-            <span className="font-black text-neutral-950 dark:text-white">
+            <span className="font-semibold text-neutral-950 dark:text-white">
               Order Time:
             </span>{' '}
             <span className="font-semibold text-neutral-600 dark:text-neutral-400">
@@ -879,13 +879,13 @@ function KitchenOrderCard({
               )}
             >
               {!isRushMode ? (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                <span className="bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                   {activeItemCount} active
                 </span>
               ) : null}
 
               {cancelledItemCount > 0 ? (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200">
+                <span className="bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-200">
                   {cancelledItemCount} cancelled
                 </span>
               ) : null}
@@ -909,7 +909,7 @@ function KitchenOrderCard({
         ))}
 
         {hiddenRushItemCount > 0 ? (
-          <div className="grid min-h-[32px] place-items-center rounded-md border border-dashed border-neutral-200 bg-neutral-50 px-2 py-1 text-center text-[10px] font-black text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
+          <div className="grid min-h-[32px] place-items-center border border-dashed border-neutral-200 bg-neutral-50 px-2 py-1 text-center text-[10px] font-semibold text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-400">
             +{hiddenRushItemCount} more item
             {hiddenRushItemCount === 1 ? '' : 's'}
           </div>
@@ -918,7 +918,7 @@ function KitchenOrderCard({
         {guestNote ? (
           <div
             className={cn(
-              'whitespace-pre-line rounded-xl border border-yellow-200 bg-yellow-50 text-yellow-900 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-200',
+              'whitespace-pre-line border border-yellow-200 bg-yellow-50 text-yellow-900 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-200',
               shouldUseRushFoodGrid ? 'col-span-3' : '',
               isTvMode
                 ? 'p-4 text-base'
@@ -927,7 +927,7 @@ function KitchenOrderCard({
                   : 'p-2 text-xs'
             )}
           >
-            <p className="font-black uppercase tracking-wide">Guest note</p>
+            <p className="font-semibold uppercase tracking-wide">Guest note</p>
             <p className="mt-1 font-semibold normal-case tracking-normal">
               {guestNote}
             </p>
@@ -940,7 +940,7 @@ function KitchenOrderCard({
           className={cn(
             'border-t border-neutral-100 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950',
             isRushMode
-              ? 'p-1.5 [&_button]:min-h-8 [&_button]:rounded-lg [&_button]:px-2 [&_button]:py-1.5 [&_button]:text-[11px]'
+              ? 'p-1.5 [&_button]:min-h-8 [&_button]:px-2 [&_button]:py-1.5 [&_button]:text-[11px]'
               : 'p-2.5'
           )}
         >
@@ -1008,22 +1008,22 @@ function KitchenScheduledOrderCard({ order }: { order: KitchenOrder }) {
     .slice(0, 2);
 
   return (
-    <article className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+    <article className="border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate font-black">{order.orderCode}</h3>
+          <h3 className="truncate font-semibold">{order.orderCode}</h3>
 
           <p className="mt-1 text-xs font-bold opacity-70">
             {roomOrLocation(order)} · {guestName}
           </p>
         </div>
 
-        <span className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[10px] font-black uppercase text-white">
+        <span className="shrink-0 bg-amber-600 px-3 py-1 text-[10px] font-semibold uppercase text-white">
           Scheduled
         </span>
       </div>
 
-      <div className="mt-3 grid gap-2 rounded-2xl bg-white/70 p-3 text-xs dark:bg-black/20">
+      <div className="mt-3 grid gap-2 bg-white/70 p-3 text-xs dark:bg-black/20">
         <p>
           <b>Scheduled For:</b>{' '}
           {order.scheduledFor ? formatDateTime(order.scheduledFor) : '—'}
@@ -1048,7 +1048,7 @@ function KitchenScheduledOrderCard({ order }: { order: KitchenOrder }) {
           ))}
 
           {order.items.length > previewItems.length ? (
-            <p className="text-xs font-black opacity-60">
+            <p className="text-xs font-semibold opacity-60">
               +{order.items.length - previewItems.length} more item
               {order.items.length - previewItems.length === 1 ? '' : 's'}
             </p>
@@ -1057,7 +1057,7 @@ function KitchenScheduledOrderCard({ order }: { order: KitchenOrder }) {
       ) : null}
 
       {order.scheduledNote ? (
-        <p className="mt-3 rounded-2xl bg-white/70 p-3 text-xs font-semibold dark:bg-black/20">
+        <p className="mt-3 bg-white/70 p-3 text-xs font-semibold dark:bg-black/20">
           <b>Schedule note:</b> {order.scheduledNote}
         </p>
       ) : null}
@@ -1073,10 +1073,10 @@ function KitchenScheduledLane({
  
 
   return (
-   <section className="max-h-[calc(100dvh-190px)] overflow-y-auto rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+   <section className="max-h-[calc(100dvh-190px)] overflow-y-auto border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-amber-950 dark:text-amber-100">
+          <h2 className="text-xl font-semibold text-amber-950 dark:text-amber-100">
             Scheduled Orders
           </h2>
 
@@ -1085,7 +1085,7 @@ function KitchenScheduledLane({
           </p>
         </div>
 
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-600 text-sm font-black text-white">
+        <span className="grid size-9 shrink-0 place-items-center bg-amber-600 text-sm font-semibold text-white">
           {orders.length}
         </span>
       </div>
@@ -1097,11 +1097,11 @@ function KitchenScheduledLane({
     ))
   ) : (
     <div className="md:col-span-2 2xl:col-span-3">
-      <div className="grid min-h-64 place-items-center rounded-[1.5rem] border border-dashed border-amber-200 bg-white/80 p-8 text-center dark:border-amber-500/20 dark:bg-neutral-950/70">
+      <div className="grid min-h-64 place-items-center border border-dashed border-amber-200 bg-white/80 p-8 text-center dark:border-amber-500/20 dark:bg-neutral-950/70">
         <div>
           <Clock className="mx-auto size-10 text-amber-500" />
 
-          <p className="mt-3 font-black text-amber-900 dark:text-amber-100">
+          <p className="mt-3 font-semibold text-amber-900 dark:text-amber-100">
             No scheduled orders
           </p>
 
@@ -1158,9 +1158,9 @@ function KitchenLane({
         'flex flex-col overflow-hidden border md:h-full',
         isRushMode
           ? type === 'ready'
-            ? 'min-h-[260px] rounded-[1.5rem]'
-            : 'min-h-[360px] rounded-[1.5rem]'
-          : 'min-h-[420px] rounded-[2rem]',
+            ? 'min-h-[260px]'
+            : 'min-h-[360px]'
+          : 'min-h-[420px]',
         usesLaneTheme
           ? `${laneTheme} ${isTvMode ? 'min-h-[calc(100dvh-220px)]' : ''}`
           : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900'
@@ -1175,7 +1175,7 @@ function KitchenLane({
         <div className="min-w-0">
           <h2
             className={cn(
-              'font-black text-neutral-950 dark:text-white',
+              'font-semibold text-neutral-950 dark:text-white',
               isTvMode ? 'text-4xl' : isRushMode ? 'text-xl' : 'text-2xl'
             )}
           >
@@ -1194,7 +1194,7 @@ function KitchenLane({
 
         <span
           className={cn(
-            'grid shrink-0 place-items-center rounded-full bg-black font-black text-white dark:bg-gold dark:text-black',
+            'grid shrink-0 place-items-center bg-black font-semibold text-white dark:bg-gold dark:text-black',
             isTvMode ? 'size-14 text-2xl' : isRushMode ? 'size-8 text-xs' : 'size-10 text-sm'
           )}
         >
@@ -1217,13 +1217,13 @@ function KitchenLane({
         {orders.length === 0 ? (
           <div
             className={cn(
-              'grid h-full min-h-40 w-full place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-white text-center dark:border-neutral-800 dark:bg-neutral-950',
+              'grid h-full min-h-40 w-full place-items-center border border-dashed border-neutral-200 bg-white text-center dark:border-neutral-800 dark:bg-neutral-950',
               isTvMode ? 'p-8' : isRushMode ? 'p-4' : 'p-5'
             )}
           >
             <p
               className={cn(
-                'font-black text-neutral-500 dark:text-neutral-400',
+                'font-semibold text-neutral-500 dark:text-neutral-400',
                 isTvMode ? 'text-xl' : 'text-sm'
               )}
             >
@@ -1261,8 +1261,8 @@ function KitchenHistoryItemLine({ item }: { item: KitchenOrderItem }) {
     <div
       className={
         isCancelled
-          ? 'rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
-          : 'rounded-xl bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-900'
+          ? 'border border-red-200 bg-red-50 px-3 py-2 text-xs dark:border-red-500/20 dark:bg-red-500/10'
+          : 'bg-neutral-50 px-3 py-2 text-xs dark:bg-neutral-900'
       }
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -1277,13 +1277,13 @@ function KitchenHistoryItemLine({ item }: { item: KitchenOrderItem }) {
         </p>
 
         {item.isBundleSnapshot ? (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+          <span className="bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
             Bundle
           </span>
         ) : null}
 
         {isCancelled ? (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200">
+          <span className="bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-200">
             Cancelled
           </span>
         ) : null}
@@ -1496,16 +1496,16 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       <div
   className={cn(
     'mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between',
-    isTvMode && 'rounded-[2rem] border border-white/10 bg-white/5 p-5'
+    isTvMode && 'border border-white/10 bg-white/5 p-5'
   )}
 >
   {isTvMode ? (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-gold">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold">
         TV Display Mode
       </p>
 
-      <h1 className="mt-2 text-5xl font-black tracking-tight text-white">
+      <h1 className="mt-2 text-5xl font-semibold tracking-tight text-white">
         Kitchen Display
       </h1>
 
@@ -1541,7 +1541,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
             })
       }
       className={cn(
-        'inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black transition',
+        'inline-flex min-h-11 items-center gap-2 px-4 py-2 text-sm font-semibold transition',
         isTvMode
           ? 'bg-gold text-black hover:bg-gold/80'
           : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
@@ -1561,15 +1561,15 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
         })}
         className={
           activeView === 'scheduled'
-            ? 'inline-flex min-h-11 items-center gap-2 rounded-2xl bg-black px-4 py-2 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
-            : 'inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+            ? 'inline-flex min-h-11 items-center gap-2 bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+            : 'inline-flex min-h-11 items-center gap-2 border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
         }
       >
         <Clock className="size-4" />
         Scheduled Orders
 
         {scheduledOrders.length > 0 ? (
-          <span className="grid size-6 place-items-center rounded-full bg-amber-100 text-[11px] font-black text-amber-800">
+          <span className="grid size-6 place-items-center bg-amber-100 text-[11px] font-semibold text-amber-800">
             {scheduledOrders.length}
           </span>
         ) : null}
@@ -1592,8 +1592,8 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
           }
           className={
             showHistory
-              ? 'inline-flex min-h-11 items-center gap-2 rounded-2xl bg-black px-4 py-2 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
-              : 'inline-flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
+              ? 'inline-flex min-h-11 items-center gap-2 bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
+              : 'inline-flex min-h-11 items-center gap-2 border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
           }
         >
           <History className="size-4" />
@@ -1608,7 +1608,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
           view: 'live',
         })}
         className={cn(
-          'inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-black transition',
+          'inline-flex min-h-11 items-center gap-2 px-4 py-2 text-sm font-semibold transition',
           activeView === 'live' && isRushMode
             ? 'bg-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80'
             : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
@@ -1771,11 +1771,11 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
              showHistory && !isTvMode && !isScheduledView ? 'block xl:sticky xl:top-4' : 'hidden'
             )}
           >
-        <section className="flex h-full max-h-full flex-col overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+        <section className="flex h-full max-h-full flex-col overflow-hidden border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
             <div className="border-b border-neutral-100 bg-neutral-50 p-5 dark:border-neutral-800 dark:bg-neutral-950">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-2xl font-black text-neutral-950 dark:text-white">
+                  <h2 className="text-2xl font-semibold text-neutral-950 dark:text-white">
                     Order History
                   </h2>
 
@@ -1790,11 +1790,11 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
 
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {!showHistory ? (
-                <div className="grid h-full min-h-72 place-items-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
+                <div className="grid h-full min-h-72 place-items-center border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
                   <div>
                     <History className="mx-auto size-9 text-neutral-400" />
 
-                    <p className="mt-3 font-black text-neutral-600 dark:text-neutral-300">
+                    <p className="mt-3 font-semibold text-neutral-600 dark:text-neutral-300">
                       Click History to view order history
                     </p>
 
@@ -1807,8 +1807,8 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
               ) : null}
 
               {showHistory && historyOrders.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
-                  <p className="font-black text-neutral-500 dark:text-neutral-400">
+                <div className="border border-dashed border-neutral-200 bg-neutral-50 p-6 text-center dark:border-neutral-800 dark:bg-neutral-950">
+                  <p className="font-semibold text-neutral-500 dark:text-neutral-400">
                     No history yet
                   </p>
                 </div>
@@ -1818,11 +1818,11 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
                 ? historyOrders.map((order) => (
                     <article
                       key={order.id}
-                      className="rounded-[1.5rem] border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950"
+                      className="border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-black text-neutral-950 dark:text-white">
+                          <h3 className="font-semibold text-neutral-950 dark:text-white">
                             {order.orderCode}
                           </h3>
 
@@ -1846,7 +1846,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
                           Total
                         </span>
 
-                        <span className="font-black text-neutral-950 dark:text-white">
+                        <span className="font-semibold text-neutral-950 dark:text-white">
                           {money(order.totalCents)}
                         </span>
                       </div>

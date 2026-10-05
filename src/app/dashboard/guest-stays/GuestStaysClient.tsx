@@ -266,7 +266,7 @@ type CreatedStayResult = {
 };
 
 const inputClass =
-  'h-12 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
+  'h-12 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10';
 
 
 const GUEST_STAYS_PAGE_SIZE_OPTIONS = [5, 10, 15, 25] as const;
@@ -319,7 +319,7 @@ function getGuestStayPageItems(
 }
 
 const labelClass =
-  'text-xs font-black uppercase tracking-wide text-neutral-500';
+  'text-xs font-semibold uppercase tracking-wide text-neutral-500';
 
 const statusOptions: GuestStayStatusValue[] = [
   'ACTIVE',
@@ -551,7 +551,7 @@ function FrontDeskStatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide ${className}`}
+      className={`inline-flex items-center px-3 py-1 text-xs font-semibold uppercase tracking-wide ${className}`}
     >
       {label}
     </span>
@@ -590,18 +590,18 @@ function FrontDeskMetricCard({
           : 'bg-white text-[#b88938]';
 
   return (
-    <div className={`rounded-[1.75rem] border p-5 ${className}`}>
+    <div className={` border p-5 ${className}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide opacity-70">
+          <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
             {label}
           </p>
-          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-2 text-3xl font-semibold">{value}</p>
           <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
         </div>
 
         {icon ? (
-          <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${iconClassName}`}>
+          <span className={`grid size-11 shrink-0 place-items-center ${iconClassName}`}>
             {icon}
           </span>
         ) : null}
@@ -827,10 +827,10 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 backdrop-blur-md sm:items-center sm:px-6 sm:py-6">
-      <section role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.5rem] border border-white/50 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.38)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]">
+      <section role="dialog" aria-modal="true" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden border border-white/50 bg-white sm:max-h-[calc(100dvh-3rem)]">
         <div className="sticky top-0 z-20 flex items-start justify-between gap-3 border-b border-neutral-100 bg-white/95 px-4 py-4 backdrop-blur-xl sm:gap-4 sm:px-6 sm:py-5">
           <div>
-            <h2 className="text-xl font-black text-[#11100b]">{title}</h2>
+            <h2 className="text-xl font-semibold text-[#11100b]">{title}</h2>
             {description ? (
               <p className="mt-1 text-sm font-semibold text-neutral-500">
                 {description}
@@ -841,7 +841,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-10 place-items-center rounded-full bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200"
+            className="grid size-10 place-items-center bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-5" />
@@ -864,9 +864,9 @@ function StatCard({
   value: number | string;
 }) {
   return (
-    <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-black uppercase text-neutral-500">{label}</p>
-      <p className="mt-1 text-3xl font-black text-[#11100b]">{value}</p>
+    <div className="border border-neutral-200 bg-white p-5 shadow-sm">
+      <p className="text-xs font-semibold uppercase text-neutral-500">{label}</p>
+      <p className="mt-1 text-3xl font-semibold text-[#11100b]">{value}</p>
     </div>
   );
 }
@@ -883,13 +883,13 @@ function PointStatCard({
   helper?: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-[#c99c38]/20 bg-[#fff8e7] p-4">
+    <div className="border border-[#c99c38]/20 bg-[#fff8e7] p-4">
       <div className="flex items-center gap-2 text-[#9a6b18]">
         {icon}
-        <p className="text-xs font-black uppercase tracking-wide">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
       </div>
 
-      <p className="mt-2 text-3xl font-black text-[#11100b]">{value}</p>
+      <p className="mt-2 text-3xl font-semibold text-[#11100b]">{value}</p>
 
       {helper ? (
         <p className="mt-1 text-xs font-bold text-[#9a6b18]/70">{helper}</p>
@@ -905,8 +905,8 @@ function PointLedgerList({
 }) {
   if (!ledgers.length) {
     return (
-      <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
-        <p className="text-sm font-black text-neutral-700">
+      <div className="border border-dashed border-neutral-200 bg-neutral-50 p-5 text-center">
+        <p className="text-sm font-semibold text-neutral-700">
           No point ledger yet.
         </p>
         <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -921,11 +921,11 @@ function PointLedgerList({
       {ledgers.map((ledger) => (
         <div
           key={ledger.id}
-          className="rounded-[1.25rem] border border-neutral-200 bg-white p-4"
+          className="border border-neutral-200 bg-white p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-black text-[#11100b]">
+              <p className="text-sm font-semibold text-[#11100b]">
                 {ledger.description || formatLedgerLabel(ledger.source)}
               </p>
 
@@ -937,9 +937,9 @@ function PointLedgerList({
             </div>
 
             <span
-              className={`shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-xs font-black ${pointClass(
-                ledger.points
-              )}`}
+              className={`shrink-0 bg-neutral-100 px-3 py-1 text-xs font-semibold ${pointClass(
+ ledger.points
+ )}`}
             >
               {formatPoints(ledger.points)} pts
             </span>
@@ -1811,19 +1811,19 @@ function handleResetPasscode(guestStayId: string) {
       />
 
       {message ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700">
+        <div className="border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700">
           {message}
         </div>
       ) : null}
 
       {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
+        <div className="border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
           {error}
         </div>
       ) : null}
 
       {xenditStatusText ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-[#d8b45f] bg-[#fff8e4] px-5 py-4 text-sm font-black text-[#7a5414] shadow-sm">
+        <div className="flex items-center gap-3 border border-[#d8b45f] bg-[#fff8e4] px-5 py-4 text-sm font-semibold text-[#7a5414] shadow-sm">
           <Loader2 className="size-5 animate-spin" />
           {xenditStatusText}
         </div>
@@ -1862,13 +1862,13 @@ function handleResetPasscode(guestStayId: string) {
   />
 </section>
 
-<section className="flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+<section className="flex flex-col gap-3 border border-neutral-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
   <div>
-    <p className="text-xs font-black uppercase tracking-[0.2em] text-[#b88938]">
+    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
       Stay Records
     </p>
 
-    <h2 className="mt-1 text-xl font-black text-[#11100b]">
+    <h2 className="mt-1 text-xl font-semibold text-[#11100b]">
       Room Stay List
     </h2>
 
@@ -1880,7 +1880,7 @@ function handleResetPasscode(guestStayId: string) {
   <button
     type="button"
     onClick={openCreateModal}
-    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-[#2a2417]"
+    className="inline-flex h-12 items-center justify-center gap-2 bg-[#11100b] px-5 text-sm font-semibold text-white transition hover:bg-[#2a2417]"
   >
     <Plus className="size-4" />
     Check In Guest
@@ -1888,9 +1888,9 @@ function handleResetPasscode(guestStayId: string) {
 </section>
 
 
-      <section className="grid gap-3 rounded-[1.75rem] border border-neutral-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px_auto] lg:items-end">
+      <section className="grid gap-3 border border-neutral-200 bg-white p-4 shadow-sm lg:grid-cols-[1fr_220px_auto] lg:items-end">
         <label className="grid gap-2">
-          <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             <Search className="size-4 text-[#b88938]" />
             Search stays
           </span>
@@ -1903,7 +1903,7 @@ function handleResetPasscode(guestStayId: string) {
         </label>
 
         <label className="grid gap-2">
-          <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+          <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             <SlidersHorizontal className="size-4 text-[#b88938]" />
             Stay status
           </span>
@@ -1931,42 +1931,42 @@ function handleResetPasscode(guestStayId: string) {
             setGuestStaySearch('');
             setGuestStayStatusFilter('ALL');
           }}
-          className="h-12 rounded-2xl border border-neutral-200 bg-neutral-50 px-5 text-sm font-black text-neutral-700 transition hover:bg-neutral-100"
+          className="h-12 border border-neutral-200 bg-neutral-50 px-5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
         >
           Reset Filters
         </button>
       </section>
 
-      <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.05)]">
+      <section className="overflow-hidden border border-neutral-200 bg-white">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1240px] text-left">
             <thead className="sticky top-0 z-10 bg-neutral-50/95 backdrop-blur">
               <tr>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Guest
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Hotel / Room
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Devices
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Orders / Requests
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Points
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Check-in
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Expected Checkout
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Status
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-black uppercase text-neutral-500">
+                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Actions
                 </th>
               </tr>
@@ -1979,14 +1979,14 @@ function handleResetPasscode(guestStayId: string) {
           return (
             <tr key={stay.id} className="border-t border-neutral-100 transition hover:bg-[#fffaf0]">
                   <td className="px-5 py-4">
-                    <p className="font-black">{stay.guestName}</p>
+                    <p className="font-semibold">{stay.guestName}</p>
                     <p className="text-xs font-semibold text-neutral-500">
                       {stay.guestPhone || stay.guestEmail || 'No contact'}
                     </p>
                   </td>
 
                   <td className="px-5 py-4">
-                    <p className="font-black">{stay.hotelName}</p>
+                    <p className="font-semibold">{stay.hotelName}</p>
                     <p className="text-xs font-semibold text-neutral-500">
                       Room {stay.roomNumber}
                       {stay.roomName ? ` — ${stay.roomName}` : ''}
@@ -1994,8 +1994,8 @@ function handleResetPasscode(guestStayId: string) {
                     <span
                       className={
                         stay.nfcRoomPasscodeEnabled
-                          ? 'mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700'
-                          : 'mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700'
+                          ? 'mt-2 inline-flex bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700'
+                          : 'mt-2 inline-flex bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700'
                       }
                     >
                       {stay.nfcRoomPasscodeEnabled
@@ -2016,7 +2016,7 @@ function handleResetPasscode(guestStayId: string) {
                   </td>
 
                                   <td className="px-5 py-4">
-                  <p className="font-black text-[#11100b]">
+                  <p className="font-semibold text-[#11100b]">
                     {stay.availablePoints} available
                   </p>
                   <p className="text-xs font-semibold text-neutral-500">
@@ -2053,7 +2053,7 @@ function handleResetPasscode(guestStayId: string) {
                           resetFeedback();
                           setViewStay(stay);
                         }}
-                        className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-2 text-xs font-black text-neutral-700 transition hover:bg-neutral-200"
+                        className="inline-flex items-center gap-1 bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-200"
                       >
                         <Eye className="size-3.5" />
                         View
@@ -2067,7 +2067,7 @@ function handleResetPasscode(guestStayId: string) {
                               resetFeedback();
                               setEditStay(stay);
                             }}
-                            className="inline-flex items-center gap-1 rounded-full bg-[#fff8e7] px-3 py-2 text-xs font-black text-[#9a6b18] transition hover:bg-[#f7e4ad]"
+                            className="inline-flex items-center gap-1 bg-[#fff8e7] px-3 py-2 text-xs font-semibold text-[#9a6b18] transition hover:bg-[#f7e4ad]"
                           >
                             <Pencil className="size-3.5" />
                             Edit
@@ -2077,7 +2077,7 @@ function handleResetPasscode(guestStayId: string) {
                             type="button"
                             disabled={isPending}
                             onClick={() => openCheckoutModal(stay)}
-                            className="inline-flex items-center gap-1 rounded-full bg-[#11100b] px-3 py-2 text-xs font-black text-white transition hover:bg-[#2a2417] disabled:opacity-60"
+                            className="inline-flex items-center gap-1 bg-[#11100b] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#2a2417] disabled:opacity-60"
                           >
                             <LogOut className="size-3.5" />
                             Checkout
@@ -2113,7 +2113,7 @@ function handleResetPasscode(guestStayId: string) {
                 onClick={() =>
                   setGuestStayPage((page) => Math.max(1, page - 1))
                 }
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-10 items-center justify-center border border-neutral-200 bg-white px-4 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
@@ -2129,8 +2129,8 @@ function handleResetPasscode(guestStayId: string) {
                     onClick={() => setGuestStayPage(item)}
                     className={
                       item === currentGuestStayPage
-                        ? 'grid size-10 place-items-center rounded-xl bg-[#11100b] text-xs font-black text-white shadow-sm'
-                        : 'grid size-10 place-items-center rounded-xl border border-neutral-200 bg-white text-xs font-black text-neutral-700 transition hover:bg-neutral-50'
+                        ? 'grid size-10 place-items-center bg-[#11100b] text-xs font-semibold text-white shadow-sm'
+                        : 'grid size-10 place-items-center border border-neutral-200 bg-white text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50'
                     }
                   >
                     {item}
@@ -2138,7 +2138,7 @@ function handleResetPasscode(guestStayId: string) {
                 ) : (
                   <span
                     key={`${item}-${index}`}
-                    className="grid size-10 place-items-center text-xs font-black text-neutral-400"
+                    className="grid size-10 place-items-center text-xs font-semibold text-neutral-400"
                   >
                     ...
                   </span>
@@ -2153,7 +2153,7 @@ function handleResetPasscode(guestStayId: string) {
                     Math.min(totalGuestStayPages, page + 1)
                   )
                 }
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-10 items-center justify-center border border-neutral-200 bg-white px-4 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>
@@ -2178,7 +2178,7 @@ function handleResetPasscode(guestStayId: string) {
                     setGuestStayPageSize(Number(event.target.value));
                     setGuestStayPage(1);
                   }}
-                  className="h-10 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black text-[#11100b] outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                  className="h-10 border border-neutral-200 bg-white px-3 text-xs font-semibold text-[#11100b] outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
                 >
                   {GUEST_STAYS_PAGE_SIZE_OPTIONS.map((size) => (
                     <option key={size} value={size}>
@@ -2203,19 +2203,19 @@ function handleResetPasscode(guestStayId: string) {
           onClose={() => setIsCreateOpen(false)}
         >
           {createdStay ? (
-            <div className="mb-5 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5">
+            <div className="mb-5 border border-emerald-200 bg-emerald-50 p-5">
               <div className="flex items-center gap-2 text-emerald-800">
                 <CheckCircle2 className="size-5" />
-                <p className="text-sm font-black">
+                <p className="text-sm font-semibold">
                   Guest stay created successfully.
                 </p>
               </div>
 
               {createdStay.securityCodeEnabled ? (
                 <>
-                  <div className="mt-4 rounded-2xl bg-white p-4">
+                  <div className="mt-4 bg-white p-4">
                     <p className={labelClass}>Room Passcode</p>
-                    <p className="mt-1 font-mono text-4xl font-black tracking-[0.2em] text-[#11100b]">
+                    <p className="mt-1 font-mono text-4xl font-semibold tracking-[0.2em] text-[#11100b]">
                       {createdStay.passcode}
                     </p>
                   </div>
@@ -2227,13 +2227,13 @@ function handleResetPasscode(guestStayId: string) {
                   </p>
                 </>
               ) : (
-                <div className="mt-4 rounded-2xl border border-emerald-200 bg-white p-4">
+                <div className="mt-4 border border-emerald-200 bg-white p-4">
                   <div className="flex items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <span className="grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700">
                       <ShieldCheck className="size-5" />
                     </span>
                     <div>
-                      <p className="text-sm font-black text-emerald-800">
+                      <p className="text-sm font-semibold text-emerald-800">
                         Direct NFC access enabled
                       </p>
                       <p className="mt-1 text-xs font-bold leading-5 text-neutral-600">
@@ -2250,16 +2250,16 @@ function handleResetPasscode(guestStayId: string) {
                 <div
                   className={
                     createdStay.smsSent
-                      ? 'mt-4 rounded-2xl border border-emerald-200 bg-white p-4'
-                      : 'mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4'
+                      ? 'mt-4 border border-emerald-200 bg-white p-4'
+                      : 'mt-4 border border-amber-200 bg-amber-50 p-4'
                   }
                 >
                   <div className="flex items-start gap-3">
                     <span
                       className={
                         createdStay.smsSent
-                          ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700'
-                          : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700'
+                          ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700'
+                          : 'grid size-10 shrink-0 place-items-center bg-amber-100 text-amber-700'
                       }
                     >
                       <MessageSquare className="size-5" />
@@ -2269,8 +2269,8 @@ function handleResetPasscode(guestStayId: string) {
                       <p
                         className={
                           createdStay.smsSent
-                            ? 'text-sm font-black text-emerald-800'
-                            : 'text-sm font-black text-amber-800'
+                            ? 'text-sm font-semibold text-emerald-800'
+                            : 'text-sm font-semibold text-amber-800'
                         }
                       >
                         {createdStay.smsSent
@@ -2369,7 +2369,7 @@ function handleResetPasscode(guestStayId: string) {
 
             {createSecurityCodeEnabled ? (
               <>
-                <label className="flex items-start gap-3 rounded-[1.5rem] border border-[#c99c38]/25 bg-[#fffaf0] p-4">
+                <label className="flex items-start gap-3 border border-[#c99c38]/25 bg-[#fffaf0] p-4">
                   <input
                     type="checkbox"
                     name="sendPasscodeSms"
@@ -2378,11 +2378,11 @@ function handleResetPasscode(guestStayId: string) {
                     onChange={(event) =>
                       setCreateSendPasscodeSms(event.currentTarget.checked)
                     }
-                    className="mt-1 size-4 rounded border-neutral-300 accent-[#b88938]"
+                    className="mt-1 size-4 border-neutral-300 accent-[#b88938]"
                   />
 
                   <span>
-                    <span className="flex items-center gap-2 text-sm font-black text-[#11100b]">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-[#11100b]">
                       <MessageSquare className="size-4 text-[#b88938]" />
                       Send room passcode via SMS
                     </span>
@@ -2394,8 +2394,8 @@ function handleResetPasscode(guestStayId: string) {
                 </label>
 
                 {createSendPasscodeSms ? (
-                  <div className="rounded-[1.25rem] border border-dashed border-emerald-200 bg-emerald-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                  <div className="border border-dashed border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                       SMS Preview
                     </p>
                     <p className="mt-1 text-sm font-bold leading-6 text-emerald-900">
@@ -2407,13 +2407,13 @@ function handleResetPasscode(guestStayId: string) {
                 ) : null}
               </>
             ) : (
-              <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4">
+              <div className="border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <span className="grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700">
                     <ShieldCheck className="size-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-black text-emerald-900">
+                    <p className="text-sm font-semibold text-emerald-900">
                       Room security code is disabled
                     </p>
                     <p className="mt-1 text-xs font-semibold leading-5 text-emerald-800/75">
@@ -2457,7 +2457,7 @@ function handleResetPasscode(guestStayId: string) {
             <button
               type="submit"
               disabled={isPending}
-              className="mt-2 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
+              className="mt-2 inline-flex h-12 items-center justify-center gap-2 bg-[#11100b] text-sm font-semibold text-white disabled:opacity-60"
             >
               {createSecurityCodeEnabled ? (
                 <KeyRound className="size-4" />
@@ -2481,17 +2481,17 @@ function handleResetPasscode(guestStayId: string) {
           onClose={() => setViewStay(null)}
         >
           <div className="grid gap-4">
-            <div className="rounded-[1.5rem] bg-[#11100b] p-5 text-white">
+            <div className="bg-[#11100b] p-5 text-white">
               <div className="flex items-start gap-3">
-                <span className="grid size-12 place-items-center rounded-2xl bg-[#c99c38] text-black">
+                <span className="grid size-12 place-items-center bg-[#c99c38] text-black">
                   <UserCheck className="size-6" />
                 </span>
 
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c99c38]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c99c38]">
                     Guest
                   </p>
-                  <h3 className="mt-1 text-2xl font-black">
+                  <h3 className="mt-1 text-2xl font-semibold">
                     {viewStay.guestName}
                   </h3>
                   <p className="mt-1 text-sm font-semibold text-white/55">
@@ -2503,14 +2503,14 @@ function handleResetPasscode(guestStayId: string) {
               </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-[#c99c38]/25 bg-[#fffaf0] p-5">
+            <div className="border border-[#c99c38]/25 bg-[#fffaf0] p-5">
   <div className="mb-4 flex items-center gap-2">
-    <span className="grid size-10 place-items-center rounded-2xl bg-[#c99c38] text-black">
+    <span className="grid size-10 place-items-center bg-[#c99c38] text-black">
       <Coins className="size-5" />
     </span>
 
     <div>
-      <h3 className="text-lg font-black text-[#11100b]">
+      <h3 className="text-lg font-semibold text-[#11100b]">
         Point Synchronization
       </h3>
       <p className="text-xs font-semibold text-neutral-500">
@@ -2549,7 +2549,7 @@ function handleResetPasscode(guestStayId: string) {
         </div>
 
         <div className="mt-5">
-          <p className="mb-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Recent Point Ledger
           </p>
 
@@ -2566,20 +2566,20 @@ function handleResetPasscode(guestStayId: string) {
                 }`}
               />
               {viewStay.nfcRoomPasscodeEnabled ? (
-                <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+                <div className="border border-neutral-200 bg-neutral-50 p-4">
                   <div className="flex items-center gap-2 text-[#b88938]">
                     <KeyRound className="size-5" />
-                    <p className="text-xs font-black uppercase tracking-wide">
+                    <p className="text-xs font-semibold uppercase tracking-wide">
                       Room Passcode
                     </p>
                   </div>
 
                   {revealedPasscodes[viewStay.id] ? (
-                    <p className="mt-2 font-mono text-3xl font-black tracking-[0.18em] text-[#11100b]">
+                    <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.18em] text-[#11100b]">
                       {revealedPasscodes[viewStay.id]}
                     </p>
                   ) : (
-                    <p className="mt-2 text-sm font-black text-[#11100b]">
+                    <p className="mt-2 text-sm font-semibold text-[#11100b]">
                       Hidden for security
                     </p>
                   )}
@@ -2589,7 +2589,7 @@ function handleResetPasscode(guestStayId: string) {
                       type="button"
                       disabled={passcodeLoadingId === viewStay.id}
                       onClick={() => handleViewPasscode(viewStay.id)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#11100b] px-3 text-xs font-black text-white disabled:opacity-60"
+                      className="inline-flex h-9 items-center justify-center gap-2 bg-[#11100b] px-3 text-xs font-semibold text-white disabled:opacity-60"
                     >
                       <Eye className="size-3.5" />
                       {passcodeLoadingId === viewStay.id ? 'Loading...' : 'View'}
@@ -2600,7 +2600,7 @@ function handleResetPasscode(guestStayId: string) {
                         type="button"
                         disabled={passcodeLoadingId === viewStay.id}
                         onClick={() => handleResetPasscode(viewStay.id)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#fff8e7] px-3 text-xs font-black text-[#9a6b18] disabled:opacity-60"
+                        className="inline-flex h-9 items-center justify-center gap-2 bg-[#fff8e7] px-3 text-xs font-semibold text-[#9a6b18] disabled:opacity-60"
                       >
                         <RefreshCw className="size-3.5" />
                         Reset
@@ -2613,14 +2613,14 @@ function handleResetPasscode(guestStayId: string) {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-4">
+                <div className="border border-emerald-200 bg-emerald-50 p-4">
                   <div className="flex items-center gap-2 text-emerald-700">
                     <ShieldCheck className="size-5" />
-                    <p className="text-xs font-black uppercase tracking-wide">
+                    <p className="text-xs font-semibold uppercase tracking-wide">
                       Direct NFC Access
                     </p>
                   </div>
-                  <p className="mt-2 text-sm font-black text-emerald-900">
+                  <p className="mt-2 text-sm font-semibold text-emerald-900">
                     Security code disabled
                   </p>
                   <p className="mt-2 text-[11px] font-semibold leading-4 text-emerald-800/75">
@@ -2676,7 +2676,7 @@ function handleResetPasscode(guestStayId: string) {
                     setEditStay(viewStay);
                     setViewStay(null);
                   }}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#fff8e7] px-4 text-sm font-black text-[#9a6b18]"
+                  className="inline-flex h-11 items-center justify-center gap-2 bg-[#fff8e7] px-4 text-sm font-semibold text-[#9a6b18]"
                 >
                   <Pencil className="size-4" />
                   Edit Stay
@@ -2686,7 +2686,7 @@ function handleResetPasscode(guestStayId: string) {
                   type="button"
                   disabled={isPending}
                   onClick={() => openCheckoutModal(viewStay)}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-4 text-sm font-black text-white disabled:opacity-60"
+                  className="inline-flex h-11 items-center justify-center gap-2 bg-[#11100b] px-4 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   <LogOut className="size-4" />
                   Checkout
@@ -2707,13 +2707,13 @@ function handleResetPasscode(guestStayId: string) {
           <form ref={checkoutFormRef} onSubmit={handleCheckoutSubmit} className="grid gap-5">
             <input type="hidden" name="guestStayId" value={checkoutStay.id} />
 
-            <div className="overflow-hidden rounded-[1.75rem] border border-[#c99c38]/25 bg-[#11100b] text-white">
+            <div className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
               <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d6a738]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
                     Stay Settlement
                   </p>
-                  <h3 className="mt-2 text-2xl font-black">
+                  <h3 className="mt-2 text-2xl font-semibold">
                     Room {checkoutStay.roomNumber}
                     {checkoutStay.roomName ? ` · ${checkoutStay.roomName}` : ''}
                   </h3>
@@ -2722,11 +2722,11 @@ function handleResetPasscode(guestStayId: string) {
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-white/10 p-4 text-right">
-                  <p className="text-xs font-black uppercase tracking-wide text-white/45">
+                <div className="bg-white/10 p-4 text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white/45">
                     Balance Due
                   </p>
-                  <p className="mt-1 text-3xl font-black text-[#f1c66a]">
+                  <p className="mt-1 text-3xl font-semibold text-[#f1c66a]">
                     {money(checkoutPreviewTotals.balanceDueCents)}
                   </p>
                 </div>
@@ -2752,10 +2752,10 @@ function handleResetPasscode(guestStayId: string) {
             </div>
 
 
-            <section className="rounded-[1.5rem] border border-neutral-200 bg-white p-3 shadow-sm">
+            <section className="border border-neutral-200 bg-white p-3 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-3 px-2 pt-1">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9a6b18]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a6b18]">
                     Settlement Path
                   </p>
                   <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -2771,15 +2771,15 @@ function handleResetPasscode(guestStayId: string) {
                   onClick={() => setCheckoutSettlementMode('FRONT_DESK')}
                   className={
                     checkoutSettlementMode === 'FRONT_DESK'
-                      ? 'flex items-center gap-3 rounded-2xl border border-[#11100b] bg-[#11100b] p-4 text-left text-white shadow-lg'
-                      : 'flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100'
+                      ? 'flex items-center gap-3 border border-[#11100b] bg-[#11100b] p-4 text-left text-white shadow-lg'
+                      : 'flex items-center gap-3 border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100'
                   }
                 >
-                  <span className={checkoutSettlementMode === 'FRONT_DESK' ? 'grid size-11 place-items-center rounded-2xl bg-white/10 text-[#f1c66a]' : 'grid size-11 place-items-center rounded-2xl bg-white text-[#b88938]'}>
+                  <span className={checkoutSettlementMode === 'FRONT_DESK' ? 'grid size-11 place-items-center bg-white/10 text-[#f1c66a]' : 'grid size-11 place-items-center bg-white text-[#b88938]'}>
                     <Banknote className="size-5" />
                   </span>
                   <span>
-                    <span className="block text-sm font-black">Front Desk Settlement</span>
+                    <span className="block text-sm font-semibold">Front Desk Settlement</span>
                     <span className={checkoutSettlementMode === 'FRONT_DESK' ? 'mt-1 block text-xs font-semibold text-white/55' : 'mt-1 block text-xs font-semibold text-neutral-500'}>
                       Cash, card, wallet, split payment, or pay later.
                     </span>
@@ -2792,15 +2792,15 @@ function handleResetPasscode(guestStayId: string) {
                   onClick={() => setCheckoutSettlementMode('XENDIT')}
                   className={
                     checkoutSettlementMode === 'XENDIT'
-                      ? 'flex items-center gap-3 rounded-2xl border border-[#d6a738] bg-[#fff7dd] p-4 text-left text-[#11100b] shadow-[0_12px_32px_rgba(214,167,56,0.2)]'
-                      : 'flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45'
+                      ? 'flex items-center gap-3 border border-[#d6a738] bg-[#fff7dd] p-4 text-left text-[#11100b] shadow-[0_12px_32px_rgba(214,167,56,0.2)]'
+                      : 'flex items-center gap-3 border border-neutral-200 bg-neutral-50 p-4 text-left text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-45'
                   }
                 >
-                  <span className="grid size-11 place-items-center rounded-2xl bg-[#d6a738] text-black">
+                  <span className="grid size-11 place-items-center bg-[#d6a738] text-black">
                     <CreditCard className="size-5" />
                   </span>
                   <span>
-                    <span className="block text-sm font-black">Xendit Online</span>
+                    <span className="block text-sm font-semibold">Xendit Online</span>
                     <span className="mt-1 block text-xs font-semibold text-neutral-500">
                       Secure card, GCash, and QR Ph hosted checkout.
                     </span>
@@ -2809,7 +2809,7 @@ function handleResetPasscode(guestStayId: string) {
               </div>
 
               {!xenditEnabled ? (
-                <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+                <p className="mt-3 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
                   Xendit is unavailable until XENDIT_SECRET_KEY and APP_URL are configured.
                 </p>
               ) : null}
@@ -2817,17 +2817,17 @@ function handleResetPasscode(guestStayId: string) {
 
             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="grid gap-4">
-                <section className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+                <section className="border border-neutral-200 bg-neutral-50 p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                         Food Orders
                       </p>
                       <p className="text-sm font-semibold text-neutral-500">
                         Ready or delivered unpaid food orders are included.
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#11100b]">
+                    <span className="bg-white px-3 py-1 text-xs font-semibold text-[#11100b]">
                       {money(checkoutStay.checkoutSummary.foodTotalCents)}
                     </span>
                   </div>
@@ -2837,11 +2837,11 @@ function handleResetPasscode(guestStayId: string) {
                       checkoutStay.checkoutSummary.orders.map((order) => (
                         <div
                           key={order.id}
-                          className="rounded-2xl border border-neutral-200 bg-white p-4"
+                          className="border border-neutral-200 bg-white p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-black text-[#11100b]">
+                              <p className="font-semibold text-[#11100b]">
                                 {order.orderCode}
                               </p>
                               <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -2850,7 +2850,7 @@ function handleResetPasscode(guestStayId: string) {
                                 {formatDateTime(order.createdAt)}
                               </p>
                             </div>
-                            <p className="shrink-0 text-sm font-black text-[#11100b]">
+                            <p className="shrink-0 text-sm font-semibold text-[#11100b]">
                               {money(order.amountCents)}
                             </p>
                           </div>
@@ -2874,24 +2874,24 @@ function handleResetPasscode(guestStayId: string) {
                         </div>
                       ))
                     ) : (
-                      <p className="rounded-2xl border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
+                      <p className="border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
                         No unpaid ready or delivered food orders.
                       </p>
                     )}
                   </div>
                 </section>
 
-                <section className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+                <section className="border border-neutral-200 bg-neutral-50 p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                         Service / Add-On Charges
                       </p>
                       <p className="text-sm font-semibold text-neutral-500">
                         Posted unpaid service charges from completed requests.
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#11100b]">
+                    <span className="bg-white px-3 py-1 text-xs font-semibold text-[#11100b]">
                       {money(checkoutStay.checkoutSummary.serviceTotalCents)}
                     </span>
                   </div>
@@ -2901,11 +2901,11 @@ function handleResetPasscode(guestStayId: string) {
                       checkoutStay.checkoutSummary.serviceCharges.map((charge) => (
                         <div
                           key={charge.id}
-                          className="rounded-2xl border border-neutral-200 bg-white p-4"
+                          className="border border-neutral-200 bg-white p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-black text-[#11100b]">
+                              <p className="font-semibold text-[#11100b]">
                                 {charge.itemName}
                               </p>
                               <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -2918,14 +2918,14 @@ function handleResetPasscode(guestStayId: string) {
                                 </p>
                               ) : null}
                             </div>
-                            <p className="shrink-0 text-sm font-black text-[#11100b]">
+                            <p className="shrink-0 text-sm font-semibold text-[#11100b]">
                               {money(charge.totalAmountCents)}
                             </p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="rounded-2xl border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
+                      <p className="border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
                         No unpaid service or add-on charges.
                       </p>
                     )}
@@ -2934,8 +2934,8 @@ function handleResetPasscode(guestStayId: string) {
               </div>
 
               <aside className="grid gap-4">
-                <section className="rounded-[1.5rem] border border-neutral-200 bg-white p-4">
-                  <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                <section className="border border-neutral-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Adjustments
                   </p>
 
@@ -2959,7 +2959,7 @@ function handleResetPasscode(guestStayId: string) {
                     <textarea
                       name="manualChargeNote"
                       defaultValue={checkoutStay.checkoutSummary.manualChargeNote}
-                      className="min-h-20 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                      className="min-h-20 w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
                       placeholder="Mini bar, lost key, damage fee..."
                     />
                   </label>
@@ -2984,17 +2984,17 @@ function handleResetPasscode(guestStayId: string) {
                     <textarea
                       name="discountNote"
                       defaultValue={checkoutStay.checkoutSummary.discountNote}
-                      className="min-h-20 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                      className="min-h-20 w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
                       placeholder="Approved discount, senior discount, manager adjustment..."
                     />
                   </label>
                 </section>
 
                 {checkoutSettlementMode === 'FRONT_DESK' ? (
-                <section className="rounded-[1.5rem] border border-[#c99c38]/25 bg-[#fffaf0] p-4">
+                <section className="border border-[#c99c38]/25 bg-[#fffaf0] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-wide text-[#9a6b18]">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#9a6b18]">
                         Split Payments
                       </p>
                       <p className="mt-1 text-xs font-semibold text-[#9a6b18]/70">
@@ -3005,7 +3005,7 @@ function handleResetPasscode(guestStayId: string) {
                     <button
                       type="button"
                       onClick={addCheckoutPayment}
-                      className="inline-flex h-9 items-center justify-center rounded-full bg-[#11100b] px-3 text-xs font-black text-white"
+                      className="inline-flex h-9 items-center justify-center bg-[#11100b] px-3 text-xs font-semibold text-white"
                     >
                       Add
                     </button>
@@ -3015,10 +3015,10 @@ function handleResetPasscode(guestStayId: string) {
                     {checkoutPayments.map((payment, index) => (
                       <div
                         key={payment.id}
-                        className="rounded-2xl border border-[#c99c38]/20 bg-white p-3"
+                        className="border border-[#c99c38]/20 bg-white p-3"
                       >
                         <div className="mb-2 flex items-center justify-between gap-3">
-                          <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                             Payment {index + 1}
                           </p>
 
@@ -3026,7 +3026,7 @@ function handleResetPasscode(guestStayId: string) {
                             <button
                               type="button"
                               onClick={() => removeCheckoutPayment(payment.id)}
-                              className="grid size-8 place-items-center rounded-full bg-red-50 text-red-600"
+                              className="grid size-8 place-items-center bg-red-50 text-red-600"
                               aria-label="Remove payment row"
                             >
                               <X className="size-4" />
@@ -3099,7 +3099,7 @@ function handleResetPasscode(guestStayId: string) {
                                 note: event.target.value,
                               })
                             }
-                            className="min-h-16 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                            className="min-h-16 w-full border border-neutral-200 bg-white px-4 py-3 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
                             placeholder="Optional cashier/front desk note."
                           />
                         </label>
@@ -3107,7 +3107,7 @@ function handleResetPasscode(guestStayId: string) {
                     ))}
                   </div>
 
-                  <div className="mt-4 space-y-2 rounded-2xl bg-white p-4 text-sm font-bold">
+                  <div className="mt-4 space-y-2 bg-white p-4 text-sm font-bold">
                     <div className="flex justify-between gap-3">
                       <span>Food</span>
                       <span>{money(checkoutPreviewTotals.foodTotalCents)}</span>
@@ -3139,40 +3139,40 @@ function handleResetPasscode(guestStayId: string) {
                   </div>
                 </section>
                 ) : (
-                <section className="overflow-hidden rounded-[1.5rem] border border-[#d6a738]/35 bg-[linear-gradient(145deg,#fff9e8,#fff3c5)] shadow-[0_18px_45px_rgba(214,167,56,0.16)]">
+                <section className="overflow-hidden border border-[#d6a738]/35 bg-[linear-gradient(145deg,#fff9e8,#fff3c5)]">
                   <div className="bg-[#11100b] p-5 text-white">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#d6a738]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d6a738]">
                           Secure Online Settlement
                         </p>
-                        <h4 className="mt-2 text-xl font-black">Pay with Xendit</h4>
+                        <h4 className="mt-2 text-xl font-semibold">Pay with Xendit</h4>
                         <p className="mt-1 text-xs font-semibold leading-5 text-white/55">
                           The guest completes payment on Xendit's hosted page. Checkout is finalized only after the signed webhook confirms payment.
                         </p>
                       </div>
-                      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#d6a738] text-black">
+                      <span className="grid size-12 shrink-0 place-items-center bg-[#d6a738] text-black">
                         <ShieldCheck className="size-5" />
                       </span>
                     </div>
                   </div>
 
                   <div className="p-5">
-                    <div className="flex items-end justify-between gap-4 rounded-2xl bg-white p-4 shadow-sm">
+                    <div className="flex items-end justify-between gap-4 bg-white p-4 shadow-sm">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-neutral-500">Amount to collect</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Amount to collect</p>
                         <p className="mt-1 text-xs font-semibold text-neutral-500">Full adjusted guest balance</p>
                       </div>
-                      <p className="text-3xl font-black text-[#11100b]">{money(checkoutPreviewTotals.subtotalCents)}</p>
+                      <p className="text-3xl font-semibold text-[#11100b]">{money(checkoutPreviewTotals.subtotalCents)}</p>
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2">
-                      <div className="rounded-xl bg-white p-3 text-center text-xs font-black text-neutral-700">Card</div>
-                      <div className="rounded-xl bg-white p-3 text-center text-xs font-black text-neutral-700">GCash</div>
-                      <div className="rounded-xl bg-white p-3 text-center text-xs font-black text-neutral-700">QR Ph</div>
+                      <div className="bg-white p-3 text-center text-xs font-semibold text-neutral-700">Card</div>
+                      <div className="bg-white p-3 text-center text-xs font-semibold text-neutral-700">GCash</div>
+                      <div className="bg-white p-3 text-center text-xs font-semibold text-neutral-700">QR Ph</div>
                     </div>
 
-                    <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[#d6a738]/25 bg-white/70 p-4">
+                    <div className="mt-4 flex items-start gap-3 border border-[#d6a738]/25 bg-white/70 p-4">
                       <Smartphone className="mt-0.5 size-5 shrink-0 text-[#9a6b18]" />
                       <p className="text-xs font-semibold leading-5 text-neutral-600">
                         After payment, CloudView verifies the Xendit webhook, records the folio payment, marks eligible food and service charges paid, revokes guest devices, and completes checkout.
@@ -3186,38 +3186,38 @@ function handleResetPasscode(guestStayId: string) {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="inline-flex h-14 min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#2a2417] disabled:opacity-60"
+                  className="inline-flex h-14 min-h-14 items-center justify-center gap-2 bg-[#11100b] px-5 py-4 text-sm font-semibold text-white transition hover:bg-[#2a2417] disabled:opacity-60"
                 >
                   <Banknote className="size-4" />
                   {isPending ? 'Completing Checkout...' : 'Complete Checkout'}
-                </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={
-                      isPending ||
-                      !xenditEnabled ||
-                      checkoutPreviewTotals.subtotalCents <= 0
-                    }
-                    onClick={handleXenditCheckout}
-                    className="inline-flex h-14 min-h-14 items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#d9ad45,#bd8219)] px-5 py-4 text-sm font-black text-black shadow-[0_16px_38px_rgba(214,167,56,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        Preparing Xendit...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="size-4" />
-                        Continue to Xendit
-                      </>
-                    )}
-                  </button>
-                )}
+ </button>
+ ) : (
+ <button
+ type="button"
+ disabled={
+ isPending ||
+ !xenditEnabled ||
+ checkoutPreviewTotals.subtotalCents <= 0
+ }
+ onClick={handleXenditCheckout}
+ className="inline-flex h-14 min-h-14 items-center justify-center gap-2 bg-[linear-gradient(135deg,#d9ad45,#bd8219)] px-5 py-4 text-sm font-semibold text-black shadow-[0_16px_38px_rgba(214,167,56,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+ >
+ {isPending ? (
+ <>
+ <Loader2 className="size-4 animate-spin" />
+ Preparing Xendit...
+ </>
+ ) : (
+ <>
+ <CreditCard className="size-4" />
+ Continue to Xendit
+ </>
+ )}
+ </button>
+ )}
 
-                <p className="text-xs font-semibold leading-5 text-neutral-500">
-                  {checkoutSettlementMode === 'FRONT_DESK'
+ <p className="text-xs font-semibold leading-5 text-neutral-500">
+ {checkoutSettlementMode === 'FRONT_DESK'
                     ? 'Completing checkout records the settlement, revokes authorized stay devices, and ends active NFC guest sessions.'
                     : 'The stay remains active until Xendit confirms payment and CloudView finishes the folio automatically.'}
                 </p>
@@ -3348,7 +3348,7 @@ function handleResetPasscode(guestStayId: string) {
             <button
               type="submit"
               disabled={isPending}
-              className="mt-2 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#11100b] text-sm font-black text-white disabled:opacity-60"
+              className="mt-2 inline-flex h-12 items-center justify-center gap-2 bg-[#11100b] text-sm font-semibold text-white disabled:opacity-60"
             >
               <Pencil className="size-4" />
               {isPending ? 'Saving Changes...' : 'Save Changes'}
@@ -3374,13 +3374,13 @@ function FolioSummaryCard({
   }
 
   return (
-    <section className="rounded-[1.75rem] border border-[#c99c38]/25 bg-[#fffaf0] p-5">
+    <section className="border border-[#c99c38]/25 bg-[#fffaf0] p-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-[#9a6b18]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#9a6b18]">
             Checkout Folio
           </p>
-          <h3 className="mt-1 text-xl font-black text-[#11100b]">
+          <h3 className="mt-1 text-xl font-semibold text-[#11100b]">
             {folio.folioNumber}
           </h3>
           <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -3393,7 +3393,7 @@ function FolioSummaryCard({
         <button
           type="button"
           onClick={onPrint}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-4 text-sm font-black text-white"
+          className="inline-flex h-11 items-center justify-center gap-2 bg-[#11100b] px-4 text-sm font-semibold text-white"
         >
           <Printer className="size-4" />
           Print Folio Statement
@@ -3412,7 +3412,7 @@ function FolioSummaryCard({
 
       <div className="mt-5 grid gap-4 xl:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Folio Lines
           </p>
           <div className="space-y-2">
@@ -3420,10 +3420,10 @@ function FolioSummaryCard({
               folio.lines.map((line) => (
                 <div
                   key={line.id}
-                  className="flex items-start justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-4"
+                  className="flex items-start justify-between gap-3 border border-neutral-200 bg-white p-4"
                 >
                   <div>
-                    <p className="text-sm font-black text-[#11100b]">
+                    <p className="text-sm font-semibold text-[#11100b]">
                       {line.title}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -3436,13 +3436,13 @@ function FolioSummaryCard({
                       </p>
                     ) : null}
                   </div>
-                  <p className="shrink-0 text-sm font-black text-[#11100b]">
+                  <p className="shrink-0 text-sm font-semibold text-[#11100b]">
                     {money(line.amountCents)}
                   </p>
                 </div>
               ))
             ) : (
-              <p className="rounded-2xl border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
+              <p className="border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
                 No folio lines recorded.
               </p>
             )}
@@ -3450,7 +3450,7 @@ function FolioSummaryCard({
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-black uppercase tracking-wide text-neutral-500">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
             Payment History
           </p>
           <div className="space-y-2">
@@ -3458,11 +3458,11 @@ function FolioSummaryCard({
               folio.payments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="rounded-2xl border border-neutral-200 bg-white p-4"
+                  className="border border-neutral-200 bg-white p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-black text-[#11100b]">
+                      <p className="text-sm font-semibold text-[#11100b]">
                         {formatStatus(payment.paymentMethod)}
                       </p>
                       <p className="mt-1 text-xs font-semibold text-neutral-500">
@@ -3482,14 +3482,14 @@ function FolioSummaryCard({
                         </p>
                       ) : null}
                     </div>
-                    <p className="shrink-0 text-sm font-black text-emerald-700">
+                    <p className="shrink-0 text-sm font-semibold text-emerald-700">
                       {money(payment.amountCents)}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="rounded-2xl border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
+              <p className="border border-dashed border-neutral-200 bg-white p-5 text-center text-sm font-bold text-neutral-500">
                 No payment history recorded.
               </p>
             )}
@@ -3511,13 +3511,13 @@ function InfoCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4">
+    <div className="border border-neutral-200 bg-neutral-50 p-4">
       <div className="flex items-center gap-2 text-[#b88938]">
         {icon}
-        <p className="text-xs font-black uppercase tracking-wide">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
       </div>
 
-      <p className="mt-2 text-sm font-black text-[#11100b]">{value}</p>
+      <p className="mt-2 text-sm font-semibold text-[#11100b]">{value}</p>
     </div>
   );
 }

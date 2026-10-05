@@ -55,12 +55,12 @@ export function OrderRunningTimer({
   const elapsedSeconds = Math.floor((effectiveEnd - startTime) / 1000);
 
   return (
-    <div className="rounded-[1.5rem] border border-gold/20 bg-gold/10 p-4 text-center">
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-gold">
+    <div className="border border-gold/20 bg-gold/10 p-4 text-center">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
         Running Timer
       </p>
 
-      <p className="mt-2 text-3xl font-black text-white">
+      <p className="mt-2 text-3xl font-semibold text-white">
         {formatDuration(elapsedSeconds)}
       </p>
 

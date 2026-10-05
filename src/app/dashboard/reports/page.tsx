@@ -470,7 +470,7 @@ function StatusPill({
 
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-black uppercase ${toneClass}`}
+      className={`inline-flex border px-2.5 py-1 text-[11px] font-semibold uppercase ${toneClass}`}
     >
       {children}
     </span>
@@ -502,17 +502,17 @@ function SummaryCard({
             : 'bg-[#fff8e7] text-[#b88938]';
 
   return (
-    <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+    <div className="border border-neutral-200 bg-white p-5">
       <div className="flex items-start gap-4">
-        <span className={`grid size-12 place-items-center rounded-2xl ${toneClass}`}>
+        <span className={`grid size-12 place-items-center ${toneClass}`}>
           <Icon className="size-6" />
         </span>
 
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-black text-neutral-950">
+          <p className="mt-2 text-2xl font-semibold text-neutral-950">
             {value}
           </p>
           <p className="mt-1 text-xs font-bold text-neutral-500">
@@ -608,7 +608,7 @@ function ReportTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+    <div className="overflow-hidden border border-neutral-200 bg-white">
       <div className="flex flex-col gap-3 border-b border-neutral-100 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
         <form method="GET" className="flex min-w-0 flex-1 gap-2">
           <input type="hidden" name="report" value={report} />
@@ -625,13 +625,13 @@ function ReportTable({
               name="q"
               defaultValue={query}
               placeholder="Search within this report..."
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-[#c99c38] focus:bg-white"
+              className="h-11 w-full border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-[#c99c38] focus:bg-white"
             />
           </div>
 
           <button
             type="submit"
-            className="h-11 shrink-0 rounded-2xl bg-[#11100b] px-4 text-sm font-black text-white transition hover:bg-black"
+            className="h-11 shrink-0 bg-[#11100b] px-4 text-sm font-semibold text-white transition hover:bg-black"
           >
             Search
           </button>
@@ -647,7 +647,7 @@ function ReportTable({
                 sort: `c${sortIndex}`,
                 direction,
               })}
-              className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-600 transition hover:bg-neutral-50"
+              className="inline-flex h-11 shrink-0 items-center justify-center border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-50"
             >
               Clear
             </Link>
@@ -665,8 +665,8 @@ function ReportTable({
               })}
               className={
                 pageSize === size
-                  ? 'inline-flex size-9 items-center justify-center rounded-xl bg-[#11100b] text-xs font-black text-white'
-                  : 'inline-flex size-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-xs font-black text-neutral-600 hover:bg-neutral-50'
+                  ? 'inline-flex size-9 items-center justify-center bg-[#11100b] text-xs font-semibold text-white'
+                  : 'inline-flex size-9 items-center justify-center border border-neutral-200 bg-white text-xs font-semibold text-neutral-600 hover:bg-neutral-50'
               }
             >
               {size}
@@ -688,7 +688,7 @@ function ReportTable({
                 return (
                   <th scope="col"
                     key={`${column}-${columnIndex}`}
-                    className="border-b border-neutral-100 px-4 py-3 text-xs font-black uppercase tracking-wide text-neutral-500"
+                    className="border-b border-neutral-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500"
                     aria-sort={
                       isActive
                         ? direction === 'asc'
@@ -703,7 +703,7 @@ function ReportTable({
                         sort: columnKey,
                         direction: nextDirection,
                       })}
-                      className="inline-flex items-center gap-2 rounded-lg transition hover:text-neutral-950"
+                      className="inline-flex items-center gap-2 transition hover:text-neutral-950"
                     >
                       <span>{column}</span>
                       {isActive ? (
@@ -745,7 +745,7 @@ function ReportTable({
                   colSpan={columns.length}
                   className="px-6 py-12 text-center"
                 >
-                  <p className="font-black text-neutral-900">
+                  <p className="font-semibold text-neutral-900">
                     No report data found.
                   </p>
                   <p className="mt-1 text-sm text-neutral-500">
@@ -761,10 +761,10 @@ function ReportTable({
       <div className="flex flex-col gap-3 border-t border-neutral-100 bg-neutral-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-bold text-neutral-600">
           Showing{' '}
-          <span className="font-black text-neutral-950">{firstRow}</span>
+          <span className="font-semibold text-neutral-950">{firstRow}</span>
           {'–'}
-          <span className="font-black text-neutral-950">{lastRow}</span> of{' '}
-          <span className="font-black text-neutral-950">{totalRows}</span>{' '}
+          <span className="font-semibold text-neutral-950">{lastRow}</span> of{' '}
+          <span className="font-semibold text-neutral-950">{totalRows}</span>{' '}
           records
           {query ? (
             <span className="text-neutral-400"> matching “{query}”</span>
@@ -772,7 +772,7 @@ function ReportTable({
         </p>
 
         <div className="flex items-center gap-2">
-          <span className="mr-1 text-xs font-black text-neutral-600">
+          <span className="mr-1 text-xs font-semibold text-neutral-600">
             Page {safePage} of {totalPages}
           </span>
 
@@ -781,8 +781,8 @@ function ReportTable({
             aria-disabled={safePage <= 1}
             className={
               safePage <= 1
-                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
-                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+                ? 'pointer-events-none grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
             }
             aria-label="First page"
           >
@@ -794,8 +794,8 @@ function ReportTable({
             aria-disabled={safePage <= 1}
             className={
               safePage <= 1
-                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
-                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+                ? 'pointer-events-none grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
             }
             aria-label="Previous page"
           >
@@ -807,8 +807,8 @@ function ReportTable({
             aria-disabled={safePage >= totalPages}
             className={
               safePage >= totalPages
-                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
-                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+                ? 'pointer-events-none grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
             }
             aria-label="Next page"
           >
@@ -820,8 +820,8 @@ function ReportTable({
             aria-disabled={safePage >= totalPages}
             className={
               safePage >= totalPages
-                ? 'pointer-events-none grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-300'
-                : 'grid size-9 place-items-center rounded-xl border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
+                ? 'pointer-events-none grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-300'
+                : 'grid size-9 place-items-center border border-neutral-200 bg-white text-neutral-700 transition hover:bg-neutral-100'
             }
             aria-label="Last page"
           >
@@ -916,8 +916,8 @@ export default async function ReportsPage({
 
   if (!accessibleHotelIds.length) {
     return (
-      <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8">
-        <h1 className="text-2xl font-black text-red-800">
+      <div className="border border-red-100 bg-red-50 p-8">
+        <h1 className="text-2xl font-semibold text-red-800">
           No hotel access found
         </h1>
         <p className="mt-2 text-sm font-semibold text-red-700">
@@ -1605,7 +1605,7 @@ export default async function ReportsPage({
         tab.description,
         'PDF / Excel / Print',
         <StatusPill tone="blue">Ready Layout</StatusPill>,
-        <span className="text-xs font-black text-[#b88938]">
+        <span className="text-xs font-semibold text-[#b88938]">
           Connect export route next
         </span>,
       ]);
@@ -1678,7 +1678,7 @@ export default async function ReportsPage({
     <div className="space-y-6">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-neutral-950">Reports</h1>
+          <h1 className="text-3xl font-semibold text-neutral-950">Reports</h1>
           <p className="mt-2 text-sm font-medium text-neutral-500">
             CloudView Daily Operations, Sales, Inventory, Services, Guest
             Portal, and Audit reports.
@@ -1694,7 +1694,7 @@ export default async function ReportsPage({
                         end: endValue,
                         format: 'pdf',
                         })}
-                        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black transition hover:bg-neutral-50"
+                        className="inline-flex h-11 items-center gap-2 border border-neutral-200 bg-white px-4 text-sm font-semibold transition hover:bg-neutral-50"
                     >
                         <Download className="size-4" />
                         Export PDF
@@ -1708,7 +1708,7 @@ export default async function ReportsPage({
                         end: endValue,
                         format: 'xlsx',
                         })}
-                        className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#11100b] px-4 text-sm font-black text-white transition hover:bg-black"
+                        className="inline-flex h-11 items-center gap-2 bg-[#11100b] px-4 text-sm font-semibold text-white transition hover:bg-black"
                     >
                         <FileSpreadsheet className="size-4 text-[#c99c38]" />
                         Export Excel
@@ -1722,47 +1722,47 @@ export default async function ReportsPage({
                         end: endValue,
                         format: 'csv',
                         })}
-                        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#c99c38]/30 bg-[#fffaf0] px-4 text-sm font-black text-[#9d741f] transition hover:bg-[#f7f1e5]"
+                        className="inline-flex h-11 items-center gap-2 border border-[#c99c38]/30 bg-[#fffaf0] px-4 text-sm font-semibold text-[#9d741f] transition hover:bg-[#f7f1e5]"
                     >
                         Export CSV
                     </a>
 </div>
       </section>
 
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+      <section className="border border-neutral-200 bg-white p-5">
         <form className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]" method="GET">
           <div>
-            <label className="text-xs font-black uppercase tracking-wide text-neutral-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Start Date
             </label>
             <input
               name="start"
               type="date"
               defaultValue={startValue}
-              className="mt-2 h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38]"
+              className="mt-2 h-11 w-full border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38]"
             />
           </div>
 
           <div>
-            <label className="text-xs font-black uppercase tracking-wide text-neutral-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
               End Date
             </label>
             <input
               name="end"
               type="date"
               defaultValue={endValue}
-              className="mt-2 h-11 w-full rounded-2xl border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38]"
+              className="mt-2 h-11 w-full border border-neutral-200 px-4 text-sm font-bold outline-none focus:border-[#c99c38]"
             />
           </div>
 
           <div>
-            <label className="text-xs font-black uppercase tracking-wide text-neutral-500">
+            <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Hotel
             </label>
             <select
               name="hotelId"
               defaultValue={selectedHotelId}
-              className="mt-2 h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-[#c99c38]"
+              className="mt-2 h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-[#c99c38]"
             >
               {user.role === 'SUPER_ADMIN' ? (
                 <option value="ALL">All Hotels</option>
@@ -1781,7 +1781,7 @@ export default async function ReportsPage({
           <div className="flex items-end">
             <button
               type="submit"
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#11100b] px-5 text-sm font-black text-white transition hover:bg-black"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 bg-[#11100b] px-5 text-sm font-semibold text-white transition hover:bg-black"
             >
               <RefreshCcw className="size-4 text-[#c99c38]" />
               Apply Filters
@@ -1790,7 +1790,7 @@ export default async function ReportsPage({
         </form>
 
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-4">
-          <span className="mr-1 text-xs font-black uppercase tracking-wide text-neutral-400">
+          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             Quick Range
           </span>
 
@@ -1809,8 +1809,8 @@ export default async function ReportsPage({
                 })}
                 className={
                   isActive
-                    ? 'rounded-full bg-[#11100b] px-4 py-2 text-xs font-black text-white'
-                    : 'rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-black text-neutral-600 transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]'
+                    ? 'bg-[#11100b] px-4 py-2 text-xs font-semibold text-white'
+                    : 'border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]'
                 }
               >
                 {preset.label}
@@ -1833,7 +1833,7 @@ export default async function ReportsPage({
         ))}
       </section>
 
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-3 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+      <section className="border border-neutral-200 bg-white p-3">
         <div className="flex gap-2 overflow-x-auto pb-1">
           {reportTabs.map((tab) => {
                     const active = tab.key === activeReport;
@@ -1848,8 +1848,8 @@ export default async function ReportsPage({
                             end: endValue,
                         })}
                         className={active
-                            ? 'shrink-0 rounded-2xl bg-[#11100b] px-4 py-3 text-sm font-black text-white'
-                            : 'shrink-0 rounded-2xl px-4 py-3 text-sm font-black text-neutral-500 hover:bg-neutral-50'}
+                            ? 'shrink-0 bg-[#11100b] px-4 py-3 text-sm font-semibold text-white'
+                            : 'shrink-0 px-4 py-3 text-sm font-semibold text-neutral-500 hover:bg-neutral-50'}
                         >
                         {tab.label}
                         </Link>
@@ -1861,7 +1861,7 @@ export default async function ReportsPage({
       <section className="grid gap-5 xl:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           <div>
-            <h2 className="text-xl font-black text-neutral-950">
+            <h2 className="text-xl font-semibold text-neutral-950">
               {reportTabs.find((tab) => tab.key === activeReport)?.label}
             </h2>
             <p className="mt-1 text-sm font-medium text-neutral-500">
@@ -1885,44 +1885,44 @@ export default async function ReportsPage({
         </div>
 
         <aside className="space-y-4">
-          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
-            <h3 className="flex items-center gap-2 font-black text-neutral-950">
+          <div className="border border-neutral-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 font-semibold text-neutral-950">
               <AlertTriangle className="size-5 text-[#c99c38]" />
               Needs Attention
             </h3>
 
             <div className="mt-4 space-y-3">
-              <div className="rounded-2xl bg-red-50 p-4">
-                <p className="text-xs font-black uppercase text-red-700">
+              <div className="bg-red-50 p-4">
+                <p className="text-xs font-semibold uppercase text-red-700">
                   Low Stock
                 </p>
-                <p className="mt-1 text-2xl font-black text-red-900">
+                <p className="mt-1 text-2xl font-semibold text-red-900">
                   {formatNumber(lowStockItems.length)}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-amber-50 p-4">
-                <p className="text-xs font-black uppercase text-amber-700">
+              <div className="bg-amber-50 p-4">
+                <p className="text-xs font-semibold uppercase text-amber-700">
                   Unpaid Orders
                 </p>
-                <p className="mt-1 text-2xl font-black text-amber-900">
+                <p className="mt-1 text-2xl font-semibold text-amber-900">
                   {formatNumber(unpaidOrders.length)}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-neutral-50 p-4">
-                <p className="text-xs font-black uppercase text-neutral-500">
+              <div className="bg-neutral-50 p-4">
+                <p className="text-xs font-semibold uppercase text-neutral-500">
                   Cancelled Orders
                 </p>
-                <p className="mt-1 text-2xl font-black text-neutral-950">
+                <p className="mt-1 text-2xl font-semibold text-neutral-950">
                   {formatNumber(cancelledOrders.length)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
-            <h3 className="flex items-center gap-2 font-black text-neutral-950">
+          <div className="border border-neutral-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 font-semibold text-neutral-950">
               <Activity className="size-5 text-[#c99c38]" />
               Quick Insights
             </h3>
@@ -1930,36 +1930,36 @@ export default async function ReportsPage({
             <div className="mt-4 space-y-4 text-sm font-semibold text-neutral-600">
               <p>
                 Average Order:{' '}
-                <span className="font-black text-neutral-950">
+                <span className="font-semibold text-neutral-950">
                   {formatCurrency(averageOrderCents)}
                 </span>
               </p>
 
               <p>
                 Avg. Service Completion:{' '}
-                <span className="font-black text-neutral-950">
+                <span className="font-semibold text-neutral-950">
                   {formatMinutes(averageServiceResolutionMinutes)}
                 </span>
               </p>
 
               <p>
                 Guest Portal Sessions:{' '}
-                <span className="font-black text-neutral-950">
+                <span className="font-semibold text-neutral-950">
                   {formatNumber(nfcSessions.length)}
                 </span>
               </p>
 
               <p>
                 Audit Events:{' '}
-                <span className="font-black text-neutral-950">
+                <span className="font-semibold text-neutral-950">
                   {formatNumber(activityLogs.length)}
                 </span>
               </p>
             </div>
           </div>
 
-          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
-            <h3 className="flex items-center gap-2 font-black text-neutral-950">
+          <div className="border border-neutral-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 font-semibold text-neutral-950">
               <Activity className="size-5 text-[#c99c38]" />
               Performance Pulse
             </h3>
@@ -1988,14 +1988,14 @@ export default async function ReportsPage({
                 },
               ].map((metric) => (
                 <div key={metric.label}>
-                  <div className="flex items-center justify-between gap-3 text-xs font-black">
+                  <div className="flex items-center justify-between gap-3 text-xs font-semibold">
                     <span className="text-neutral-600">{metric.label}</span>
                     <span className="text-neutral-950">{metric.value}%</span>
                   </div>
 
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
+                  <div className="mt-2 h-2 overflow-hidden bg-neutral-100">
                     <div
-                      className="h-full rounded-full bg-[#c99c38]"
+                      className="h-full bg-[#c99c38]"
                       style={{
                         width: `${Math.min(100, Math.max(0, metric.value))}%`,
                       }}
@@ -2006,22 +2006,22 @@ export default async function ReportsPage({
             </div>
           </div>
 
-          <div className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
-            <h3 className="flex items-center gap-2 font-black text-neutral-950">
+          <div className="border border-neutral-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 font-semibold text-neutral-950">
               <ShieldCheck className="size-5 text-[#c99c38]" />
               Top Data
             </h3>
 
             <div className="mt-4 space-y-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                   Top Selling Items
                 </p>
                 <div className="mt-2 space-y-2">
                   {topSellingItems.slice(0, 4).map((item) => (
                     <div
                       key={item.name}
-                      className="flex items-center justify-between gap-3 rounded-2xl bg-neutral-50 px-3 py-2 text-xs font-bold"
+                      className="flex items-center justify-between gap-3 bg-neutral-50 px-3 py-2 text-xs font-bold"
                     >
                       <span className="truncate">{item.name}</span>
                       <span>{formatCurrency(item.revenueCents)}</span>
@@ -2037,14 +2037,14 @@ export default async function ReportsPage({
               </div>
 
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-neutral-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                   Most Scanned NFC
                 </p>
                 <div className="mt-2 space-y-2">
                   {nfcByDestination.slice(0, 4).map((item) => (
                     <div
                       key={item.destination}
-                      className="flex items-center justify-between gap-3 rounded-2xl bg-neutral-50 px-3 py-2 text-xs font-bold"
+                      className="flex items-center justify-between gap-3 bg-neutral-50 px-3 py-2 text-xs font-bold"
                     >
                       <span className="truncate">{item.destination}</span>
                       <span>{formatNumber(item.count)}</span>
@@ -2063,7 +2063,7 @@ export default async function ReportsPage({
         </aside>
       </section>
 
-      <section className="rounded-[1.75rem] border border-neutral-200 bg-white p-5 text-xs font-semibold text-neutral-500 shadow-[0_18px_45px_rgba(0,0,0,0.04)]">
+      <section className="border border-neutral-200 bg-white p-5 text-xs font-semibold text-neutral-500">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p>
             Report period: {formatDateOnly(startDate)} –{' '}

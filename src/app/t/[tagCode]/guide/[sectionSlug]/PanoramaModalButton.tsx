@@ -59,7 +59,7 @@ function PanoramaViewer({
       {loading ? (
         <div className="absolute inset-0 grid place-items-center bg-[#070706]">
           <div className="text-center">
-            <span className="mx-auto grid size-14 animate-pulse place-items-center rounded-full border border-[#d5ad55]/30 bg-[#d5ad55]/10 text-[#d5ad55]">
+            <span className="mx-auto grid size-14 animate-pulse place-items-center border border-[#d5ad55]/30 bg-[#d5ad55]/10 text-[#d5ad55]">
               <Rotate3D className="size-6" />
             </span>
             <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.26em] text-[#d5ad55]">
@@ -72,7 +72,7 @@ function PanoramaViewer({
       {error ? (
         <div className="absolute inset-0 grid place-items-center bg-[#070706] px-6 text-center">
           <div className="max-w-sm">
-            <span className="mx-auto grid size-14 place-items-center rounded-full border border-red-400/20 bg-red-400/10 text-red-300">
+            <span className="mx-auto grid size-14 place-items-center border border-red-400/20 bg-red-400/10 text-red-300">
               <X className="size-6" />
             </span>
             <p className="mt-4 font-serif text-xl text-white">{error}</p>
@@ -164,7 +164,7 @@ export function PanoramaModalButton({
           ref={closeButtonRef}
           type="button"
           onClick={() => setOpen(false)}
-          className="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 bg-black/35 text-white/80 backdrop-blur-xl transition hover:bg-white/15 active:scale-95"
+          className="grid size-11 shrink-0 place-items-center border border-white/10 bg-black/35 text-white/80 backdrop-blur-xl transition hover:bg-white/15"
           aria-label="Close 360 viewer"
         >
           <X className="size-5" />
@@ -172,9 +172,9 @@ export function PanoramaModalButton({
       </header>
 
       <div className="pointer-events-none absolute inset-x-4 bottom-0 z-30 pb-[max(1rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[420px] sm:-translate-x-1/2 sm:pb-0">
-        <div className="rounded-[1.35rem] border border-white/10 bg-black/55 p-3.5 backdrop-blur-xl">
+        <div className="border border-white/10 bg-black/55 p-3.5 backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#d5ad55]/12 text-[#d5ad55]">
+            <span className="grid size-10 shrink-0 place-items-center bg-[#d5ad55]/12 text-[#d5ad55]">
               <Move className="size-[18px]" />
             </span>
             <div>
@@ -196,9 +196,9 @@ export function PanoramaModalButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full border border-[#e4c36f]/45 bg-[linear-gradient(135deg,#e0bb60,#b98529)] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.17em] text-[#17130b] shadow-[0_14px_35px_rgba(181,132,40,0.28)] transition hover:brightness-110 active:scale-[0.98]"
+        className="group inline-flex min-h-11 items-center justify-center gap-2.5 border border-[#e4c36f]/45 bg-[linear-gradient(135deg,#e0bb60,#b98529)] px-4 py-3 text-[10px] font-bold uppercase tracking-[0.17em] text-[#17130b] shadow-[0_14px_35px_rgba(181,132,40,0.28)] transition hover:brightness-110"
       >
-        <span className="grid size-7 place-items-center rounded-full bg-black/10 transition group-hover:rotate-6">
+        <span className="grid size-7 place-items-center bg-black/10 transition group-hover:rotate-6">
           <Eye className="size-3.5" />
         </span>
         Experience 360°

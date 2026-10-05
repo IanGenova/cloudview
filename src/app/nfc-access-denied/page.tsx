@@ -119,12 +119,12 @@ export default async function NfcAccessDeniedPage({
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-24 left-1/2 size-72 -translate-x-1/2 rounded-full blur-3xl"
+        className="pointer-events-none absolute -top-24 left-1/2 size-72 -translate-x-1/2 blur-3xl"
         style={{ backgroundColor: 'rgba(214, 167, 56, 0.10)' }}
       />
 
       <section
-        className="relative z-10 w-full max-w-md overflow-hidden rounded-[2rem] border shadow-2xl"
+        className="relative z-10 w-full max-w-md overflow-hidden border shadow-2xl"
         style={{
           backgroundColor: '#111111',
           borderColor: 'rgba(255,255,255,0.10)',
@@ -136,7 +136,7 @@ export default async function NfcAccessDeniedPage({
           style={{ borderColor: 'rgba(255,255,255,0.09)' }}
         >
           <div
-            className="mx-auto grid size-16 place-items-center rounded-2xl border"
+            className="mx-auto grid size-16 place-items-center border"
             style={{
               backgroundColor: 'rgba(214,167,56,0.12)',
               borderColor: 'rgba(214,167,56,0.28)',
@@ -151,7 +151,7 @@ export default async function NfcAccessDeniedPage({
           </div>
 
           <p
-            className="mt-5 text-[10px] font-black uppercase tracking-[0.2em]"
+            className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em]"
             style={{ color: '#d6a738' }}
           >
             CloudView Secure Access
@@ -174,7 +174,7 @@ export default async function NfcAccessDeniedPage({
 
         <div className="space-y-3 p-5">
           <div
-            className="flex items-start gap-3 rounded-[1.35rem] border p-4"
+            className="flex items-start gap-3 border p-4"
             style={{
               backgroundColor: '#1b1b1b',
               borderColor: 'rgba(255,255,255,0.09)',
@@ -196,7 +196,7 @@ export default async function NfcAccessDeniedPage({
 
           {tagCode ? (
             <p
-              className="text-center text-[10px] font-black uppercase tracking-[0.16em]"
+              className="text-center text-[10px] font-semibold uppercase tracking-[0.16em]"
               style={{ color: 'rgba(255,255,255,0.32)' }}
             >
               NFC Tag: {tagCode}

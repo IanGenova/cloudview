@@ -42,11 +42,11 @@ export default async function ServicePage({
           backHref={`/t/${tagCode}`}
           variant="dark"
         >
-          <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_38%),linear-gradient(145deg,#161512,#0b0b0a)] p-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.3)]">
-            <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-gold/20 bg-gold/10 text-gold">
+          <section className="overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_38%),linear-gradient(145deg,#161512,#0b0b0a)] p-6 text-center">
+            <div className="mx-auto grid size-16 place-items-center border border-gold/20 bg-gold/10 text-gold">
               <Lock className="size-7" />
             </div>
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-white/55">
+            <div className="mt-5 inline-flex items-center gap-2 border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
               <ShieldCheck className="size-3.5" />
               Guest access notice
             </div>
@@ -60,14 +60,14 @@ export default async function ServicePage({
             <div className="mt-6 grid gap-3">
               <Link
                 href={`/t/${tagCode}/guide`}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-gold px-5 text-sm font-black text-black"
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-5 text-sm font-semibold text-black"
               >
                 <Sparkles className="size-4" />
                 View Hotel Guide
               </Link>
               <Link
                 href={`/t/${tagCode}/contact`}
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.04] px-5 text-sm font-black text-white"
+                className="inline-flex min-h-12 items-center justify-center border border-white/15 bg-white/[0.04] px-5 text-sm font-semibold text-white"
               >
                 Contact Front Desk
               </Link>

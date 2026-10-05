@@ -51,8 +51,8 @@ export default async function POSPage({
 
   if (!selectedHotelId || !hotel) {
     return (
-      <div className="rounded-[1.5rem] border border-dashed border-neutral-300 bg-white p-8 text-center shadow-sm">
-        <p className="text-lg font-black text-[#11100b]">No hotel available.</p>
+      <div className="border border-dashed border-neutral-300 bg-white p-8 text-center shadow-sm">
+        <p className="text-lg font-semibold text-[#11100b]">No hotel available.</p>
         <p className="mt-1 text-sm font-semibold text-neutral-500">
           Please create or assign a hotel before using the POS Terminal.
         </p>

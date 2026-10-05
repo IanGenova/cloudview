@@ -46,7 +46,7 @@ export function AnalyticsStickySummary({ stats }: { stats: SummaryStat[] }) {
       }`}
     >
       <div className="flex items-center gap-4 overflow-x-auto">
-        <span className="shrink-0 text-[10px] font-black uppercase tracking-[0.16em] text-neutral-400">
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
           Key figures
         </span>
 
@@ -56,7 +56,7 @@ export function AnalyticsStickySummary({ stats }: { stats: SummaryStat[] }) {
               <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
                 {stat.label}
               </dt>
-              <dd className="text-sm font-black tabular-nums text-neutral-900 dark:text-white">
+              <dd className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-white">
                 {stat.value}
               </dd>
             </div>
@@ -66,7 +66,7 @@ export function AnalyticsStickySummary({ stats }: { stats: SummaryStat[] }) {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="ml-auto shrink-0 rounded-full border border-neutral-200 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-neutral-600 transition hover:border-[#c99c38] hover:text-[#9d741f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c99c38] dark:border-neutral-700 dark:text-neutral-300"
+          className="ml-auto shrink-0 border border-neutral-200 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-600 transition hover:border-[#c99c38] hover:text-[#9d741f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c99c38] dark:border-neutral-700 dark:text-neutral-300"
         >
           Top
         </button>

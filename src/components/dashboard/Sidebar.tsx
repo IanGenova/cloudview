@@ -309,7 +309,7 @@ function SidebarLink({
       aria-label={!isSidebarOpen ? item.label : undefined}
       aria-current={active ? 'page' : undefined}
       className={cx(
-        'group/link relative flex items-center overflow-hidden rounded-2xl text-[13px] font-black transition-all duration-200',
+        'group/link relative flex items-center overflow-hidden text-[13px] font-semibold transition-all duration-200',
         isSidebarOpen
           ? 'min-h-11 gap-3 px-3 py-2.5'
           : 'mx-auto size-12 justify-center p-0',
@@ -319,14 +319,14 @@ function SidebarLink({
       )}
     >
       {active ? (
-        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[var(--cv-on-accent)]" />
+        <span className="absolute inset-y-2 left-0 w-1 bg-[var(--cv-on-accent)]" />
       ) : (
-        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[var(--cv-accent)] opacity-0 transition-opacity group-hover/link:opacity-100" />
+        <span className="absolute inset-y-2 left-0 w-1 bg-[var(--cv-accent)] opacity-0 transition-opacity group-hover/link:opacity-100" />
       )}
 
       <span
         className={cx(
-          'relative z-10 grid shrink-0 place-items-center rounded-xl transition',
+          'relative z-10 grid shrink-0 place-items-center transition',
           isSidebarOpen ? 'size-8' : 'size-9',
           active
             ? 'bg-black/15 text-[var(--cv-on-accent)]'
@@ -378,20 +378,20 @@ function SidebarSection({
   }
 
   return (
-    <section className="rounded-[1.35rem]">
+    <section className="">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         className={cx(
-          'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
+          'mb-1 flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition',
           hasActiveItem
             ? 'bg-white/[0.06] text-[var(--cv-sidebar-text-strong)]'
             : 'text-[var(--cv-sidebar-text)] hover:bg-white/[0.045] hover:text-[var(--cv-sidebar-text-strong)]'
         )}
       >
         <span className="min-w-0">
-          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[var(--cv-accent)]">
+          <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cv-accent)]">
             {group.label}
           </span>
         </span>
@@ -555,13 +555,13 @@ export function Sidebar({
   return (
     <aside
       className={cx(
-        'sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden border-r border-[var(--cv-sidebar-border)] bg-[var(--cv-sidebar-bg)] text-white shadow-[18px_0_55px_rgba(0,0,0,0.36)] transition-[width] duration-300 ease-in-out lg:flex lg:flex-col',
+        'sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden border-r border-[var(--cv-sidebar-border)] bg-[var(--cv-sidebar-bg)] text-white transition-[width] duration-300 ease-in-out lg:flex lg:flex-col',
         isSidebarOpen ? 'w-[292px]' : 'w-[88px]'
       )}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,var(--cv-sidebar-glow)_0%,var(--cv-sidebar-strong)_38%,var(--cv-sidebar-bg)_100%)]" />
-      <div className="pointer-events-none absolute -right-24 top-20 size-56 rounded-full bg-[var(--cv-accent)]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 bottom-20 size-56 rounded-full bg-[var(--cv-accent)]/8 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-20 size-56 bg-[var(--cv-accent)]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 bottom-20 size-56 bg-[var(--cv-accent)]/8 blur-3xl" />
 
       <div
         className={cx(
@@ -582,18 +582,18 @@ export function Sidebar({
             className={cx(
               'overflow-hidden border border-[var(--cv-accent)]/30 bg-white/[0.045] shadow-[0_16px_42px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[#f1c66a]/60 hover:bg-white/[0.065]',
               isSidebarOpen
-                ? 'min-w-0 flex-1 rounded-[1.75rem] p-3.5'
-                : 'grid size-14 place-items-center rounded-2xl p-0'
+                ? 'min-w-0 flex-1 p-3.5'
+                : 'grid size-14 place-items-center p-0'
             )}
           >
             <div className="flex items-center gap-3">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[var(--cv-accent-hover)] via-[var(--cv-accent)] to-[var(--cv-accent-strong)] text-[var(--cv-on-accent)] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
+              <span className="grid size-12 shrink-0 place-items-center bg-gradient-to-br from-[var(--cv-accent-hover)] via-[var(--cv-accent)] to-[var(--cv-accent-strong)] text-[var(--cv-on-accent)] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
                 <Home className="size-5" />
               </span>
 
               {isSidebarOpen ? (
                 <span className="min-w-0">
-                  <span className="block truncate text-base font-black tracking-tight text-white">
+                  <span className="block truncate text-base font-semibold tracking-tight text-white">
                     CloudView
                   </span>
                   <span className="mt-0.5 block truncate text-xs font-semibold text-[var(--cv-sidebar-text)]">
@@ -604,12 +604,12 @@ export function Sidebar({
             </div>
 
             {isSidebarOpen ? (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[var(--cv-accent)]/15 bg-black/20 px-3 py-2">
-                <p className="truncate text-[9px] font-black uppercase tracking-[0.22em] text-[var(--cv-accent)]">
+              <div className="mt-3 flex items-center justify-between gap-3 border border-[var(--cv-accent)]/15 bg-black/20 px-3 py-2">
+                <p className="truncate text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--cv-accent)]">
                   Admin Portal
                 </p>
 
-                <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-300">
+                <span className="bg-emerald-500/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-emerald-300">
                   Active
                 </span>
               </div>
@@ -622,7 +622,7 @@ export function Sidebar({
             title={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             aria-expanded={isSidebarOpen}
-            className="grid size-10 shrink-0 place-items-center rounded-2xl border border-[var(--cv-accent)]/25 bg-white/[0.055] text-[var(--cv-accent)] transition hover:border-[#f1c66a]/55 hover:bg-[var(--cv-accent)]/15 hover:text-[var(--cv-accent-hover)]"
+            className="grid size-10 shrink-0 place-items-center border border-[var(--cv-accent)]/25 bg-white/[0.055] text-[var(--cv-accent)] transition hover:border-[#f1c66a]/55 hover:bg-[var(--cv-accent)]/15 hover:text-[var(--cv-accent-hover)]"
           >
             {isSidebarOpen ? (
               <PanelLeftClose className="size-4" />
@@ -639,12 +639,12 @@ export function Sidebar({
           )}
         >
           {isSidebarOpen ? (
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--cv-sidebar-muted)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--cv-sidebar-muted)]">
               Menu
             </p>
           ) : null}
 
-          <span className="rounded-full border border-[var(--cv-accent)]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-black text-[var(--cv-accent)]">
+          <span className="border border-[var(--cv-accent)]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-semibold text-[var(--cv-accent)]">
             {moduleCount}
           </span>
         </div>
@@ -676,19 +676,19 @@ export function Sidebar({
                       onClick={() => toggleGroup(SETTINGS_GROUP_KEY)}
                       aria-expanded={openGroups.has(SETTINGS_GROUP_KEY)}
                       className={cx(
-                        'mb-1 flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left transition',
+                        'mb-1 flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition',
                         hasActiveSettings
                           ? 'bg-white/[0.06] text-[var(--cv-sidebar-text-strong)]'
                           : 'text-[var(--cv-sidebar-text)] hover:bg-white/[0.045] hover:text-[var(--cv-sidebar-text-strong)]'
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-[var(--cv-accent)]">
+                        <span className="grid size-8 shrink-0 place-items-center bg-white/[0.055] text-[var(--cv-accent)]">
                           <Settings className="size-4" />
                         </span>
 
                         <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-black uppercase tracking-[0.08em] text-[var(--cv-accent)]">
+                          <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cv-accent)]">
                             Admin Setup
                           </span>
                         </span>
@@ -730,7 +730,7 @@ export function Sidebar({
               ) : null}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[var(--cv-accent-strong)]/30 bg-[var(--cv-sidebar-strong)] p-4 text-sm font-bold text-[var(--cv-sidebar-text)]">
+            <div className="border border-dashed border-[var(--cv-accent-strong)]/30 bg-[var(--cv-sidebar-strong)] p-4 text-sm font-bold text-[var(--cv-sidebar-text)]">
               No dashboard modules assigned.
             </div>
           )}
@@ -738,7 +738,7 @@ export function Sidebar({
 
         <div
           className={cx(
-            'mt-3 shrink-0 overflow-hidden rounded-[1.5rem] border border-[var(--cv-accent)]/20 bg-white/[0.045] p-3 backdrop-blur',
+            'mt-3 shrink-0 overflow-hidden border border-[var(--cv-accent)]/20 bg-white/[0.045] p-3 backdrop-blur',
             isSidebarOpen ? 'w-full' : 'w-14'
           )}
         >
@@ -748,13 +748,13 @@ export function Sidebar({
               !isSidebarOpen && 'justify-center'
             )}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-black/35 text-[var(--cv-accent)]">
+            <span className="grid size-10 shrink-0 place-items-center bg-black/35 text-[var(--cv-accent)]">
               <ShieldCheck className="size-5" />
             </span>
 
             {isSidebarOpen ? (
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--cv-accent)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--cv-accent)]">
                   Access Control
                 </p>
                 <p className="mt-0.5 truncate text-xs font-semibold text-[var(--cv-sidebar-text)]">

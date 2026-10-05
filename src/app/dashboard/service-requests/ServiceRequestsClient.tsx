@@ -270,9 +270,9 @@ function getStatusClass(status: string) {
 function StatusPill({ status }: { status: string }) {
   return (
     <span
-      className={`rounded-full px-3 py-1 text-[10px] font-black ${getStatusClass(
-        status
-      )}`}
+      className={` px-3 py-1 text-[10px] font-semibold ${getStatusClass(
+ status
+ )}`}
     >
       {statusLabel(status)}
     </span>
@@ -288,7 +288,7 @@ function BillingPill({
 }) {
   if (billedCount <= 0) {
     return (
-      <span className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+      <span className="bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
         NOT BILLED
       </span>
     );
@@ -296,14 +296,14 @@ function BillingPill({
 
   if (billedCount < itemCount) {
     return (
-      <span className="rounded-full bg-blue-100 px-3 py-1 text-[10px] font-black text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
+      <span className="bg-blue-100 px-3 py-1 text-[10px] font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
         PARTIAL BILL
       </span>
     );
   }
 
   return (
-    <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+    <span className="bg-emerald-100 px-3 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
       BILLED
     </span>
   );
@@ -322,7 +322,7 @@ function PaymentStatusPill({ status }: { status: string }) {
             : 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
 
   return (
-    <span className={`rounded-full px-3 py-1 text-[10px] font-black ${className}`}>
+    <span className={` px-3 py-1 text-[10px] font-semibold ${className}`}>
       {statusLabel(status)}
     </span>
   );
@@ -343,13 +343,13 @@ function SummaryCard({
     <div
       className={
         tone === 'green'
-          ? 'rounded-[2rem] border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10'
+          ? 'border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10'
           : tone === 'amber'
-            ? 'rounded-[2rem] border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10'
-            : 'rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900'
+            ? 'border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/20 dark:bg-amber-500/10'
+            : 'border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900'
       }
     >
-      <div className="mb-3 grid size-10 place-items-center rounded-xl bg-black text-white dark:bg-gold dark:text-black">
+      <div className="mb-3 grid size-10 place-items-center bg-black text-white dark:bg-gold dark:text-black">
         <Icon className="size-5" />
       </div>
 
@@ -357,7 +357,7 @@ function SummaryCard({
         {label}
       </p>
 
-      <p className="mt-1 text-2xl font-black text-neutral-950 dark:text-white">
+      <p className="mt-1 text-2xl font-semibold text-neutral-950 dark:text-white">
         {value}
       </p>
     </div>
@@ -489,8 +489,8 @@ function QuickStatusAction({
         disabled={isMutating}
         className={
           tone === 'danger'
-            ? 'h-10 w-full rounded-2xl bg-red-600 px-4 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50'
-            : 'h-10 w-full rounded-2xl bg-black px-4 text-sm font-black text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gold dark:text-black dark:hover:bg-gold/90'
+            ? 'h-10 w-full bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50'
+            : 'h-10 w-full bg-black px-4 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gold dark:text-black dark:hover:bg-gold/90'
         }
       >
         {isMutating ? 'Updating...' : label}
@@ -565,10 +565,10 @@ function AttachmentGallery({
 
   return (
     <>
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <p className="flex items-center gap-2 text-sm font-black text-neutral-950 dark:text-white">
+            <p className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">
               <Images className="size-4 text-gold" />
               {title}
             </p>
@@ -591,7 +591,7 @@ function AttachmentGallery({
               key={attachment.id}
               type="button"
               onClick={() => setSelectedAttachment(attachment)}
-              className="group overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 text-left transition hover:border-gold dark:border-neutral-800 dark:bg-neutral-900"
+              className="group overflow-hidden border border-neutral-200 bg-neutral-50 text-left transition hover:border-gold dark:border-neutral-800 dark:bg-neutral-900"
             >
               <div
                 className={
@@ -606,7 +606,7 @@ function AttachmentGallery({
                   className="size-full object-cover"
                 />
 
-                <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-black/70 text-white opacity-0 transition group-hover:opacity-100">
+                <span className="absolute right-2 top-2 grid size-8 place-items-center bg-black/70 text-white opacity-0 transition group-hover:opacity-100">
                   <Maximize2 className="size-4" />
                 </span>
               </div>
@@ -614,17 +614,17 @@ function AttachmentGallery({
               {!compact ? (
                 <div className="p-3">
                   <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${getAttachmentBadgeClass(
-                      attachment.attachmentType,
-                      attachment.uploadedByGuest
-                    )}`}
+                    className={`inline-flex px-2.5 py-1 text-[10px] font-semibold uppercase ${getAttachmentBadgeClass(
+ attachment.attachmentType,
+ attachment.uploadedByGuest
+ )}`}
                   >
                     {attachment.uploadedByGuest
                       ? 'Guest Upload'
                       : attachmentTypeLabel(attachment.attachmentType)}
                   </span>
 
-                  <p className="mt-2 truncate text-xs font-black text-neutral-800 dark:text-neutral-200">
+                  <p className="mt-2 truncate text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                     {attachment.originalName || 'Uploaded photo'}
                   </p>
 
@@ -640,10 +640,10 @@ function AttachmentGallery({
 
       {selectedAttachment ? (
         <div className="fixed inset-0 z-[90] grid place-items-center bg-black/80 px-4 py-4">
-          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl dark:bg-neutral-900">
+          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl dark:bg-neutral-900">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 p-4 dark:border-neutral-800">
               <div className="min-w-0">
-                <p className="text-lg font-black text-neutral-950 dark:text-white">
+                <p className="text-lg font-semibold text-neutral-950 dark:text-white">
                   {selectedAttachment.originalName || 'Service Request Photo'}
                 </p>
 
@@ -665,7 +665,7 @@ function AttachmentGallery({
               <button
                 type="button"
                 onClick={() => setSelectedAttachment(null)}
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
+                className="grid size-10 shrink-0 place-items-center bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
                 aria-label="Close photo preview"
               >
                 <X className="size-5" />
@@ -682,10 +682,10 @@ function AttachmentGallery({
 
             <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-neutral-100 p-4 dark:border-neutral-800">
               <span
-                className={`rounded-full px-3 py-1 text-xs font-black uppercase ${getAttachmentBadgeClass(
-                  selectedAttachment.attachmentType,
-                  selectedAttachment.uploadedByGuest
-                )}`}
+                className={` px-3 py-1 text-xs font-semibold uppercase ${getAttachmentBadgeClass(
+ selectedAttachment.attachmentType,
+ selectedAttachment.uploadedByGuest
+ )}`}
               >
                 {selectedAttachment.uploadedByGuest
                   ? 'Guest Upload'
@@ -696,7 +696,7 @@ function AttachmentGallery({
                 href={selectedAttachment.imageUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-black px-4 text-sm font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
+                className="inline-flex h-10 items-center gap-2 bg-black px-4 text-sm font-semibold text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
               >
                 <Download className="size-4" />
                 Open / Download
@@ -719,11 +719,11 @@ function RequestItemCard({
   const canCancelItem = item.status === 'NEW';
 
   return (
-    <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950">
+    <div className="bg-neutral-50 p-4 dark:bg-neutral-950">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-black text-neutral-950 dark:text-white">
+            <p className="font-semibold text-neutral-950 dark:text-white">
               {item.type}
             </p>
             <StatusPill status={item.status} />
@@ -739,17 +739,17 @@ function RequestItemCard({
         <div className="flex shrink-0 flex-col items-end gap-2">
           {item.paymentMethod === 'XENDIT' ? (
             <div className="flex flex-col items-end gap-1">
-              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-black text-gold">
+              <span className="bg-gold/15 px-3 py-1 text-[10px] font-semibold text-gold">
                 XENDIT {money(item.amountCents / 100)}
               </span>
               <PaymentStatusPill status={item.paymentStatus} />
             </div>
           ) : item.charge ? (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+            <span className="bg-emerald-100 px-3 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
               {money(item.charge.totalAmount)}
             </span>
           ) : (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+            <span className="bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
               {item.billingMode === 'FREE' ? 'COMPLIMENTARY' : 'NOT BILLED'}
             </span>
           )}
@@ -758,7 +758,7 @@ function RequestItemCard({
             <button
               type="button"
               onClick={() => onCancel(item)}
-              className="inline-flex h-8 items-center gap-1 rounded-full bg-red-600 px-3 text-[10px] font-black text-white transition hover:bg-red-700"
+              className="inline-flex h-8 items-center gap-1 bg-red-600 px-3 text-[10px] font-semibold text-white transition hover:bg-red-700"
             >
               <Ban className="size-3" />
               Cancel Item
@@ -768,7 +768,7 @@ function RequestItemCard({
       </div>
 
       {item.charge ? (
-        <div className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+        <div className="mt-3 bg-emerald-50 p-3 text-xs font-bold text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
           <p>{item.charge.itemName}</p>
           <p>
             {item.charge.quantity} × {money(item.charge.unitPrice)} ={' '}
@@ -778,7 +778,7 @@ function RequestItemCard({
       ) : null}
 
       {item.paymentMethod === 'XENDIT' ? (
-        <div className="mt-3 rounded-xl bg-gold/10 p-3 text-xs font-bold text-gold">
+        <div className="mt-3 bg-gold/10 p-3 text-xs font-bold text-gold">
           <p>Secure Xendit payment: {money(item.amountCents / 100)}</p>
           <p className="mt-1">Payment status: {statusLabel(item.paymentStatus)}</p>
           {item.refundedAmountCents > 0 ? (
@@ -801,7 +801,7 @@ function RequestItemCard({
 ) : null}
 
       {!canCancelItem && item.status !== 'CANCELLED' ? (
-        <p className="mt-3 rounded-xl bg-neutral-100 p-3 text-xs font-bold text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+        <p className="mt-3 bg-neutral-100 p-3 text-xs font-bold text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
           This service item can no longer be cancelled directly because it has
           already been started or completed.
         </p>
@@ -848,10 +848,10 @@ function CancelServiceItemModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/60 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl dark:bg-neutral-900 sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
+      <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto bg-white p-4 shadow-2xl dark:bg-neutral-900 sm:max-h-[calc(100dvh-3rem)] sm:p-6">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black text-neutral-950 dark:text-white">
+            <h2 className="text-xl font-semibold text-neutral-950 dark:text-white">
               Cancel Service Item
             </h2>
             <p className="mt-1 text-sm text-neutral-500">
@@ -863,7 +863,7 @@ function CancelServiceItemModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid size-9 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
+            className="grid size-9 place-items-center bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
             aria-label="Close cancel item modal"
           >
             <X className="size-4" />
@@ -875,7 +875,7 @@ function CancelServiceItemModal({
           <input type="hidden" name="reason" value={finalReason} />
 
           <label className="grid gap-2">
-            <span className="text-sm font-black text-neutral-800 dark:text-neutral-200">
+            <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
               Cancellation Reason
             </span>
             <Select
@@ -892,19 +892,19 @@ function CancelServiceItemModal({
 
           {reason === 'Other' ? (
             <label className="grid gap-2">
-              <span className="text-sm font-black text-neutral-800 dark:text-neutral-200">
+              <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
                 Custom Reason
               </span>
               <textarea
                 value={customReason}
                 onChange={(event) => setCustomReason(event.target.value)}
                 placeholder="Type reason..."
-                className="min-h-24 resize-none rounded-2xl border border-neutral-200 bg-white p-4 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-950"
+                className="min-h-24 resize-none border border-neutral-200 bg-white p-4 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-950"
               />
             </label>
           ) : null}
 
-          <div className="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-700 dark:bg-red-500/10 dark:text-red-200">
+          <div className="bg-red-50 p-4 text-sm font-bold text-red-700 dark:bg-red-500/10 dark:text-red-200">
             This cancels only this service item. Tracked inventory is restored,
             its room charge is removed, and a Xendit-paid item starts the
             matching refund workflow. Other service items remain active.
@@ -914,7 +914,7 @@ function CancelServiceItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+              className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
             >
               Close
             </button>
@@ -922,7 +922,7 @@ function CancelServiceItemModal({
             <button
               type="submit"
               disabled={isMutating}
-              className="h-11 rounded-2xl bg-red-600 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-11 bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isMutating ? 'Cancelling...' : 'Confirm Cancel'}
             </button>
@@ -977,11 +977,11 @@ function DetailsModal({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 sm:items-center sm:px-4 sm:py-6">
-        <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl dark:bg-neutral-900 sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem] sm:p-6">
+        <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-y-auto bg-white p-4 shadow-2xl dark:bg-neutral-900 sm:max-h-[calc(100dvh-3rem)] sm:p-6">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-black text-neutral-950 dark:text-white">
+                <h2 className="text-2xl font-semibold text-neutral-950 dark:text-white">
                   {request.requestCode}
                 </h2>
 
@@ -1002,7 +1002,7 @@ function DetailsModal({
             <button
               type="button"
               onClick={onClose}
-              className="grid size-10 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
+              className="grid size-10 shrink-0 place-items-center bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white"
               aria-label="Close details"
             >
               <X className="size-5" />
@@ -1016,7 +1016,7 @@ function DetailsModal({
                 attachments={request.attachments ?? []}
               />
 
-              <h3 className="font-black text-neutral-950 dark:text-white">
+              <h3 className="font-semibold text-neutral-950 dark:text-white">
                 Service Items
               </h3>
 
@@ -1030,8 +1030,8 @@ function DetailsModal({
             </div>
 
             <aside className="space-y-4">
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
-                <p className="text-sm font-black text-blue-950 dark:text-blue-100">
+              <div className="border border-blue-200 bg-blue-50 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+                <p className="text-sm font-semibold text-blue-950 dark:text-blue-100">
                   Staff Review Checklist
                 </p>
                 <p className="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-200/70">
@@ -1042,15 +1042,15 @@ function DetailsModal({
                   {reviewItems.map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-xl bg-white/80 p-3 text-xs dark:bg-black/20"
+                      className="bg-white/80 p-3 text-xs dark:bg-black/20"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <b>{item.label}</b>
                         <span
                           className={
                             item.ready
-                              ? 'rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
-                              : 'rounded-full bg-red-100 px-2 py-1 text-[10px] font-black text-red-700 dark:bg-red-500/15 dark:text-red-200'
+                              ? 'bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                              : 'bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700 dark:bg-red-500/15 dark:text-red-200'
                           }
                         >
                           {item.ready ? 'READY' : 'REVIEW'}
@@ -1064,8 +1064,8 @@ function DetailsModal({
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-950">
-                <p className="text-sm font-black text-neutral-950 dark:text-white">
+              <div className="bg-neutral-50 p-4 dark:bg-neutral-950">
+                <p className="text-sm font-semibold text-neutral-950 dark:text-white">
                   Request Order Details
                 </p>
 
@@ -1108,7 +1108,7 @@ function DetailsModal({
 
               <form
                 action={handleSaveRequest}
-                className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800"
+                className="border border-neutral-200 p-4 dark:border-neutral-800"
               >
                 <input
                   type="hidden"
@@ -1124,7 +1124,7 @@ function DetailsModal({
 
                 <div className="grid gap-3">
                   <label className="grid gap-1">
-                    <span className="text-xs font-black uppercase text-neutral-500">
+                    <span className="text-xs font-semibold uppercase text-neutral-500">
                       Status
                     </span>
 
@@ -1144,7 +1144,7 @@ function DetailsModal({
                   </label>
 
                   <label className="grid gap-1">
-                    <span className="text-xs font-black uppercase text-neutral-500">
+                    <span className="text-xs font-semibold uppercase text-neutral-500">
                       Assign Staff
                     </span>
 
@@ -1166,18 +1166,18 @@ function DetailsModal({
                   </label>
 
                   <label className="grid gap-1">
-                    <span className="text-xs font-black uppercase text-neutral-500">
+                    <span className="text-xs font-semibold uppercase text-neutral-500">
                       Internal Note
                     </span>
 
                     <textarea
                       name="note"
                       placeholder="Optional note for this grouped request order"
-                      className="min-h-24 resize-none rounded-2xl border border-neutral-200 bg-white p-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-950"
+                      className="min-h-24 resize-none border border-neutral-200 bg-white p-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-950"
                     />
                   </label>
 
-                  <label className="flex items-start gap-3 rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                  <label className="flex items-start gap-3 bg-amber-50 p-3 text-sm font-bold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
                     <input
                       type="checkbox"
                       name="postCharge"
@@ -1203,7 +1203,7 @@ function DetailsModal({
                         return (
                           <div
                             key={item.id}
-                            className="rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-950"
+                            className="bg-neutral-50 p-3 dark:bg-neutral-950"
                           >
                             <input
                               type="hidden"
@@ -1211,7 +1211,7 @@ function DetailsModal({
                               value={item.id}
                             />
 
-                            <p className="mb-2 text-sm font-black">
+                            <p className="mb-2 text-sm font-semibold">
                               {item.type}
                             </p>
 
@@ -1223,7 +1223,7 @@ function DetailsModal({
                                   item.charge?.itemName ?? item.type
                                 }
                                 placeholder="Item name"
-                                className="h-11 rounded-2xl border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
+                                className="h-11 border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
                               />
 
                               <input
@@ -1233,7 +1233,7 @@ function DetailsModal({
                                 min="1"
                                 defaultValue={quantity}
                                 placeholder="Qty"
-                                className="h-11 rounded-2xl border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
+                                className="h-11 border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
                               />
 
                               <input
@@ -1244,7 +1244,7 @@ function DetailsModal({
                                 step="0.01"
                                 defaultValue={unitPrice || ''}
                                 placeholder="Unit price"
-                                className="h-11 rounded-2xl border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
+                                className="h-11 border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
                               />
                             </div>
 
@@ -1255,14 +1255,14 @@ function DetailsModal({
                                 item.charge?.description ?? item.notes
                               }
                               placeholder="Description"
-                              className="mt-2 h-11 w-full rounded-2xl border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
+                              className="mt-2 h-11 w-full border border-neutral-200 px-3 text-sm font-semibold outline-none dark:border-neutral-800 dark:bg-neutral-900"
                             />
                           </div>
                         );
                       })}
 
                       {!chargeableItems.length ? (
-                        <div className="rounded-2xl bg-neutral-50 p-4 text-sm font-bold text-neutral-500 dark:bg-neutral-950">
+                        <div className="bg-neutral-50 p-4 text-sm font-bold text-neutral-500 dark:bg-neutral-950">
                           No active service items can be charged because all
                           items are cancelled.
                         </div>
@@ -1273,7 +1273,7 @@ function DetailsModal({
                   <button
                     type="submit"
                     disabled={isMutating}
-                    className="h-11 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gold dark:text-black dark:hover:bg-gold/90"
+                    className="h-11 bg-black text-sm font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gold dark:text-black dark:hover:bg-gold/90"
                   >
                     {isMutating ? 'Saving...' : 'Save Request Order'}
                   </button>
@@ -1328,15 +1328,15 @@ function Toast({
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
         }
       >
         <div
           className={
             message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {message.type === 'success' ? (
@@ -1347,7 +1347,7 @@ function Toast({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === 'success' ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -1356,7 +1356,7 @@ function Toast({
         <button
           type="button"
           onClick={() => setVisible(false)}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -1704,10 +1704,10 @@ export function ServiceRequestsClient({
         />
       </div>
 
-      <div className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="mb-6 border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <h2 className="text-xl font-black text-neutral-950 dark:text-white">
+            <h2 className="text-xl font-semibold text-neutral-950 dark:text-white">
               Service Operations Center
             </h2>
             <p className="mt-1 text-sm text-neutral-500">
@@ -1717,7 +1717,7 @@ export function ServiceRequestsClient({
           </div>
 
           <div className="grid gap-2 md:grid-cols-[1fr_180px] xl:min-w-[520px]">
-            <div className="flex h-11 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
+            <div className="flex h-11 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
               <Search className="size-4 text-neutral-400" />
               <input
                 value={query}
@@ -1753,8 +1753,8 @@ export function ServiceRequestsClient({
                 onClick={() => setActiveTab(tab.value)}
                 className={
                   activeTab === tab.value
-                    ? 'inline-flex h-11 items-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white dark:bg-gold dark:text-black'
-                    : 'inline-flex h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300'
+                    ? 'inline-flex h-11 items-center gap-2 bg-black px-5 text-sm font-semibold text-white dark:bg-gold dark:text-black'
+                    : 'inline-flex h-11 items-center gap-2 border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300'
                 }
               >
                 <Icon className="size-4" />
@@ -1866,12 +1866,12 @@ function RequestLane({
 
   return (
     <section
-      className={`flex min-h-[560px] flex-col overflow-hidden rounded-[2rem] border shadow-sm ${laneToneClass}`}
+      className={`flex min-h-[560px] flex-col overflow-hidden border shadow-sm ${laneToneClass}`}
     >
       <div className="shrink-0 border-b border-black/5 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-neutral-950/70">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-xl font-black text-neutral-950 dark:text-white">
+            <h3 className="text-xl font-semibold text-neutral-950 dark:text-white">
               {title}
             </h3>
 
@@ -1880,7 +1880,7 @@ function RequestLane({
             </p>
           </div>
 
-          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-black text-sm font-black text-white dark:bg-gold dark:text-black">
+          <span className="grid size-10 shrink-0 place-items-center bg-black text-sm font-semibold text-white dark:bg-gold dark:text-black">
             {requests.length}
           </span>
         </div>
@@ -1911,12 +1911,12 @@ function RequestLane({
               return (
                 <article
                   key={request.id}
-                  className="rounded-[1.25rem] border border-neutral-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950"
+                  className="border border-neutral-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="truncate text-sm font-black text-neutral-950 dark:text-white">
+                        <h4 className="truncate text-sm font-semibold text-neutral-950 dark:text-white">
                           {request.requestCode}
                         </h4>
 
@@ -1940,20 +1940,20 @@ function RequestLane({
                     <button
                       type="button"
                       onClick={() => onOpen(request)}
-                      className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-100 text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
+                      className="grid size-9 shrink-0 place-items-center bg-neutral-100 text-neutral-700 transition hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
                       aria-label="Open request order details"
                     >
                       <Eye className="size-4" />
                     </button>
                   </div>
 
-                  <div className="mt-3 rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900">
+                  <div className="mt-3 bg-neutral-50 p-3 dark:bg-neutral-900">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
                         Service Items
                       </p>
 
-                      <span className="rounded-full bg-black px-2.5 py-1 text-[10px] font-black text-white dark:bg-gold dark:text-black">
+                      <span className="bg-black px-2.5 py-1 text-[10px] font-semibold text-white dark:bg-gold dark:text-black">
                         {request.itemCount}
                       </span>
                     </div>
@@ -1964,39 +1964,39 @@ function RequestLane({
                   </div>
 
                   <div className="mt-3 grid grid-cols-3 gap-2">
-                    <div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
-                      <p className="text-[9px] font-black uppercase text-neutral-400">
+                    <div className="bg-neutral-50 p-2 dark:bg-neutral-900">
+                      <p className="text-[9px] font-semibold uppercase text-neutral-400">
                         Assigned
                       </p>
-                      <p className="mt-1 truncate text-xs font-black text-neutral-950 dark:text-white">
+                      <p className="mt-1 truncate text-xs font-semibold text-neutral-950 dark:text-white">
                         {request.assignedToName || 'Unassigned'}
                       </p>
                     </div>
 
-                    <div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
-                      <p className="text-[9px] font-black uppercase text-neutral-400">
+                    <div className="bg-neutral-50 p-2 dark:bg-neutral-900">
+                      <p className="text-[9px] font-semibold uppercase text-neutral-400">
                         Charge
                       </p>
                       <p
                         className={
                           hasCharge
-                            ? 'mt-1 truncate text-xs font-black text-emerald-700 dark:text-emerald-300'
-                            : 'mt-1 truncate text-xs font-black text-neutral-500'
+                            ? 'mt-1 truncate text-xs font-semibold text-emerald-700 dark:text-emerald-300'
+                            : 'mt-1 truncate text-xs font-semibold text-neutral-500'
                         }
                       >
                         {money(request.totalChargeAmount)}
                       </p>
                     </div>
 
-                    <div className="rounded-xl bg-neutral-50 p-2 dark:bg-neutral-900">
-                      <p className="text-[9px] font-black uppercase text-neutral-400">
+                    <div className="bg-neutral-50 p-2 dark:bg-neutral-900">
+                      <p className="text-[9px] font-semibold uppercase text-neutral-400">
                         Photos
                       </p>
                       <p
                         className={
                           hasPhotos
-                            ? 'mt-1 truncate text-xs font-black text-blue-700 dark:text-blue-300'
-                            : 'mt-1 truncate text-xs font-black text-neutral-500'
+                            ? 'mt-1 truncate text-xs font-semibold text-blue-700 dark:text-blue-300'
+                            : 'mt-1 truncate text-xs font-semibold text-neutral-500'
                         }
                       >
                         {request.attachments.length}
@@ -2005,7 +2005,7 @@ function RequestLane({
                   </div>
 
                   {hasPhotos ? (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 p-2 text-[11px] font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+                    <div className="mt-3 flex items-center gap-2 bg-blue-50 p-2 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
                       <Images className="size-3.5" />
                       {request.attachments.length} photo
                       {request.attachments.length === 1 ? '' : 's'} attached
@@ -2027,7 +2027,7 @@ function RequestLane({
                     <button
                       type="button"
                       onClick={() => onOpen(request)}
-                      className="h-9 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+                      className="h-9 border border-neutral-200 bg-white px-4 text-xs font-semibold transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
                     >
                       Open Details
                     </button>
@@ -2037,13 +2037,13 @@ function RequestLane({
             })}
           </div>
         ) : (
-          <div className="grid h-full min-h-64 place-items-center rounded-[1.5rem] border border-dashed border-neutral-300 bg-white/70 p-8 text-center dark:border-neutral-800 dark:bg-neutral-950/70">
+          <div className="grid h-full min-h-64 place-items-center border border-dashed border-neutral-300 bg-white/70 p-8 text-center dark:border-neutral-800 dark:bg-neutral-950/70">
             <div>
-              <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+              <div className="mx-auto grid size-12 place-items-center bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
                 <MessageCircle className="size-5" />
               </div>
 
-              <p className="mt-4 font-black text-neutral-600 dark:text-neutral-300">
+              <p className="mt-4 font-semibold text-neutral-600 dark:text-neutral-300">
                 No request orders here.
               </p>
 

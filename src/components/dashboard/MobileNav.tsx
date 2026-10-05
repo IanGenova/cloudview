@@ -164,7 +164,7 @@ export function MobileNav({
               href={item.href}
               aria-current={active ? 'page' : undefined}
               className={cx(
-                'min-h-10 shrink-0 snap-start scroll-mx-2 rounded-full border px-3 py-2 text-xs font-black transition sm:px-4 sm:text-sm',
+                'min-h-10 shrink-0 snap-start scroll-mx-2 border px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm',
                 active
                   ? 'border-[#d6a738]/60 bg-gradient-to-r from-[#c99c38] to-[#8f6820] text-[#070604] shadow-[0_10px_24px_rgba(201,156,56,0.22)]'
                   : 'border-[#c99c38]/20 bg-[#151106] text-[#d8d2c3] hover:border-[#c99c38]/50 hover:bg-[#21190c] hover:text-[#f7e7bd]'

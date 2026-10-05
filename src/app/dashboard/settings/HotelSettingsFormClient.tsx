@@ -184,10 +184,10 @@ export function HotelSettingsFormClient({
         {children}
 
         <div className="md:col-span-2">
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="font-black text-neutral-950 dark:text-white">
+                <p className="font-semibold text-neutral-950 dark:text-white">
                   Review and save changes
                 </p>
                 <p className="mt-1 text-sm font-medium text-neutral-500 dark:text-neutral-400">
@@ -200,7 +200,7 @@ export function HotelSettingsFormClient({
                   type="button"
                   onClick={resetForm}
                   disabled={!isDirty}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-5 text-sm font-black text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
+                  className="inline-flex h-11 items-center justify-center gap-2 border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
                 >
                   <RotateCcw className="size-4" />
                   Reset
@@ -208,7 +208,7 @@ export function HotelSettingsFormClient({
 
                 <button
                   type="submit"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-black px-5 text-sm font-black text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
+                  className="inline-flex h-11 items-center justify-center gap-2 bg-black px-5 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
                 >
                   <Save className="size-4" />
                   Save Settings
@@ -220,15 +220,15 @@ export function HotelSettingsFormClient({
       </form>
 
       {isDirty ? (
-        <div className="fixed bottom-6 left-1/2 z-40 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 rounded-[1.5rem] border border-amber-200 bg-white/95 p-3 shadow-2xl backdrop-blur dark:border-amber-500/30 dark:bg-neutral-950/95">
+        <div className="fixed bottom-6 left-1/2 z-40 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 border border-amber-200 bg-white/95 p-3 shadow-2xl backdrop-blur dark:border-amber-500/30 dark:bg-neutral-950/95">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+              <div className="grid size-10 place-items-center bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
                 <AlertTriangle className="size-5" />
               </div>
 
               <div>
-                <p className="text-sm font-black text-neutral-950 dark:text-white">
+                <p className="text-sm font-semibold text-neutral-950 dark:text-white">
                   You have unsaved changes
                 </p>
                 <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -241,7 +241,7 @@ export function HotelSettingsFormClient({
               <button
                 type="button"
                 onClick={resetForm}
-                className="h-10 rounded-xl border border-neutral-200 bg-white px-4 text-xs font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
+                className="h-10 border border-neutral-200 bg-white px-4 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white"
               >
                 Reset
               </button>
@@ -249,7 +249,7 @@ export function HotelSettingsFormClient({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(true)}
-                className="h-10 rounded-xl bg-black px-4 text-xs font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
+                className="h-10 bg-black px-4 text-xs font-semibold text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
               >
                 Save Changes
               </button>
@@ -260,10 +260,10 @@ export function HotelSettingsFormClient({
 
       {confirmOpen ? (
         <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/50 px-3 py-3 backdrop-blur-sm sm:items-center sm:p-4">
-          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] bg-white p-4 shadow-2xl dark:bg-neutral-950 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[2rem] sm:p-6">
+          <div role="alertdialog" aria-modal="true" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto bg-white p-4 shadow-2xl dark:bg-neutral-950 sm:max-h-[calc(100dvh-2rem)] sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xl font-black text-neutral-950 dark:text-white">
+                <p className="text-xl font-semibold text-neutral-950 dark:text-white">
                   Save hotel settings?
                 </p>
                 <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
@@ -274,7 +274,7 @@ export function HotelSettingsFormClient({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
-                className="grid size-9 place-items-center rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-white"
+                className="grid size-9 place-items-center bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-white"
               >
                 <X className="size-4" />
               </button>
@@ -284,7 +284,7 @@ export function HotelSettingsFormClient({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
-                className="h-11 rounded-2xl border border-neutral-200 bg-white text-sm font-black text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
+                className="h-11 border border-neutral-200 bg-white text-sm font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
               >
                 Cancel
               </button>
@@ -292,7 +292,7 @@ export function HotelSettingsFormClient({
               <button
                 type="button"
                 onClick={confirmSave}
-                className="h-11 rounded-2xl bg-black text-sm font-black text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
+                className="h-11 bg-black text-sm font-semibold text-white hover:bg-neutral-800 dark:bg-gold dark:text-black"
               >
                 Yes, Save
               </button>
@@ -303,15 +303,15 @@ export function HotelSettingsFormClient({
 
       {toast ? (
         <DashboardToastViewport>
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+          <div className="border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
           <div className="flex gap-3">
             <div
               className={
                 toast.type === 'success'
-                  ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                  ? 'grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
                   : toast.type === 'loading'
-                    ? 'grid size-10 shrink-0 place-items-center rounded-2xl bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200'
-                    : 'grid size-10 shrink-0 place-items-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
+                    ? 'grid size-10 shrink-0 place-items-center bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200'
+                    : 'grid size-10 shrink-0 place-items-center bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
               }
             >
               {toast.type === 'loading' ? (
@@ -322,7 +322,7 @@ export function HotelSettingsFormClient({
             </div>
 
             <div>
-              <p className="font-black text-neutral-950 dark:text-white">
+              <p className="font-semibold text-neutral-950 dark:text-white">
                 {toast.title}
               </p>
               <p className="mt-1 text-sm leading-5 text-neutral-500 dark:text-neutral-400">

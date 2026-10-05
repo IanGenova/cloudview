@@ -548,21 +548,21 @@ function FilterDropdown({
 }) {
   return (
     <details className="group relative">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-black text-neutral-700 shadow-sm transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0] [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2 border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-[#c99c38]/50 hover:bg-[#fffaf0] [&::-webkit-details-marker]:hidden">
         <CalendarDays className="size-4 text-[#c99c38]" />
         {label}
         <ChevronDown className="size-4 text-neutral-400 transition group-open:rotate-180" />
       </summary>
 
-      <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1 shadow-2xl">
+      <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden border border-neutral-200 bg-white p-1 shadow-2xl">
         {options.map((option) => (
           <Link
             key={option.href}
             href={option.href}
             className={
               option.active
-                ? 'block rounded-xl bg-[#11100b] px-3 py-2 text-sm font-black text-white'
-                : 'block rounded-xl px-3 py-2 text-sm font-bold text-neutral-600 hover:bg-[#f7f1e5] hover:text-[#11100b]'
+                ? 'block bg-[#11100b] px-3 py-2 text-sm font-semibold text-white'
+                : 'block px-3 py-2 text-sm font-bold text-neutral-600 hover:bg-[#f7f1e5] hover:text-[#11100b]'
             }
           >
             {option.label}
@@ -589,7 +589,7 @@ function MiniLineChart({ points }: { points: ChartPoint[] }) {
               >
               <div className="flex h-24 w-full items-end">
                 <div
-                  className="w-full rounded-t-xl bg-gradient-to-t from-[#c99c38]/25 via-[#c99c38]/55 to-[#d6a738] shadow-[0_10px_22px_rgba(201,156,56,0.18)]"
+                  className="w-full bg-gradient-to-t from-[#c99c38]/25 via-[#c99c38]/55 to-[#d6a738] shadow-[0_10px_22px_rgba(201,156,56,0.18)]"
                   style={{ height: `${height}%` }}
                 />
               </div>
@@ -621,7 +621,7 @@ function MiniBarChart({ points }: { points: ChartPoint[] }) {
               >
               <div className="flex h-24 w-full items-end">
                 <div
-                  className="mx-auto w-6 rounded-t-xl bg-gradient-to-t from-[#9d741f] via-[#c99c38] to-[#f1c66a] shadow-[0_10px_22px_rgba(201,156,56,0.18)]"
+                  className="mx-auto w-6 bg-gradient-to-t from-[#9d741f] via-[#c99c38] to-[#f1c66a] shadow-[0_10px_22px_rgba(201,156,56,0.18)]"
                   style={{ height: `${height}%` }}
                 />
               </div>
@@ -651,13 +651,13 @@ function DonutChart({ items }: { items: ServiceBreakdownItem[] }) {
   return (
     <div className="mt-5 flex items-center gap-5">
       <div
-        className="grid size-28 shrink-0 place-items-center rounded-full"
+        className="grid size-28 shrink-0 place-items-center"
         style={{
           background: `conic-gradient(#c99c38 0% ${completedEnd}%, #11100b ${completedEnd}% ${pendingEnd}%, #d6d3cc ${pendingEnd}% ${cancelledEnd}%, #f4f4f5 ${cancelledEnd}% 100%)`,
         }}
       >
-        <div className="grid size-16 place-items-center rounded-full bg-white">
-          <span className="text-lg font-black">
+        <div className="grid size-16 place-items-center bg-white">
+          <span className="text-lg font-semibold">
             {items.reduce((sum, item) => sum + item.value, 0)}
           </span>
         </div>
@@ -673,17 +673,17 @@ function DonutChart({ items }: { items: ServiceBreakdownItem[] }) {
               <span
                 className={
                   item.label === 'Completed'
-                    ? 'size-2.5 rounded-full bg-[#c99c38]'
+                    ? 'size-2.5 rounded-dot bg-[#c99c38]'
                     : item.label === 'Pending'
-                      ? 'size-2.5 rounded-full bg-[#11100b]'
-                      : 'size-2.5 rounded-full bg-neutral-300'
+                      ? 'size-2.5 rounded-dot bg-[#11100b]'
+                      : 'size-2.5 rounded-dot bg-neutral-300'
                 }
               />
 
               <span className="font-bold text-neutral-600">{item.label}</span>
             </div>
 
-            <span className="font-black">
+            <span className="font-semibold">
               {item.value} ({item.percent}%)
             </span>
           </div>
@@ -708,10 +708,10 @@ function CommandActionCard({
 }) {
   const className =
     tone === 'gold'
-      ? 'rounded-[1.5rem] bg-[#d6a738] p-4 text-black shadow-[0_18px_38px_rgba(214,167,56,0.22)] transition hover:bg-[#f1c66a]'
+      ? 'bg-[#d6a738] p-4 text-black transition hover:bg-[#f1c66a]'
       : tone === 'dark'
-        ? 'rounded-[1.5rem] bg-[#11100b] p-4 text-white shadow-[0_18px_38px_rgba(0,0,0,0.16)] transition hover:bg-black'
-        : 'rounded-[1.5rem] border border-neutral-200 bg-white p-4 text-[#11100b] shadow-[0_18px_45px_rgba(0,0,0,0.04)] transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]';
+        ? 'bg-[#11100b] p-4 text-white transition hover:bg-black'
+        : 'border border-neutral-200 bg-white p-4 text-[#11100b] transition hover:border-[#c99c38]/40 hover:bg-[#fffaf0]';
 
   const iconClassName =
     tone === 'gold'
@@ -722,11 +722,11 @@ function CommandActionCard({
 
   return (
     <Link href={href} className={className}>
-      <span className={`grid size-11 place-items-center rounded-2xl ${iconClassName}`}>
+      <span className={`grid size-11 place-items-center ${iconClassName}`}>
         <Icon className="size-5" />
       </span>
 
-      <p className="mt-4 text-sm font-black">{title}</p>
+      <p className="mt-4 text-sm font-semibold">{title}</p>
       <p
         className={
           tone === 'gold'
@@ -778,20 +778,20 @@ function AttentionItemCard({
   return (
     <Link
       href={href}
-      className={`block rounded-[1.5rem] border p-4 transition hover:scale-[1.01] ${toneClass}`}
+      className={`block border p-4 transition hover:scale-[1.01] ${toneClass}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide opacity-70">
+          <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
             {title}
           </p>
-          <p className="mt-2 text-3xl font-black">{value}</p>
+          <p className="mt-2 text-3xl font-semibold">{value}</p>
           <p className="mt-1 text-xs font-bold leading-5 opacity-70">
             {description}
           </p>
         </div>
 
-        <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${iconClass}`}>
+        <span className={`grid size-11 shrink-0 place-items-center ${iconClass}`}>
           <Icon className="size-5" />
         </span>
       </div>
@@ -814,14 +814,14 @@ function MiniProgressBar({
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-3 text-xs font-black text-neutral-500">
+      <div className="mb-1 flex items-center justify-between gap-3 text-xs font-semibold text-neutral-500">
         <span>{label}</span>
         <span>{helper}</span>
       </div>
 
-      <div className="h-2 overflow-hidden rounded-full bg-white/15">
+      <div className="h-2 overflow-hidden bg-white/15">
         <div
-          className="h-full rounded-full bg-[#d6a738]"
+          className="h-full bg-[#d6a738]"
           style={{
             width: `${width}%`,
           }}
@@ -848,16 +848,16 @@ function LuxuryStatCard({
     <div
       className={
         dark
-          ? 'rounded-[1.75rem] border border-[#c99c38]/30 bg-[#11100b] p-5 text-white shadow-[0_18px_45px_rgba(0,0,0,0.18)]'
-          : 'rounded-[1.75rem] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(0,0,0,0.06)]'
+          ? 'border border-[#c99c38]/30 bg-[#11100b] p-5 text-white'
+          : 'border border-neutral-200 bg-white p-5'
       }
     >
       <div className="flex items-center gap-4">
         <span
           className={
             dark
-              ? 'grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-[#f1c66a] via-[#c99c38] to-[#8f6820] text-[#090806]'
-              : 'grid size-14 place-items-center rounded-2xl bg-[#f7f1e5] text-[#c99c38]'
+              ? 'grid size-14 place-items-center bg-gradient-to-br from-[#f1c66a] via-[#c99c38] to-[#8f6820] text-[#090806]'
+              : 'grid size-14 place-items-center bg-[#f7f1e5] text-[#c99c38]'
           }
         >
           <Icon className="size-6" />
@@ -874,7 +874,7 @@ function LuxuryStatCard({
             {label}
           </p>
 
-          <p className="mt-1 text-3xl font-black">{value}</p>
+          <p className="mt-1 text-3xl font-semibold">{value}</p>
 
           {caption ? (
             <p
@@ -1271,19 +1271,19 @@ const analyticsOptions = [
 
 return (
   <div className="space-y-7">
-    <section className="overflow-hidden rounded-[2.5rem] border border-[#c99c38]/25 bg-[#11100b] text-white shadow-[0_24px_70px_rgba(0,0,0,0.16)]">
+    <section className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
       <div className="relative p-6">
-        <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-[#c99c38]/25 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 -top-20 size-72 bg-[#c99c38]/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-10 size-72 bg-emerald-500/10 blur-3xl" />
 
         <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-[#f1c66a]">
+            <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
               <Sparkles className="size-4" />
               Command Center
             </p>
 
-            <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
+            <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
               Today’s hotel operations pulse.
             </h1>
 
@@ -1293,12 +1293,12 @@ return (
             </p>
           </div>
 
-          <div className="min-w-[260px] rounded-[2rem] border border-white/10 bg-white/10 p-5 backdrop-blur">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          <div className="min-w-[260px] border border-white/10 bg-white/10 p-5 backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
               Needs Attention
             </p>
 
-            <p className="mt-2 text-5xl font-black">{attentionScore}</p>
+            <p className="mt-2 text-5xl font-semibold">{attentionScore}</p>
 
             <p className="mt-1 text-xs font-semibold text-white/45">
               Live kitchen, services, checkouts, and inventory alerts.
@@ -1330,10 +1330,10 @@ return (
 
       <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
         <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
             Sales
           </p>
-          <p className="mt-1 text-3xl font-black">
+          <p className="mt-1 text-3xl font-semibold">
             {money(salesAgg._sum.totalCents ?? 0)}
           </p>
           <p className="mt-1 text-xs font-semibold text-white/45">
@@ -1342,30 +1342,30 @@ return (
         </div>
 
         <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
             Orders
           </p>
-          <p className="mt-1 text-3xl font-black">{ordersInRange}</p>
+          <p className="mt-1 text-3xl font-semibold">{ordersInRange}</p>
           <p className="mt-1 text-xs font-semibold text-white/45">
             Created in selected period
           </p>
         </div>
 
         <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
             Active Stays
           </p>
-          <p className="mt-1 text-3xl font-black">{activeGuestStays}</p>
+          <p className="mt-1 text-3xl font-semibold">{activeGuestStays}</p>
           <p className="mt-1 text-xs font-semibold text-white/45">
             {checkoutsToday} checking out today
           </p>
         </div>
 
         <div className="p-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d6a738]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
             Kitchen
           </p>
-          <p className="mt-1 text-3xl font-black">{liveKitchenOrders}</p>
+          <p className="mt-1 text-3xl font-semibold">{liveKitchenOrders}</p>
           <p className="mt-1 text-xs font-semibold text-white/45">
             {scheduledOrders} scheduled pre-orders
           </p>
@@ -1425,13 +1425,13 @@ return (
     </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
+        <div className="border border-neutral-200 bg-white">
           <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-5">
-            <h2 className="text-xl font-black">Recent Orders</h2>
+            <h2 className="text-xl font-semibold">Recent Orders</h2>
 
             <Link
               href="/dashboard/orders"
-              className="rounded-2xl border border-neutral-200 px-4 py-2 text-xs font-black hover:bg-neutral-50"
+              className="border border-neutral-200 px-4 py-2 text-xs font-semibold hover:bg-neutral-50"
             >
               View all orders
             </Link>
@@ -1441,10 +1441,10 @@ return (
             {recentOrders.map((order) => (
               <div
                 key={order.id}
-                className="flex items-center justify-between gap-4 rounded-2xl border border-neutral-100 bg-neutral-50/80 p-4"
+                className="flex items-center justify-between gap-4 border border-neutral-100 bg-neutral-50/80 p-4"
               >
                 <div className="min-w-0">
-                  <p className="font-black">{order.orderCode}</p>
+                  <p className="font-semibold">{order.orderCode}</p>
 
                   <p className="mt-1 truncate text-sm text-neutral-500">
                     {order.hotel.name} ·{' '}
@@ -1457,7 +1457,7 @@ return (
                 <div className="shrink-0 text-right">
                   <StatusBadge status={order.status} />
 
-                  <p className="mt-1 text-sm font-black">
+                  <p className="mt-1 text-sm font-semibold">
                     {money(order.totalCents)}
                   </p>
                 </div>
@@ -1465,8 +1465,8 @@ return (
             ))}
 
             {!recentOrders.length ? (
-              <div className="rounded-2xl border border-dashed border-neutral-200 p-6 text-center">
-                <p className="font-black">No orders in this period.</p>
+              <div className="border border-dashed border-neutral-200 p-6 text-center">
+                <p className="font-semibold">No orders in this period.</p>
 
                 <p className="mt-1 text-sm text-neutral-500">
                   Guest and POS orders will appear here.
@@ -1476,15 +1476,15 @@ return (
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-neutral-200 bg-white shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
+        <div className="border border-neutral-200 bg-white">
           <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-5">
-            <h2 className="text-xl font-black">
+            <h2 className="text-xl font-semibold">
               Popular Products & Inventory Watch
             </h2>
 
             <Link
               href="/dashboard/inventory"
-              className="rounded-2xl border border-neutral-200 px-4 py-2 text-xs font-black hover:bg-neutral-50"
+              className="border border-neutral-200 px-4 py-2 text-xs font-semibold hover:bg-neutral-50"
             >
               View inventory
             </Link>
@@ -1492,43 +1492,43 @@ return (
 
           <div className="grid gap-6 p-6 md:grid-cols-2">
             <div className="space-y-3">
-              <h3 className="font-black">Popular products</h3>
+              <h3 className="font-semibold">Popular products</h3>
 
               {popular.map((item) => (
                 <div
                   key={item.productNameSnapshot ?? 'Unknown product'}
-                  className="flex items-center justify-between rounded-2xl border border-neutral-100 bg-neutral-50/80 p-3 text-sm"
+                  className="flex items-center justify-between border border-neutral-100 bg-neutral-50/80 p-3 text-sm"
                 >
                   <span className="font-bold">
                     {item.productNameSnapshot ?? 'Unknown product'}
                   </span>
 
-                  <span className="rounded-full bg-[#f7f1e5] px-3 py-1 text-xs font-black text-[#9d741f]">
+                  <span className="bg-[#f7f1e5] px-3 py-1 text-xs font-semibold text-[#9d741f]">
                     {item._sum.quantity ?? 0} sold
                   </span>
                 </div>
               ))}
 
               {!popular.length ? (
-                <p className="rounded-2xl border border-dashed border-neutral-200 p-4 text-sm font-bold text-neutral-500">
+                <p className="border border-dashed border-neutral-200 p-4 text-sm font-bold text-neutral-500">
                   No product sales yet.
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-3">
-              <h3 className="font-black">Inventory watch</h3>
+              <h3 className="font-semibold">Inventory watch</h3>
 
               {menuInventoryAlerts.slice(0, 3).map((item) => (
                 <div
                   key={`menu-${item.id}`}
-                  className="flex items-center justify-between rounded-2xl border border-red-100 bg-red-50/60 p-3 text-sm"
+                  className="flex items-center justify-between border border-red-100 bg-red-50/60 p-3 text-sm"
                 >
                   <span className="font-bold">
                     {item.product?.name ?? 'Menu item'}
                   </span>
 
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-red-600">
+                  <span className="bg-white px-3 py-1 text-xs font-semibold text-red-600">
                     {String(item.availableQty)} left
                   </span>
                 </div>
@@ -1537,20 +1537,20 @@ return (
               {serviceInventoryAlerts.slice(0, 3).map((item) => (
                 <div
                   key={`service-${item.id}`}
-                  className="flex items-center justify-between rounded-2xl border border-orange-100 bg-orange-50/70 p-3 text-sm"
+                  className="flex items-center justify-between border border-orange-100 bg-orange-50/70 p-3 text-sm"
                 >
                   <span className="font-bold">
                     {item.service?.name ?? 'Service item'}
                   </span>
 
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-orange-700">
+                  <span className="bg-white px-3 py-1 text-xs font-semibold text-orange-700">
                     {String(item.availableQty)} left
                   </span>
                 </div>
               ))}
 
               {!menuInventoryAlerts.length && !serviceInventoryAlerts.length ? (
-                <p className="rounded-2xl border border-dashed border-neutral-200 p-4 text-sm font-bold text-neutral-500">
+                <p className="border border-dashed border-neutral-200 p-4 text-sm font-bold text-neutral-500">
                   No low inventory alerts.
                 </p>
               ) : null}
@@ -1559,10 +1559,10 @@ return (
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-neutral-200 bg-white p-6 shadow-[0_18px_45px_rgba(0,0,0,0.06)]">
+      <section className="border border-neutral-200 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black">Analytics</h2>
+            <h2 className="text-xl font-semibold">Analytics</h2>
 
             <p className="mt-1 text-sm font-medium text-neutral-500">
               Sales, order volume, and service request movement for{' '}
@@ -1578,17 +1578,17 @@ return (
         </div>
 
         <div className="mt-5 grid gap-5 xl:grid-cols-3">
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-white p-5">
+          <div className="border border-neutral-200 bg-white p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-black">Sales Trend</p>
+                <p className="text-sm font-semibold">Sales Trend</p>
 
-                <p className="mt-1 text-2xl font-black">
+                <p className="mt-1 text-2xl font-semibold">
                   {money(analytics.totalSalesCents)}
                 </p>
               </div>
 
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+              <span className="inline-flex items-center gap-1 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                 <TrendingUp className="size-3" />
                 {analyticsRange.label}
               </span>
@@ -1597,17 +1597,17 @@ return (
             <MiniLineChart points={analytics.sales} />
           </div>
 
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-white p-5">
+          <div className="border border-neutral-200 bg-white p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-black">Order Volume</p>
+                <p className="text-sm font-semibold">Order Volume</p>
 
-                <p className="mt-1 text-2xl font-black">
+                <p className="mt-1 text-2xl font-semibold">
                   {analytics.totalOrders}
                 </p>
               </div>
 
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#f7f1e5] px-3 py-1 text-xs font-black text-[#9d741f]">
+              <span className="inline-flex items-center gap-1 bg-[#f7f1e5] px-3 py-1 text-xs font-semibold text-[#9d741f]">
                 <TrendingUp className="size-3" />
                 Orders
               </span>
@@ -1616,17 +1616,17 @@ return (
             <MiniBarChart points={analytics.orderVolume} />
           </div>
 
-          <div className="rounded-[1.5rem] border border-neutral-200 bg-white p-5">
+          <div className="border border-neutral-200 bg-white p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-black">Service Requests</p>
+                <p className="text-sm font-semibold">Service Requests</p>
 
-                <p className="mt-1 text-2xl font-black">
+                <p className="mt-1 text-2xl font-semibold">
                   {analyticsRequests.length}
                 </p>
               </div>
 
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-700">
+              <span className="inline-flex items-center gap-1 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
                 <TrendingDown className="size-3" />
                 Status
               </span>

@@ -186,8 +186,8 @@ function OrderItemSummary({
     <div
       className={
         isCancelled
-          ? 'rounded-[1.25rem] border border-red-500/20 bg-red-500/10 p-4'
-          : 'rounded-[1.25rem] bg-white/5 p-4'
+          ? 'border border-red-500/20 bg-red-500/10 p-4'
+          : 'bg-white/5 p-4'
       }
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -205,15 +205,15 @@ function OrderItemSummary({
             </p>
 
             {item.isBundleSnapshot ? (
-              <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
+              <span className="bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                 Bundle
               </span>
             ) : null}
 
             <span
-              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${itemStatusBadgeClass(
-                item.status
-              )}`}
+              className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${itemStatusBadgeClass(
+ item.status
+ )}`}
             >
               {statusLabel(item.status)}
             </span>
@@ -250,7 +250,7 @@ function OrderItemSummary({
       </div>
 
       {item.isBundleSnapshot ? (
-        <div className="mt-4 rounded-xl bg-gold/10 p-4">
+        <div className="mt-4 bg-gold/10 p-4">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
             Includes
           </p>
@@ -374,7 +374,7 @@ export default async function MyOrdersPage({
         <div className="mb-6 grid grid-cols-[44px_1fr_44px] items-center">
           <Link
             href={`/t/${tagCode}`}
-            className="grid size-11 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="grid size-11 place-items-center text-white/70 transition hover:bg-white/10 hover:text-white"
             aria-label="Back"
           >
             <ChevronLeft className="size-6" />
@@ -390,9 +390,9 @@ export default async function MyOrdersPage({
           <div />
         </div>
 
-        <section className="mb-5 rounded-[2rem] border border-gold/20 bg-gold/10 p-5 backdrop-blur-md">
+        <section className="mb-5 border border-gold/20 bg-gold/10 p-5 backdrop-blur-md">
           <div className="flex items-start gap-4">
-            <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-gold text-black shadow-sm">
+            <div className="grid size-14 shrink-0 place-items-center bg-gold text-black shadow-sm">
               <ShoppingBag className="size-6" />
             </div>
 
@@ -410,7 +410,7 @@ export default async function MyOrdersPage({
         </section>
 
         {rewardsContext.guestMember && rewardsContext.pointAccount ? (
-          <section className="mb-5 rounded-[2rem] border border-gold/25 bg-gold/10 p-5 backdrop-blur-md">
+          <section className="mb-5 border border-gold/25 bg-gold/10 p-5 backdrop-blur-md">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
@@ -428,14 +428,14 @@ export default async function MyOrdersPage({
 
               <Link
                 href={`/t/${tagCode}/rewards`}
-                className="shrink-0 rounded-[1.25rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="shrink-0 bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110"
               >
                 View
               </Link>
             </div>
           </section>
         ) : (
-          <section className="mb-5 rounded-[2rem] border border-gold/25 bg-white/[0.04] p-5 backdrop-blur-md">
+          <section className="mb-5 border border-gold/25 bg-white/[0.04] p-5 backdrop-blur-md">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
@@ -453,7 +453,7 @@ export default async function MyOrdersPage({
 
               <Link
                 href={`/t/${tagCode}/rewards`}
-                className="shrink-0 rounded-[1.25rem] bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="shrink-0 bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110"
               >
                 Claim
               </Link>
@@ -462,9 +462,9 @@ export default async function MyOrdersPage({
         )}
 
         {visibleXenditSessions.length ? (
-          <section className="mb-5 rounded-[2rem] border border-gold/20 bg-white/[0.035] p-5 backdrop-blur-md">
+          <section className="mb-5 border border-gold/20 bg-white/[0.035] p-5 backdrop-blur-md">
             <div className="mb-4 flex items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-2xl bg-gold/15 text-gold">
+              <span className="grid size-11 place-items-center bg-gold/15 text-gold">
                 <QrCode className="size-5" />
               </span>
               <div>
@@ -487,18 +487,18 @@ export default async function MyOrdersPage({
                 return (
                   <div
                     key={payment.id}
-                    className="rounded-[1.25rem] border border-white/10 bg-black/25 p-4"
+                    className="border border-white/10 bg-black/25 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-black text-white">
+                        <p className="text-sm font-semibold text-white">
                           {money(payment.amountCents)}
                         </p>
                         <p className="mt-1 text-xs font-medium text-white/45">
                           {formatDateTime(payment.createdAt)}
                         </p>
                       </div>
-                      <span className="rounded-full bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
+                      <span className="bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
                         {statusLabel(payment.status)}
                       </span>
                     </div>
@@ -511,7 +511,7 @@ export default async function MyOrdersPage({
                     ) : null}
 
                     {payment.errorMessage || payment.refundErrorMessage ? (
-                      <p className="mt-3 rounded-xl bg-red-500/10 p-3 text-xs font-medium leading-5 text-red-200">
+                      <p className="mt-3 bg-red-500/10 p-3 text-xs font-medium leading-5 text-red-200">
                         {payment.refundErrorMessage || payment.errorMessage}
                       </p>
                     ) : null}
@@ -520,7 +520,7 @@ export default async function MyOrdersPage({
                       {canResume && payment.checkoutUrl ? (
                         <a
                           href={payment.checkoutUrl}
-                          className="rounded-xl bg-gold px-4 py-2 text-xs font-black text-black"
+                          className="bg-gold px-4 py-2 text-xs font-semibold text-black"
                         >
                           Continue payment
                         </a>
@@ -529,7 +529,7 @@ export default async function MyOrdersPage({
                       {payment.orderCode ? (
                         <Link
                           href={`/t/${tagCode}/track/${payment.orderCode}`}
-                          className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-black text-white"
+                          className="border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white"
                         >
                           Track order
                         </Link>
@@ -554,7 +554,7 @@ export default async function MyOrdersPage({
               return (
                 <article
                   key={order.id}
-                  className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 shadow-sm backdrop-blur-md"
+                  className="border border-white/10 bg-white/[0.03] p-5 shadow-sm backdrop-blur-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -564,9 +564,9 @@ export default async function MyOrdersPage({
                         </h2>
 
                         <span
-                          className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusBadgeClass(
-                            order.status
-                          )}`}
+                          className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusBadgeClass(
+ order.status
+ )}`}
                         >
                           {statusLabel(order.status)}
                         </span>
@@ -583,7 +583,7 @@ export default async function MyOrdersPage({
                   </div>
 
                   <div className="mt-5 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl bg-white/5 p-4">
+                    <div className="bg-white/5 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
                         Active Items
                       </p>
@@ -592,7 +592,7 @@ export default async function MyOrdersPage({
                       </p>
                     </div>
 
-                    <div className="rounded-2xl bg-white/5 p-4">
+                    <div className="bg-white/5 p-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
                         Payment
                       </p>
@@ -604,31 +604,31 @@ export default async function MyOrdersPage({
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span
-                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
-                        order.paymentStatus
-                      )}`}
+                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${paymentBadgeClass(
+ order.paymentStatus
+ )}`}
                     >
                       {statusLabel(order.paymentStatus)}
                     </span>
 
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/70">
+                    <span className="bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/70">
                       {orderType}
                     </span>
 
                     {cancelledItemCount > 0 ? (
-                      <span className="rounded-full bg-red-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-red-200">
+                      <span className="bg-red-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-red-200">
                         {cancelledItemCount} cancelled item{cancelledItemCount === 1 ? '' : 's'}
                       </span>
                     ) : null}
 
                     {canManageItems ? (
-                      <span className="rounded-full bg-blue-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-blue-200">
+                      <span className="bg-blue-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-blue-200">
                         Can cancel items
                       </span>
                     ) : null}
                   </div>
 
-                  <div className="mt-5 rounded-[1.25rem] bg-white/5 p-4">
+                  <div className="mt-5 bg-white/5 p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
                       Preview
                     </p>
@@ -637,7 +637,7 @@ export default async function MyOrdersPage({
                     </p>
                   </div>
 
-                  <details className="group mt-3 rounded-[1.25rem] bg-white/5 p-4 open:bg-white/[0.07]">
+                  <details className="group mt-3 bg-white/5 p-4 open:bg-white/[0.07]">
                     <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-widest text-gold transition group-open:mb-4">
                       View Order Details
                     </summary>
@@ -652,7 +652,7 @@ export default async function MyOrdersPage({
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <Link
                       href={`/t/${tagCode}/track/${order.orderCode}`}
-                      className="flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] bg-gold px-4 py-3 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                      className="flex min-h-12 items-center justify-center gap-2 bg-gold px-4 py-3 text-center text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110"
                     >
                       <PackageCheck className="size-4" />
                       {canManageItems ? 'Track / Manage' : 'Track Order'}
@@ -660,7 +660,7 @@ export default async function MyOrdersPage({
 
                     <Link
                       href={`/t/${tagCode}/menu`}
-                      className="flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] border border-white/15 px-4 py-3 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10 active:scale-[0.98]"
+                      className="flex min-h-12 items-center justify-center gap-2 border border-white/15 px-4 py-3 text-center text-[15px] font-semibold tracking-wide text-white transition hover:bg-white/10"
                     >
                       <Utensils className="size-4 text-gold" />
                       Order Again
@@ -671,9 +671,9 @@ export default async function MyOrdersPage({
             })}
           </div>
         ) : (
-          <section className="grid min-h-[50vh] place-items-center rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-md">
+          <section className="grid min-h-[50vh] place-items-center border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-md">
             <div>
-              <div className="mx-auto grid size-24 place-items-center rounded-full bg-white/5 text-gold shadow-sm">
+              <div className="mx-auto grid size-24 place-items-center bg-white/5 text-gold shadow-sm">
                 <ReceiptText className="size-10" strokeWidth={1.5} />
               </div>
 
@@ -685,7 +685,7 @@ export default async function MyOrdersPage({
 
               <Link
                 href={`/t/${tagCode}/menu`}
-                className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-[1.25rem] bg-gold px-6 py-3 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110 active:scale-[0.98]"
+                className="mt-8 inline-flex min-h-12 items-center justify-center gap-2 bg-gold px-6 py-3 text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110"
               >
                 <Utensils className="size-4" />
                 Order Food
@@ -694,9 +694,9 @@ export default async function MyOrdersPage({
           </section>
         )}
 
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
+        <section className="mt-6 border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md">
           <div className="mb-4 flex items-center gap-3">
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold/10 text-gold">
+            <div className="grid size-10 shrink-0 place-items-center bg-gold/10 text-gold">
               <Clock className="size-5" />
             </div>
             <h2 className="font-serif text-xl font-normal tracking-wide">Order Notes</h2>

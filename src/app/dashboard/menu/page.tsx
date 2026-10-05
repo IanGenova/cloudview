@@ -119,15 +119,15 @@ function Toast({ message }: { message: Message }) {
       <div
         className={
           message.type === 'success'
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
         }
       >
         <div
           className={
             message.type === 'success'
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {message.type === 'success' ? (
@@ -138,7 +138,7 @@ function Toast({ message }: { message: Message }) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {message.type === 'success' ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -146,7 +146,7 @@ function Toast({ message }: { message: Message }) {
 
         <a
           href="/dashboard/menu"
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -169,7 +169,7 @@ function FormField({
 }) {
   return (
     <label className={`grid gap-2 ${className}`}>
-      <span className="text-sm font-black text-neutral-800">{label}</span>
+      <span className="text-sm font-semibold text-neutral-800">{label}</span>
       {children}
       {helper ? (
         <span className="text-xs font-medium leading-relaxed text-neutral-500">
@@ -196,11 +196,11 @@ function Modal({
   return (
     <dialog
       id={id}
-      className={`w-[calc(100%-1.5rem)] ${size} rounded-[2rem] border border-neutral-200 bg-white p-0 shadow-2xl backdrop:bg-black/50`}
+      className={`w-[calc(100%-1.5rem)] ${size} border border-neutral-200 bg-white p-0 shadow-2xl backdrop:bg-black/50`}
     >
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-neutral-100 bg-white p-5">
         <div>
-          <h2 className="text-2xl font-black">{title}</h2>
+          <h2 className="text-2xl font-semibold">{title}</h2>
           {description ? (
             <p className="mt-1 text-sm text-neutral-500">{description}</p>
           ) : null}
@@ -208,7 +208,7 @@ function Modal({
 
         <form method="dialog">
           <button
-            className="grid size-10 place-items-center rounded-full bg-neutral-100 hover:bg-neutral-200"
+            className="grid size-10 place-items-center bg-neutral-100 hover:bg-neutral-200"
             aria-label="Close modal"
           >
             <X className="size-5" />
@@ -531,9 +531,9 @@ const bulkDefaultHotelId =
         description="Digital menu categories, products, images, pricing, availability, bundle menus, and recipe links."
       />
 
-      <div className="mb-4 flex flex-col gap-3 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft md:flex-row md:items-center md:justify-between">
+      <div className="mb-4 flex flex-col gap-3 border border-neutral-200 bg-white p-4 md:flex-row md:items-center md:justify-between">
   <div>
-    <h2 className="text-xl font-black">Products</h2>
+    <h2 className="text-xl font-semibold">Products</h2>
     <p className="mt-1 text-sm text-neutral-500">
       These items appear in the Guest Portal and POS Terminal. Products
       can now be single items or fixed bundles.
@@ -570,16 +570,16 @@ const bulkDefaultHotelId =
 <form
   action="/dashboard/menu"
   method="get"
-  className="mb-6 rounded-[2rem] border border-neutral-200 bg-white p-4 shadow-soft"
+  className="mb-6 border border-neutral-200 bg-white p-4"
 >
   <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <div className="flex items-center gap-2">
-        <span className="grid size-9 place-items-center rounded-2xl bg-gold/15 text-gold">
+        <span className="grid size-9 place-items-center bg-gold/15 text-gold">
           <SlidersHorizontal className="size-4" />
         </span>
 
-        <h3 className="text-lg font-black">Filter Menu Products</h3>
+        <h3 className="text-lg font-semibold">Filter Menu Products</h3>
       </div>
 
       <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -591,7 +591,7 @@ const bulkDefaultHotelId =
     {hasActiveFilters ? (
       <a
         href="/dashboard/menu"
-        className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-black text-black hover:bg-neutral-100"
+        className="inline-flex min-h-10 items-center justify-center border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-neutral-100"
       >
         Clear Filters
       </a>
@@ -600,7 +600,7 @@ const bulkDefaultHotelId =
 
   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
     <label className="grid gap-2 xl:col-span-2">
-      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
         Search
       </span>
 
@@ -618,7 +618,7 @@ const bulkDefaultHotelId =
 
     {user.role === 'SUPER_ADMIN' ? (
       <label className="grid gap-2">
-        <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
           Hotel
         </span>
 
@@ -634,7 +634,7 @@ const bulkDefaultHotelId =
     ) : null}
 
     <label className="grid gap-2">
-      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
         Category
       </span>
 
@@ -650,7 +650,7 @@ const bulkDefaultHotelId =
     </label>
 
     <label className="grid gap-2">
-      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
         Type
       </span>
 
@@ -662,7 +662,7 @@ const bulkDefaultHotelId =
     </label>
 
     <label className="grid gap-2">
-      <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
         Availability
       </span>
 
@@ -684,8 +684,8 @@ const bulkDefaultHotelId =
 
 
      {products.length === 0 ? (
-  <div className="rounded-[2rem] border border-dashed border-neutral-200 bg-white p-10 text-center shadow-soft">
-    <h3 className="text-xl font-black text-neutral-800">
+  <div className="border border-dashed border-neutral-200 bg-white p-10 text-center">
+    <h3 className="text-xl font-semibold text-neutral-800">
       No products found
     </h3>
 
@@ -697,7 +697,7 @@ const bulkDefaultHotelId =
     {hasActiveFilters ? (
       <a
         href="/dashboard/menu"
-        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-2xl bg-black px-5 py-2 text-sm font-black text-white hover:bg-neutral-800"
+        className="mt-5 inline-flex min-h-11 items-center justify-center bg-black px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
       >
         Clear Filters
       </a>
@@ -719,7 +719,7 @@ const bulkDefaultHotelId =
         : 0;
 return (
   <div key={product.id} className="contents">
-    <article className="overflow-hidden rounded-[1.5rem] border border-neutral-200 bg-white shadow-soft">
+    <article className="overflow-hidden border border-neutral-200 bg-white">
 
         <div
           className="h-32 bg-neutral-100 bg-cover bg-center"
@@ -730,7 +730,7 @@ return (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="truncate text-base font-black">
+                <h3 className="truncate text-base font-semibold">
                   {product.name}
                 </h3>
 
@@ -741,8 +741,8 @@ return (
                 <span
                   className={
                     isBundle
-                      ? 'rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800'
-                      : 'rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-black text-neutral-600'
+                      ? 'bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800'
+                      : 'bg-neutral-100 px-2.5 py-1 text-[11px] font-semibold text-neutral-600'
                   }
                 >
                   {productTypeLabel(product.productType)}
@@ -755,7 +755,7 @@ return (
               </p>
             </div>
 
-            <p className="shrink-0 text-lg font-black">
+            <p className="shrink-0 text-lg font-semibold">
               {money(product.priceCents)}
             </p>
           </div>
@@ -765,8 +765,8 @@ return (
           </p>
 
           {isBundle ? (
-            <div className="mt-3 rounded-xl bg-amber-50 p-2.5">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
+            <div className="mt-3 bg-amber-50 p-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
                 Bundle / Combo Includes
               </p>
 
@@ -784,7 +784,7 @@ return (
                   </div>
 
                   {bundleNormalTotalCents > 0 ? (
-                    <div className="mt-2 rounded-xl bg-white/80 p-2 text-[11px] font-black text-amber-900">
+                    <div className="mt-2 bg-white/80 p-2 text-[11px] font-semibold text-amber-900">
                       <p>Normal total: {money(bundleNormalTotalCents)}</p>
                       {bundleSavingsCents > 0 ? (
                         <p className="mt-1">
@@ -819,7 +819,7 @@ return (
               itemType="product"
               action={deleteProductAction}
               successMessage="Menu item was deleted successfully."
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         </div>
@@ -901,7 +901,7 @@ return (
 
             <DynamicBundleComponentFields componentOptions={bundleComponentOptions} />
 
-            <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+            <label className="flex items-center gap-3 bg-neutral-50 p-3 md:col-span-2">
               <input
                 name="isAvailable"
                 type="checkbox"
@@ -909,7 +909,7 @@ return (
                 className="size-4 accent-black"
               />
               <span>
-                <span className="block text-sm font-black">Available</span>
+                <span className="block text-sm font-semibold">Available</span>
                 <span className="text-xs font-medium text-neutral-500">
                   Show this product in the guest portal and POS.
                 </span>
@@ -996,7 +996,7 @@ return (
 
               <DynamicBundleComponentFields componentOptions={bundleComponentOptions} />
 
-              <label className="flex items-center gap-3 rounded-2xl bg-neutral-50 p-3 md:col-span-2">
+              <label className="flex items-center gap-3 bg-neutral-50 p-3 md:col-span-2">
                 <input
                   name="isAvailable"
                   type="checkbox"
@@ -1004,7 +1004,7 @@ return (
                   className="size-4 accent-black"
                 />
                 <span>
-                  <span className="block text-sm font-black">Available</span>
+                  <span className="block text-sm font-semibold">Available</span>
                   <span className="text-xs font-medium text-neutral-500">
                     Show this product in the guest portal and POS.
                   </span>
@@ -1100,18 +1100,18 @@ return (
             </CardContent>
           </Card>
 
-          <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white">
+          <section className="overflow-hidden border border-neutral-200 bg-white">
             <div className="border-b border-neutral-100 bg-neutral-50 p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-xl font-black">Existing Categories</h3>
+                  <h3 className="text-xl font-semibold">Existing Categories</h3>
                   <p className="mt-1 text-sm text-neutral-500">
                     Edit category name, sort order, availability, or delete
                     unused categories.
                   </p>
                 </div>
 
-                <span className="rounded-full bg-black px-4 py-2 text-sm font-black text-white">
+                <span className="bg-black px-4 py-2 text-sm font-semibold text-white">
                   {categories.length} categories
                 </span>
               </div>
@@ -1119,8 +1119,8 @@ return (
 
             {categories.length === 0 ? (
               <div className="p-6">
-                <div className="rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center">
-                  <h4 className="text-lg font-black text-neutral-700">
+                <div className="border border-dashed border-neutral-200 bg-neutral-50 p-8 text-center">
+                  <h4 className="text-lg font-semibold text-neutral-700">
                     No categories yet
                   </h4>
                   <p className="mt-2 text-sm text-neutral-500">
@@ -1131,7 +1131,7 @@ return (
             ) : (
               <div className="overflow-x-auto">
                 <div className="min-w-[820px]">
-                  <div className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] gap-3 border-b border-neutral-100 bg-neutral-50 px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-neutral-500">
+                  <div className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] gap-3 border-b border-neutral-100 bg-neutral-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
                     <div>Hotel</div>
                     <div>Category</div>
                     <div>Sort</div>
@@ -1150,7 +1150,7 @@ return (
                           className="grid grid-cols-[1.2fr_1.3fr_110px_130px_110px_180px] items-center gap-3 px-5 py-4"
                         >
                           <div className="min-w-0">
-                            <p className="truncate font-black text-neutral-700">
+                            <p className="truncate font-semibold text-neutral-700">
                               {category.hotel.name}
                             </p>
                             <p className="mt-1 text-xs font-semibold text-neutral-400">
@@ -1191,7 +1191,7 @@ return (
                             </div>
 
                             <div>
-                              <label className="inline-flex items-center gap-2 rounded-2xl bg-neutral-50 px-3 py-2 text-sm font-black">
+                              <label className="inline-flex items-center gap-2 bg-neutral-50 px-3 py-2 text-sm font-semibold">
                                 <input
                                   name="isActive"
                                   type="checkbox"
@@ -1204,7 +1204,7 @@ return (
                           </MenuActionForm>
 
                           <div>
-                            <span className="rounded-full bg-neutral-100 px-3 py-1 text-sm font-black">
+                            <span className="bg-neutral-100 px-3 py-1 text-sm font-semibold">
                               {category._count.products}
                             </span>
                           </div>
@@ -1213,7 +1213,7 @@ return (
                             <button
                               type="submit"
                               form={updateFormId}
-                              className="rounded-xl bg-black px-4 py-2 text-xs font-black text-white hover:bg-neutral-800"
+                              className="bg-black px-4 py-2 text-xs font-semibold text-white hover:bg-neutral-800"
                             >
                               Save
                             </button>
@@ -1225,7 +1225,7 @@ return (
                               itemType="category"
                               action={deleteCategoryAction}
                               successMessage="Menu category was deleted successfully."
-                              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex h-10 items-center justify-center gap-2 bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                           </div>
                         </div>

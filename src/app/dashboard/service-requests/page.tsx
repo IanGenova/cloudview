@@ -135,14 +135,14 @@ function ScheduledServiceRequestsPanel({
   }
 
   return (
-    <section className="mb-6 rounded-[2rem] border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+    <section className="mb-6 border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700 dark:text-amber-200">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-200">
             Upcoming
           </p>
 
-          <h2 className="mt-1 text-2xl font-black">
+          <h2 className="mt-1 text-2xl font-semibold">
             Scheduled Service Requests
           </h2>
 
@@ -151,7 +151,7 @@ function ScheduledServiceRequestsPanel({
           </p>
         </div>
 
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-600 text-sm font-black text-white">
+        <span className="grid size-10 shrink-0 place-items-center bg-amber-600 text-sm font-semibold text-white">
           {requests.length}
         </span>
       </div>
@@ -160,11 +160,11 @@ function ScheduledServiceRequestsPanel({
         {requests.map((request) => (
           <article
             key={request.id}
-            className="rounded-[1.5rem] border border-amber-200 bg-white/75 p-4 shadow-sm dark:border-amber-500/20 dark:bg-black/20"
+            className="border border-amber-200 bg-white/75 p-4 shadow-sm dark:border-amber-500/20 dark:bg-black/20"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="truncate text-lg font-black">
+                <h3 className="truncate text-lg font-semibold">
                   {request.requestCode}
                 </h3>
 
@@ -177,12 +177,12 @@ function ScheduledServiceRequestsPanel({
                 </p>
               </div>
 
-              <span className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+              <span className="shrink-0 bg-amber-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
                 Scheduled
               </span>
             </div>
 
-            <div className="mt-4 grid gap-2 rounded-2xl bg-amber-100/70 p-3 text-xs dark:bg-amber-500/10">
+            <div className="mt-4 grid gap-2 bg-amber-100/70 p-3 text-xs dark:bg-amber-500/10">
               <p>
                 <b>Scheduled For:</b>{' '}
                 {formatScheduleDateTime(request.scheduledFor)}
@@ -206,7 +206,7 @@ function ScheduledServiceRequestsPanel({
               ))}
 
               {request.items.length > 3 ? (
-                <p className="text-xs font-black opacity-60">
+                <p className="text-xs font-semibold opacity-60">
                   +{request.items.length - 3} more item
                   {request.items.length - 3 === 1 ? '' : 's'}
                 </p>
@@ -214,7 +214,7 @@ function ScheduledServiceRequestsPanel({
             </div>
 
             {request.scheduledNote ? (
-              <p className="mt-4 rounded-2xl bg-amber-100/70 p-3 text-xs font-semibold dark:bg-amber-500/10">
+              <p className="mt-4 bg-amber-100/70 p-3 text-xs font-semibold dark:bg-amber-500/10">
                 <b>Schedule note:</b> {request.scheduledNote}
               </p>
             ) : null}

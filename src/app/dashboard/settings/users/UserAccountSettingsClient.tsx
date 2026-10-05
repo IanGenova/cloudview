@@ -685,17 +685,17 @@ function PermissionMatrix({
   ).length;
 
   return (
-    <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4">
+    <div className="border border-neutral-200 bg-neutral-50 p-4">
       <input type="hidden" name="permissionsEnabled" value="1" />
 
       <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <p className="text-sm font-black">Dashboard Module Access</p>
+          <p className="text-sm font-semibold">Dashboard Module Access</p>
           <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
             Select which dashboard pages and functions this user can access.
           </p>
 
-          <p className="mt-2 text-xs font-black text-neutral-600">
+          <p className="mt-2 text-xs font-semibold text-neutral-600">
             {visibleCount} of {visibleModules.length} modules visible
           </p>
           <p className="mt-1 text-[11px] font-bold text-emerald-700">
@@ -708,7 +708,7 @@ function PermissionMatrix({
           <button
             type="button"
             onClick={() => setAllModules(fullPermissionValue())}
-            className="h-9 rounded-xl bg-black px-3 text-xs font-black text-white hover:bg-neutral-800"
+            className="h-9 bg-black px-3 text-xs font-semibold text-white hover:bg-neutral-800"
           >
             Select All
           </button>
@@ -716,7 +716,7 @@ function PermissionMatrix({
           <button
             type="button"
             onClick={() => setAllModules(viewOnlyPermissionValue())}
-            className="h-9 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-black hover:bg-neutral-100"
+            className="h-9 border border-neutral-200 bg-white px-3 text-xs font-semibold hover:bg-neutral-100"
           >
             View Only All
           </button>
@@ -724,26 +724,26 @@ function PermissionMatrix({
           <button
             type="button"
             onClick={() => setAllModules(emptyPermissionValue())}
-            className="h-9 rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black text-red-700 hover:bg-red-100"
+            className="h-9 border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100"
           >
             Clear All
           </button>
         </div>
         ) : (
-          <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-black text-emerald-700">
+          <p className="bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700">
             Super Admin accounts always receive full dashboard access.
           </p>
         )}
       </div>
 
       {!isSuperAdminTarget ? (
-      <div className="mb-4 grid gap-2 rounded-2xl border border-neutral-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid gap-2 border border-neutral-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
         {permissionColumns.map((column) => (
           <button
             key={`select-column-${column.key}`}
             type="button"
             onClick={() => setColumnAll(column.key, true)}
-            className="h-9 rounded-xl bg-neutral-100 px-3 text-xs font-black text-neutral-700 hover:bg-neutral-200"
+            className="h-9 bg-neutral-100 px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-200"
           >
             Select All {column.label}
           </button>
@@ -764,11 +764,11 @@ function PermissionMatrix({
           return (
             <div
               key={module.key}
-              className="rounded-2xl border border-neutral-200 bg-white p-4"
+              className="border border-neutral-200 bg-white p-4"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-sm font-black leading-tight">
+                  <p className="text-sm font-semibold leading-tight">
                     {module.label}
                   </p>
                   <p className="mt-1 text-xs font-bold leading-5 text-neutral-500">
@@ -783,7 +783,7 @@ function PermissionMatrix({
                     onClick={() =>
                       setModulePreset(module.key, fullPermissionValue())
                     }
-                    className="h-8 rounded-xl bg-black px-3 text-[11px] font-black text-white hover:bg-neutral-800"
+                    className="h-8 bg-black px-3 text-[11px] font-semibold text-white hover:bg-neutral-800"
                   >
                     All
                   </button>
@@ -793,7 +793,7 @@ function PermissionMatrix({
                     onClick={() =>
                       setModulePreset(module.key, viewOnlyPermissionValue())
                     }
-                    className="h-8 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-[11px] font-black hover:bg-neutral-100"
+                    className="h-8 border border-neutral-200 bg-neutral-50 px-3 text-[11px] font-semibold hover:bg-neutral-100"
                   >
                     View Only
                   </button>
@@ -804,7 +804,7 @@ function PermissionMatrix({
                       setModulePreset(module.key, emptyPermissionValue())
                     }
                     disabled={isRequiredLandingModule(module.key)}
-                    className="h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="h-8 border border-red-200 bg-red-50 px-3 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Clear
                   </button>
@@ -827,8 +827,8 @@ function PermissionMatrix({
                       key={`${module.key}-${column.key}`}
                       className={
                         disabled
-                          ? 'flex cursor-not-allowed items-center justify-between rounded-xl border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-black text-neutral-400'
-                          : 'flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-black text-neutral-700 transition hover:border-neutral-400 hover:bg-white'
+                          ? 'flex cursor-not-allowed items-center justify-between border border-neutral-200 bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-400'
+                          : 'flex cursor-pointer items-center justify-between border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400 hover:bg-white'
                       }
                     >
                       <span>{column.label}</span>
@@ -845,7 +845,7 @@ function PermissionMatrix({
                             event.target.checked
                           );
                         }}
-                        className="size-4 cursor-pointer rounded border-neutral-300 accent-black disabled:cursor-not-allowed"
+                        className="size-4 cursor-pointer border-neutral-300 accent-black disabled:cursor-not-allowed"
                       />
                     </label>
                   );
@@ -857,7 +857,7 @@ function PermissionMatrix({
       </div>
 
       {allSelected ? (
-        <p className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-black text-emerald-700">
+        <p className="mt-3 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700">
           All permissions are currently selected.
         </p>
       ) : null}
@@ -912,15 +912,15 @@ function Toast({
       <div
         className={
           isSuccess
-            ? 'flex items-start gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
-            : 'flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
+            ? 'flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 shadow-2xl'
+            : 'flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl'
         }
       >
         <div
           className={
             isSuccess
-              ? 'grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-white'
-              : 'grid size-9 shrink-0 place-items-center rounded-full bg-red-600 text-white'
+              ? 'grid size-9 shrink-0 place-items-center bg-emerald-600 text-white'
+              : 'grid size-9 shrink-0 place-items-center bg-red-600 text-white'
           }
         >
           {isSuccess ? (
@@ -931,7 +931,7 @@ function Toast({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">
+          <p className="text-sm font-semibold">
             {isSuccess ? 'Success' : 'Action failed'}
           </p>
           <p className="mt-1 text-sm font-bold leading-6">{message.text}</p>
@@ -943,7 +943,7 @@ function Toast({
             setVisible(false);
             onClose();
           }}
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/70 hover:bg-white"
+          className="grid size-8 shrink-0 place-items-center bg-white/70 hover:bg-white"
           aria-label="Close notification"
         >
           <X className="size-4" />
@@ -968,8 +968,8 @@ function SubmitButton({
       disabled={pending}
       className={
         danger
-          ? 'h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
-          : 'h-11 rounded-2xl bg-black px-5 text-sm font-black text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60'
+          ? 'h-11 bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
+          : 'h-11 bg-black px-5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60'
       }
     >
       {pending ? 'Please wait…' : children}
@@ -986,8 +986,8 @@ function StateMessage({ state }: { state: ActionState }) {
     <div
       className={
         state.ok
-          ? 'rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700'
-          : 'rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700'
+          ? 'border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700'
+          : 'border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700'
       }
     >
       {state.message}
@@ -1013,16 +1013,16 @@ function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`flex max-h-[calc(100dvh-1.5rem)] w-full ${widthClass} flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:rounded-[2rem]`}
+        className={`flex max-h-[calc(100dvh-1.5rem)] w-full ${widthClass} flex-col overflow-hidden bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)] `}
       >
         <div className="shrink-0 border-b border-neutral-100 bg-white px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-black">{title}</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
 
             <button
               type="button"
               onClick={onClose}
-              className="grid size-11 shrink-0 place-items-center rounded-full bg-neutral-100 text-sm font-black hover:bg-neutral-200"
+              className="grid size-11 shrink-0 place-items-center bg-neutral-100 text-sm font-semibold hover:bg-neutral-200"
               aria-label="Close modal"
             >
               ✕
@@ -1157,7 +1157,7 @@ function CreateUserModal({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Full Name
             </label>
             <input
@@ -1166,12 +1166,12 @@ function CreateUserModal({
               value={draft.name}
               onChange={(event) => updateDraft('name', event.target.value)}
               placeholder="Juan Dela Cruz"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Email
             </label>
             <input
@@ -1181,12 +1181,12 @@ function CreateUserModal({
               value={draft.email}
               onChange={(event) => updateDraft('email', event.target.value)}
               placeholder="user@email.com"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Temporary Password
             </label>
             <input
@@ -1197,7 +1197,7 @@ function CreateUserModal({
               value={draft.password}
               onChange={(event) => updateDraft('password', event.target.value)}
               placeholder="At least 8 characters"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
             <p className="mt-1 text-xs text-neutral-500">
               Use at least 8 characters and share it securely with the user.
@@ -1205,7 +1205,7 @@ function CreateUserModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Confirm Password
             </label>
             <input
@@ -1218,19 +1218,19 @@ function CreateUserModal({
                 updateDraft('confirmPassword', event.target.value)
               }
               placeholder="Re-enter temporary password"
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               User Role
             </label>
             <select
               name="role"
               value={draft.role}
               onChange={(event) => updateRole(event.target.value as Role)}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
             >
               {allowedRoles.map((role) => (
                 <option key={role} value={role}>
@@ -1241,7 +1241,7 @@ function CreateUserModal({
           </div>
 
           <div className="md:col-span-2">
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Hotel Access
             </label>
             <select
@@ -1252,7 +1252,7 @@ function CreateUserModal({
                 currentUserRole !== 'SUPER_ADMIN' ||
                 draft.role === 'SUPER_ADMIN'
               }
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
             >
               {currentUserRole === 'SUPER_ADMIN' ? (
                 <option value="">No hotel / Super Admin</option>
@@ -1285,7 +1285,7 @@ function CreateUserModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1383,19 +1383,19 @@ function EditUserModal({
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Full Name
             </label>
             <input
               name="name"
               defaultValue={account.name}
               required
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Email
             </label>
             <input
@@ -1403,12 +1403,12 @@ function EditUserModal({
               type="email"
               defaultValue={account.email}
               required
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               User Role
             </label>
             {isCurrentUser ? (
@@ -1419,7 +1419,7 @@ function EditUserModal({
               value={role}
               disabled={isCurrentUser}
               onChange={(event) => updateRole(event.target.value as Role)}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
             >
               {allowedRoles.map((allowedRole) => (
                 <option key={allowedRole} value={allowedRole}>
@@ -1430,7 +1430,7 @@ function EditUserModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
               Hotel Access
             </label>
             <select
@@ -1438,7 +1438,7 @@ function EditUserModal({
               value={hotelId}
               onChange={(event) => setHotelId(event.target.value)}
               disabled={currentUserRole !== 'SUPER_ADMIN' || role === 'SUPER_ADMIN'}
-              className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+              className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
             >
               {currentUserRole === 'SUPER_ADMIN' ? (
                 <option value="">No hotel / Super Admin</option>
@@ -1472,7 +1472,7 @@ function EditUserModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1522,13 +1522,13 @@ function ResetPasswordModal({
 
         <StateMessage state={state} />
 
-        <div className="rounded-2xl bg-neutral-50 p-4 text-sm">
-          <p className="font-black">{account.name}</p>
+        <div className="bg-neutral-50 p-4 text-sm">
+          <p className="font-semibold">{account.name}</p>
           <p className="text-neutral-500">{account.email}</p>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             New Password
           </label>
           <input
@@ -1537,12 +1537,12 @@ function ResetPasswordModal({
             required
             minLength={8}
             placeholder="At least 8 characters"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-black uppercase text-neutral-500">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
             Confirm Password
           </label>
           <input
@@ -1551,11 +1551,11 @@ function ResetPasswordModal({
             required
             minLength={8}
             placeholder="Re-enter new password"
-            className="h-11 w-full rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
+            className="h-11 w-full border border-neutral-200 bg-white px-4 text-sm font-bold outline-none focus:border-neutral-400"
           />
         </div>
 
-        <div className="rounded-2xl bg-amber-50 p-4 text-xs font-bold text-amber-700">
+        <div className="bg-amber-50 p-4 text-xs font-bold text-amber-700">
           Use at least 8 characters. Share the temporary password securely and
           ask the user to replace it after signing in.
         </div>
@@ -1564,7 +1564,7 @@ function ResetPasswordModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1625,11 +1625,11 @@ function AccountStatusModal({
         <div
           className={
             nextIsActive
-              ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800'
-              : 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800'
+              ? 'border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800'
+              : 'border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800'
           }
         >
-          <p className="font-black">
+          <p className="font-semibold">
             {nextIsActive
               ? 'This user will be allowed to sign in again.'
               : 'This user will immediately lose dashboard access.'}
@@ -1643,7 +1643,7 @@ function AccountStatusModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1694,8 +1694,8 @@ function DeleteUserModal({
 
         <StateMessage state={state} />
 
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          <p className="font-black">This action cannot be undone.</p>
+        <div className="border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-semibold">This action cannot be undone.</p>
           <p className="mt-1">
             You are about to delete <strong>{account.name}</strong> with email{' '}
             <strong>{account.email}</strong>.
@@ -1706,7 +1706,7 @@ function DeleteUserModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 rounded-2xl border border-neutral-200 px-5 text-sm font-black hover:bg-neutral-50"
+            className="h-11 border border-neutral-200 px-5 text-sm font-semibold hover:bg-neutral-50"
           >
             Cancel
           </button>
@@ -1798,13 +1798,13 @@ export function UserAccountSettingsClient({
       <Toast message={toast} onClose={clearToast} />
 
       <div className="space-y-5">
-        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-[#11100b] text-white shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
+        <section className="overflow-hidden border border-neutral-200 bg-[#11100b] text-white">
           <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="inline-flex rounded-full border border-[#c99c38]/30 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-[#f1c66a]">
+              <p className="inline-flex border border-[#c99c38]/30 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f1c66a]">
                 Access Control
               </p>
-              <h2 className="mt-3 text-2xl font-black tracking-tight">
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight">
                 User Account Settings
               </h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/60">
@@ -1816,7 +1816,7 @@ export function UserAccountSettingsClient({
             <button
               type="button"
               onClick={() => setCreatingUser(true)}
-              className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#d6a738] px-5 text-sm font-black text-black shadow-[0_14px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
+              className="inline-flex h-11 items-center justify-center bg-[#d6a738] px-5 text-sm font-semibold text-black shadow-[0_14px_35px_rgba(214,167,56,0.25)] transition hover:bg-[#f1c66a]"
             >
               Create New User
             </button>
@@ -1824,40 +1824,40 @@ export function UserAccountSettingsClient({
 
           <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
             <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d6a738]">
                 Users
               </p>
-              <p className="mt-1 text-2xl font-black">{users.length}</p>
+              <p className="mt-1 text-2xl font-semibold">{users.length}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Total accounts
               </p>
             </div>
 
             <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d6a738]">
                 Admins
               </p>
-              <p className="mt-1 text-2xl font-black">{adminCount}</p>
+              <p className="mt-1 text-2xl font-semibold">{adminCount}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Admin-level accounts
               </p>
             </div>
 
             <div className="border-b border-white/10 p-4 sm:border-b-0 sm:border-r">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d6a738]">
                 Active
               </p>
-              <p className="mt-1 text-2xl font-black">{activeCount}</p>
+              <p className="mt-1 text-2xl font-semibold">{activeCount}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Accounts allowed to sign in
               </p>
             </div>
 
             <div className="p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#d6a738]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d6a738]">
                 Needs Review
               </p>
-              <p className="mt-1 text-2xl font-black">{zeroAccessCount}</p>
+              <p className="mt-1 text-2xl font-semibold">{zeroAccessCount}</p>
               <p className="mt-1 text-xs font-semibold text-white/45">
                 Active accounts with no saved access · {inactiveCount} inactive
               </p>
@@ -1865,22 +1865,22 @@ export function UserAccountSettingsClient({
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-neutral-200 bg-white p-5 shadow-sm">
+        <section className="border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_170px_210px_170px]">
             <label className="grid gap-1">
-              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Search Users
               </span>
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search name, email, role, or hotel..."
-                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-11 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               />
             </label>
 
             <label className="grid gap-1">
-              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Role
               </span>
               <select
@@ -1888,7 +1888,7 @@ export function UserAccountSettingsClient({
                 onChange={(event) =>
                   setRoleFilter(event.target.value as 'ALL' | Role)
                 }
-                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-11 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               >
                 <option value="ALL">All Roles</option>
                 {allowedRoles.map((role) => (
@@ -1900,13 +1900,13 @@ export function UserAccountSettingsClient({
             </label>
 
             <label className="grid gap-1">
-              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Hotel
               </span>
               <select
                 value={hotelFilter}
                 onChange={(event) => setHotelFilter(event.target.value)}
-                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-11 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               >
                 <option value="ALL">All Hotels</option>
                 <option value="NONE">No Hotel Assigned</option>
@@ -1920,7 +1920,7 @@ export function UserAccountSettingsClient({
 
 
             <label className="grid gap-1">
-              <span className="text-xs font-black uppercase tracking-wide text-neutral-500">
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 Status
               </span>
               <select
@@ -1930,7 +1930,7 @@ export function UserAccountSettingsClient({
                     event.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE'
                   )
                 }
-                className="h-11 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
+                className="h-11 border border-neutral-200 bg-white px-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="ACTIVE">Active</option>
@@ -1940,10 +1940,10 @@ export function UserAccountSettingsClient({
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
+        <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
           <div className="flex flex-col gap-2 border-b border-neutral-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-lg font-black">User Directory</h2>
+              <h2 className="text-lg font-semibold">User Directory</h2>
               <p className="text-sm font-semibold text-neutral-500">
                 Showing {filteredUsers.length} of {users.length} accounts.
                 Overview is always kept visible as a safe login landing page.
@@ -1955,22 +1955,22 @@ export function UserAccountSettingsClient({
             <table className="w-full min-w-[1080px] text-left">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     User
                   </th>
-                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Role
                   </th>
-                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Hotel
                   </th>
-                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Status
                   </th>
-                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Access
                   </th>
-                  <th scope="col" className="px-5 py-3 text-xs font-black uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Actions
                   </th>
                 </tr>
@@ -1990,7 +1990,7 @@ export function UserAccountSettingsClient({
                   return (
                     <tr key={account.id} className="border-t border-neutral-100">
                       <td className="px-5 py-4">
-                        <p className="font-black text-[#11100b]">
+                        <p className="font-semibold text-[#11100b]">
                           {account.name}
                         </p>
                         <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -1999,7 +1999,7 @@ export function UserAccountSettingsClient({
                       </td>
 
                       <td className="px-5 py-4">
-                        <span className="inline-flex rounded-full bg-[#fff8e7] px-3 py-1 text-xs font-black text-[#9a6b18]">
+                        <span className="inline-flex bg-[#fff8e7] px-3 py-1 text-xs font-semibold text-[#9a6b18]">
                           {roleLabels[account.role]}
                         </span>
                       </td>
@@ -2012,8 +2012,8 @@ export function UserAccountSettingsClient({
                         <span
                           className={
                             account.isActive
-                              ? 'inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700'
-                              : 'inline-flex rounded-full bg-neutral-200 px-3 py-1 text-xs font-black text-neutral-600'
+                              ? 'inline-flex bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'
+                              : 'inline-flex bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-600'
                           }
                         >
                           {account.isActive ? 'Active' : 'Inactive'}
@@ -2021,7 +2021,7 @@ export function UserAccountSettingsClient({
                       </td>
 
                       <td className="px-5 py-4">
-                        <p className="text-sm font-black text-[#11100b]">
+                        <p className="text-sm font-semibold text-[#11100b]">
                           {visibleModules} visible modules
                         </p>
                         <p
@@ -2042,7 +2042,7 @@ export function UserAccountSettingsClient({
                           <button
                             type="button"
                             onClick={() => setEditingUser(account)}
-                            className="h-9 rounded-xl border border-neutral-200 px-3 text-xs font-black hover:bg-neutral-50"
+                            className="h-9 border border-neutral-200 px-3 text-xs font-semibold hover:bg-neutral-50"
                           >
                             Edit
                           </button>
@@ -2050,7 +2050,7 @@ export function UserAccountSettingsClient({
                           <button
                             type="button"
                             onClick={() => setResetPasswordUser(account)}
-                            className="h-9 rounded-xl bg-black px-3 text-xs font-black text-white hover:bg-neutral-800"
+                            className="h-9 bg-black px-3 text-xs font-semibold text-white hover:bg-neutral-800"
                           >
                             Reset Password
                           </button>
@@ -2061,8 +2061,8 @@ export function UserAccountSettingsClient({
                               onClick={() => setStatusUser(account)}
                               className={
                                 account.isActive
-                                  ? 'h-9 rounded-xl bg-amber-500 px-3 text-xs font-black text-black hover:bg-amber-400'
-                                  : 'h-9 rounded-xl bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-700'
+                                  ? 'h-9 bg-amber-500 px-3 text-xs font-semibold text-black hover:bg-amber-400'
+                                  : 'h-9 bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700'
                               }
                             >
                               {account.isActive ? 'Deactivate' : 'Activate'}
@@ -2073,7 +2073,7 @@ export function UserAccountSettingsClient({
                             <button
                               type="button"
                               onClick={() => setDeletingUser(account)}
-                              className="h-9 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-700"
+                              className="h-9 bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700"
                             >
                               Delete
                             </button>

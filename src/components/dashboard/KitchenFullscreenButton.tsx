@@ -48,7 +48,7 @@ export function KitchenFullscreenButton({
     <button
       type="button"
       onClick={toggleFullscreen}
-      className="inline-flex h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-black text-neutral-900 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
+      className="inline-flex h-11 items-center gap-2 border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-900 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
     >
       {isFullscreen ? (
         <Minimize2 className="size-4" />
