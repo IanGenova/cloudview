@@ -10,7 +10,6 @@ import {
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  ChefHat,
   ChevronRight,
   Clock3,
   BedDouble,
@@ -21,11 +20,8 @@ import {
   Plus,
   CreditCard,
   QrCode,
-  ReceiptText,
   Search,
   ShoppingBag,
-  Sparkles,
-  Trash2,
   Utensils,
   X,
 } from 'lucide-react';
@@ -367,6 +363,21 @@ function BundleSavings({
   );
 }
 
+/*
+ * The checkout fields that can reject an order, and the ids the error binds
+ * to. Keeping them in one place is what lets a failure move focus to the box
+ * it is about rather than leaving the guest to find it.
+ */
+type CheckoutField = 'name' | 'phone' | 'room' | 'passcode' | 'confirm';
+
+const CHECKOUT_FIELD_IDS: Record<CheckoutField, string> = {
+  name: 'menu-ordered-by',
+  phone: 'menu-phone-number',
+  room: 'menu-room-number',
+  passcode: 'menu-room-passcode',
+  confirm: 'menu-confirm-order-type',
+};
+
 function buildOrderNotes({
   orderType,
   notes,
@@ -429,6 +440,33 @@ export function MenuClient({
 const [scheduledDate, setScheduledDate] = useState('');
 const [scheduledTime, setScheduledTime] = useState('');
 const [scheduledNote, setScheduledNote] = useState('');
+
+  /*
+   * IX-6. Every failure used to arrive as one sentence in a banner at the foot
+   * of the form, with nothing on the field it was about: the guest read "Please
+   * enter a valid guest phone number" below the Place Order button and had to
+   * scroll back up and guess which box it meant. The banner stays — it is the
+   * thing a screen reader announces — but the message is also attached to the
+   * field, which takes focus.
+   */
+  const [fieldError, setFieldError] = useState<{ field: CheckoutField; message: string } | null>(null);
+
+  function fail(field: CheckoutField, message: string) {
+    setError(message);
+    setFieldError({ field, message });
+
+    const id = CHECKOUT_FIELD_IDS[field];
+    window.requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (el as HTMLElement).focus({ preventScroll: true });
+    });
+  }
+
+  function errorFor(field: CheckoutField) {
+    return fieldError?.field === field ? fieldError.message : null;
+  }
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1087,6 +1125,7 @@ const [scheduledNote, setScheduledNote] = useState('');
 
   function submit() {
     setError(null);
+    setFieldError(null);
 
     if (existingXenditSession) {
       setError(
@@ -1122,29 +1161,29 @@ const [scheduledNote, setScheduledNote] = useState('');
     }
 
     if (guestName.trim().length < 2) {
-      setError('Please enter the guest name.');
+      fail('name', 'Enter the name this order is for.');
       return;
     }
 
     const phoneDigits = guestPhone.replace(/\D/g, '');
 
     if (phoneDigits.length < 7 || phoneDigits.length > 15) {
-      setError('Please enter a valid guest phone number.');
+      fail('phone', 'Enter a phone number staff can reach you on, 7 to 15 digits.');
       return;
     }
 
     if (requiresRoomVerification && !roomNumber.trim()) {
-      setError('Please enter the room number for delivery or room charging.');
+      fail('room', 'Enter the room number this order is going to.');
       return;
     }
 
     if (requiresRoomVerification && !/^\d{6}$/.test(roomPasscode.trim())) {
-      setError('Please enter the six-digit room passcode.');
+      fail('passcode', 'Enter the six-digit passcode for that room.');
       return;
     }
 
     if (!confirmedClause) {
-      setError('Please confirm the order type before placing your order.');
+      fail('confirm', 'Confirm the order type before placing your order.');
       return;
     }
 
@@ -1251,6 +1290,20 @@ const [scheduledNote, setScheduledNote] = useState('');
     clearCheckoutDraft();
   }
 
+  /*
+   * Emptying the cart cannot be undone — the draft goes with it — so it asks
+   * first, and the question names what is about to be lost.
+   */
+  function askBeforeClearingCart() {
+    const what = `${itemCount} item${itemCount === 1 ? '' : 's'} · ${money(total, currency)}`;
+
+    if (!window.confirm(`Remove everything from this order?\n\n${what}\n\nYou will need to choose the dishes again.`)) {
+      return;
+    }
+
+    clearCart();
+  }
+
   if (screen === 'cart') {
     return (
       <div className="-mx-5 -mt-3 min-h-[calc(100vh-5rem)] bg-[#070706] px-5 pb-32 pt-3 text-white">
@@ -1285,11 +1338,8 @@ const [scheduledNote, setScheduledNote] = useState('');
             <ArrowLeft className="size-5" />
           </button>
 
-          <div className="min-w-0 flex-1 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
-              Final step
-            </p>
-            <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-serif text-2xl font-normal tracking-wide text-white">
               Review your order
             </h2>
             <p className="mt-1 text-xs font-medium text-white/45">
@@ -1297,18 +1347,13 @@ const [scheduledNote, setScheduledNote] = useState('');
             </p>
           </div>
 
-          {cart.length > 0 ? (
-            <button
-              type="button"
-              onClick={clearCart}
-              className="grid size-11 shrink-0 place-items-center border border-red-400/15 bg-red-500/10 text-red-200 transition hover:bg-red-500/20"
-              aria-label="Clear cart"
-            >
-              <Trash2 className="size-4.5" />
-            </button>
-          ) : (
-            <div className="size-11" />
-          )}
+          {/*
+            IX-7. Emptying the cart used to be a 44px icon button in the
+            top-right corner, the mirror image of the back arrow in the
+            top-left, and it fired on the first tap. It is a word now, it sits
+            under the list it empties rather than beside the way out, and it
+            asks.
+          */}
         </div>
 
         {cart.length === 0 ? (
@@ -1336,18 +1381,15 @@ const [scheduledNote, setScheduledNote] = useState('');
         ) : (
           <>
             <section className="overflow-hidden border border-white/10 bg-white/[0.04]">
-              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
-                    Selected dishes
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-white/55">
-                    Adjust quantities before checkout
-                  </p>
-                </div>
-                <span className="bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">
-                  {itemCount}
-                </span>
+              {/*
+                An eyebrow, a sentence telling the guest what the controls
+                below it do, and a count the header three inches above already
+                gives. One heading.
+              */}
+              <div className="border-b border-white/10 px-5 py-4">
+                <h3 className="font-serif text-xl font-normal tracking-wide text-white">
+                  Selected dishes
+                </h3>
               </div>
 
               <div className="divide-y divide-white/10">
@@ -1388,13 +1430,13 @@ const [scheduledNote, setScheduledNote] = useState('');
                             onTap={() =>
                               updateQty(item.productId, item.quantity - 1)
                             }
-                            className="grid size-8 place-items-center text-white/65 transition hover:bg-white/10 hover:text-white"
+                            className="grid size-11 place-items-center text-white/65 transition hover:bg-white/10 hover:text-white"
                             aria-label={`Decrease ${product.name}`}
                           >
-                            <Minus className="size-3.5" />
+                            <Minus className="size-4" />
                           </TapButton>
 
-                          <span className="min-w-8 text-center text-sm font-semibold text-white">
+                          <span className="min-w-10 text-center text-base font-semibold tabular-nums text-white">
                             {item.quantity}
                           </span>
 
@@ -1403,10 +1445,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                               updateQty(item.productId, item.quantity + 1)
                             }
                             disabled={!canIncrease}
-                            className="grid size-8 place-items-center text-white/65 transition hover:bg-white/10 hover:text-white"
+                            className="grid size-11 place-items-center text-white/65 transition hover:bg-white/10 hover:text-white"
                             aria-label={`Increase ${product.name}`}
                           >
-                            <Plus className="size-3.5" />
+                            <Plus className="size-4" />
                           </TapButton>
                         </div>
                       </div>
@@ -1414,7 +1456,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                       <div className="flex flex-col items-end justify-between gap-3">
                         <TapButton
                           onTap={() => updateQty(item.productId, 0)}
-                          className="grid size-9 place-items-center text-white/35 transition hover:bg-red-500/10 hover:text-red-200"
+                          className="grid size-11 place-items-center text-white/40 transition hover:bg-red-500/10 hover:text-red-200"
                           aria-label={`Remove ${product.name}`}
                         >
                           <X className="size-4" />
@@ -1427,49 +1469,62 @@ const [scheduledNote, setScheduledNote] = useState('');
                   );
                 })}
               </div>
+
+              {cart.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={askBeforeClearingCart}
+                  className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-white/45 underline-offset-4 transition hover:text-red-200 hover:underline"
+                >
+                  Remove all items
+                </button>
+              ) : null}
             </section>
 
             <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
-              <div className="mb-5 flex items-center gap-3">
-                <span className="grid size-11 place-items-center bg-gold/15 text-gold">
-                  <ReceiptText className="size-5" />
-                </span>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
-                    Guest details
-                  </p>
-                  <h3 className="mt-1 font-serif text-xl font-normal tracking-wide text-white">
-                    Delivery preferences
-                  </h3>
-                </div>
-              </div>
+              <h3 className="mb-5 font-serif text-xl font-normal tracking-wide text-white">
+                Delivery preferences
+              </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="menu-ordered-by" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                    Ordered by
+                  <label htmlFor="menu-ordered-by" className="mb-2 flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                    <span>Ordered by</span>
+                    <span className="text-white/35">Required</span>
                   </label>
                   <input
             id="menu-ordered-by"
                     type="text"
                     autoComplete="name"
                     required
+                    aria-invalid={errorFor('name') ? true : undefined}
+                    aria-describedby="menu-ordered-by-note"
                     placeholder="Guest name"
                     value={guestName}
                     onChange={(event) =>
                       setGuestName(event.currentTarget.value)
                     }
-                    className={cn(checkoutFieldClass, 'h-14')}
+                    className={cn(checkoutFieldClass, 'h-14', errorFor('name') && '!border-red-400/70')}
                     style={checkoutFieldStyle}
                   />
-                  <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-                    Auto-filled from the active stay. Confirm the name before ordering.
+                  {/*
+                    IX-5. This said "Auto-filled from the active stay" under a
+                    box that was empty, because this NFC panel is a public
+                    location with no stay attached to it. It only says so when
+                    it is true.
+                  */}
+                  <p id="menu-ordered-by-note" className={cn('mt-2 text-xs font-medium leading-5', errorFor('name') ? 'text-red-200' : 'text-white/40')}>
+                    {errorFor('name') ??
+                      (defaultGuestName
+                        ? 'Taken from your stay. Change it if someone else is ordering.'
+                        : 'So staff know who to hand the order to.')}
                   </p>
                 </div>
 
                 <div>
-                  <label htmlFor="menu-phone-number" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                    Phone number
+                  <label htmlFor="menu-phone-number" className="mb-2 flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                    <span>Phone number</span>
+                    <span className="text-white/35">Required</span>
                   </label>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
@@ -1479,15 +1534,20 @@ const [scheduledNote, setScheduledNote] = useState('');
                       inputMode="tel"
                       autoComplete="tel"
                       required
+                      aria-invalid={errorFor('phone') ? true : undefined}
+                      aria-describedby="menu-phone-number-note"
                       placeholder="09XX XXX XXXX"
                       value={guestPhone}
                       onChange={(event) => setGuestPhone(event.currentTarget.value)}
-                      className={cn(checkoutFieldClass, 'h-14 pl-11')}
+                      className={cn(checkoutFieldClass, 'h-14 pl-11', errorFor('phone') && '!border-red-400/70')}
                       style={checkoutFieldStyle}
                     />
                   </div>
-                  <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-                    Required so hotel staff can contact you about this order.
+                  <p id="menu-phone-number-note" className={cn('mt-2 text-xs font-medium leading-5', errorFor('phone') ? 'text-red-200' : 'text-white/40')}>
+                    {errorFor('phone') ??
+                      (defaultGuestPhone
+                        ? 'Taken from your stay. Staff call this number about the order.'
+                        : 'So hotel staff can reach you about this order.')}
                   </p>
                 </div>
 
@@ -1682,20 +1742,23 @@ const [scheduledNote, setScheduledNote] = useState('');
                     {requiresRoomVerification ? (
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <input
+                          id="menu-room-number"
                           type="text"
                           inputMode="text"
                           autoComplete="off"
                           required
                           aria-label="Room number"
+                          aria-invalid={errorFor('room') ? true : undefined}
                           placeholder="Room number"
                           value={roomNumber}
                           onChange={(event) => setRoomNumber(event.currentTarget.value)}
-                          className={cn(checkoutFieldClass, 'h-14')}
+                          className={cn(checkoutFieldClass, 'h-14', errorFor('room') && '!border-red-400/70')}
                           style={checkoutFieldStyle}
                         />
                         <div className="relative">
                           <KeyRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
                           <input
+                            id="menu-room-passcode"
                             type="password"
                             inputMode="numeric"
                             pattern="[0-9]{6}"
@@ -1703,15 +1766,22 @@ const [scheduledNote, setScheduledNote] = useState('');
                             autoComplete="one-time-code"
                             required
                             aria-label="Six-digit room passcode"
+                            aria-invalid={errorFor('passcode') ? true : undefined}
                             placeholder="6-digit passcode"
                             value={roomPasscode}
                             onChange={(event) =>
                               setRoomPasscode(event.currentTarget.value.replace(/\D/g, '').slice(0, 6))
                             }
-                            className={cn(checkoutFieldClass, 'h-14 pl-11 font-mono tracking-[0.18em]')}
+                            className={cn(checkoutFieldClass, 'h-14 pl-11 font-mono tracking-[0.18em]', errorFor('passcode') && '!border-red-400/70')}
                             style={checkoutFieldStyle}
                           />
                         </div>
+
+                        {errorFor('room') || errorFor('passcode') ? (
+                          <p className="text-xs font-medium leading-5 text-red-200 sm:col-span-2">
+                            {errorFor('room') ?? errorFor('passcode')}
+                          </p>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -1730,46 +1800,49 @@ const [scheduledNote, setScheduledNote] = useState('');
                   style={checkoutFieldStyle}
                 />
 
-                <label className="flex cursor-pointer items-start gap-3 border border-gold/15 bg-gold/[0.07] p-4 text-sm font-semibold leading-6 text-gold/90 transition hover:bg-gold/10">
-                  <input
-                    type="checkbox"
-                    checked={confirmedClause}
-                    onChange={(event) =>
-                      setConfirmedClause(event.target.checked)
-                    }
-                    className="mt-1 size-5 shrink-0 border border-gold/50 bg-black accent-[#d6a738]"
-                  />
-                  <span>
-                    I confirm this order is for{' '}
-                    <b className="text-white">{orderTypeLabels[orderType]}</b>.
-                  </span>
-                </label>
-              </div>
-            </section>
+                <div>
+                  <label
+                    htmlFor="menu-confirm-order-type"
+                    className={cn(
+                      'flex min-h-11 cursor-pointer items-start gap-3 border p-4 text-sm font-semibold leading-6 transition',
+                      errorFor('confirm')
+                        ? 'border-red-400/70 bg-red-500/10 text-red-100'
+                        : 'border-gold/15 bg-gold/[0.07] text-gold/90 hover:bg-gold/10'
+                    )}
+                  >
+                    <input
+                      id="menu-confirm-order-type"
+                      type="checkbox"
+                      required
+                      checked={confirmedClause}
+                      aria-invalid={errorFor('confirm') ? true : undefined}
+                      onChange={(event) =>
+                        setConfirmedClause(event.target.checked)
+                      }
+                      className="mt-0.5 size-6 shrink-0 border border-gold/50 bg-black accent-[#d6a738]"
+                    />
+                    <span>
+                      I confirm this order is for{' '}
+                      <b className="text-white">{orderTypeLabels[orderType]}</b>.
+                    </span>
+                  </label>
 
-            <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
-              <div className="flex items-center gap-3">
-                <span className="grid size-11 place-items-center bg-gold/15 text-gold">
-                  <Sparkles className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
-                    CloudView Rewards
-                  </p>
-                  <p className="mt-1 text-sm font-semibold leading-5 text-white/65">
-                    Link your rewards profile before checkout to earn points.
-                  </p>
+                  {errorFor('confirm') ? (
+                    <p className="mt-2 text-xs font-medium leading-5 text-red-200">
+                      {errorFor('confirm')}
+                    </p>
+                  ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/t/${tagCode}/rewards`)}
-                  className="shrink-0 border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold transition hover:bg-gold/20"
-                >
-                  View
-                </button>
               </div>
             </section>
 
+            {/*
+              IX-4. A filled gold rewards panel stood here, and a second one
+              above the menu, so the checkout had two calls to action
+              competing with the one that places the order. The single line
+              the page carries above this client covers both screens; the gold
+              belongs to Place Order.
+            */}
             <section className="mt-5 border border-gold/20 bg-[linear-gradient(145deg,rgba(214,167,56,0.14),rgba(255,255,255,0.035))] p-5">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between gap-4 text-white/55">
@@ -1803,8 +1876,14 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
               </div>
 
+              {/*
+                The banner stays — it is what a screen reader announces, and it
+                carries the failures that belong to no single field — but every
+                failure that does belong to one is now also written at that
+                field, which takes focus. IX-6.
+              */}
               {error ? (
-                <p className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
+                <p role="alert" className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-sm font-semibold text-red-200">
                   {error}
                 </p>
               ) : null}
@@ -1830,9 +1909,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                     : 'Submitting...'
                 ) : (
                   <>
+                    {/* The control that commits the money says how much. */}
                     {paymentMethod === 'XENDIT'
-                      ? 'Continue to Secure Payment'
-                      : 'Place Order'}
+                      ? `Pay ${money(total, currency)} securely`
+                      : `Place order · ${money(total, currency)}`}
                     {paymentMethod === 'XENDIT' ? (
                       <CreditCard className="size-4.5" />
                     ) : (
@@ -1871,82 +1951,52 @@ const [scheduledNote, setScheduledNote] = useState('');
           onRefresh={() => void refreshExistingFoodPayment()}
           onCancel={() => void cancelExistingFoodPayment()}
         />
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(`/t/${tagCode}`)}
-          className="grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/10 hover:text-white"
-          aria-label="Back"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-
-        <div className="min-w-0 flex-1 px-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
-            In-room dining
-          </p>
-          <p className="mt-1 truncate font-serif text-xl font-normal tracking-wide text-white">
-            Curated for your stay
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openCart}
-          className="relative grid size-11 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/10"
-          aria-label="Open cart"
-        >
-          <ShoppingBag className="size-5" />
-          {itemCount > 0 ? (
-            <span className="absolute -right-1 -top-1 grid size-5 place-items-center bg-gold text-[10px] font-semibold text-black ring-2 ring-black">
-              {itemCount}
-            </span>
-          ) : null}
-        </button>
-      </div>
-
-      <section className="mb-5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_34%),linear-gradient(145deg,#161512,#0b0b0a)] p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
-              <ChefHat className="size-3.5" />
-              Hotel dining
-            </div>
-            <h2 className="mt-4 max-w-[16rem] font-serif text-[2rem] font-normal leading-[1.05] tracking-tight text-white">
-              Delicious moments, delivered.
-            </h2>
-            <p className="mt-3 max-w-xs text-sm font-medium leading-6 text-white/55">
-              Browse available dishes, bundles, and room-service favourites.
-            </p>
+      {/*
+        CP-1. The shell above already carries a back arrow and says "Order Food"
+        and where you are, so the second back arrow and the second title —
+        "In-room dining / Curated for your stay" — were the third and fourth
+        statements of location before any food. The hero card that followed
+        them was the largest type on the screen at 32px, telling the guest they
+        could browse dishes on a screen whose only purpose is browsing dishes.
+        Both gone; the cart moved into the bar that is already sticky, so it is
+        reachable the whole way down the menu instead of scrolling away.
+      */}
+      <div className="sticky top-[4.5rem] z-40 -mx-1 mb-6 border border-white/10 bg-black/85 p-2 backdrop-blur-xl">
+        <div className="flex items-center gap-2">
+          <div className="flex h-12 min-w-0 flex-1 items-center gap-3 bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
+            <Search className="size-4.5 shrink-0 text-gold" />
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              aria-label="Search dishes, bundles, or categories"
+              placeholder="Search dishes, bundles, or categories"
+              className="h-full w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/35"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="grid size-11 shrink-0 place-items-center text-white/40 transition hover:bg-white/10 hover:text-white"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
           </div>
 
-          <span className="grid size-14 shrink-0 place-items-center border border-white/10 bg-white/[0.05] text-gold">
-            <Utensils className="size-6" strokeWidth={1.5} />
-          </span>
-        </div>
-
-      </section>
-
-      <div className="sticky top-[4.5rem] z-40 -mx-1 mb-6 border border-white/10 bg-black/85 p-2 backdrop-blur-xl">
-        <div className="flex h-12 items-center gap-3 bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
-          <Search className="size-4.5 shrink-0 text-gold" />
-          <input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            aria-label="Search dishes, bundles, or categories"
-            placeholder="Search dishes, bundles, or categories"
-            className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/35"
-          />
-          {searchQuery ? (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="grid size-8 shrink-0 place-items-center text-white/40 transition hover:bg-white/10 hover:text-white"
-              aria-label="Clear search"
-            >
-              <X className="size-4" />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative grid size-12 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/10"
+            aria-label="Open cart"
+          >
+            <ShoppingBag className="size-5" />
+            {itemCount > 0 ? (
+              <span className="absolute -right-1 -top-1 grid size-5 place-items-center bg-gold text-[10px] font-semibold text-black ring-2 ring-black">
+                {itemCount}
+              </span>
+            ) : null}
+          </button>
         </div>
 
         <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -2004,43 +2054,48 @@ const [scheduledNote, setScheduledNote] = useState('');
 
       {featured ? (
         <section className="mb-7">
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
-                Chef’s selection
-              </p>
-              <h3 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-                Recommended for you
-              </h3>
-            </div>
-            <Sparkles className="size-5 text-gold" />
-          </div>
+          {/*
+            "Chef's selection" above "Recommended for you" said the same thing
+            twice, and the sparkle said it a third time. One line.
+          */}
+          <h3 className="mb-3 font-serif text-2xl font-normal tracking-wide text-white">
+            Chef&rsquo;s selection
+          </h3>
 
           <article className="relative isolate overflow-hidden border border-white/10 bg-white/[0.045]">
+            {/*
+              A11Y-2, the blocker. The dish name was white, 24px, set straight
+              on the photograph with a gradient that is transparent by the
+              midpoint. Measured against the real image at the size it renders:
+              1.01:1 over the lightest pixel beneath the text and 3.43:1 over
+              the mean — unreadable on a pale dish and below the floor even on
+              average. The name and the price now sit on the card's own
+              surface, where the ratio is a property of the design rather than
+              of whichever photograph the hotel uploaded. The category keeps its
+              place on the image: it has its own opaque plate behind it.
+            */}
             <div className="relative">
               <ProductImage
                 product={featured}
                 className="h-40 w-full sm:h-48"
               />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="line-clamp-2 font-serif text-2xl font-normal leading-tight tracking-wide text-white">
-                    {featured.name}
-                  </p>
-                  <p className="mt-1 text-base font-semibold text-gold">
-                    {simpleMoney(featured.priceCents, currency)}
-                  </p>
-                </div>
-                <span className="shrink-0 border border-white/15 bg-black/50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/80 backdrop-blur">
-                  {featured.categoryName}
-                </span>
-              </div>
+              <span className="absolute right-3 top-3 border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
+                {featured.categoryName}
+              </span>
             </div>
 
             <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <h4 className="min-w-0 font-serif text-2xl font-normal leading-tight tracking-wide text-white">
+                  {featured.name}
+                </h4>
+                <p className="shrink-0 font-serif text-2xl font-normal tabular-nums text-gold">
+                  {simpleMoney(featured.priceCents, currency)}
+                </p>
+              </div>
+
               {featured.description ? (
-                <p className="line-clamp-2 text-sm font-medium leading-6 text-white/55">
+                <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-white/55">
                   {featured.description}
                 </p>
               ) : null}
@@ -2076,7 +2131,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                       onTap={() =>
                         updateQty(featured.id, getCartQuantity(featured.id) - 1)
                       }
-                      className="grid size-9 place-items-center text-gold hover:bg-gold/10"
+                      className="grid size-11 place-items-center text-gold hover:bg-gold/10"
                       aria-label={`Decrease ${featured.name}`}
                     >
                       <Minus className="size-4" />
@@ -2091,7 +2146,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                         getCartQuantity(featured.id) >=
                           getProductAvailableQty(featured)
                       }
-                      className="grid size-9 place-items-center bg-gold text-black"
+                      className="grid size-11 place-items-center bg-gold text-black"
                       aria-label={`Increase ${featured.name}`}
                     >
                       <Plus className="size-4" />
@@ -2118,15 +2173,10 @@ const [scheduledNote, setScheduledNote] = useState('');
       ) : null}
 
       <section>
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
-              Explore menu
-            </p>
-            <h3 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-              {activeCategory === 'All' ? 'All dishes' : activeCategory}
-            </h3>
-          </div>
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <h3 className="font-serif text-2xl font-normal tracking-wide text-white">
+            {activeCategory === 'All' ? 'All dishes' : activeCategory}
+          </h3>
           <p className="text-xs font-bold text-white/35">
             {/*
              * The category chips count every dish, but this grid excludes
@@ -2164,7 +2214,11 @@ const [scheduledNote, setScheduledNote] = useState('');
                   />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
 
-                  <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-1.25rem)] truncate border border-white/10 bg-black/55 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-white/70 backdrop-blur">
+                  {/*
+                    A11Y-2 again, in miniature: a 55% plate under 70% white is
+                    still partly the photograph. Opaque enough to be a surface.
+                  */}
+                  <span className="absolute left-2.5 top-2.5 max-w-[calc(100%-1.25rem)] truncate border border-white/10 bg-black/75 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
                     {product.categoryName}
                   </span>
 
@@ -2214,12 +2268,12 @@ const [scheduledNote, setScheduledNote] = useState('');
                         <div className="flex shrink-0 items-center border border-gold/25 bg-gold/10 p-0.5">
                           <TapButton
                             onTap={() => updateQty(product.id, quantity - 1)}
-                            className="grid size-8 place-items-center text-gold"
+                            className="grid size-11 place-items-center text-gold"
                             aria-label={`Decrease ${product.name}`}
                           >
-                            <Minus className="size-3.5" />
+                            <Minus className="size-4" />
                           </TapButton>
-                          <span className="min-w-6 text-center text-xs font-semibold text-white">
+                          <span className="min-w-8 text-center text-sm font-semibold tabular-nums text-white">
                             {quantity}
                           </span>
                           <TapButton
@@ -2227,10 +2281,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                             disabled={
                               soldOut || quantity >= getProductAvailableQty(product)
                             }
-                            className="grid size-8 place-items-center bg-gold text-black"
+                            className="grid size-11 place-items-center bg-gold text-black"
                             aria-label={`Increase ${product.name}`}
                           >
-                            <Plus className="size-3.5" />
+                            <Plus className="size-4" />
                           </TapButton>
                         </div>
                       ) : (

@@ -760,3 +760,88 @@ Reject button was cut in half. It was caught by looking at the capture, which is
 captures are for.
 
 Wakes since commit: 0.
+
+## Phase: uiux-B-guest-spine (5 October 2026) — Full
+
+Owner: "now continue with group B". Arrival, menu, cart, checkout and confirmation — the
+path a guest actually walks. Tracking is deliberately untouched: the audit lists its
+waiting discipline and its state copy under What is kept.
+
+### Acceptance criteria
+- [x] B1 The dish name is off the photograph. Measured against the real image at the size
+      it renders, sampling the pixels directly beneath the text: white over the lightest
+      pixel was **1.00:1** on a pale dish and **2.14:1** on a darker one, 9.24:1 at the mean
+      — the ratio was a property of whichever photograph the hotel had uploaded, which is
+      the defect. The name and price now sit on the card's own surface, composited
+      rgb(16, 16, 16): **19.06:1**. The category keeps its place on the image and its plate
+      went from 55% to 75% black under full white.
+      by artifact: `.flow/uiux/2026-10-02/applied/B-measured.json`
+      from: UIUX-2026-10-02 § Accessibility — A11Y-2 (BLOCKER)
+- [x] B2 The guest reaches the first dish within one screen. A filled gold rewards panel, a
+      second back arrow, a second title and a hero card stood between the top of the menu
+      and the food. Measured on a 390×844 phone: first dish at **904px -> 546px**, page
+      **2,102 -> 1,646px**, headings **5 -> 3**, largest type **32px "Delicious moments,
+      delivered." -> 24px "Chef's selection"**. The cart moved into the bar that was
+      already sticky, so it no longer scrolls away.
+      by artifact: `.flow/uiux/2026-10-02/applied/B-b02-menu--mobile--light.png`
+      from: UIUX-2026-10-02 § Content and copy — CP-1, § Visual hierarchy — VH-2
+- [x] B3 The rewards upsell stops wearing the primary colour, and there is one of it. The
+      menu carried a filled gold panel with a 24px heading and a gold button; the checkout
+      carried a second. Both are a line and a text link now, and the only filled gold
+      control on the checkout is the one that places the order.
+      from: UIUX-2026-10-02 § Interaction design — IX-4
+- [x] B4 The checkout stops claiming something untrue. "Auto-filled from the active stay"
+      sat under an empty box, because this NFC panel is a public location with no stay
+      attached to it. It says that only when the stay actually supplied the value, and
+      otherwise says what the field is for.
+      from: UIUX-2026-10-02 § Interaction design — IX-5
+- [x] B5 A rejected order says what is wrong at the field it is wrong at. Driven through
+      the product with the name empty: focus moves to `menu-ordered-by`, the field carries
+      `aria-invalid="true"`, the message is written beneath it in red, the `role="alert"`
+      banner still carries it for a screen reader, and two fields show a visible "Required".
+      Fields marked required **4 -> 5**, fields with a description **0 -> 2**.
+      by artifact: `.flow/uiux/2026-10-02/applied/B-measured.json`
+      from: UIUX-2026-10-02 § Interaction design — IX-6
+- [x] B6 Emptying the cart asks first and stops being a twin of the way out. It was a 44px
+      icon button mirroring the back arrow and it fired on the first tap. It is now a word
+      under the list it empties, and it asks: "Remove everything from this order? · 1 item ·
+      ₱463.60 · You will need to choose the dishes again." Dismissed, the cart still held
+      its dish. by artifact: `.flow/uiux/2026-10-02/applied/B-measured.json`
+      from: UIUX-2026-10-02 § Interaction design — IX-7
+- [x] B7 Quantity controls are thumb-sized. Across 24 captures of eight guest routes, tap
+      targets under 44px went **57 -> 12**. The cart's own controls went 32px and 36px to
+      44px; the guide's Wi-Fi reveal and copy — named in the finding — went 32px to 44px.
+      The twelve that remain are three elements: a checkbox whose 24px box sits inside a
+      44px label that is the actual target, a 44px button the probe rounds to 43.98, and
+      one link measured mid-entrance-animation at 44 × 0.985 = 43.34.
+      from: UIUX-2026-10-02 § Accessibility — A11Y-3, § Interaction design — IX-10
+- [x] B8 The control that commits the money names it: "Place order · ₱317.20", or "Pay
+      ₱317.20 securely" for Xendit. The confirmation screen stopped being a centred 36px
+      "Thank You, <name>!" above centred reassurance with the order code at 15px three
+      blocks below — the code is the heading now, left-aligned, and the line above it
+      thanks the guest in passing. Page **952 -> 848px**.
+      by artifact: `.flow/uiux/2026-10-02/applied/B-b07-confirmed--mobile--light.png`
+      from: UIUX-2026-10-02 § Visual hierarchy — VH-2
+- [x] B9 Measured across the 24 captures, pre-audit build to current, same database:
+      radius-bearing elements **810 -> 0**, elements above weight 600 **456 -> 0**, total
+      document height **50,526 -> 46,519px**, 24/24 routes HTTP 200 on both.
+      `tsc --noEmit` clean, 238 tests pass, the production build compiles.
+      by artifact: `.flow/uiux/2026-10-02/applied/B-manifest.json`
+
+### Found inaccurate
+`VH-11` claims two `<h1>` elements on four guest screens. Measured on arrival, menu and
+cart: one each, on both builds. Either the group-A phase closed it or the audit counted
+something else. Not acted on, and not claimed as closed.
+
+### Two measurement traps, both nearly reported as results
+The base-build capture tapped the NFC panel on the **current** server and then photographed
+the **pre-audit** one. A tap token is a session on one origin only, so all 24 baseline
+captures were the "Tap NFC Again" guard page — a complete, plausible-looking baseline of
+nothing. `capture.cjs` now derives the tap URL from the server under test.
+
+The contrast probe read the first non-transparent background it found and called
+`rgba(255, 255, 255, 0.043)` white, reporting 1:1 for text that actually renders at 19:1.
+The guest portal stacks translucent whites on near-black; the backdrop has to be composited
+down the ancestor chain before the ratio means anything.
+
+Wakes since commit: 0.

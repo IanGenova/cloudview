@@ -4,7 +4,6 @@ import {
   Check,
   Clock3,
   CreditCard,
-  ReceiptText,
   RotateCcw,
   XCircle,
 } from 'lucide-react';
@@ -85,12 +84,18 @@ export default async function OrderConfirmedPage({
         variant="dark"
         showTopBar={false}
       >
-        <div className="grid min-h-[calc(100vh-8rem)] content-center bg-[#050505] py-10 text-center text-white">
+        {/*
+          This screen was a centred 36px "Thank You, <name>!" above a centred
+          sentence of reassurance, with the one thing the guest would read out
+          to a member of staff — the order code — set at 15px three blocks
+          further down. The thanks is a line; the code is the heading.
+        */}
+        <div className="min-h-[calc(100vh-8rem)] bg-[#050505] py-10 text-white">
           <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.12),transparent_45%)]" />
 
           <div className="relative z-10">
             <div
-              className={`mx-auto grid size-24 place-items-center border ${
+              className={`grid size-12 place-items-center border ${
  isCancelled || isRefunding
  ? 'border-amber-400/20 bg-amber-400/10 text-amber-300'
  : isRefunded
@@ -99,33 +104,37 @@ export default async function OrderConfirmedPage({
  }`}
             >
               {isRefunding ? (
-                <RotateCcw className="size-9" />
+                <RotateCcw className="size-6" />
               ) : isRefunded ? (
-                <CreditCard className="size-9" />
+                <CreditCard className="size-6" />
               ) : isCancelled ? (
-                <XCircle className="size-9" />
+                <XCircle className="size-6" />
               ) : (
-                <Check className="size-8" strokeWidth={2} />
+                <Check className="size-6" strokeWidth={2} />
               )}
             </div>
 
-            <h1 className="mt-8 font-serif text-4xl font-light capitalize leading-tight tracking-wide text-white">
+            <p className="mt-5 text-sm font-medium text-white/70">
               {isCancelled || isRefunding || isRefunded
                 ? title
-                : `Thank You, ${displayName}!`}
+                : `Thank you, ${displayName}. Your order is with the kitchen.`}
+            </p>
+
+            <h1 className="mt-2 font-serif text-4xl font-normal leading-tight tracking-wide text-white">
+              {order.orderCode}
             </h1>
 
-            <p className="mx-auto mt-4 max-w-xs text-sm font-medium leading-6 text-white/60">
+            <p className="mt-3 max-w-xs text-sm font-medium leading-6 text-white/60">
               {isRefunded
                 ? 'Xendit confirmed the refund. The return timing depends on the original payment method.'
                 : isRefunding
                   ? 'The order is cancelled and CloudView is processing the eligible Xendit refund.'
                   : isCancelled
                     ? 'This order was cancelled. Review the payment status below for any refund update.'
-                    : 'Your order has been received. You can track it in real time from confirmation to delivery.'}
+                    : 'Quote this code if you ask staff about the order.'}
             </p>
 
-            <div className="mx-auto mt-8 w-full max-w-xs border border-white/10 bg-white/[0.04] p-6 text-left backdrop-blur-xl">
+            <div className="mt-8 w-full border border-white/10 bg-white/[0.04] p-6 text-left backdrop-blur-xl">
               {!isCancelled && !isRefunding && !isRefunded ? (
                 <div className="flex items-start gap-4">
                   <div className="grid size-12 shrink-0 place-items-center bg-gold/20 text-gold">
@@ -142,13 +151,8 @@ export default async function OrderConfirmedPage({
                 </div>
               ) : null}
 
-              <div className="mt-6 border border-white/10 bg-black/40 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                <div className="flex items-center gap-2 font-serif text-[15px] font-medium tracking-wide text-white">
-                  <ReceiptText className="size-4 text-gold" />
-                  Order {order.orderCode}
-                </div>
-
-                <div className="mt-4 space-y-2 border-t border-white/10 pt-4 text-sm">
+              <div className="mt-6 border border-white/10 bg-black/40 p-5">
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between gap-3">
                     <span className="text-white/50">Order status</span>
                     <b className="text-white">{label(order.status)}</b>

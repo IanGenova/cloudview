@@ -513,13 +513,13 @@ export function HotelGuideContent({
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search dining, Wi-Fi, pool, checkout…"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                  className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
                 />
                 {searchQuery ? (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="grid size-8 shrink-0 place-items-center bg-white/[0.08] text-white/60"
+                    className="grid size-11 shrink-0 place-items-center bg-white/[0.08] text-white/60"
                     aria-label="Clear search"
                   >
                     <X className="size-4" />
@@ -656,7 +656,7 @@ export function HotelGuideContent({
                               onClick={() =>
                                 setShowWifiPassword((current) => !current)
                               }
-                              className="grid size-8 place-items-center border border-white/10 text-white/45 transition hover:text-white"
+                              className="grid size-11 place-items-center border border-white/10 text-white/45 transition hover:text-white"
                               aria-label={
                                 showWifiPassword
                                   ? "Hide Wi-Fi password"
@@ -672,7 +672,7 @@ export function HotelGuideContent({
                             <button
                               type="button"
                               onClick={copyWifiPassword}
-                              className="grid size-8 place-items-center border border-white/10 text-white/45 transition hover:text-white"
+                              className="grid size-11 place-items-center border border-white/10 text-white/45 transition hover:text-white"
                               aria-label="Copy Wi-Fi password"
                             >
                               {copiedWifi ? (

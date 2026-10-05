@@ -1,0 +1,254 @@
+{
+ "note": "Guest spine, group B. Both servers on the same disposable database, measured minutes apart. 3007 is the pre-audit build, 3008 the current one.",
+ "before": {
+  "arrival": {
+   "h1s": [
+    "Guest"
+   ],
+   "headings": [
+    "H1:Guest",
+    "H2:What would you like to do?",
+    "H2:Track your requests",
+    "H2:Helpful during your stay"
+   ],
+   "biggest": {
+    "px": 36,
+    "tag": "H1",
+    "text": "Guest"
+   },
+   "docHeight": 2145,
+   "firstDishTop": null,
+   "smallTargets": 1,
+   "smallSample": [
+    {
+     "label": "Explore Hotel Guide",
+     "w": 171,
+     "h": 43
+    }
+   ],
+   "textOnPhoto": [],
+   "fields": 0,
+   "required": 0,
+   "described": 0
+  },
+  "menu": {
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    "H1:Order Food",
+    "H2:Earn points from this order",
+    "H2:Delicious moments, delivered.",
+    "H3:Recommended for you",
+    "H3:All dishes"
+   ],
+   "biggest": {
+    "px": 32,
+    "tag": "H2",
+    "text": "Delicious moments, delivered."
+   },
+   "docHeight": 2102,
+   "firstDishTop": 904,
+   "smallTargets": 2,
+   "smallSample": [
+    {
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "label": "Search dishes, bundles, or cat",
+     "w": 272,
+     "h": 20
+    }
+   ],
+   "textOnPhoto": [],
+   "fields": 1,
+   "required": 0,
+   "described": 0
+  },
+  "cart": {
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    "H1:Order Food",
+    "H2:Earn points from this order",
+    "H2:Review your order",
+    "H3:Breakfast Pancakes",
+    "H3:Delivery preferences"
+   ],
+   "biggest": {
+    "px": 30,
+    "tag": "P",
+    "text": "₱317.20"
+   },
+   "docHeight": 2469,
+   "firstDishTop": 485,
+   "smallTargets": 6,
+   "smallSample": [
+    {
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "label": "INPUT",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "textOnPhoto": [],
+   "fields": 9,
+   "required": 4,
+   "described": 0
+  }
+ },
+ "after": {
+  "arrival": {
+   "h1s": [
+    "Guest"
+   ],
+   "headings": [
+    "H1:Guest",
+    "H2:What would you like to do?",
+    "H2:Track your requests",
+    "H2:Helpful during your stay"
+   ],
+   "biggest": {
+    "px": 36,
+    "tag": "H1",
+    "text": "Guest"
+   },
+   "docHeight": 2061,
+   "firstDishTop": null,
+   "smallTargets": 1,
+   "smallSample": [
+    {
+     "label": "Explore Hotel Guide",
+     "w": 175,
+     "h": 43
+    }
+   ],
+   "textOnPhoto": [],
+   "fields": 0,
+   "required": 0,
+   "described": 0
+  },
+  "menu": {
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    "H1:Order Food",
+    "H3:Chef’s selection",
+    "H3:All dishes"
+   ],
+   "biggest": {
+    "px": 24,
+    "tag": "H3",
+    "text": "Chef’s selection"
+   },
+   "docHeight": 1670,
+   "firstDishTop": 546,
+   "smallTargets": 0,
+   "smallSample": [],
+   "textOnPhoto": [],
+   "fields": 1,
+   "required": 0,
+   "described": 0
+  },
+  "cart": {
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    "H1:Order Food",
+    "H2:Review your order",
+    "H3:Selected dishes",
+    "H3:Signature Burger",
+    "H3:Delivery preferences"
+   ],
+   "biggest": {
+    "px": 30,
+    "tag": "P",
+    "text": "₱463.60"
+   },
+   "docHeight": 2203,
+   "firstDishTop": 331,
+   "smallTargets": 1,
+   "smallSample": [
+    {
+     "label": "INPUT",
+     "w": 24,
+     "h": 24
+    }
+   ],
+   "textOnPhoto": [],
+   "fields": 9,
+   "required": 5,
+   "described": 2
+  }
+ },
+ "blocker_A11Y_2": {
+  "before": {
+   "found": true,
+   "text": "Signature Burger",
+   "colour": "rgb(255, 255, 255)",
+   "sampledPixels": 5730,
+   "ratioOverLightestPixel": 2.14,
+   "ratioOverMeanPixel": 9.24,
+   "ratioOverDarkestPixel": 21
+  },
+  "after": {
+   "found": "name is not over a photograph",
+   "text": "Signature Burger"
+  },
+  "after_on_surface": {
+   "found": true,
+   "text": "Signature Burger",
+   "colour": "rgb(255, 255, 255)",
+   "compositedSurface": "rgb(16, 16, 16)",
+   "layers": 5,
+   "ratio": 19.06
+  }
+ },
+ "validation_IX_6_and_IX_7": {
+  "openCart": "opening",
+  "submitted": "Place order · ₱463.60",
+  "afterSubmit": {
+   "focusedId": "menu-ordered-by",
+   "focusedLabel": "",
+   "bannerText": "Enter the name this order is for.",
+   "nameInvalid": "true",
+   "nameNote": "Enter the name this order is for.",
+   "noteColour": "rgb(254, 202, 202)",
+   "requiredMarks": 2
+  },
+  "clearCartDialog": {
+   "type": "confirm",
+   "message": "Remove everything from this order?\n\n1 item · ₱463.60\n\nYou will need to choose the dishes again."
+  },
+  "cartSurvivedDismiss": 1
+ }
+}

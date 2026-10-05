@@ -1,0 +1,3815 @@
+[
+ {
+  "id": "b01-arrival",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b01-arrival--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Maria Santos"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Maria Santos"
+    },
+    {
+     "tag": "H2",
+     "text": "What would you like to do?"
+    },
+    {
+     "tag": "H2",
+     "text": "Track your requests"
+    },
+    {
+     "tag": "H2",
+     "text": "Helpful during your stay"
+    }
+   ],
+   "headingCount": 4,
+   "radii": [
+    [
+     "16px",
+     20
+    ],
+    [
+     "24px",
+     8
+    ],
+    [
+     "9999px",
+     6
+    ],
+    [
+     "28px",
+     3
+    ],
+    [
+     "21.6px",
+     2
+    ],
+    [
+     "32px",
+     2
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 41,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     61
+    ],
+    [
+     "500",
+     26
+    ],
+    [
+     "600",
+     13
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "300",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     71
+    ],
+    [
+     "rgb(201, 156, 56)",
+     12
+    ],
+    [
+     "rgb(0, 0, 0)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     1
+    ],
+    [
+     "rgba(0, 0, 0, 0.6)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     1
+    ]
+   ],
+   "textColorKinds": 9,
+   "bgColorKinds": 11,
+   "blurred": 13,
+   "gradients": 4,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Explore Hotel Guide",
+     "w": 171,
+     "h": 43
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 2116,
+   "elements": 209,
+   "textLength": 998,
+   "textHead": "CV CLOUD VIEW DEMO HOTEL GUEST PORTAL 1 GOOD AFTERNOON Maria Santos Welcome to Cloud View Demo Hotel. Everything you need during your stay is just one tap away. LOCATION Pool Deck WI-FI CloudView-Guest GUEST CONCIERGE What would you like to do? ORDER FOOD Browse menu and order room service. REQUEST SERVICE Ask for towels, cleaning, help, and more. Hotel Guide Pool Contact MY ACTIVITY Track your re"
+  },
+  "ok": true
+ },
+ {
+  "id": "b02-menu",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b02-menu--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Delicious moments, delivered."
+    },
+    {
+     "tag": "H3",
+     "text": "Recommended for you"
+    },
+    {
+     "tag": "H3",
+     "text": "All dishes"
+    },
+    {
+     "tag": "H4",
+     "text": "Cloud Club Sandwich"
+    },
+    {
+     "tag": "H4",
+     "text": "Signature Burger"
+    },
+    {
+     "tag": "H4",
+     "text": "Iced Tea"
+    }
+   ],
+   "headingCount": 8,
+   "radii": [
+    [
+     "9999px",
+     23
+    ],
+    [
+     "16px",
+     7
+    ],
+    [
+     "32px",
+     3
+    ],
+    [
+     "25.6px",
+     3
+    ],
+    [
+     "28px",
+     2
+    ]
+   ],
+   "radiusKinds": 5,
+   "radiusElements": 38,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     60
+    ],
+    [
+     "900",
+     24
+    ],
+    [
+     "700",
+     12
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     2
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     62
+    ],
+    [
+     "rgb(201, 156, 56)",
+     11
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     3
+    ],
+    [
+     "rgb(0, 0, 0)",
+     3
+    ],
+    [
+     "rgba(110, 231, 183, 0.8)",
+     3
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 17,
+   "blurred": 8,
+   "gradients": 9,
+   "glow": 2,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search dishes, bundles, or cat",
+     "w": 330,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 2,
+   "imgsNoAlt": 0,
+   "docHeight": 2162,
+   "elements": 162,
+   "textLength": 793,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim IN-ROOM DINING Curated for your stay HOTEL DINING Delicious moments, delivered. Browse available dishes, bundles, and room-service favourites. All 4 Breakfast 1 Mains 2 Drinks 1 CHEF’S SELECTION Recommended for you Breakfast Pancakes ₱260 BREAKFAST Panc"
+  },
+  "ok": true
+ },
+ {
+  "id": "b03-cart",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b03-cart--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Review your order"
+    },
+    {
+     "tag": "H3",
+     "text": "Breakfast Pancakes"
+    },
+    {
+     "tag": "H3",
+     "text": "Delivery preferences"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     17
+    ],
+    [
+     "9999px",
+     9
+    ],
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "12px",
+     2
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 36,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif",
+    "ui-monospace"
+   ],
+   "weights": [
+    [
+     "400",
+     54
+    ],
+    [
+     "900",
+     19
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     6
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     59
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ]
+   ],
+   "textColorKinds": 11,
+   "bgColorKinds": 12,
+   "blurred": 3,
+   "gradients": 2,
+   "glow": 11,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "tag": "INPUT",
+     "label": "",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 6,
+   "imgsNoAlt": 0,
+   "docHeight": 2345,
+   "elements": 164,
+   "textLength": 1069,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim FINAL STEP Review your order 1 item · ₱317.20 SELECTED DISHES Adjust quantities before checkout 1 Breakfast Pancakes ₱260 1 ₱260.00 GUEST DETAILS Delivery preferences ORDERED BY Auto-filled from the active stay. Confirm the name before ordering. PHONE N"
+  },
+  "ok": true
+ },
+ {
+  "id": "b04-cart-checkout",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b04-cart-checkout--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Review your order"
+    },
+    {
+     "tag": "H3",
+     "text": "Breakfast Pancakes"
+    },
+    {
+     "tag": "H3",
+     "text": "Delivery preferences"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     17
+    ],
+    [
+     "9999px",
+     9
+    ],
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "12px",
+     2
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 36,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif",
+    "ui-monospace"
+   ],
+   "weights": [
+    [
+     "400",
+     54
+    ],
+    [
+     "900",
+     19
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     6
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     59
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ]
+   ],
+   "textColorKinds": 11,
+   "bgColorKinds": 12,
+   "blurred": 3,
+   "gradients": 2,
+   "glow": 11,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "tag": "INPUT",
+     "label": "",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 6,
+   "imgsNoAlt": 0,
+   "docHeight": 2345,
+   "elements": 164,
+   "textLength": 1069,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim FINAL STEP Review your order 1 item · ₱317.20 SELECTED DISHES Adjust quantities before checkout 1 Breakfast Pancakes ₱260 1 ₱260.00 GUEST DETAILS Delivery preferences ORDERED BY Auto-filled from the active stay. Confirm the name before ordering. PHONE N"
+  },
+  "ok": true
+ },
+ {
+  "id": "b05-orders",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/orders",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b05-orders--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "My Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "My Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Food Order History"
+    },
+    {
+     "tag": "H2",
+     "text": "Claim points from your orders"
+    },
+    {
+     "tag": "H2",
+     "text": "CVDHFO000016"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Notes"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "9999px",
+     7
+    ],
+    [
+     "16px",
+     7
+    ],
+    [
+     "20px",
+     7
+    ],
+    [
+     "32px",
+     4
+    ],
+    [
+     "12px",
+     1
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 27,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     41
+    ],
+    [
+     "500",
+     16
+    ],
+    [
+     "600",
+     15
+    ],
+    [
+     "700",
+     8
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     47
+    ],
+    [
+     "rgb(201, 156, 56)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     5
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     2
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 10,
+   "blurred": 5,
+   "gradients": 0,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 1321,
+   "elements": 111,
+   "textLength": 801,
+   "textHead": "My Orders Pool Deck · Guest Food Order History GUEST: GUEST View your current and previous food orders. Pending orders can still be managed from the tracking page. CLOUDVIEW REWARDS Claim points from your orders Link your guest rewards profile to earn points from food orders and services. Claim CVDHFO000016 PENDING Oct 5, 2026, 12:22 PM ₱707.60 ACTIVE ITEMS 2 PAYMENT PAY AT COUNTER UNPAID PICK UP "
+  },
+  "ok": true
+ },
+ {
+  "id": "b06-guide",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/guide",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b06-guide--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/guide",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Hotel Guide",
+    "Everything, thoughtfully within reach."
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Hotel Guide"
+    },
+    {
+     "tag": "H1",
+     "text": "Everything, thoughtfully within reach."
+    },
+    {
+     "tag": "H2",
+     "text": "How may we assist?"
+    },
+    {
+     "tag": "H2",
+     "text": "The details that matter"
+    },
+    {
+     "tag": "H2",
+     "text": "Explore the hotel"
+    },
+    {
+     "tag": "H3",
+     "text": "Dining"
+    },
+    {
+     "tag": "H3",
+     "text": "Facilities"
+    },
+    {
+     "tag": "H3",
+     "text": "Nearby Attractions"
+    },
+    {
+     "tag": "H3",
+     "text": "Hotel Information"
+    }
+   ],
+   "headingCount": 9,
+   "radii": [
+    [
+     "9999px",
+     11
+    ],
+    [
+     "16px",
+     8
+    ],
+    [
+     "21.6px",
+     3
+    ],
+    [
+     "23.2px",
+     3
+    ],
+    [
+     "12px",
+     3
+    ],
+    [
+     "34.4px",
+     1
+    ],
+    [
+     "18.4px",
+     1
+    ],
+    [
+     "28.8px",
+     1
+    ]
+   ],
+   "radiusKinds": 10,
+   "radiusElements": 33,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     69
+    ],
+    [
+     "700",
+     19
+    ],
+    [
+     "300",
+     5
+    ],
+    [
+     "600",
+     5
+    ],
+    [
+     "500",
+     3
+    ],
+    [
+     "900",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     58
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     9
+    ],
+    [
+     "rgb(247, 242, 232)",
+     9
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     8
+    ],
+    [
+     "rgb(213, 173, 85)",
+     6
+    ],
+    [
+     "rgba(213, 173, 85, 0.8)",
+     3
+    ],
+    [
+     "rgb(246, 240, 228)",
+     3
+    ],
+    [
+     "rgb(232, 198, 111)",
+     2
+    ]
+   ],
+   "textColorKinds": 11,
+   "bgColorKinds": 16,
+   "blurred": 8,
+   "gradients": 6,
+   "glow": 2,
+   "smallTargets": [
+    {
+     "tag": "INPUT",
+     "label": "Search dining, Wi-Fi, pool, ch",
+     "w": 302,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Show Wi-Fi password",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Copy Wi-Fi password",
+     "w": 32,
+     "h": 32
+    }
+   ],
+   "smallTargetCount": 3,
+   "imgsNoAlt": 0,
+   "docHeight": 2464,
+   "elements": 208,
+   "textLength": 924,
+   "textHead": "Hotel Guide Everything you need during your stay PRIVATE CONCIERGE CLOUDVIEW WELCOME TO YOUR STAY Everything, thoughtfully within reach. Discover hotel essentials, dining, amenities and personalised assistance in one refined guide. AT YOUR SERVICE How may we assist? In-room dining BROWSE MENU & ORDER Guest services REQUEST AMENITIES & ASSISTANCE Contact our team SPEAK WITH HOTEL STAFF STAY ESSENTI"
+  },
+  "ok": true
+ },
+ {
+  "id": "b07-confirmed",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/confirmed/{{ORDER}}",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b07-confirmed--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/confirmed/CVDHFO000016",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Thank You, Maria Santos!"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Thank You, Maria Santos!"
+    }
+   ],
+   "headingCount": 1,
+   "radii": [
+    [
+     "16px",
+     5
+    ],
+    [
+     "20px",
+     2
+    ],
+    [
+     "9999px",
+     1
+    ],
+    [
+     "32px",
+     1
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 5,
+   "radiusElements": 10,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     20
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     5
+    ],
+    [
+     "300",
+     1
+    ],
+    [
+     "600",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     21
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     4
+    ],
+    [
+     "rgb(201, 156, 56)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     1
+    ],
+    [
+     "rgb(23, 23, 23)",
+     1
+    ]
+   ],
+   "textColorKinds": 7,
+   "bgColorKinds": 7,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 952,
+   "elements": 60,
+   "textLength": 276,
+   "textHead": "Thank You, Maria Santos! Your order has been received. You can track it in real time from confirmation to delivery. ESTIMATED DELIVERY 20–30 mins Order CVDHFO000016 Order status PENDING Payment UNPAID Method PAY AT COUNTER Total ₱707.60 Track Order Home Order Services Profile"
+  },
+  "ok": true
+ },
+ {
+  "id": "b08-track",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/track/{{ORDER}}",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b08-track--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/track/CVDHFO000016",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Tracking"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Tracking"
+    },
+    {
+     "tag": "H2",
+     "text": "Waiting for confirmation"
+    },
+    {
+     "tag": "H2",
+     "text": "Waiting for staff confirmation"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Details"
+    },
+    {
+     "tag": "H2",
+     "text": "Delivery Details"
+    },
+    {
+     "tag": "H2",
+     "text": "Need help?"
+    }
+   ],
+   "headingCount": 6,
+   "radii": [
+    [
+     "9999px",
+     15
+    ],
+    [
+     "20px",
+     13
+    ],
+    [
+     "16px",
+     11
+    ],
+    [
+     "32px",
+     4
+    ],
+    [
+     "12px",
+     3
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 7,
+   "radiusElements": 49,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     59
+    ],
+    [
+     "500",
+     43
+    ],
+    [
+     "600",
+     26
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "300",
+     3
+    ],
+    [
+     "900",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     85
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     12
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     11
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     5
+    ],
+    [
+     "rgb(167, 243, 208)",
+     2
+    ],
+    [
+     "rgb(254, 202, 202)",
+     2
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 13,
+   "blurred": 6,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 2773,
+   "elements": 204,
+   "textLength": 1072,
+   "textHead": "Order Tracking Pool Deck ☁ CLOUD VIEW RESORT & HOTEL Waiting for confirmation Your order was received and is waiting for hotel staff confirmation. ESTIMATED CONFIRMATION TIME 2 - 5 mins LIVE PROGRESS Waiting for staff confirmation Updates automatically through realtime events. PENDING Received Confirmed Preparing Ready Delivered ORDER PROGRESS 15% complete CURRENT Order Received TIMER 25s UPDATED "
+  },
+  "ok": true
+ },
+ {
+  "id": "b01-arrival",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b01-arrival--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Maria Santos"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Maria Santos"
+    },
+    {
+     "tag": "H2",
+     "text": "What would you like to do?"
+    },
+    {
+     "tag": "H2",
+     "text": "Track your requests"
+    },
+    {
+     "tag": "H2",
+     "text": "Helpful during your stay"
+    }
+   ],
+   "headingCount": 4,
+   "radii": [
+    [
+     "16px",
+     16
+    ],
+    [
+     "24px",
+     8
+    ],
+    [
+     "9999px",
+     6
+    ],
+    [
+     "12px",
+     4
+    ],
+    [
+     "21.6px",
+     2
+    ],
+    [
+     "28px",
+     2
+    ],
+    [
+     "32px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 8,
+   "radiusElements": 41,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     61
+    ],
+    [
+     "500",
+     26
+    ],
+    [
+     "600",
+     13
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "300",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     71
+    ],
+    [
+     "rgb(201, 156, 56)",
+     12
+    ],
+    [
+     "rgb(0, 0, 0)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     1
+    ],
+    [
+     "rgba(0, 0, 0, 0.6)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     1
+    ]
+   ],
+   "textColorKinds": 9,
+   "bgColorKinds": 11,
+   "blurred": 13,
+   "gradients": 4,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Explore Hotel Guide",
+     "w": 171,
+     "h": 43
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 2177,
+   "elements": 209,
+   "textLength": 998,
+   "textHead": "CV CLOUD VIEW DEMO HOTEL GUEST PORTAL 1 GOOD AFTERNOON Maria Santos Welcome to Cloud View Demo Hotel. Everything you need during your stay is just one tap away. LOCATION Pool Deck WI-FI CloudView-Guest GUEST CONCIERGE What would you like to do? ORDER FOOD Browse menu and order room service. REQUEST SERVICE Ask for towels, cleaning, help, and more. Hotel Guide Pool Contact MY ACTIVITY Track your re"
+  },
+  "ok": true
+ },
+ {
+  "id": "b02-menu",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b02-menu--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Delicious moments, delivered."
+    },
+    {
+     "tag": "H3",
+     "text": "Recommended for you"
+    },
+    {
+     "tag": "H3",
+     "text": "All dishes"
+    },
+    {
+     "tag": "H4",
+     "text": "Cloud Club Sandwich"
+    },
+    {
+     "tag": "H4",
+     "text": "Signature Burger"
+    },
+    {
+     "tag": "H4",
+     "text": "Iced Tea"
+    }
+   ],
+   "headingCount": 8,
+   "radii": [
+    [
+     "9999px",
+     23
+    ],
+    [
+     "12px",
+     4
+    ],
+    [
+     "32px",
+     3
+    ],
+    [
+     "16px",
+     3
+    ],
+    [
+     "25.6px",
+     3
+    ],
+    [
+     "28px",
+     1
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 7,
+   "radiusElements": 38,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     60
+    ],
+    [
+     "900",
+     24
+    ],
+    [
+     "700",
+     12
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     2
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     62
+    ],
+    [
+     "rgb(201, 156, 56)",
+     11
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     3
+    ],
+    [
+     "rgb(0, 0, 0)",
+     3
+    ],
+    [
+     "rgba(110, 231, 183, 0.8)",
+     3
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 17,
+   "blurred": 8,
+   "gradients": 9,
+   "glow": 2,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search dishes, bundles, or cat",
+     "w": 272,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 2,
+   "imgsNoAlt": 0,
+   "docHeight": 2102,
+   "elements": 162,
+   "textLength": 792,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim IN-ROOM DINING Curated for your stay HOTEL DINING Delicious moments, delivered. Browse available dishes, bundles, and room-service favourites. All 4 Breakfast 1 Mains 2 Drinks 1 CHEF’S SELECTION Recommended for you Breakfast Pancakes ₱260 BREAKFAST Panc"
+  },
+  "ok": true
+ },
+ {
+  "id": "b03-cart",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b03-cart--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Review your order"
+    },
+    {
+     "tag": "H3",
+     "text": "Breakfast Pancakes"
+    },
+    {
+     "tag": "H3",
+     "text": "Delivery preferences"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     13
+    ],
+    [
+     "9999px",
+     9
+    ],
+    [
+     "12px",
+     6
+    ],
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 36,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif",
+    "ui-monospace"
+   ],
+   "weights": [
+    [
+     "400",
+     54
+    ],
+    [
+     "900",
+     19
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     6
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     59
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ]
+   ],
+   "textColorKinds": 11,
+   "bgColorKinds": 12,
+   "blurred": 3,
+   "gradients": 2,
+   "glow": 11,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "tag": "INPUT",
+     "label": "",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 6,
+   "imgsNoAlt": 0,
+   "docHeight": 2469,
+   "elements": 164,
+   "textLength": 1069,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim FINAL STEP Review your order 1 item · ₱317.20 SELECTED DISHES Adjust quantities before checkout 1 Breakfast Pancakes ₱260 1 ₱260.00 GUEST DETAILS Delivery preferences ORDERED BY Auto-filled from the active stay. Confirm the name before ordering. PHONE N"
+  },
+  "ok": true
+ },
+ {
+  "id": "b04-cart-checkout",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b04-cart-checkout--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Review your order"
+    },
+    {
+     "tag": "H3",
+     "text": "Breakfast Pancakes"
+    },
+    {
+     "tag": "H3",
+     "text": "Delivery preferences"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     13
+    ],
+    [
+     "9999px",
+     9
+    ],
+    [
+     "12px",
+     6
+    ],
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 36,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif",
+    "ui-monospace"
+   ],
+   "weights": [
+    [
+     "400",
+     54
+    ],
+    [
+     "900",
+     19
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     6
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     59
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ]
+   ],
+   "textColorKinds": 11,
+   "bgColorKinds": 12,
+   "blurred": 3,
+   "gradients": 2,
+   "glow": 11,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "tag": "INPUT",
+     "label": "",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 6,
+   "imgsNoAlt": 0,
+   "docHeight": 2469,
+   "elements": 164,
+   "textLength": 1069,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim FINAL STEP Review your order 1 item · ₱317.20 SELECTED DISHES Adjust quantities before checkout 1 Breakfast Pancakes ₱260 1 ₱260.00 GUEST DETAILS Delivery preferences ORDERED BY Auto-filled from the active stay. Confirm the name before ordering. PHONE N"
+  },
+  "ok": true
+ },
+ {
+  "id": "b05-orders",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/orders",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b05-orders--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "My Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "My Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Food Order History"
+    },
+    {
+     "tag": "H2",
+     "text": "Claim points from your orders"
+    },
+    {
+     "tag": "H2",
+     "text": "CVDHFO000017"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Notes"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "9999px",
+     7
+    ],
+    [
+     "20px",
+     7
+    ],
+    [
+     "12px",
+     5
+    ],
+    [
+     "32px",
+     4
+    ],
+    [
+     "16px",
+     3
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 27,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     41
+    ],
+    [
+     "500",
+     16
+    ],
+    [
+     "600",
+     15
+    ],
+    [
+     "700",
+     8
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     47
+    ],
+    [
+     "rgb(201, 156, 56)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     5
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     2
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 10,
+   "blurred": 5,
+   "gradients": 0,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 1480,
+   "elements": 111,
+   "textLength": 801,
+   "textHead": "My Orders Pool Deck · Guest Food Order History GUEST: GUEST View your current and previous food orders. Pending orders can still be managed from the tracking page. CLOUDVIEW REWARDS Claim points from your orders Link your guest rewards profile to earn points from food orders and services. Claim CVDHFO000017 PENDING Oct 5, 2026, 12:23 PM ₱707.60 ACTIVE ITEMS 2 PAYMENT PAY AT COUNTER UNPAID PICK UP "
+  },
+  "ok": true
+ },
+ {
+  "id": "b06-guide",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/guide",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b06-guide--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/guide",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Hotel Guide",
+    "Everything, thoughtfully within reach."
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Hotel Guide"
+    },
+    {
+     "tag": "H1",
+     "text": "Everything, thoughtfully within reach."
+    },
+    {
+     "tag": "H2",
+     "text": "How may we assist?"
+    },
+    {
+     "tag": "H2",
+     "text": "The details that matter"
+    },
+    {
+     "tag": "H2",
+     "text": "Explore the hotel"
+    },
+    {
+     "tag": "H3",
+     "text": "Dining"
+    },
+    {
+     "tag": "H3",
+     "text": "Facilities"
+    },
+    {
+     "tag": "H3",
+     "text": "Nearby Attractions"
+    },
+    {
+     "tag": "H3",
+     "text": "Hotel Information"
+    }
+   ],
+   "headingCount": 9,
+   "radii": [
+    [
+     "9999px",
+     11
+    ],
+    [
+     "12px",
+     7
+    ],
+    [
+     "16px",
+     4
+    ],
+    [
+     "21.6px",
+     3
+    ],
+    [
+     "23.2px",
+     3
+    ],
+    [
+     "34.4px",
+     1
+    ],
+    [
+     "18.4px",
+     1
+    ],
+    [
+     "28.8px",
+     1
+    ]
+   ],
+   "radiusKinds": 10,
+   "radiusElements": 33,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     69
+    ],
+    [
+     "700",
+     19
+    ],
+    [
+     "300",
+     5
+    ],
+    [
+     "600",
+     5
+    ],
+    [
+     "500",
+     3
+    ],
+    [
+     "900",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     58
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     9
+    ],
+    [
+     "rgb(247, 242, 232)",
+     9
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     8
+    ],
+    [
+     "rgb(213, 173, 85)",
+     6
+    ],
+    [
+     "rgba(213, 173, 85, 0.8)",
+     3
+    ],
+    [
+     "rgb(246, 240, 228)",
+     3
+    ],
+    [
+     "rgb(232, 198, 111)",
+     2
+    ]
+   ],
+   "textColorKinds": 11,
+   "bgColorKinds": 16,
+   "blurred": 8,
+   "gradients": 6,
+   "glow": 2,
+   "smallTargets": [
+    {
+     "tag": "INPUT",
+     "label": "Search dining, Wi-Fi, pool, ch",
+     "w": 244,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Show Wi-Fi password",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Copy Wi-Fi password",
+     "w": 32,
+     "h": 32
+    }
+   ],
+   "smallTargetCount": 3,
+   "imgsNoAlt": 0,
+   "docHeight": 2456,
+   "elements": 208,
+   "textLength": 924,
+   "textHead": "Hotel Guide Everything you need during your stay PRIVATE CONCIERGE CLOUDVIEW WELCOME TO YOUR STAY Everything, thoughtfully within reach. Discover hotel essentials, dining, amenities and personalised assistance in one refined guide. AT YOUR SERVICE How may we assist? In-room dining BROWSE MENU & ORDER Guest services REQUEST AMENITIES & ASSISTANCE Contact our team SPEAK WITH HOTEL STAFF STAY ESSENTI"
+  },
+  "ok": true
+ },
+ {
+  "id": "b07-confirmed",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/confirmed/{{ORDER}}",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b07-confirmed--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/confirmed/CVDHFO000017",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Thank You, Maria Santos!"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Thank You, Maria Santos!"
+    }
+   ],
+   "headingCount": 1,
+   "radii": [
+    [
+     "12px",
+     4
+    ],
+    [
+     "20px",
+     2
+    ],
+    [
+     "9999px",
+     1
+    ],
+    [
+     "32px",
+     1
+    ],
+    [
+     "16px",
+     1
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 10,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     20
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     5
+    ],
+    [
+     "300",
+     1
+    ],
+    [
+     "600",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     21
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     4
+    ],
+    [
+     "rgb(201, 156, 56)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     1
+    ],
+    [
+     "rgb(23, 23, 23)",
+     1
+    ]
+   ],
+   "textColorKinds": 7,
+   "bgColorKinds": 7,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 952,
+   "elements": 60,
+   "textLength": 276,
+   "textHead": "Thank You, Maria Santos! Your order has been received. You can track it in real time from confirmation to delivery. ESTIMATED DELIVERY 20–30 mins Order CVDHFO000017 Order status PENDING Payment UNPAID Method PAY AT COUNTER Total ₱707.60 Track Order Home Order Services Profile"
+  },
+  "ok": true
+ },
+ {
+  "id": "b08-track",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/track/{{ORDER}}",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b08-track--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/track/CVDHFO000017",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Tracking"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Tracking"
+    },
+    {
+     "tag": "H2",
+     "text": "Waiting for confirmation"
+    },
+    {
+     "tag": "H2",
+     "text": "Waiting for staff confirmation"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Details"
+    },
+    {
+     "tag": "H2",
+     "text": "Delivery Details"
+    },
+    {
+     "tag": "H2",
+     "text": "Need help?"
+    }
+   ],
+   "headingCount": 6,
+   "radii": [
+    [
+     "9999px",
+     15
+    ],
+    [
+     "20px",
+     13
+    ],
+    [
+     "16px",
+     7
+    ],
+    [
+     "12px",
+     7
+    ],
+    [
+     "32px",
+     4
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 7,
+   "radiusElements": 49,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     59
+    ],
+    [
+     "500",
+     43
+    ],
+    [
+     "600",
+     26
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "300",
+     3
+    ],
+    [
+     "900",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     85
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     12
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     11
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     5
+    ],
+    [
+     "rgb(167, 243, 208)",
+     2
+    ],
+    [
+     "rgb(254, 202, 202)",
+     2
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 13,
+   "blurred": 6,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 2919,
+   "elements": 204,
+   "textLength": 1072,
+   "textHead": "Order Tracking Pool Deck ☁ CLOUD VIEW RESORT & HOTEL Waiting for confirmation Your order was received and is waiting for hotel staff confirmation. ESTIMATED CONFIRMATION TIME 2 - 5 mins LIVE PROGRESS Waiting for staff confirmation Updates automatically through realtime events. PENDING Received Confirmed Preparing Ready Delivered ORDER PROGRESS 15% complete CURRENT Order Received TIMER 24s UPDATED "
+  },
+  "ok": true
+ },
+ {
+  "id": "b01-arrival",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b01-arrival--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Maria Santos"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Maria Santos"
+    },
+    {
+     "tag": "H2",
+     "text": "What would you like to do?"
+    },
+    {
+     "tag": "H2",
+     "text": "Track your requests"
+    },
+    {
+     "tag": "H2",
+     "text": "Helpful during your stay"
+    }
+   ],
+   "headingCount": 4,
+   "radii": [
+    [
+     "16px",
+     16
+    ],
+    [
+     "24px",
+     8
+    ],
+    [
+     "9999px",
+     6
+    ],
+    [
+     "12px",
+     4
+    ],
+    [
+     "21.6px",
+     2
+    ],
+    [
+     "28px",
+     2
+    ],
+    [
+     "32px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 8,
+   "radiusElements": 41,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     61
+    ],
+    [
+     "500",
+     26
+    ],
+    [
+     "600",
+     13
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "300",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     71
+    ],
+    [
+     "rgb(201, 156, 56)",
+     12
+    ],
+    [
+     "rgb(0, 0, 0)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     1
+    ],
+    [
+     "rgba(0, 0, 0, 0.6)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     1
+    ]
+   ],
+   "textColorKinds": 9,
+   "bgColorKinds": 11,
+   "blurred": 13,
+   "gradients": 4,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Explore Hotel Guide",
+     "w": 171,
+     "h": 43
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 2177,
+   "elements": 209,
+   "textLength": 998,
+   "textHead": "CV CLOUD VIEW DEMO HOTEL GUEST PORTAL 1 GOOD AFTERNOON Maria Santos Welcome to Cloud View Demo Hotel. Everything you need during your stay is just one tap away. LOCATION Pool Deck WI-FI CloudView-Guest GUEST CONCIERGE What would you like to do? ORDER FOOD Browse menu and order room service. REQUEST SERVICE Ask for towels, cleaning, help, and more. Hotel Guide Pool Contact MY ACTIVITY Track your re"
+  },
+  "ok": true
+ },
+ {
+  "id": "b02-menu",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b02-menu--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Delicious moments, delivered."
+    },
+    {
+     "tag": "H3",
+     "text": "Recommended for you"
+    },
+    {
+     "tag": "H3",
+     "text": "All dishes"
+    },
+    {
+     "tag": "H4",
+     "text": "Cloud Club Sandwich"
+    },
+    {
+     "tag": "H4",
+     "text": "Signature Burger"
+    },
+    {
+     "tag": "H4",
+     "text": "Iced Tea"
+    }
+   ],
+   "headingCount": 8,
+   "radii": [
+    [
+     "9999px",
+     23
+    ],
+    [
+     "12px",
+     4
+    ],
+    [
+     "32px",
+     3
+    ],
+    [
+     "16px",
+     3
+    ],
+    [
+     "25.6px",
+     3
+    ],
+    [
+     "28px",
+     1
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 7,
+   "radiusElements": 38,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     60
+    ],
+    [
+     "900",
+     24
+    ],
+    [
+     "700",
+     12
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     2
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     63
+    ],
+    [
+     "rgb(201, 156, 56)",
+     11
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     3
+    ],
+    [
+     "rgb(0, 0, 0)",
+     3
+    ],
+    [
+     "rgba(110, 231, 183, 0.8)",
+     3
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 17,
+   "blurred": 8,
+   "gradients": 9,
+   "glow": 2,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search dishes, bundles, or cat",
+     "w": 272,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 2,
+   "imgsNoAlt": 0,
+   "docHeight": 2102,
+   "elements": 162,
+   "textLength": 792,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim IN-ROOM DINING Curated for your stay HOTEL DINING Delicious moments, delivered. Browse available dishes, bundles, and room-service favourites. All 4 Breakfast 1 Mains 2 Drinks 1 CHEF’S SELECTION Recommended for you Breakfast Pancakes ₱260 BREAKFAST Panc"
+  },
+  "ok": true
+ },
+ {
+  "id": "b03-cart",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b03-cart--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Review your order"
+    },
+    {
+     "tag": "H3",
+     "text": "Breakfast Pancakes"
+    },
+    {
+     "tag": "H3",
+     "text": "Delivery preferences"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     13
+    ],
+    [
+     "9999px",
+     9
+    ],
+    [
+     "12px",
+     6
+    ],
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 36,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif",
+    "ui-monospace"
+   ],
+   "weights": [
+    [
+     "400",
+     54
+    ],
+    [
+     "900",
+     19
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     6
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     60
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ]
+   ],
+   "textColorKinds": 10,
+   "bgColorKinds": 12,
+   "blurred": 3,
+   "gradients": 2,
+   "glow": 11,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "tag": "INPUT",
+     "label": "",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 6,
+   "imgsNoAlt": 0,
+   "docHeight": 2469,
+   "elements": 164,
+   "textLength": 1069,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim FINAL STEP Review your order 1 item · ₱317.20 SELECTED DISHES Adjust quantities before checkout 1 Breakfast Pancakes ₱260 1 ₱260.00 GUEST DETAILS Delivery preferences ORDERED BY Auto-filled from the active stay. Confirm the name before ordering. PHONE N"
+  },
+  "ok": true
+ },
+ {
+  "id": "b04-cart-checkout",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/menu",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b04-cart-checkout--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/menu",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Food"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Food"
+    },
+    {
+     "tag": "H2",
+     "text": "Earn points from this order"
+    },
+    {
+     "tag": "H2",
+     "text": "Review your order"
+    },
+    {
+     "tag": "H3",
+     "text": "Breakfast Pancakes"
+    },
+    {
+     "tag": "H3",
+     "text": "Delivery preferences"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     13
+    ],
+    [
+     "9999px",
+     9
+    ],
+    [
+     "12px",
+     6
+    ],
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 36,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif",
+    "ui-monospace"
+   ],
+   "weights": [
+    [
+     "400",
+     54
+    ],
+    [
+     "900",
+     19
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     6
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     60
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     7
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ]
+   ],
+   "textColorKinds": 10,
+   "bgColorKinds": 12,
+   "blurred": 3,
+   "gradients": 2,
+   "glow": 11,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Decrease Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Increase Breakfast Pancakes",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Remove Breakfast Pancakes",
+     "w": 36,
+     "h": 36
+    },
+    {
+     "tag": "INPUT",
+     "label": "",
+     "w": 20,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "View",
+     "w": 55,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 6,
+   "imgsNoAlt": 0,
+   "docHeight": 2469,
+   "elements": 164,
+   "textLength": 1069,
+   "textHead": "Order Food Pool Deck CLOUDVIEW REWARDS Earn points from this order Claim rewards before ordering so this order can be linked to your points. Claim FINAL STEP Review your order 1 item · ₱317.20 SELECTED DISHES Adjust quantities before checkout 1 Breakfast Pancakes ₱260 1 ₱260.00 GUEST DETAILS Delivery preferences ORDERED BY Auto-filled from the active stay. Confirm the name before ordering. PHONE N"
+  },
+  "ok": true
+ },
+ {
+  "id": "b05-orders",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/orders",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b05-orders--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "My Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "My Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Food Order History"
+    },
+    {
+     "tag": "H2",
+     "text": "Claim points from your orders"
+    },
+    {
+     "tag": "H2",
+     "text": "CVDHFO000019"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Notes"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "9999px",
+     7
+    ],
+    [
+     "20px",
+     7
+    ],
+    [
+     "12px",
+     5
+    ],
+    [
+     "32px",
+     4
+    ],
+    [
+     "16px",
+     3
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 27,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     41
+    ],
+    [
+     "500",
+     16
+    ],
+    [
+     "600",
+     15
+    ],
+    [
+     "700",
+     8
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     47
+    ],
+    [
+     "rgb(201, 156, 56)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     5
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     3
+    ],
+    [
+     "rgb(0, 0, 0)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     2
+    ]
+   ],
+   "textColorKinds": 13,
+   "bgColorKinds": 10,
+   "blurred": 5,
+   "gradients": 0,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Claim",
+     "w": 75,
+     "h": 44
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 1480,
+   "elements": 111,
+   "textLength": 801,
+   "textHead": "My Orders Pool Deck · Guest Food Order History GUEST: GUEST View your current and previous food orders. Pending orders can still be managed from the tracking page. CLOUDVIEW REWARDS Claim points from your orders Link your guest rewards profile to earn points from food orders and services. Claim CVDHFO000019 PENDING Oct 5, 2026, 12:24 PM ₱707.60 ACTIVE ITEMS 2 PAYMENT PAY AT COUNTER UNPAID PICK UP "
+  },
+  "ok": true
+ },
+ {
+  "id": "b06-guide",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/guide",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b06-guide--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/guide",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Hotel Guide",
+    "Everything, thoughtfully within reach."
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Hotel Guide"
+    },
+    {
+     "tag": "H1",
+     "text": "Everything, thoughtfully within reach."
+    },
+    {
+     "tag": "H2",
+     "text": "How may we assist?"
+    },
+    {
+     "tag": "H2",
+     "text": "The details that matter"
+    },
+    {
+     "tag": "H2",
+     "text": "Explore the hotel"
+    },
+    {
+     "tag": "H3",
+     "text": "Dining"
+    },
+    {
+     "tag": "H3",
+     "text": "Facilities"
+    },
+    {
+     "tag": "H3",
+     "text": "Nearby Attractions"
+    },
+    {
+     "tag": "H3",
+     "text": "Hotel Information"
+    }
+   ],
+   "headingCount": 9,
+   "radii": [
+    [
+     "9999px",
+     11
+    ],
+    [
+     "12px",
+     7
+    ],
+    [
+     "16px",
+     4
+    ],
+    [
+     "21.6px",
+     3
+    ],
+    [
+     "23.2px",
+     3
+    ],
+    [
+     "34.4px",
+     1
+    ],
+    [
+     "18.4px",
+     1
+    ],
+    [
+     "28.8px",
+     1
+    ]
+   ],
+   "radiusKinds": 10,
+   "radiusElements": 33,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     69
+    ],
+    [
+     "700",
+     19
+    ],
+    [
+     "300",
+     5
+    ],
+    [
+     "600",
+     5
+    ],
+    [
+     "500",
+     3
+    ],
+    [
+     "900",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     59
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     9
+    ],
+    [
+     "rgb(247, 242, 232)",
+     9
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     8
+    ],
+    [
+     "rgb(213, 173, 85)",
+     6
+    ],
+    [
+     "rgba(213, 173, 85, 0.8)",
+     3
+    ],
+    [
+     "rgb(246, 240, 228)",
+     3
+    ],
+    [
+     "rgb(232, 198, 111)",
+     2
+    ]
+   ],
+   "textColorKinds": 10,
+   "bgColorKinds": 16,
+   "blurred": 8,
+   "gradients": 6,
+   "glow": 2,
+   "smallTargets": [
+    {
+     "tag": "INPUT",
+     "label": "Search dining, Wi-Fi, pool, ch",
+     "w": 244,
+     "h": 20
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Show Wi-Fi password",
+     "w": 32,
+     "h": 32
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Copy Wi-Fi password",
+     "w": 32,
+     "h": 32
+    }
+   ],
+   "smallTargetCount": 3,
+   "imgsNoAlt": 0,
+   "docHeight": 2456,
+   "elements": 208,
+   "textLength": 924,
+   "textHead": "Hotel Guide Everything you need during your stay PRIVATE CONCIERGE CLOUDVIEW WELCOME TO YOUR STAY Everything, thoughtfully within reach. Discover hotel essentials, dining, amenities and personalised assistance in one refined guide. AT YOUR SERVICE How may we assist? In-room dining BROWSE MENU & ORDER Guest services REQUEST AMENITIES & ASSISTANCE Contact our team SPEAK WITH HOTEL STAFF STAY ESSENTI"
+  },
+  "ok": true
+ },
+ {
+  "id": "b07-confirmed",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/confirmed/{{ORDER}}",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b07-confirmed--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/confirmed/CVDHFO000019",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Thank You, Maria Santos!"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Thank You, Maria Santos!"
+    }
+   ],
+   "headingCount": 1,
+   "radii": [
+    [
+     "12px",
+     4
+    ],
+    [
+     "20px",
+     2
+    ],
+    [
+     "9999px",
+     1
+    ],
+    [
+     "32px",
+     1
+    ],
+    [
+     "16px",
+     1
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 6,
+   "radiusElements": 10,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     20
+    ],
+    [
+     "700",
+     11
+    ],
+    [
+     "500",
+     5
+    ],
+    [
+     "300",
+     1
+    ],
+    [
+     "600",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     22
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     4
+    ],
+    [
+     "rgb(201, 156, 56)",
+     3
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     2
+    ],
+    [
+     "rgb(0, 0, 0)",
+     1
+    ]
+   ],
+   "textColorKinds": 6,
+   "bgColorKinds": 7,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 952,
+   "elements": 60,
+   "textLength": 276,
+   "textHead": "Thank You, Maria Santos! Your order has been received. You can track it in real time from confirmation to delivery. ESTIMATED DELIVERY 20–30 mins Order CVDHFO000019 Order status PENDING Payment UNPAID Method PAY AT COUNTER Total ₱707.60 Track Order Home Order Services Profile"
+  },
+  "ok": true
+ },
+ {
+  "id": "b08-track",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/track/{{ORDER}}",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Bbase\\b08-track--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/track/CVDHFO000019",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Order Tracking"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Order Tracking"
+    },
+    {
+     "tag": "H2",
+     "text": "Waiting for confirmation"
+    },
+    {
+     "tag": "H2",
+     "text": "Waiting for staff confirmation"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Details"
+    },
+    {
+     "tag": "H2",
+     "text": "Delivery Details"
+    },
+    {
+     "tag": "H2",
+     "text": "Need help?"
+    }
+   ],
+   "headingCount": 6,
+   "radii": [
+    [
+     "9999px",
+     15
+    ],
+    [
+     "20px",
+     13
+    ],
+    [
+     "16px",
+     7
+    ],
+    [
+     "12px",
+     7
+    ],
+    [
+     "32px",
+     4
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "22.4px",
+     1
+    ]
+   ],
+   "radiusKinds": 7,
+   "radiusElements": 49,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     59
+    ],
+    [
+     "500",
+     43
+    ],
+    [
+     "600",
+     26
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "300",
+     3
+    ],
+    [
+     "900",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     85
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     12
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     11
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     5
+    ],
+    [
+     "rgb(167, 243, 208)",
+     2
+    ],
+    [
+     "rgb(254, 202, 202)",
+     2
+    ]
+   ],
+   "textColorKinds": 14,
+   "bgColorKinds": 13,
+   "blurred": 6,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 2919,
+   "elements": 204,
+   "textLength": 1072,
+   "textHead": "Order Tracking Pool Deck ☁ CLOUD VIEW RESORT & HOTEL Waiting for confirmation Your order was received and is waiting for hotel staff confirmation. ESTIMATED CONFIRMATION TIME 2 - 5 mins LIVE PROGRESS Waiting for staff confirmation Updates automatically through realtime events. PENDING Received Confirmed Preparing Ready Delivered ORDER PROGRESS 15% complete CURRENT Order Received TIMER 24s UPDATED "
+  },
+  "ok": true
+ }
+]

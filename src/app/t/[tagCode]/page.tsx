@@ -428,9 +428,14 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               {guestDisplayName.toLowerCase()}
             </h1>
 
+            {/*
+              CP-1. "Welcome to <hotel>. Everything you need during your stay is
+              just one tap away." sat under the hotel's name on a screen whose
+              whole content is the things you can tap. The sentence that
+              remains tells the guest something only this screen knows.
+            */}
             <p className="mt-4 max-w-xs text-sm font-medium leading-6 text-white/70">
-              Welcome to {tag.hotel.name}. Everything you need during your stay
-              is just one tap away.
+              You are at {locationName}.
             </p>
           </GuestReveal>
 
@@ -441,16 +446,10 @@ export default async function GuestHome({ params }: GuestHomeProps) {
         </section>
 
         <GuestReveal delay={0.12} className="px-5 pt-6">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-                Guest Concierge
-              </p>
-              <h2 className="mt-1 text-3xl font-serif font-normal text-white">
-                What would you like to do?
-              </h2>
-            </div>
-          </div>
+          {/* An eyebrow reading "Guest Concierge" above a question that asks the same thing. */}
+          <h2 className="mb-4 font-serif text-2xl font-normal text-white">
+            What would you like to do?
+          </h2>
 
           <div className="grid grid-cols-2 gap-3">
             <PrimaryActionCard
@@ -559,7 +558,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
 
                 <Link
                   href={`/t/${normalizedTagCode}/guide`}
-                  className="mt-4 inline-flex bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
+                  className="mt-4 inline-flex min-h-11 items-center bg-black px-5 py-3 text-sm font-semibold tracking-wide text-white"
                 >
                   Explore Hotel Guide
                 </Link>

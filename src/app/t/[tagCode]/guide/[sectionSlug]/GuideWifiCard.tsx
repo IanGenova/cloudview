@@ -98,7 +98,7 @@ export function GuideWifiCard({
                 aria-label={
                   revealed ? "Hide Wi-Fi password" : "Show Wi-Fi password"
                 }
-                className="inline-flex items-center gap-2 border border-white/12 bg-black/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/72 transition hover:border-[#d5ad55]/45 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
+                className="inline-flex min-h-11 items-center gap-2 border border-white/12 bg-black/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/72 transition hover:border-[#d5ad55]/45 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
               >
                 {revealed ? (
                   <EyeOff className="size-3.5" />
@@ -112,7 +112,7 @@ export function GuideWifiCard({
                 type="button"
                 onClick={copyPassword}
                 aria-label="Copy Wi-Fi password"
-                className="inline-flex items-center gap-2 border border-[#d5ad55]/35 bg-[#d5ad55]/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e8c66f] transition hover:bg-[#d5ad55]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
+                className="inline-flex min-h-11 items-center gap-2 border border-[#d5ad55]/35 bg-[#d5ad55]/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e8c66f] transition hover:bg-[#d5ad55]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d5ad55]"
               >
                 {copied ? (
                   <Check className="size-3.5" />

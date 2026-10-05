@@ -333,54 +333,29 @@ export default async function GuestMenuPage({
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
-        <div className="mb-5 border border-gold/20 bg-gold/10 p-5 text-white backdrop-blur-md">
-          {rewardsContext.guestMember && rewardsContext.pointAccount ? (
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
-                  CloudView Rewards
-                </p>
+        {/*
+          IX-4 and CP-1. This was a filled gold panel with a 24px heading and a
+          filled gold button, sitting above the menu: the first thing a hungry
+          guest saw, the only call to action above the fold, and part of why the
+          first dish was 900px down a 844px screen. Rewards are worth a line,
+          and the decision they ask for — link my points before I pay — belongs
+          beside the payment, which is where the cart already puts it.
+        */}
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-white/10 pb-3 text-white">
+          <p className="text-sm font-medium text-white/60">
+            {rewardsContext.guestMember && rewardsContext.pointAccount
+              ? `${rewardsContext.pointAccount.availablePoints} rewards points available`
+              : 'Rewards points are earned on paid orders.'}
+          </p>
 
-                <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-                  {rewardsContext.pointAccount.availablePoints} points available
-                </h2>
-
-                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
-                  Complete paid orders to earn more rewards points.
-                </p>
-              </div>
-
-              <Link
-                href={`/t/${tagCode}/rewards`}
-                className="shrink-0 bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110"
-              >
-                View
-              </Link>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
-                  CloudView Rewards
-                </p>
-
-                <h2 className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-                  Earn points from this order
-                </h2>
-
-                <p className="mt-1 text-sm font-medium leading-6 text-white/60">
-                  Claim rewards before ordering so this order can be linked to your points.
-                </p>
-              </div>
-
-              <Link
-                href={`/t/${tagCode}/rewards`}
-                className="shrink-0 bg-gold px-5 py-3 text-[13px] font-semibold tracking-wide text-black transition hover:brightness-110"
-              >
-                Claim
-              </Link>
-            </div>
-          )}
+          <Link
+            href={`/t/${tagCode}/rewards`}
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-gold underline-offset-4 hover:underline"
+          >
+            {rewardsContext.guestMember && rewardsContext.pointAccount
+              ? 'View rewards'
+              : 'Claim rewards'}
+          </Link>
         </div>
 
         <MenuClient
