@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { money } from '@/lib/money';
 import { cn } from '@/lib/utils';
+import { emptyState } from '@/lib/empty-state';
 import {
   ExistingXenditSessionGuard,
   type ExistingXenditGuardStatus,
@@ -1002,6 +1003,15 @@ const [scheduledNote, setScheduledNote] = useState('');
         .includes(query);
     });
   }, [activeCategory, products, searchQuery]);
+
+  const menuEmptyState = emptyState({
+    total: products.length,
+    filtered: Boolean(searchQuery.trim()) || activeCategory !== 'All',
+    noun: 'dish',
+    plural: 'dishes',
+    query: searchQuery.trim() || undefined,
+    emptyDetail: 'The kitchen has not published a menu for this location yet.',
+  });
 
   const featured =
     filteredProducts.find((product) => !isProductSoldOut(product)) ??
@@ -2305,16 +2315,21 @@ const [scheduledNote, setScheduledNote] = useState('');
           })}
         </div>
 
+        {/*
+          ST-7 and CP-9. "No dishes found — try another category or clear your
+          search" ran whether or not anything had been searched, so a hotel
+          with an empty menu told the guest to undo a filter they had not set.
+        */}
         {!filteredProducts.length ? (
           <div className="border border-white/10 bg-white/[0.04] p-9 text-center">
             <div className="mx-auto grid size-16 place-items-center bg-white/5 text-white/35">
               <Utensils className="size-7" strokeWidth={1.5} />
             </div>
             <h3 className="mt-5 font-serif text-2xl font-normal tracking-wide text-white">
-              No dishes found
+              {menuEmptyState.title}
             </h3>
             <p className="mx-auto mt-2 max-w-xs text-sm font-medium leading-6 text-white/45">
-              Try another category or clear your search.
+              {menuEmptyState.detail}
             </p>
             {(searchQuery || activeCategory !== 'All') ? (
               <button

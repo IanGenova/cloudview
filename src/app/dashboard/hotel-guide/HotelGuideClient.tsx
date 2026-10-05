@@ -1,5 +1,6 @@
 "use client";
 
+import { emptyState } from '@/lib/empty-state';
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
 
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -2119,6 +2120,14 @@ export function HotelGuideClient({
     [sections],
   );
 
+  const guideEmpty = emptyState({
+    total: totalItems,
+    filtered: Boolean(normalizeSearch(searchQuery)),
+    noun: 'guide item',
+    query: searchQuery.trim() || undefined,
+    emptyDetail: 'Add an item, or load the starter guide, to give guests something to read.',
+  });
+
   /**
    * Deduplicate across the whole guide: an item photo appears under both its
    * item and its parent section, and the same image id must not inflate the
@@ -2620,9 +2629,10 @@ export function HotelGuideClient({
               {!flatVisibleItems.length ? (
                 <div className="border border-dashed border-neutral-300 bg-white p-10 text-center">
                   <FileText className="mx-auto size-8 text-neutral-300" />
-                  <p className="mt-3 font-semibold">No guide items found</p>
+                  {/* ST-7, CP-9: only blame a filter that is actually set. */}
+                  <p className="mt-3 font-semibold">{guideEmpty.title}</p>
                   <p className="mt-1 text-sm text-neutral-500">
-                    Adjust your filters or add a new guide item.
+                    {guideEmpty.detail}
                   </p>
                 </div>
               ) : null}

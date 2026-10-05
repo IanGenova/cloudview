@@ -1622,6 +1622,10 @@ export function ServiceRequestsClient({
     };
   }, [localRequests]);
 
+  /* ST-9: is anything actually narrowing the board right now? */
+  const requestsAreFiltered =
+    Boolean(deferredQuery.trim()) || statusFilter !== 'ALL';
+
   const filteredRequests = useMemo(() => {
     const search = deferredQuery.trim().toLowerCase();
 
@@ -1739,6 +1743,7 @@ export function ServiceRequestsClient({
             onOpen={setSelectedRequest}
             updateAction={handleUpdateServiceRequest}
             isMutating={isMutating}
+            filtered={requestsAreFiltered}
           />
 
           <RequestLane
@@ -1749,6 +1754,7 @@ export function ServiceRequestsClient({
             onOpen={setSelectedRequest}
             updateAction={handleUpdateServiceRequest}
             isMutating={isMutating}
+            filtered={requestsAreFiltered}
           />
         </div>
       ) : (
@@ -1766,6 +1772,7 @@ export function ServiceRequestsClient({
           onOpen={setSelectedRequest}
           updateAction={handleUpdateServiceRequest}
           isMutating={isMutating}
+          filtered={requestsAreFiltered}
           wide
         />
       )}
@@ -1809,6 +1816,7 @@ function RequestLane({
   updateAction,
   isMutating,
   wide,
+  filtered,
 }: {
   title: string;
   description: string;
@@ -1818,6 +1826,8 @@ function RequestLane({
   updateAction: ServiceRequestClientAction;
   isMutating: boolean;
   wide?: boolean;
+  /* ST-9: whether a search or a status filter is actually narrowing the board. */
+  filtered?: boolean;
 }) {
   const isNewLane = title.toLowerCase().includes('new');
   const isProgressLane = title.toLowerCase().includes('progress');
@@ -1830,7 +1840,16 @@ function RequestLane({
 
   return (
     <section
-      className={`flex min-h-[560px] flex-col overflow-hidden border shadow-sm ${laneToneClass}`}
+      /*
+        ST-9: a 560px floor on every lane, so two empty ones reserved a whole
+        screen of nothing on a board with no requests. A lane holding cards
+        still gets the floor — it keeps the two columns level while work is
+        moving through them — but an empty lane takes the height of its own
+        one-line message.
+      */
+      className={`flex flex-col overflow-hidden border shadow-sm ${
+        requests.length ? 'min-h-[560px]' : ''
+      } ${laneToneClass}`}
     >
       <div className="shrink-0 border-b border-black/5 bg-white/70 p-4 backdrop-blur dark:border-white/10 dark:bg-neutral-950/70">
         <div className="flex items-start justify-between gap-3">
@@ -2001,20 +2020,18 @@ function RequestLane({
             })}
           </div>
         ) : (
-          <div className="grid h-full min-h-64 place-items-center border border-dashed border-neutral-300 bg-white/70 p-8 text-center dark:border-neutral-800 dark:bg-neutral-950/70">
-            <div>
-              <div className="mx-auto grid size-12 place-items-center bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
-                <MessageCircle className="size-5" />
-              </div>
-
-              <p className="mt-4 font-semibold text-neutral-600 dark:text-neutral-300">
-                No request orders here.
-              </p>
-
-              <p className="mt-1 text-sm text-neutral-500">
-                Matching service requests will appear in this lane.
-              </p>
-            </div>
+          /*
+            ST-9 and CP-9. An empty lane reserved a 256px-tall dashed box and
+            said "Matching service requests will appear in this lane" — the
+            word "matching" blaming a filter on a board whose search was empty
+            and whose status was All. Two of these side by side held a whole
+            screen of nothing. It is a line now, and it only says "matching"
+            when something is actually being matched.
+          */
+          <div className="border border-dashed border-neutral-300 bg-white/70 px-5 py-6 text-sm text-neutral-500 dark:border-neutral-800 dark:bg-neutral-950/70">
+            {filtered
+              ? 'Nothing in this lane matches the current search.'
+              : 'Nothing in this lane.'}
           </div>
         )}
       </div>

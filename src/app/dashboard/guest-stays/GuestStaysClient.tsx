@@ -1,5 +1,6 @@
 'use client';
 
+import { emptyState } from '@/lib/empty-state';
 import {
   type FormEvent,
   useEffect,
@@ -1013,6 +1014,23 @@ export function GuestStaysClient({
 
   const createSecurityCodeEnabled =
     selectedHotel?.nfcRoomPasscodeEnabled ?? true;
+
+  /*
+   * ST-4 and CP-9. This table said "No guest stays match the current filters"
+   * on an installation with no stays and no filters set, which reads as a
+   * broken query rather than an empty hotel. Checking the database settled it:
+   * zero stays, thirty-one orders — the orders carry a guest's typed name, not
+   * a checked-in stay, and the screen was telling the truth in the wrong words.
+   */
+  const staysEmpty = emptyState({
+    total: guestStays.length,
+    filtered:
+      Boolean(guestStaySearch.trim()) || guestStayStatusFilter !== 'ALL',
+    noun: 'guest stay',
+    query: guestStaySearch.trim() || undefined,
+    emptyDetail:
+      'A stay appears here once a guest is checked in to a room.',
+  });
 
   const filteredGuestStays = useMemo(() => {
     const query = guestStaySearch.trim().toLowerCase();
@@ -2094,9 +2112,10 @@ function handleResetPasscode(guestStayId: string) {
                 <tr>
                   <td
                     colSpan={9}
-                    className="px-5 py-10 text-center font-bold text-neutral-500"
+                    className="px-5 py-10 text-center text-neutral-500"
                   >
-                    No guest stays match the current filters.
+                    <p className="font-semibold">{staysEmpty.title}</p>
+                    <p className="mt-1 text-sm">{staysEmpty.detail}</p>
                   </td>
                 </tr>
               ) : null}

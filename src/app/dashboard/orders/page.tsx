@@ -247,6 +247,7 @@ export default async function OrdersPage({
       />
 
       <OrdersClient
+        loadedAt={new Date().toISOString()}
         message={message}
         summary={{
           activeOrders: activeOrders.length,

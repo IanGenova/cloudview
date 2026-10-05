@@ -74,3 +74,25 @@ export function passcodeVerifyMessage(
     'Unable to verify room access.'
   );
 }
+
+/*
+ * ST-3 and CP-8: which failures leave the passcode form worth showing.
+ *
+ * The screen used to render every error above a live, enabled form. Three of
+ * the six cannot be resolved by the guest at all -- a lockout has to expire, a
+ * device limit and a missing stay need a member of staff -- so the screen told
+ * them to contact the front desk and then offered "Authorize Device" anyway.
+ * The other three are the guest's to fix and the form must stay.
+ *
+ * Anything unrecognised is treated as retryable: stranding a guest on a screen
+ * with no form is worse than letting them try a code that may yet work.
+ */
+const BLOCKING_CODES = new Set<string>([
+  'passcode_locked',
+  'device_limit',
+  'no_active_stay',
+]);
+
+export function passcodeIsBlocking(error?: string | null): boolean {
+  return Boolean(error) && BLOCKING_CODES.has(error as string);
+}

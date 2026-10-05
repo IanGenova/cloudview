@@ -1,5 +1,6 @@
 'use client';
 
+import { emptyState } from '@/lib/empty-state';
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
 import { useRouter } from 'next/navigation';
 import {
@@ -1066,6 +1067,14 @@ const hasActiveFilters =
   typeFilter !== 'ALL' ||
   statusFilter !== 'ALL';
 
+const tagsEmpty = emptyState({
+  total: localTags.length,
+  filtered: hasActiveFilters,
+  noun: 'NFC tag',
+  query: search.trim() || undefined,
+  emptyDetail: 'Create a tag to give a room or a public area its own guest portal.',
+});
+
   async function handleCreateTag(formData: FormData) {
   if (isMutating) {
     return;
@@ -1544,12 +1553,13 @@ return (
           <div className="border border-dashed border-neutral-300 bg-white p-10 text-center md:col-span-2 2xl:col-span-3 dark:border-neutral-800 dark:bg-neutral-900">
             <RadioTower className="mx-auto size-10 text-neutral-300 dark:text-neutral-600" />
 
+            {/* ST-7, CP-9: nothing filtered is not the same as nothing there. */}
             <p className="mt-4 font-semibold text-[#11100b] dark:text-white">
-              No NFC tags found.
+              {tagsEmpty.title}
             </p>
 
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              Try changing your search or filters, or create a new NFC tag.
+              {tagsEmpty.detail}
             </p>
 
             <button

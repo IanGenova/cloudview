@@ -49,3 +49,13 @@ src/components/ui/Textarea.tsx
 # src/lib/staff-confirm-wiring.test.ts, which reads the call sites and fails if
 # a destructive one stops going through the rule.
 src/components/dashboard/KitchenStatusActionButton.tsx
+
+
+# Route boundaries: a heading, a sentence and two links each. The only
+# non-markup line in the error pages is console.error of the digest.
+src/app/not-found.tsx
+src/app/dashboard/not-found.tsx
+src/app/dashboard/error.tsx
+
+# Renders the age wording from src/lib/loaded-at.ts, which is tested.
+src/components/dashboard/LoadedAt.tsx

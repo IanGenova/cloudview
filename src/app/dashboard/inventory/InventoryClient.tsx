@@ -27,6 +27,7 @@ import {
   ServiceBillingMode,
 } from '@prisma/client';
 import { Card, CardContent } from '@/components/ui/Card';
+import { emptyState } from '@/lib/empty-state';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -1740,6 +1741,25 @@ export function InventoryClient({
     menuSearch,
   ]);
 
+  const menuEmpty = emptyState({
+    total: localMenuItems.length,
+    filtered:
+      Boolean(menuSearch.trim()) ||
+      menuFilter !== 'ALL' ||
+      menuCategoryFilter !== 'ALL',
+    noun: 'menu item',
+    query: menuSearch.trim() || undefined,
+    emptyDetail: 'Menu items created in the Services module appear here.',
+  });
+
+  const serviceEmpty = emptyState({
+    total: localServiceItems.length,
+    filtered: Boolean(serviceSearch.trim()) || serviceFilter !== 'ALL',
+    noun: 'service item',
+    query: serviceSearch.trim() || undefined,
+    emptyDetail: 'Service add-ons created in the Services module appear here.',
+  });
+
   const sortedMenuItems = useMemo(() => {
     const directionMultiplier = menuSort.direction === 'asc' ? 1 : -1;
 
@@ -2486,9 +2506,14 @@ export function InventoryClient({
                             colSpan={8}
                             className="px-5 py-12 text-center"
                           >
-                            <p className="font-semibold">No menu items found.</p>
+                            {/*
+                              ST-7, CP-9: "found" reports on a query, "yet"
+                              reports on the world, and only one of them is
+                              ever true. One rule decides.
+                            */}
+                            <p className="font-semibold">{menuEmpty.title}</p>
                             <p className="mt-1 text-sm text-neutral-500">
-                              Try changing your search or filter.
+                              {menuEmpty.detail}
                             </p>
                           </td>
                         </tr>
@@ -2832,9 +2857,9 @@ export function InventoryClient({
                             colSpan={7}
                             className="px-5 py-12 text-center"
                           >
-                            <p className="font-semibold">No service items found.</p>
+                            <p className="font-semibold">{serviceEmpty.title}</p>
                             <p className="mt-1 text-sm text-neutral-500">
-                              Try changing your search or filter.
+                              {serviceEmpty.detail}
                             </p>
                           </td>
                         </tr>

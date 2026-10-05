@@ -1,6 +1,8 @@
 'use client';
 
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+import { LoadedAt } from '@/components/dashboard/LoadedAt';
+import { emptyState } from '@/lib/empty-state';
 import { renderNonFiscalNoticeHtml } from '@/lib/fiscal-notice';
 
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -2145,11 +2147,14 @@ export function OrdersClient({
   summary,
   statusCounts,
   orders,
+  loadedAt,
 }: {
   message?: Message;
   summary: Summary;
   statusCounts: StatusCounts;
   orders: DashboardOrder[];
+  /* ST-8: when the server last read this board, so Refresh has an answer. */
+  loadedAt: string;
 }) {
   const router = useRouter();
 
@@ -2552,10 +2557,12 @@ export function OrdersClient({
                 Newest first
               </span>
 
+              <LoadedAt at={loadedAt} />
+
               <button
                 type="button"
                 onClick={() => router.refresh()}
-                className="inline-flex items-center gap-2 border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="inline-flex min-h-11 items-center gap-2 border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 <RefreshCw className="size-3.5" />
                 Refresh latest
@@ -2591,13 +2598,44 @@ export function OrdersClient({
               />
             ))}
 
+            {/*
+              ST-7 and CP-9. This said "No orders found. Try changing your
+              search or filters." whether a filter was set or not, so a hotel
+              that had taken no orders yet was told to undo a search it had
+              never typed. One rule, in `empty-state.ts`, decides which of the
+              two things is true.
+            */}
             {!sortedOrders.length ? (
-              <div className="border border-dashed border-neutral-300 bg-white p-10 text-center lg:col-span-2">
-                <p className="font-semibold">No orders found.</p>
-                <p className="mt-1 text-sm text-neutral-500">
-                  Try changing your search or filters.
-                </p>
-              </div>
+              (() => {
+                const state = emptyState({
+                  total: localOrders.length,
+                  filtered: Boolean(search) || statusFilter !== 'ALL' || paymentFilter !== 'ALL',
+                  noun: 'order',
+                  query: search || undefined,
+                  emptyDetail:
+                    'Orders placed from a guest portal or the POS terminal arrive here.',
+                });
+
+                return (
+                  <div className="border border-dashed border-neutral-300 bg-white p-10 text-center lg:col-span-2">
+                    <p className="font-semibold">{state.title}</p>
+                    <p className="mt-1 text-sm text-neutral-500">{state.detail}</p>
+                    {state.canClear ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('');
+                          setStatusFilter('ALL');
+                          setPaymentFilter('ALL');
+                        }}
+                        className="mt-4 inline-flex min-h-11 items-center border border-cv-hairline px-4 text-sm font-semibold"
+                      >
+                        Clear filters
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })()
             ) : null}
           </div>
 

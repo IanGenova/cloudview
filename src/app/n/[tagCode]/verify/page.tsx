@@ -1,7 +1,11 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { KeyRound, Lock, ShieldCheck } from 'lucide-react';
 import { db } from '@/lib/db';
-import { passcodeVerifyMessage } from '@/lib/guest-passcode-messages';
+import {
+  passcodeIsBlocking,
+  passcodeVerifyMessage,
+} from '@/lib/guest-passcode-messages';
 import { verifyTagScanSecret } from '@/lib/nfc-security';
 import { getActiveGuestStayForRoom } from '@/lib/guest-stay-device-auth';
 import { verifyGuestStayPasscodeAction } from './actions';
@@ -99,10 +103,9 @@ export default async function VerifyGuestStayPage({
     roomId: tag.roomId,
   });
 
-  const errorMessage = getErrorMessage(
-    activeStay ? error : 'no_active_stay',
-    retry
-  );
+  const failureCode = activeStay ? error : 'no_active_stay';
+  const errorMessage = getErrorMessage(failureCode, retry);
+  const blocked = passcodeIsBlocking(failureCode);
 
   const roomLabel = tag.room
     ? `Room ${tag.room.number}${tag.room.name ? ` · ${tag.room.name}` : ''}`
@@ -129,11 +132,36 @@ export default async function VerifyGuestStayPage({
         </div>
 
         {errorMessage ? (
-          <div className="mt-5 bg-red-500/10 p-4 text-sm font-bold text-red-200">
+          <div
+            role="alert"
+            className="mt-5 border border-red-400/25 bg-red-500/10 p-4 text-sm font-semibold leading-6 text-red-200"
+          >
             {errorMessage}
           </div>
         ) : null}
 
+        {/*
+          ST-3 and CP-8. A lockout, a device limit and a missing stay all used
+          to appear above a live, enabled passcode form: the screen said
+          "contact the front desk" and then offered "Authorize Device", which
+          could not have worked. When the failure is not the guest's to fix,
+          the form goes and the front desk becomes the action.
+        */}
+        {blocked ? (
+          <div className="mt-6 border border-white/10 bg-black/30 p-5">
+            <p className="text-sm font-semibold leading-6 text-white/70">
+              The front desk can authorise this device for you. Nothing you can
+              type here will unlock it.
+            </p>
+
+            <Link
+              href={`/t/${tagCode}/contact`}
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center bg-gold px-5 py-3 text-sm font-semibold text-black transition hover:brightness-110"
+            >
+              Contact the front desk
+            </Link>
+          </div>
+        ) : (
         <form
           action={verifyGuestStayPasscodeAction}
           className="mt-6 space-y-4"
@@ -169,19 +197,21 @@ export default async function VerifyGuestStayPage({
             />
           </label>
 
-          <button className="inline-flex h-13 w-full items-center justify-center gap-2 bg-gold text-sm font-semibold text-black">
+          <button className="inline-flex min-h-11 w-full items-center justify-center gap-2 bg-gold py-3 text-sm font-semibold text-black">
             <KeyRound className="size-4" />
             Authorize Device
           </button>
         </form>
+        )}
 
-        <div className="mt-5 flex items-start gap-3 bg-black/30 p-4">
-          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-gold" />
-          <p className="text-xs font-semibold leading-5 text-white/45">
-            This device will be remembered for this stay only. If your device
-            limit is reached, please contact the front desk.
-          </p>
-        </div>
+        {!blocked ? (
+          <div className="mt-5 flex items-start gap-3 bg-black/30 p-4">
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-gold" />
+            <p className="text-xs font-semibold leading-5 text-white/45">
+              This device will be remembered for this stay only.
+            </p>
+          </div>
+        ) : null}
       </section>
     </main>
   );

@@ -494,6 +494,28 @@ function DonutChart({
   let offset = 0;
   const visibleSegments = segments.filter((segment) => segment.value > 0);
 
+  /*
+   * ST-6. With nothing to chart, this drew the ring anyway — a grey circle
+   * around a centred 0 — and listed every series at 0 beside it, with "No
+   * chart data yet." tucked underneath as a sixth line. Three of these on one
+   * screen made a fresh install look like a business that had failed rather
+   * than one that had not started. Nothing to chart draws nothing.
+   */
+  if (!visibleSegments.length) {
+    return (
+      <div className="grid min-h-[13rem] place-items-center">
+        <div className="text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
+            {centerLabel}
+          </p>
+          <p className="mt-2 text-sm text-neutral-500">
+            Nothing recorded in this period yet.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[210px_minmax(0,1fr)] lg:items-center">
       <div className="relative mx-auto size-52">
@@ -580,9 +602,6 @@ function DonutChart({
           );
         })}
 
-        {!segments.some((segment) => segment.value > 0) ? (
-          <EmptyState text="No chart data yet." />
-        ) : null}
       </div>
     </div>
   );

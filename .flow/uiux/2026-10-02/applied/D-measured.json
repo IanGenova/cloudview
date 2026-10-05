@@ -1,0 +1,24 @@
+{
+ "note": "Group D. 3007 is the pre-audit build, 3008 the current one, both on the same disposable database.",
+ "roles": "See role-check.cjs output in the phase record: no developer shorthand on any of the three non-admin accounts.",
+ "guest404": "check-404.cjs: a guest with a tapped session gets 404 + the guest boundary; an unmatched path gets 404 + the root boundary.",
+ "guest404_output": [
+  "404   /t/pool-deck-main-panel/guide/no-such-section  \"NOT HERE That page has moved on The link you followed does not lead anywhere in this hotel’s portal. Nothing is wrong \"",
+  "404   /t/pool-deck-main-panel/track/NOSUCHORDER      \"NOT HERE That page has moved on The link you followed does not lead anywhere in this hotel’s portal. Nothing is wrong \"",
+  "404   /nothing-at-all                                \"NOT FOUND There is nothing at this address The link may be mistyped, or it may point at something that has since been \""
+ ],
+ "roles_output": [
+  "HOTEL_ADMIN  /dashboard                           {\"url\":\"/dashboard\",\"shorthand\":[],\"stays\":[\"Guest stays expected to check out today\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 17 DASHBO\"}",
+  "HOTEL_ADMIN  /dashboard/guest-stays               {\"url\":\"/dashboard/guest-stays\",\"shorthand\":[],\"stays\":[\"Guest Stays\",\"Guest Stays\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 17 DASHBO\"}",
+  "HOTEL_ADMIN  /dashboard/settings/access-control   {\"url\":\"/dashboard/settings/access-control\",\"shorthand\":[],\"stays\":[],\"head\":\"NOT FOUND There is nothing at this address The link may be mistyped,\"}",
+  "HOTEL_ADMIN  /dashboard/orders                    {\"url\":\"/dashboard/orders\",\"shorthand\":[],\"stays\":[\"Guest Stays\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 17 DASHBO\"}",
+  "STAFF        /dashboard                           {\"url\":\"/dashboard\",\"shorthand\":[],\"stays\":[\"Guest stays expected to check out today\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 6 DASHBOA\"}",
+  "STAFF        /dashboard/guest-stays               {\"url\":\"/dashboard\",\"shorthand\":[],\"stays\":[\"Guest stays expected to check out today\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 6 DASHBOA\"}",
+  "STAFF        /dashboard/settings/access-control   {\"url\":\"/dashboard/settings/access-control\",\"shorthand\":[],\"stays\":[],\"head\":\"NOT FOUND There is nothing at this address The link may be mistyped,\"}",
+  "STAFF        /dashboard/orders                    {\"url\":\"/dashboard/orders\",\"shorthand\":[],\"stays\":[\"Guest Stays\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 6 DASHBOA\"}",
+  "KITCHEN      /dashboard                           {\"url\":\"/dashboard\",\"shorthand\":[],\"stays\":[\"Guest stays expected to check out today\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 5 DASHBOA\"}",
+  "KITCHEN      /dashboard/guest-stays               {\"url\":\"/dashboard/kitchen\",\"shorthand\":[],\"stays\":[\"Guest Stays\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 5 DASHBOA\"}",
+  "KITCHEN      /dashboard/settings/access-control   {\"url\":\"/dashboard/settings/access-control\",\"shorthand\":[],\"stays\":[],\"head\":\"NOT FOUND There is nothing at this address The link may be mistyped,\"}",
+  "KITCHEN      /dashboard/orders                    {\"url\":\"/dashboard/kitchen\",\"shorthand\":[],\"stays\":[\"Guest Stays\"],\"head\":\"CloudView Cloud View Demo Hotel ADMIN PORTAL ACTIVE MENU 5 DASHBOA\"}"
+ ]
+}

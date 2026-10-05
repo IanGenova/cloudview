@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   PASSCODE_ERROR_CODES,
+  passcodeIsBlocking,
   passcodeVerifyMessage,
 } from './guest-passcode-messages';
 
@@ -79,5 +80,47 @@ test('every code the action can send has a sentence', () => {
 
     assert.equal(typeof message, 'string', `${code} has no message`);
     assert.doesNotMatch(message ?? '', /unable to verify/i, `${code} fell through to the generic line`);
+  }
+});
+
+/*
+ * ST-3 and CP-8. The verify screen rendered a blocking error and a live,
+ * enabled passcode form at the same time: "Device limit reached for this room
+ * stay. Please contact the front desk." sat directly above a working-looking
+ * "Authorize Device" button that could not possibly succeed. Three of the six
+ * failures cannot be resolved by trying again; the screen has to know which.
+ */
+
+test('a lockout blocks the form until the timer runs out', () => {
+  assert.equal(passcodeIsBlocking('passcode_locked'), true);
+});
+
+test('a device limit blocks: only staff can raise it', () => {
+  assert.equal(passcodeIsBlocking('device_limit'), true);
+});
+
+test('no active stay blocks: the guest cannot create one', () => {
+  assert.equal(passcodeIsBlocking('no_active_stay'), true);
+});
+
+test('a wrong or missing passcode is the guest to fix, so the form stays live', () => {
+  assert.equal(passcodeIsBlocking('invalid_passcode'), false);
+  assert.equal(passcodeIsBlocking('missing_passcode'), false);
+});
+
+test('an unexplained failure stays retryable rather than stranding the guest', () => {
+  assert.equal(passcodeIsBlocking('authorization_failed'), false);
+  assert.equal(passcodeIsBlocking('something_new'), false);
+  assert.equal(passcodeIsBlocking(undefined), false);
+  assert.equal(passcodeIsBlocking(null), false);
+});
+
+test('every known code is classified', () => {
+  for (const code of PASSCODE_ERROR_CODES) {
+    assert.equal(
+      typeof passcodeIsBlocking(code),
+      'boolean',
+      `${code} has no blocking verdict`
+    );
   }
 });

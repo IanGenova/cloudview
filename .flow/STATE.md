@@ -845,3 +845,110 @@ The guest portal stacks translucent whites on near-black; the backdrop has to be
 down the ancestor chain before the ratio means anything.
 
 Wakes since commit: 0.
+
+## Phase: uiux-D-states-and-dead-ends (5 October 2026) — Full
+
+Owner: "now continue with group D". The empty states, the error pages and the screens that
+describe a situation they are not in. ST-1 is a blocker and the artifact calls it the
+highest-value single change in the audit.
+
+### Acceptance criteria
+- [x] D1 The guest's second job no longer dead-ends. On an installation with no services
+      listed, the screen promised "housekeeping, room amenities, maintenance assistance and
+      thoughtful add-ons", badged the location a green AVAILABLE, and then said "No services
+      found — try another category or clear your search" with no category chosen, no search
+      typed and no other control on the screen. It now says the hotel has not listed any
+      services here, badges the location "Nothing listed", and offers the one thing that
+      does work: Contact the front desk. Photographed in both states, from the same
+      database, before and after.
+      by artifact: `.flow/uiux/2026-10-02/applied/D-d01-service-deadend-before--mobile--light.png`
+      and `.flow/uiux/2026-10-02/applied/D-d01-service--mobile--light.png`
+      from: UIUX-2026-10-02 § States and feedback — ST-1 (BLOCKER)
+- [x] D2 Nothing renders Next's unstyled 404 any more. The app had no `not-found.tsx` and
+      no `error.tsx` anywhere, so fifteen guest routes and the whole console dropped out of
+      a branded product onto a white "404 — This page could not be found." with no way
+      back. Four boundaries now: a guest 404 and error inside the dark portal, a console
+      404 and error that keep the sidebar and offer the board. Driven from a browser with a
+      tapped NFC session: a bad guide section and a bad order code both return **404 with
+      the guest boundary**; an unmatched path returns **404 with the root boundary**, which
+      reads the path and offers the guest's doors or the staff's.
+      by artifact: `.flow/uiux/2026-10-02/applied/D-measured.json`,
+      `.flow/uiux/2026-10-02/applied/D-d03-notfound-before--mobile--light.png`
+      from: UIUX-2026-10-02 § States and feedback — ST-2
+- [x] D3 One empty-state rule instead of two vocabularies. The product writes "No <thing>
+      found" on 20 screens and "No <thing> yet" on 35, and chooses between them by habit:
+      "found" reports on a query, "yet" reports on the world, and only one of them is ever
+      true. Six screens then added "Try changing your search or filter" whether or not
+      anything was filtered. `src/lib/empty-state.ts` decides, with 8 tests, and all six —
+      orders, the guest menu, inventory's two tables, NFC tags, the hotel guide — go
+      through it. A filter cannot hide what was never there, so an empty collection always
+      reports on the world. Blaming lines left in the product: **6 -> 0**.
+      by test: `src/lib/empty-state.test.ts`
+      from: UIUX-2026-10-02 § States and feedback — ST-7, § Content and copy — CP-9
+- [x] D4 The verify screen stops offering an action that cannot work. A lockout, a device
+      limit and a missing stay all appeared above a live, enabled passcode form: the screen
+      said "contact the front desk" and then offered "Authorize Device". `passcodeIsBlocking`
+      classifies the six failures, with 6 tests covering each and the unknown case, and a
+      blocking failure replaces the form with the front desk. **The screen itself could not
+      be reached in the disposable environment** — the only room-bound tag has no scan
+      secret, so every route to it answers `nfc-access-denied?reason=bad-secret`. Source
+      change and rule are proven; the rendering is not.
+      by test: `src/lib/guest-passcode-messages.test.ts`
+      from: UIUX-2026-10-02 § States and feedback — ST-3, § Content and copy — CP-8
+- [x] D5 The analytics donuts stop drawing charts out of zeroes. With nothing to chart they
+      drew the ring anyway — a grey circle around a centred 0 — listed every series at 0
+      beside it, and tucked "No chart data yet." underneath as a sixth line. Three of those
+      on one screen made a fresh install look like a business that had failed rather than
+      one that had not started. Nothing to chart now draws nothing.
+      from: UIUX-2026-10-02 § States and feedback — ST-6
+- [x] D6 The realtime boards say how old they are. Both carried a manual Refresh and never
+      said when anything was read, so a quiet shift and a dead socket looked identical. The
+      timestamp is produced by the server on every render, so a realtime refresh updates it
+      exactly as a manual one does; the wording is `describeAge`, with 5 tests including a
+      backwards clock and a non-finite input.
+      by test: `src/lib/loaded-at.test.ts`
+      from: UIUX-2026-10-02 § States and feedback — ST-8
+- [x] D7 The requests board stops reserving a screen for nothing and stops blaming a filter
+      that is not set. Each lane had a 560px floor and an empty one said "**Matching**
+      service requests will appear in this lane" on a board whose search was empty and
+      whose status was All. The floor applies only to a lane holding cards; an empty lane
+      is one line, and it says "matching" only when something is being matched.
+      by artifact: `.flow/uiux/2026-10-02/applied/D-d04-staff-requests--desktop--light.png`
+      from: UIUX-2026-10-02 § States and feedback — ST-9
+- [x] D8 Machine stage green: `tsc --noEmit` clean, **257 tests** pass across 26 files (19
+      new), the production build compiles, 24/24 routes HTTP 200 on both servers. Measured
+      across the 24 captures, pre-audit build to current: radius-bearing elements
+      **1,221 -> 45** (all `9999px` dots), distinct radius values **141 -> 3**, elements
+      above weight 600 **1,143 -> 0**, total document height **45,393 -> 43,890px**.
+      by artifact: `.flow/uiux/2026-10-02/applied/D-manifest.json`
+
+### Two findings that did not survive contact
+`ST-4` says three staff screens report zero guest stays while the portal shows a named
+guest. The database settles it: **0 guest stays, 0 guest members, 31 orders**. An order
+carries a guest's typed name, not a checked-in stay, so the staff screens were right and
+the audit compared two different things. What was wrong was the wording — "No guest stays
+match the current filters" with no filters set — and that is fixed with the rest of D3.
+
+`ST-5` says three of four accounts report a broken permission state in developer shorthand.
+Signed in as each of HOTEL_ADMIN, STAFF and KITCHEN across four console routes: **zero
+shorthand strings** in the rendered text of any of the twelve. What those accounts do get
+is a silent redirect — STAFF asking for `/dashboard/guest-stays` lands on `/dashboard`,
+KITCHEN asking for `/dashboard/orders` lands on `/dashboard/kitchen` — with no word about
+why. That is a real defect and a different one; it is recorded here, not fixed, because
+naming it is a navigation decision and group E is the owner's.
+
+### Something changed the database mid-phase
+Twelve service catalog items appeared at 13:16 local, four minutes after the capture that
+photographed the dead end, created by the product's own "Add Default Services" staff
+action. I did not invoke it knowingly and cannot identify what did. It matters because it
+would have made the blocker unreproducible; the before capture was already taken, and the
+fix's empty branch was then photographed by clearing the catalog from the disposable
+database, which is what that database is for.
+
+### A third measurement trap
+`curl` reports 307 for every `/t/...` path, because the NFC guard runs before the route. A
+plain curl test therefore "proved" that the guest 404 boundary never fired, when what it
+had actually measured was the guard redirecting a client with no NFC cookies. From a
+browser that has tapped the panel, the guest boundary serves a real 404.
+
+Wakes since commit: 0.

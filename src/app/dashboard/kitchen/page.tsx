@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
 import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
 import { KitchenManualRefreshButton } from '@/components/dashboard/KitchenManualRefreshButton';
+import { LoadedAt } from '@/components/dashboard/LoadedAt';
 import { KitchenTvPagedLane } from '@/components/dashboard/KitchenTvPagedLane';
 import { KitchenSwipeDragController } from '@/components/dashboard/KitchenSwipeDragController';
 import { KitchenFocusOrderScroller } from '@/components/dashboard/KitchenFocusOrderScroller';
@@ -1563,6 +1564,9 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   )}
 
 <div className="flex flex-wrap gap-2 md:justify-end">
+  {/* ST-8: the board says how old it is, so Refresh has something to answer. */}
+  <LoadedAt at={new Date().toISOString()} />
+
   <KitchenManualRefreshButton />
 
   <KitchenFullscreenButton targetId="kitchen-display-fullscreen" />

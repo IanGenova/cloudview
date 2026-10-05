@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   ArrowLeft,
   Baby,
@@ -2181,9 +2182,15 @@ export function GuestServiceOrderForm({
               Comfort, delivered to your room.
             </h2>
 
+            {/*
+              ST-1. This promised housekeeping, amenities, maintenance and
+              add-ons on an installation that had none of them listed, which is
+              the first half of the dead end. It only promises what is there.
+            */}
             <p className="mt-3 max-w-xs text-sm font-medium leading-6 text-white/55">
-              Request housekeeping, room amenities, maintenance assistance, and
-              thoughtful add-ons.
+              {services.length
+                ? 'Request housekeeping, room amenities, maintenance assistance, and thoughtful add-ons.'
+                : 'The hotel has not listed any services for this location yet.'}
             </p>
           </div>
 
@@ -2201,8 +2208,19 @@ export function GuestServiceOrderForm({
               {roomLabel}
             </p>
           </div>
-          <span className="border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-widest text-emerald-300">
-            Available
+          {/*
+            And the second half: a green AVAILABLE above an empty list. The
+            badge reports what the location can actually do.
+          */}
+          <span
+            className={cn(
+              'border px-3 py-1 text-[9px] font-semibold uppercase tracking-widest',
+              services.length
+                ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300'
+                : 'border-white/15 bg-white/5 text-white/55'
+            )}
+          >
+            {services.length ? 'Available' : 'Nothing listed'}
           </span>
         </div>
       </section>
@@ -2225,7 +2243,10 @@ export function GuestServiceOrderForm({
           }}
         />
         <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-          Auto-filled from your active stay. You may edit this name.
+          {/* IX-5 again, on this form: it only claims a stay filled it in when one did. */}
+          {defaultGuestName
+            ? 'Taken from your stay. Change it if someone else is asking.'
+            : 'So staff know who the request is for.'}
         </p>
       </section>
 
@@ -2415,29 +2436,59 @@ export function GuestServiceOrderForm({
             );
           })}
 
+        {/*
+          ST-1, the blocker, and CP-9 with it. One empty state served two
+          different situations and described only one of them: "No services
+          found — try another category or clear your search" appeared when the
+          hotel had simply listed nothing, so the guest was told to undo a
+          filter that was not set, on a screen with no other way out. Nothing
+          listed is not the same as nothing matched, and only one of the two is
+          the guest's to fix.
+        */}
         {!filteredServices.length ? (
           <div className="border border-white/10 bg-white/[0.04] p-9 text-center">
             <div className="mx-auto grid size-16 place-items-center bg-white/5 text-white/35">
               <ConciergeBell className="size-7" strokeWidth={1.5} />
             </div>
-            <h3 className="mt-5 font-serif text-2xl font-normal tracking-wide">
-              No services found
-            </h3>
-            <p className="mx-auto mt-2 max-w-xs text-sm font-medium leading-6 text-white/45">
-              Try another category or clear your search.
-            </p>
-            {(searchQuery || activeCategory !== 'All') ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setActiveCategory('All');
-                }}
-                className="mt-5 border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white"
-              >
-                Reset filters
-              </button>
-            ) : null}
+
+            {services.length ? (
+              <>
+                <h3 className="mt-5 font-serif text-2xl font-normal tracking-wide">
+                  Nothing matches that
+                </h3>
+                <p className="mx-auto mt-2 max-w-xs text-sm font-medium leading-6 text-white/45">
+                  {searchQuery
+                    ? `No service matches “${searchQuery}”${activeCategory !== 'All' ? ` in ${activeCategory}` : ''}.`
+                    : `No service is listed under ${activeCategory}.`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActiveCategory('All');
+                  }}
+                  className="mt-5 inline-flex min-h-11 items-center border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white"
+                >
+                  Show all services
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 className="mt-5 font-serif text-2xl font-normal tracking-wide">
+                  No services listed yet
+                </h3>
+                <p className="mx-auto mt-2 max-w-xs text-sm font-medium leading-6 text-white/45">
+                  Nothing can be requested from this panel at the moment. The
+                  front desk can still help with anything you need.
+                </p>
+                <Link
+                  href={`/t/${tagCode}/contact`}
+                  className="mt-5 inline-flex min-h-11 items-center bg-gold px-5 py-3 text-sm font-semibold text-black transition hover:brightness-110"
+                >
+                  Contact the front desk
+                </Link>
+              </>
+            )}
           </div>
         ) : null}
       </div>
