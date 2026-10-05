@@ -952,3 +952,34 @@ had actually measured was the guard redirecting a client with no NFC cookies. Fr
 browser that has tapped the panel, the guest boundary serves a real 404.
 
 Wakes since commit: 0.
+
+## Fix: the Services module's stretched action (5 October 2026) — Quick
+
+Owner, with a screenshot: "Can you fix this?" A regression from
+`uiux-C2b-remaining-heroes`, found by looking at the running product rather than by any
+check in this file.
+
+Removing that module's hero emptied the first cell of a two-column grid but left the grid
+standing, and a grid child stretches to the row: the one surviving action became a
+**350px-tall filled black slab**, right-aligned in a column of nothing, matching the
+height of the panel beside it. Every gate was green — tsc, 257 tests, a clean build, one
+`<h1>`, no radii, no weight above 600 — because none of them can see a button the size of
+a poster.
+
+- [x] X1 The action is a control again: a plain right-aligned button above the content,
+      outside any grid.
+- [x] X2 The dead column is gone. The setup helper that occupied the other cell is one
+      hairline row — the sentence on the left, the hotel select and the button on the
+      right — instead of a filled gold card carrying its own icon tile and a nested tip
+      box. The tip is now the second half of the sentence.
+- [x] X3 The same pattern was checked in the four other modules de-heroed in that phase:
+      rewards, backups, NFC tags and the dashboard home. Backups and tags put their lifted
+      action in a plain `div`, not a grid cell, so they are unaffected; rewards' grid has
+      two real children; the home has no such grid. Services was the only one.
+
+The lesson is the one C8 already recorded in the group-C phase and it has now cost twice:
+a layout can be numerically perfect and visibly broken, and only the capture shows it.
+The de-hero passes removed containers without checking what the surviving children were
+children *of*.
+
+Wakes since commit: 0.

@@ -827,44 +827,45 @@ function handleDeleteServiceConfirm() {
     <>
       <FloatingToast toast={toast} onClose={() => setToast(null)} />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_370px]">
-        {/*
-          The hero that stood here repeated the page title and carried four
-          tiles counting the catalogue listed below it. Its action stays.
-        */}
-        <div className="mb-5 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setCreatingService(true)}
-            className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#11100b] px-5 text-sm font-medium text-white transition hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-          >
-            <PackagePlus className="size-4" />
-            Create Service / Add-on
-          </button>
-        </div>
+      {/*
+        The hero that stood here repeated the page title and carried four tiles
+        counting the catalogue below it. Removing it left its two-column grid
+        behind with an empty first cell, and a grid child stretches: the one
+        surviving action became a 350px-tall black slab floating beside a
+        column of nothing. The action is a control again, and the setup helper
+        is one hairline row instead of a filled gold card with its own icon
+        tile and a nested tip box.
+      */}
+      <div className="mb-5 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setCreatingService(true)}
+          className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#11100b] px-5 text-sm font-medium text-white transition hover:bg-neutral-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+        >
+          <PackagePlus className="size-4" />
+          Create Service / Add-on
+        </button>
+      </div>
 
-        <section className="border border-[#c99c38]/25 bg-[#fffaf0] p-5 shadow-sm">
-          <div className="flex items-start gap-3">
-            <span className="grid size-12 shrink-0 place-items-center bg-[#d6a738] text-black">
-              <Sparkles className="size-5" />
-            </span>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a6b18]">
-                Default Setup
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-[#11100b]">
-                Recommended services
-              </h2>
-              <p className="mt-1 text-sm font-semibold leading-6 text-neutral-600">
-                Add the standard room services and add-ons for the selected hotel.
-              </p>
-            </div>
+      <section className="mb-5 border border-cv-hairline bg-white p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="font-serif text-xl font-normal tracking-tight text-[#11100b]">
+              Recommended services
+            </h2>
+            <p className="mt-1 max-w-prose text-sm leading-6 text-neutral-600">
+              Add the standard room services and add-ons for the selected
+              hotel. Run it once per hotel, then adjust pricing, labels and
+              visibility below.
+            </p>
           </div>
 
-          <form action={handleSeedDefaultServices} className="mt-5 space-y-4">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          <form
+            action={handleSeedDefaultServices}
+            className="flex shrink-0 flex-wrap items-end gap-3"
+          >
+            <div className="min-w-[13rem]">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
                 Hotel
               </label>
               <Select
@@ -880,16 +881,12 @@ function handleDeleteServiceConfirm() {
               </Select>
             </div>
 
-            <Button className="w-full" disabled={pendingAction === 'seed' || isPending}>
+            <Button disabled={pendingAction === 'seed' || isPending}>
               {pendingAction === 'seed' ? 'Adding defaults...' : 'Add Default Services'}
             </Button>
           </form>
-
-          <p className="mt-4 border border-[#c99c38]/20 bg-white/70 p-4 text-xs font-bold leading-5 text-[#8a641d]">
-            Tip: run this once per hotel, then customize pricing, labels, and visibility below.
-          </p>
-        </section>
-      </div>
+        </div>
+      </section>
 
       <section className="mt-5 border border-neutral-200 bg-white">
         <div className="border-b border-neutral-100 p-5">
