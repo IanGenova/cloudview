@@ -1567,7 +1567,11 @@ function getOrderFocusLabel(order: DashboardOrder) {
   }
 
   if (order.paymentStatus === 'UNPAID') {
-    return 'Payment pending';
+    /*
+     * CP-4. "Payment pending" here and "UNPAID" on the badge beside it meant
+     * the same screen gave two names to one state. One word for money owed.
+     */
+    return 'Unpaid';
   }
 
   if (order.status === 'PREPARING') {

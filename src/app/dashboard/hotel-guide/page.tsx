@@ -210,7 +210,7 @@ export default async function HotelGuideModulePage({
   return (
     <div>
       <PageHeader
-        title="Hotel Guide Module"
+        title="Hotel guide"
         description="Control the guide sections, brochure images, and information shown in the Guest Portal."
       />
 

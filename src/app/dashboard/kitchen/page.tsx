@@ -990,7 +990,7 @@ function KitchenOrderCard({
             <KitchenStatusActionButton
               orderId={order.id}
               status={OrderStatus.READY}
-              label="Serving"
+              label="Mark Ready"
               tone="dark"
               action="ready"
               order={{ code: order.orderCode, totalCents: order.totalCents }}
@@ -1708,8 +1708,8 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     />
 
     <KitchenLane
-      title="Serving"
-      description="Orders ready for delivery."
+      title="Ready"
+      description="Finished, waiting to go to the guest."
       orders={readyOrders}
       type="ready"
       showHistory={showHistory}
@@ -1758,7 +1758,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     </KitchenTvPagedLane>
 
     <KitchenTvPagedLane
-      title="Serving"
+      title="Ready"
       description="Auto-rotating orders ready for delivery."
       type="ready"
       totalOrders={readyOrders.length}
@@ -1799,8 +1799,8 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     />
 
     <KitchenLane
-      title="Serving"
-      description="Orders ready to be delivered to the guest."
+      title="Ready"
+      description="Finished, waiting to go to the guest."
       orders={readyOrders}
       type="ready"
       showHistory={showHistory}

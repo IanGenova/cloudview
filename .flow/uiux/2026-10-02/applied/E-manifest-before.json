@@ -1,0 +1,2047 @@
+[
+ {
+  "id": "e01-mystay",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/activity",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e01-mystay--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/activity",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Guest"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Guest"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Stay Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Service Requests"
+    },
+    {
+     "tag": "H2",
+     "text": "Past Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Past Service Requests"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     4
+    ],
+    [
+     "16px",
+     2
+    ],
+    [
+     "9999px",
+     1
+    ]
+   ],
+   "radiusKinds": 4,
+   "radiusElements": 12,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     30
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     4
+    ],
+    [
+     "300",
+     3
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     37
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     1
+    ],
+    [
+     "rgb(201, 156, 56)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     1
+    ]
+   ],
+   "textColorKinds": 5,
+   "bgColorKinds": 5,
+   "blurred": 0,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Back to Portal",
+     "w": 138,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 900,
+   "elements": 60,
+   "textLength": 517,
+   "textHead": "Back to Portal GUEST ACTIVITY Guest Cloud View Demo Hotel · Guest Session ACTIVE ORDERS 0 ACTIVE REQUESTS 0 Current Stay Orders No current orders yet Food orders from this current stay will appear here. Current Service Requests No current requests yet Service requests from this current stay will appear here. Past Orders No past orders yet Previous orders from this guest profile will appear here. P"
+  },
+  "ok": true
+ },
+ {
+  "id": "e02-contact",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/contact",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e02-contact--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/contact",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "My Stay"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "My Stay"
+    },
+    {
+     "tag": "H2",
+     "text": "Guest"
+    },
+    {
+     "tag": "H2",
+     "text": "Start earning during your stay"
+    },
+    {
+     "tag": "H2",
+     "text": "Your stay, simplified"
+    },
+    {
+     "tag": "H2",
+     "text": "Need personal assistance?"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "16px",
+     12
+    ],
+    [
+     "9999px",
+     5
+    ],
+    [
+     "12px",
+     5
+    ],
+    [
+     "24px",
+     5
+    ],
+    [
+     "32px",
+     2
+    ],
+    [
+     "25.6px",
+     2
+    ],
+    [
+     "28px",
+     2
+    ],
+    [
+     "21.6px",
+     2
+    ]
+   ],
+   "radiusKinds": 8,
+   "radiusElements": 35,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     47
+    ],
+    [
+     "500",
+     16
+    ],
+    [
+     "900",
+     11
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "600",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     54
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.35)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     1
+    ]
+   ],
+   "textColorKinds": 9,
+   "bgColorKinds": 11,
+   "blurred": 2,
+   "gradients": 4,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 1659,
+   "elements": 171,
+   "textLength": 805,
+   "textHead": "PRIVATE GUEST PROFILE My Stay CV CLOUD VIEW DEMO HOTEL Good afternoon Guest Everything for your stay, rewards, requests, and hotel assistance—organized in one refined space. STAY LOCATION Pool Deck GUEST ACCESS Active CLOUDVIEW REWARDS Start earning during your stay Link your guest profile to collect points from eligible activity. PERSONAL CONCIERGE Your stay, simplified My Orders Track food order"
+  },
+  "ok": true
+ },
+ {
+  "id": "e03-login",
+  "surface": "edge",
+  "path": "/dashboard/login",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e03-login--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/login",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Your hotel operations, securely managed."
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Your hotel operations, securely managed."
+    },
+    {
+     "tag": "H2",
+     "text": "Welcome back"
+    }
+   ],
+   "headingCount": 2,
+   "radii": [
+    [
+     "9999px",
+     6
+    ],
+    [
+     "12px",
+     5
+    ],
+    [
+     "18.4px",
+     4
+    ],
+    [
+     "16px",
+     3
+    ],
+    [
+     "36px",
+     1
+    ]
+   ],
+   "radiusKinds": 5,
+   "radiusElements": 19,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     22
+    ],
+    [
+     "900",
+     10
+    ],
+    [
+     "600",
+     7
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     15
+    ],
+    [
+     "rgb(17, 16, 11)",
+     12
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     3
+    ],
+    [
+     "rgb(64, 59, 52)",
+     2
+    ],
+    [
+     "rgb(163, 163, 163)",
+     2
+    ],
+    [
+     "rgb(224, 182, 79)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     1
+    ],
+    [
+     "rgb(184, 137, 56)",
+     1
+    ]
+   ],
+   "textColorKinds": 10,
+   "bgColorKinds": 10,
+   "blurred": 3,
+   "gradients": 8,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Show password",
+     "w": 40,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 900,
+   "elements": 93,
+   "textLength": 666,
+   "textHead": "CLOUDVIEW Your hotel operations, securely managed. Access orders, services, inventory, guest stays, NFC operations, and business intelligence from one protected workspace. Role-based access Each account sees only the tools assigned to its role. Protected sessions Authenticated access is required for dashboard modules. Operational visibility Manage daily hotel activity from one controlled portal. S"
+  },
+  "ok": true
+ },
+ {
+  "id": "e04-sidebar",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e04-sidebar--desktop--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Operations Board"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Queue"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000031"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000030"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000029"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000028"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000027"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000026"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 11,
+   "radii": [
+    [
+     "16px",
+     94
+    ],
+    [
+     "9999px",
+     84
+    ],
+    [
+     "12px",
+     14
+    ],
+    [
+     "28px",
+     11
+    ],
+    [
+     "21.6px",
+     4
+    ],
+    [
+     "24px",
+     3
+    ],
+    [
+     "32px",
+     3
+    ],
+    [
+     "36px",
+     1
+    ]
+   ],
+   "radiusKinds": 8,
+   "radiusElements": 214,
+   "fonts": [
+    "ui-sans-serif"
+   ],
+   "weights": [
+    [
+     "900",
+     249
+    ],
+    [
+     "400",
+     236
+    ],
+    [
+     "700",
+     15
+    ],
+    [
+     "600",
+     11
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(120, 53, 15)",
+     132
+    ],
+    [
+     "rgb(23, 23, 23)",
+     78
+    ],
+    [
+     "rgb(255, 255, 255)",
+     49
+    ],
+    [
+     "rgb(163, 163, 163)",
+     48
+    ],
+    [
+     "rgb(10, 10, 10)",
+     38
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(64, 64, 64)",
+     26
+    ],
+    [
+     "rgb(185, 28, 28)",
+     24
+    ]
+   ],
+   "textColorKinds": 25,
+   "bgColorKinds": 32,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Light",
+     "w": 80,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 107,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 31",
+     "w": 65,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 30",
+     "w": 108,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 1",
+     "w": 114,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 110,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 114,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 20,
+   "imgsNoAlt": 0,
+   "docHeight": 2622,
+   "elements": 726,
+   "textLength": 3152,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Light Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear"
+  },
+  "ok": true
+ },
+ {
+  "id": "e01-mystay",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/activity",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e01-mystay--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/activity",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Guest"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Guest"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Stay Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Service Requests"
+    },
+    {
+     "tag": "H2",
+     "text": "Past Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Past Service Requests"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     4
+    ],
+    [
+     "16px",
+     2
+    ],
+    [
+     "9999px",
+     1
+    ]
+   ],
+   "radiusKinds": 4,
+   "radiusElements": 12,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     30
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     4
+    ],
+    [
+     "300",
+     3
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     37
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     1
+    ],
+    [
+     "rgb(201, 156, 56)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     1
+    ]
+   ],
+   "textColorKinds": 5,
+   "bgColorKinds": 5,
+   "blurred": 0,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Back to Portal",
+     "w": 138,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 1283,
+   "elements": 60,
+   "textLength": 517,
+   "textHead": "Back to Portal GUEST ACTIVITY Guest Cloud View Demo Hotel · Guest Session ACTIVE ORDERS 0 ACTIVE REQUESTS 0 Current Stay Orders No current orders yet Food orders from this current stay will appear here. Current Service Requests No current requests yet Service requests from this current stay will appear here. Past Orders No past orders yet Previous orders from this guest profile will appear here. P"
+  },
+  "ok": true
+ },
+ {
+  "id": "e02-contact",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/contact",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e02-contact--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/contact",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "My Stay"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "My Stay"
+    },
+    {
+     "tag": "H2",
+     "text": "Guest"
+    },
+    {
+     "tag": "H2",
+     "text": "Start earning during your stay"
+    },
+    {
+     "tag": "H2",
+     "text": "Your stay, simplified"
+    },
+    {
+     "tag": "H2",
+     "text": "Need personal assistance?"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "12px",
+     9
+    ],
+    [
+     "16px",
+     8
+    ],
+    [
+     "9999px",
+     5
+    ],
+    [
+     "24px",
+     5
+    ],
+    [
+     "32px",
+     2
+    ],
+    [
+     "25.6px",
+     2
+    ],
+    [
+     "21.6px",
+     2
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 9,
+   "radiusElements": 35,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     47
+    ],
+    [
+     "500",
+     16
+    ],
+    [
+     "900",
+     11
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "600",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     54
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.35)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     1
+    ]
+   ],
+   "textColorKinds": 9,
+   "bgColorKinds": 11,
+   "blurred": 2,
+   "gradients": 4,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 1772,
+   "elements": 171,
+   "textLength": 805,
+   "textHead": "PRIVATE GUEST PROFILE My Stay CV CLOUD VIEW DEMO HOTEL Good afternoon Guest Everything for your stay, rewards, requests, and hotel assistance—organized in one refined space. STAY LOCATION Pool Deck GUEST ACCESS Active CLOUDVIEW REWARDS Start earning during your stay Link your guest profile to collect points from eligible activity. PERSONAL CONCIERGE Your stay, simplified My Orders Track food order"
+  },
+  "ok": true
+ },
+ {
+  "id": "e03-login",
+  "surface": "edge",
+  "path": "/dashboard/login",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e03-login--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/login",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [],
+   "headings": [
+    {
+     "tag": "H2",
+     "text": "Welcome back"
+    }
+   ],
+   "headingCount": 1,
+   "radii": [
+    [
+     "18.4px",
+     4
+    ],
+    [
+     "9999px",
+     3
+    ],
+    [
+     "12px",
+     2
+    ],
+    [
+     "36px",
+     1
+    ],
+    [
+     "16px",
+     1
+    ]
+   ],
+   "radiusKinds": 5,
+   "radiusElements": 11,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     14
+    ],
+    [
+     "900",
+     7
+    ],
+    [
+     "600",
+     3
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(17, 16, 11)",
+     14
+    ],
+    [
+     "rgb(64, 59, 52)",
+     2
+    ],
+    [
+     "rgb(163, 163, 163)",
+     2
+    ],
+    [
+     "rgb(255, 255, 255)",
+     2
+    ],
+    [
+     "rgb(184, 137, 56)",
+     1
+    ],
+    [
+     "rgb(38, 38, 38)",
+     1
+    ],
+    [
+     "rgb(115, 115, 115)",
+     1
+    ],
+    [
+     "rgb(102, 93, 80)",
+     1
+    ]
+   ],
+   "textColorKinds": 8,
+   "bgColorKinds": 7,
+   "blurred": 3,
+   "gradients": 7,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Show password",
+     "w": 40,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 844,
+   "elements": 65,
+   "textLength": 277,
+   "textHead": "CLOUDVIEW Secure Admin Access Welcome back Sign in with your authorized CloudView account. EMAIL ADDRESS PASSWORD ENCRYPTED ACCESS Secure sign in Authorized personnel only. Access activity may be recorded for security and operational auditing. CloudView Hotel Management System"
+  },
+  "ok": true
+ },
+ {
+  "id": "e04-sidebar",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "mobile",
+  "theme": "light",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e04-sidebar--mobile--light.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Operations Board"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Queue"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000031"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000030"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000029"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000028"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000027"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000026"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 11,
+   "radii": [
+    [
+     "9999px",
+     98
+    ],
+    [
+     "16px",
+     75
+    ],
+    [
+     "28px",
+     10
+    ],
+    [
+     "12px",
+     5
+    ],
+    [
+     "32px",
+     3
+    ],
+    [
+     "24px",
+     2
+    ],
+    [
+     "36px",
+     1
+    ]
+   ],
+   "radiusKinds": 7,
+   "radiusElements": 194,
+   "fonts": [
+    "ui-sans-serif"
+   ],
+   "weights": [
+    [
+     "900",
+     235
+    ],
+    [
+     "400",
+     209
+    ],
+    [
+     "700",
+     15
+    ],
+    [
+     "600",
+     9
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(120, 53, 15)",
+     132
+    ],
+    [
+     "rgb(23, 23, 23)",
+     80
+    ],
+    [
+     "rgb(163, 163, 163)",
+     48
+    ],
+    [
+     "rgb(10, 10, 10)",
+     38
+    ],
+    [
+     "rgb(255, 255, 255)",
+     28
+    ],
+    [
+     "rgb(64, 64, 64)",
+     26
+    ],
+    [
+     "rgb(185, 28, 28)",
+     24
+    ],
+    [
+     "rgb(216, 210, 195)",
+     18
+    ]
+   ],
+   "textColorKinds": 20,
+   "bgColorKinds": 25,
+   "blurred": 2,
+   "gradients": 1,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Home",
+     "w": 61,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Hotels",
+     "w": 64,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Guide",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Rooms",
+     "w": 67,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "NFC Tags",
+     "w": 81,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Menu",
+     "w": 60,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Inventory",
+     "w": 84,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Orders",
+     "w": 66,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Kitchen",
+     "w": 71,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Services",
+     "w": 74,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Requests",
+     "w": 79,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "POS",
+     "w": 50,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Analytics",
+     "w": 80,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Reports",
+     "w": 72,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 34,
+   "imgsNoAlt": 0,
+   "docHeight": 6686,
+   "elements": 615,
+   "textLength": 3018,
+   "textHead": "Home Hotels Guide Rooms NFC Tags Menu Inventory Orders Kitchen Services Requests POS Analytics Reports Stays Rewards Hotel Settings Backup Users Signed in as Super Admin Light Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear first, with Xendit refund and stock-restoration details. ORDER COMMAND CENTER Order Operations Board Prioritize pending approvals, ki"
+  },
+  "ok": true
+ },
+ {
+  "id": "e03-login",
+  "surface": "edge",
+  "path": "/dashboard/login",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e03-login--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/login",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Your hotel operations, securely managed."
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Your hotel operations, securely managed."
+    },
+    {
+     "tag": "H2",
+     "text": "Welcome back"
+    }
+   ],
+   "headingCount": 2,
+   "radii": [
+    [
+     "9999px",
+     6
+    ],
+    [
+     "12px",
+     5
+    ],
+    [
+     "18.4px",
+     4
+    ],
+    [
+     "16px",
+     3
+    ],
+    [
+     "36px",
+     1
+    ]
+   ],
+   "radiusKinds": 5,
+   "radiusElements": 19,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     22
+    ],
+    [
+     "900",
+     10
+    ],
+    [
+     "600",
+     7
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     15
+    ],
+    [
+     "rgb(17, 16, 11)",
+     12
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     3
+    ],
+    [
+     "rgb(64, 59, 52)",
+     2
+    ],
+    [
+     "rgb(163, 163, 163)",
+     2
+    ],
+    [
+     "rgb(224, 182, 79)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     1
+    ],
+    [
+     "rgb(184, 137, 56)",
+     1
+    ]
+   ],
+   "textColorKinds": 10,
+   "bgColorKinds": 10,
+   "blurred": 3,
+   "gradients": 8,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Show password",
+     "w": 40,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 900,
+   "elements": 93,
+   "textLength": 666,
+   "textHead": "CLOUDVIEW Your hotel operations, securely managed. Access orders, services, inventory, guest stays, NFC operations, and business intelligence from one protected workspace. Role-based access Each account sees only the tools assigned to its role. Protected sessions Authenticated access is required for dashboard modules. Operational visibility Manage daily hotel activity from one controlled portal. S"
+  },
+  "ok": true
+ },
+ {
+  "id": "e04-sidebar",
+  "surface": "dashboard",
+  "path": "/dashboard/orders",
+  "width": "desktop",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e04-sidebar--desktop--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/orders",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Orders"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Operations Board"
+    },
+    {
+     "tag": "H2",
+     "text": "Order Queue"
+    },
+    {
+     "tag": "H3",
+     "text": "Orders"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000031"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000030"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000029"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000028"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000027"
+    },
+    {
+     "tag": "H3",
+     "text": "CVDHFO000026"
+    },
+    {
+     "tag": "H3",
+     "text": "Needs Attention"
+    }
+   ],
+   "headingCount": 11,
+   "radii": [
+    [
+     "16px",
+     94
+    ],
+    [
+     "9999px",
+     84
+    ],
+    [
+     "12px",
+     14
+    ],
+    [
+     "28px",
+     11
+    ],
+    [
+     "21.6px",
+     4
+    ],
+    [
+     "24px",
+     3
+    ],
+    [
+     "32px",
+     3
+    ],
+    [
+     "36px",
+     1
+    ]
+   ],
+   "radiusKinds": 8,
+   "radiusElements": 214,
+   "fonts": [
+    "ui-sans-serif"
+   ],
+   "weights": [
+    [
+     "900",
+     249
+    ],
+    [
+     "400",
+     236
+    ],
+    [
+     "700",
+     15
+    ],
+    [
+     "600",
+     11
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(252, 211, 77)",
+     132
+    ],
+    [
+     "rgb(250, 250, 250)",
+     85
+    ],
+    [
+     "rgb(163, 163, 163)",
+     81
+    ],
+    [
+     "rgb(245, 245, 245)",
+     67
+    ],
+    [
+     "rgb(255, 255, 255)",
+     53
+    ],
+    [
+     "rgb(252, 165, 165)",
+     30
+    ],
+    [
+     "rgb(216, 202, 167)",
+     27
+    ],
+    [
+     "rgb(201, 156, 56)",
+     8
+    ]
+   ],
+   "textColorKinds": 18,
+   "bgColorKinds": 33,
+   "blurred": 3,
+   "gradients": 3,
+   "glow": 0,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Close sidebar",
+     "w": 40,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DASHBOARD",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "HOTEL SETUP",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "GUEST SERVICE",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "SALES & STOCK",
+     "w": 255,
+     "h": 33
+    },
+    {
+     "tag": "BUTTON",
+     "label": "Dark",
+     "w": 78,
+     "h": 40
+    },
+    {
+     "tag": "A",
+     "label": "Logout",
+     "w": 107,
+     "h": 40
+    },
+    {
+     "tag": "BUTTON",
+     "label": "All 31",
+     "w": 65,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PENDING 30",
+     "w": 108,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "PREPARING 1",
+     "w": 114,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "READY 0",
+     "w": 85,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "DELIVERED 0",
+     "w": 110,
+     "h": 34
+    },
+    {
+     "tag": "BUTTON",
+     "label": "CANCELLED 0",
+     "w": 114,
+     "h": 34
+    },
+    {
+     "tag": "INPUT",
+     "label": "Search code, room, guest, item",
+     "w": 756,
+     "h": 20
+    }
+   ],
+   "smallTargetCount": 20,
+   "imgsNoAlt": 0,
+   "docHeight": 2622,
+   "elements": 722,
+   "textLength": 3151,
+   "textHead": "CloudView Super Admin ADMIN PORTAL ACTIVE MENU 19 DASHBOARD Overview Analytics Reports HOTEL SETUP GUEST SERVICE Guest Stays Orders Kitchen Display Services Module Service Requests Rewards SALES & STOCK ADMIN SETUP ACCESS CONTROL Role-based menu Signed in as Super Admin SUPER ADMIN Notifications Dark Logout Orders Latest food orders from NFC/QR guest portals and POS terminal. Newest orders appear "
+  },
+  "ok": true
+ },
+ {
+  "id": "e01-mystay",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/activity",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e01-mystay--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/activity",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "Guest"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "Guest"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Stay Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Current Service Requests"
+    },
+    {
+     "tag": "H2",
+     "text": "Past Orders"
+    },
+    {
+     "tag": "H2",
+     "text": "Past Service Requests"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "32px",
+     5
+    ],
+    [
+     "24px",
+     4
+    ],
+    [
+     "16px",
+     2
+    ],
+    [
+     "9999px",
+     1
+    ]
+   ],
+   "radiusKinds": 4,
+   "radiusElements": 12,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     30
+    ],
+    [
+     "500",
+     9
+    ],
+    [
+     "600",
+     4
+    ],
+    [
+     "300",
+     3
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     37
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.7)",
+     1
+    ],
+    [
+     "rgb(201, 156, 56)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.6)",
+     1
+    ]
+   ],
+   "textColorKinds": 5,
+   "bgColorKinds": 5,
+   "blurred": 0,
+   "gradients": 1,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "A",
+     "label": "Back to Portal",
+     "w": 138,
+     "h": 34
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 1283,
+   "elements": 60,
+   "textLength": 517,
+   "textHead": "Back to Portal GUEST ACTIVITY Guest Cloud View Demo Hotel · Guest Session ACTIVE ORDERS 0 ACTIVE REQUESTS 0 Current Stay Orders No current orders yet Food orders from this current stay will appear here. Current Service Requests No current requests yet Service requests from this current stay will appear here. Past Orders No past orders yet Previous orders from this guest profile will appear here. P"
+  },
+  "ok": true
+ },
+ {
+  "id": "e02-contact",
+  "surface": "guest",
+  "path": "/t/pool-deck-main-panel/contact",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e02-contact--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/t/pool-deck-main-panel/contact",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [
+    "My Stay"
+   ],
+   "headings": [
+    {
+     "tag": "H1",
+     "text": "My Stay"
+    },
+    {
+     "tag": "H2",
+     "text": "Guest"
+    },
+    {
+     "tag": "H2",
+     "text": "Start earning during your stay"
+    },
+    {
+     "tag": "H2",
+     "text": "Your stay, simplified"
+    },
+    {
+     "tag": "H2",
+     "text": "Need personal assistance?"
+    }
+   ],
+   "headingCount": 5,
+   "radii": [
+    [
+     "12px",
+     9
+    ],
+    [
+     "16px",
+     8
+    ],
+    [
+     "9999px",
+     5
+    ],
+    [
+     "24px",
+     5
+    ],
+    [
+     "32px",
+     2
+    ],
+    [
+     "25.6px",
+     2
+    ],
+    [
+     "21.6px",
+     2
+    ],
+    [
+     "28px",
+     1
+    ]
+   ],
+   "radiusKinds": 9,
+   "radiusElements": 35,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     47
+    ],
+    [
+     "500",
+     16
+    ],
+    [
+     "900",
+     11
+    ],
+    [
+     "700",
+     8
+    ],
+    [
+     "600",
+     1
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(255, 255, 255)",
+     55
+    ],
+    [
+     "rgb(201, 156, 56)",
+     10
+    ],
+    [
+     "rgba(255, 255, 255, 0.45)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.65)",
+     6
+    ],
+    [
+     "rgba(255, 255, 255, 0.35)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.4)",
+     2
+    ],
+    [
+     "rgba(255, 255, 255, 0.55)",
+     1
+    ],
+    [
+     "rgba(255, 255, 255, 0.5)",
+     1
+    ]
+   ],
+   "textColorKinds": 8,
+   "bgColorKinds": 11,
+   "blurred": 2,
+   "gradients": 4,
+   "glow": 1,
+   "smallTargets": [],
+   "smallTargetCount": 0,
+   "imgsNoAlt": 0,
+   "docHeight": 1772,
+   "elements": 171,
+   "textLength": 805,
+   "textHead": "PRIVATE GUEST PROFILE My Stay CV CLOUD VIEW DEMO HOTEL Good afternoon Guest Everything for your stay, rewards, requests, and hotel assistance—organized in one refined space. STAY LOCATION Pool Deck GUEST ACCESS Active CLOUDVIEW REWARDS Start earning during your stay Link your guest profile to collect points from eligible activity. PERSONAL CONCIERGE Your stay, simplified My Orders Track food order"
+  },
+  "ok": true
+ },
+ {
+  "id": "e03-login",
+  "surface": "edge",
+  "path": "/dashboard/login",
+  "width": "mobile",
+  "theme": "dark",
+  "file": "D:\\_ultra\\uiux\\shots-Ebase\\e03-login--mobile--dark.png",
+  "status": 200,
+  "url": "http://127.0.0.1:3007/dashboard/login",
+  "probe": {
+   "title": "Cloud View — Smart Hospitality, One Tap Away",
+   "h1s": [],
+   "headings": [
+    {
+     "tag": "H2",
+     "text": "Welcome back"
+    }
+   ],
+   "headingCount": 1,
+   "radii": [
+    [
+     "18.4px",
+     4
+    ],
+    [
+     "9999px",
+     3
+    ],
+    [
+     "12px",
+     2
+    ],
+    [
+     "36px",
+     1
+    ],
+    [
+     "16px",
+     1
+    ]
+   ],
+   "radiusKinds": 5,
+   "radiusElements": 11,
+   "fonts": [
+    "ui-sans-serif",
+    "ui-serif"
+   ],
+   "weights": [
+    [
+     "400",
+     14
+    ],
+    [
+     "900",
+     7
+    ],
+    [
+     "600",
+     3
+    ]
+   ],
+   "textColors": [
+    [
+     "rgb(17, 16, 11)",
+     14
+    ],
+    [
+     "rgb(64, 59, 52)",
+     2
+    ],
+    [
+     "rgb(163, 163, 163)",
+     2
+    ],
+    [
+     "rgb(255, 255, 255)",
+     2
+    ],
+    [
+     "rgb(184, 137, 56)",
+     1
+    ],
+    [
+     "rgb(38, 38, 38)",
+     1
+    ],
+    [
+     "rgb(115, 115, 115)",
+     1
+    ],
+    [
+     "rgb(102, 93, 80)",
+     1
+    ]
+   ],
+   "textColorKinds": 8,
+   "bgColorKinds": 7,
+   "blurred": 3,
+   "gradients": 7,
+   "glow": 1,
+   "smallTargets": [
+    {
+     "tag": "BUTTON",
+     "label": "Show password",
+     "w": 40,
+     "h": 40
+    }
+   ],
+   "smallTargetCount": 1,
+   "imgsNoAlt": 0,
+   "docHeight": 844,
+   "elements": 65,
+   "textLength": 277,
+   "textHead": "CLOUDVIEW Secure Admin Access Welcome back Sign in with your authorized CloudView account. EMAIL ADDRESS PASSWORD ENCRYPTED ACCESS Secure sign in Authorized personnel only. Access activity may be recorded for security and operational auditing. CloudView Hotel Management System"
+  },
+  "ok": true
+ }
+]

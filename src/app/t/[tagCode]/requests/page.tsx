@@ -533,7 +533,7 @@ export default async function MyRequestsPage({
         </div>
       </div>
 
-      <GuestBottomNav tagCode={tagCode} active="profile" dark />
+      <GuestBottomNav tagCode={tagCode} active="stay" dark />
     </main>
   );
 }

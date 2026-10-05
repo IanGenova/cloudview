@@ -490,7 +490,7 @@ export default async function GuestRewardsPage({
         </div>
       </GuestShell>
 
-      <GuestBottomNav tagCode={tagCode} active="profile" dark />
+      <GuestBottomNav tagCode={tagCode} active="stay" dark />
     </>
   );
 }

@@ -39,7 +39,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   },
   {
     module: DashboardModule.HOTEL_GUIDE,
-    label: 'Hotel Guide',
+    label: 'Hotel guide',
     href: '/dashboard/hotel-guide',
     group: 'main',
   },
@@ -81,7 +81,11 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   },
   {
     module: DashboardModule.SERVICES_MODULE,
-    label: 'Services Module',
+    /*
+     * Decision 2, the owner's: "Module" and "Terminal" name the code, not the
+     * job. Three labels say what a member of staff is going to do.
+     */
+    label: 'Services',
     href: '/dashboard/services',
     group: 'main',
   },
@@ -93,7 +97,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   },
   {
     module: DashboardModule.POS_TERMINAL,
-    label: 'POS Terminal',
+    label: 'Counter sales',
     href: '/dashboard/pos',
     group: 'main',
   },

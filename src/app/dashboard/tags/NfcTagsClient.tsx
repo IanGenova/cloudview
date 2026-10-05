@@ -839,7 +839,7 @@ function EditTagForm({
       <GeneratedCodeInput
         code={code}
         onRegenerate={regenerateCode}
-        helper="Click Regenerate to update this tag ID. Reprint or rewrite the NFC card after saving."
+        helper="Click Regenerate to update this tag ID. Reprint or rewrite the NFC tag after saving."
       />
 
       <FormField label="Status">
@@ -909,7 +909,7 @@ function EditTagForm({
 
       <div className="bg-amber-50 p-4 text-sm font-bold text-amber-800 md:col-span-2 xl:col-span-3">
         Updating the Unique Tag ID changes the NFC guest URL. After saving,
-        reprint the QR/NFC launch link or rewrite the physical NFC card.
+        reprint the QR/NFC launch link or rewrite the physical NFC tag.
       </div>
 
       <div className="md:col-span-2 xl:col-span-3">
@@ -1211,7 +1211,7 @@ function handleRotateTagSecret(tag: NfcTagItem) {
     tag,
     title: 'Rotate NFC Secret?',
     description:
-      'This will revoke existing NFC access sessions. Reprint or rewrite the NFC card after rotating the secret.',
+      'This will revoke existing NFC access sessions. Reprint or rewrite the NFC tag after rotating the secret.',
     confirmLabel: 'Rotate Secret',
   });
 }

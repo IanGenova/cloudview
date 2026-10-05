@@ -18,7 +18,14 @@ export type GuestHotel = {
   logoUrl?: string | null;
 };
 
-type GuestNavKey = 'home' | 'order' | 'services' | 'profile';
+/*
+ * Decision 3, the owner's. The fourth tab was "Profile", which named a
+ * database record rather than anything a guest has; it opened a page whose own
+ * title was "My Stay" (IA-12). It is "My stay" now, and it goes to the screen
+ * that actually holds a guest's stay — current orders, current requests, and
+ * the history of both — rather than to a hub of links to those.
+ */
+type GuestNavKey = 'home' | 'order' | 'services' | 'stay';
 
 export function GuestLogo({
   hotel,
@@ -52,7 +59,21 @@ export function GuestLogo({
             compact ? 'size-9' : 'size-14'
           )}
         >
-          <span className="text-xl leading-none">☁</span>
+          {/*
+            The only emoji anywhere in the product's chrome, standing in for a
+            hotel that has not uploaded a logo — a cloud, which is the vendor's
+            brand, on a screen meant to be the hotel's. Its initials say whose
+            portal this is.
+          */}
+          <span className="font-serif text-base leading-none tracking-wide">
+            {hotel.name
+              .split(' ')
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((word) => word[0])
+              .join('')
+              .toUpperCase() || 'CV'}
+          </span>
         </div>
       )}
 
@@ -207,9 +228,9 @@ const navItems = [
     icon: ConciergeBell,
   },
   {
-    key: 'profile',
-    label: 'Profile',
-    href: (tagCode: string) => `/t/${tagCode}/contact`,
+    key: 'stay',
+    label: 'My stay',
+    href: (tagCode: string) => `/t/${tagCode}/activity`,
     icon: UserRound,
   },
 ] as const;
@@ -226,26 +247,36 @@ function isRoute(pathname: string, route: string) {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
+/*
+ * IA-5. Four tabs cannot represent sixteen screens, but the worse half of that
+ * finding was the last line of this function: anything it did not recognise
+ * fell through to 'home', so a guest reading "My Requests" was told by the bar
+ * that they were on the home screen. Every guest route is now accounted for,
+ * and an unrecognised one marks nothing rather than marking the wrong thing.
+ */
 function resolveActiveGuestNav(
   pathname: string,
   tagCode: string
-): GuestNavKey {
+): GuestNavKey | null {
   const normalizedPathname = normalizePathname(pathname);
   const basePath = `/t/${tagCode}`;
 
-  // Hotel Guide belongs to Home, including section-detail routes.
+  // The guide and the facility pages are things to read about the hotel.
   if (
     normalizedPathname === basePath ||
-    isRoute(normalizedPathname, `${basePath}/guide`)
+    isRoute(normalizedPathname, `${basePath}/guide`) ||
+    isRoute(normalizedPathname, `${basePath}/pool`)
   ) {
     return 'home';
   }
 
+  // Ordering food, and everything between the menu and the confirmation.
   if (
     isRoute(normalizedPathname, `${basePath}/menu`) ||
     isRoute(normalizedPathname, `${basePath}/order`) ||
-    isRoute(normalizedPathname, `${basePath}/orders`) ||
-    isRoute(normalizedPathname, `${basePath}/cart`)
+    isRoute(normalizedPathname, `${basePath}/cart`) ||
+    isRoute(normalizedPathname, `${basePath}/payment`) ||
+    isRoute(normalizedPathname, `${basePath}/confirmed`)
   ) {
     return 'order';
   }
@@ -257,16 +288,22 @@ function resolveActiveGuestNav(
     return 'services';
   }
 
+  // Everything the guest already has going on, and who they are to the hotel.
   if (
+    isRoute(normalizedPathname, `${basePath}/activity`) ||
+    isRoute(normalizedPathname, `${basePath}/orders`) ||
+    isRoute(normalizedPathname, `${basePath}/requests`) ||
+    isRoute(normalizedPathname, `${basePath}/track`) ||
     isRoute(normalizedPathname, `${basePath}/contact`) ||
     isRoute(normalizedPathname, `${basePath}/profile`) ||
     isRoute(normalizedPathname, `${basePath}/account`) ||
-    isRoute(normalizedPathname, `${basePath}/rewards`)
+    isRoute(normalizedPathname, `${basePath}/rewards`) ||
+    isRoute(normalizedPathname, `${basePath}/support`)
   ) {
-    return 'profile';
+    return 'stay';
   }
 
-  return 'home';
+  return null;
 }
 
 export function GuestBottomNav({
@@ -283,7 +320,7 @@ export function GuestBottomNav({
   // Pathname wins over a stale or incorrect manually supplied active prop.
   const resolvedActive = pathname
     ? resolveActiveGuestNav(pathname, tagCode)
-    : active ?? 'home';
+    : active ?? null;
 
   return (
     <nav

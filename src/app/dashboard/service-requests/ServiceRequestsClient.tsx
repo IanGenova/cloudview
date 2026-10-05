@@ -183,7 +183,7 @@ const operationTabs: {
   },
   {
     value: 'NOT_BILLED',
-    label: 'Not Billed',
+    label: 'Not billed',
     icon: ReceiptText,
   },
   {
@@ -1763,7 +1763,7 @@ export function ServiceRequestsClient({
             activeTab === 'BILLED'
               ? 'Billed Request Orders'
               : activeTab === 'NOT_BILLED'
-                ? 'Not Billed Request Orders'
+                ? 'Not billed'
                 : 'Request History'
           }
           description="Grouped service request orders."

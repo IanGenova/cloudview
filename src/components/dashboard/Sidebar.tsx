@@ -67,29 +67,40 @@ const dataBackupNavItem: DashboardNavItem = {
   group: 'settings',
 };
 
+/*
+ * IA-1, and decision 2, which is the owner's: the menu was a list of the
+ * system's parts — Dashboard, Hotel Setup, Guest Service, Sales & Stock — so
+ * finding anything meant knowing which subsystem a hotelier's question lived
+ * in. Taking counter money, for instance, was split across Sales & Stock and
+ * Guest Service with nothing linking them (IA-10).
+ *
+ * These four groups are spans of attention instead. "Today" is the shift: the
+ * screens someone opens because something is happening right now. "The hotel"
+ * is the place and the people in it. "What we sell" is the catalogue and its
+ * stock. "Records" is what you read afterwards.
+ */
 const navGroups: SidebarGroup[] = [
   {
-    label: 'Dashboard',
-    modules: ['OVERVIEW', 'ANALYTICS', 'REPORTS'],
-  },
-  {
-    label: 'Hotel Setup',
-    modules: ['HOTELS', 'HOTEL_GUIDE', 'ROOMS_LOCATIONS', 'NFC_TAGS'],
-  },
-  {
-    label: 'Guest Service',
+    label: 'Today',
     modules: [
-      'GUEST_STAYS',
+      'OVERVIEW',
       'ORDERS',
       'KITCHEN_DISPLAY',
-      'SERVICES_MODULE',
       'SERVICE_REQUESTS',
-      'REWARDS',
+      'POS_TERMINAL',
     ],
   },
   {
-    label: 'Sales & Stock',
-    modules: ['MENU', 'INVENTORY', 'POS_TERMINAL'],
+    label: 'The hotel',
+    modules: ['GUEST_STAYS', 'ROOMS_LOCATIONS', 'NFC_TAGS', 'HOTEL_GUIDE'],
+  },
+  {
+    label: 'What we sell',
+    modules: ['MENU', 'SERVICES_MODULE', 'INVENTORY', 'REWARDS'],
+  },
+  {
+    label: 'Records',
+    modules: ['ANALYTICS', 'REPORTS', 'HOTELS'],
   },
 ];
 
@@ -314,7 +325,7 @@ function SidebarLink({
           ? 'min-h-11 gap-3 px-3 py-2.5'
           : 'mx-auto size-12 justify-center p-0',
         active
-          ? 'bg-gradient-to-r from-[var(--cv-accent-hover)] via-[var(--cv-accent)] to-[var(--cv-accent-strong)] text-[var(--cv-on-accent)] shadow-[0_12px_30px_rgba(214,167,56,0.28)]'
+          ? 'bg-[var(--cv-accent)] text-[var(--cv-on-accent)]'
           : 'text-[var(--cv-sidebar-text)] hover:bg-white/[0.065] hover:text-[var(--cv-sidebar-text-strong)]'
       )}
     >
@@ -587,7 +598,7 @@ export function Sidebar({
             )}
           >
             <div className="flex items-center gap-3">
-              <span className="grid size-12 shrink-0 place-items-center bg-gradient-to-br from-[var(--cv-accent-hover)] via-[var(--cv-accent)] to-[var(--cv-accent-strong)] text-[var(--cv-on-accent)] shadow-[0_12px_24px_rgba(214,167,56,0.28)]">
+              <span className="grid size-12 shrink-0 place-items-center bg-[var(--cv-accent)] text-[var(--cv-on-accent)]">
                 <Home className="size-5" />
               </span>
 
@@ -651,7 +662,13 @@ export function Sidebar({
 
         <nav
           className={cx(
-            'min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            /*
+              IA-2. This scrolled with the scrollbar hidden, so opening a group
+              pushed up to six items out of sight with nothing on screen saying
+              the list continued. A thin rule is enough of a cue and costs no
+              layout.
+            */
+            'min-h-0 flex-1 overflow-y-auto [scrollbar-color:rgba(214,167,56,0.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:bg-[rgba(214,167,56,0.35)] [&::-webkit-scrollbar]:w-1.5',
             isSidebarOpen ? 'w-full pr-1' : 'w-full px-0'
           )}
         >

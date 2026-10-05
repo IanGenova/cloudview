@@ -110,7 +110,7 @@ export default async function HelpSupportPage({
           />
 
           <SupportAction
-            href={`/t/${tagCode}/orders`}
+            href={`/t/${tagCode}/activity`}
             icon={ShoppingBag}
             title="Follow Up My Orders"
             description="View your food and drink order history and tracking."
@@ -188,7 +188,7 @@ export default async function HelpSupportPage({
         </Link>
       </div>
 
-      <GuestBottomNav tagCode={tagCode} active="profile" dark />
+      <GuestBottomNav tagCode={tagCode} active="stay" dark />
     </main>
   );
 }

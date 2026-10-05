@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
 type DashboardNavItem = {
@@ -145,6 +145,23 @@ export function MobileNav({
     [pathname, mobileNavItems]
   );
 
+  /*
+   * IA-3. Nineteen items become a horizontal strip of pills below 1024px, and
+   * the current page was marked all along — it was just never scrolled to. On
+   * a phone you saw the first five and none of them was where you were, so the
+   * bar read as though it had lost track of you. Bring the marked one into
+   * view whenever it changes.
+   */
+  const activeRef = useRef<HTMLAnchorElement | null>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({
+      block: 'nearest',
+      inline: 'center',
+      behavior: 'smooth',
+    });
+  }, [activeHref]);
+
   if (!mobileNavItems.length) {
     return null;
   }
@@ -162,11 +179,12 @@ export function MobileNav({
             <Link
               key={`${item.module}-${item.href}`}
               href={item.href}
+              ref={active ? activeRef : undefined}
               aria-current={active ? 'page' : undefined}
               className={cx(
-                'min-h-10 shrink-0 snap-start scroll-mx-2 border px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm',
+                'inline-flex min-h-11 shrink-0 snap-start scroll-mx-2 items-center border px-3 text-xs font-semibold transition sm:px-4 sm:text-sm',
                 active
-                  ? 'border-[#d6a738]/60 bg-gradient-to-r from-[#c99c38] to-[#8f6820] text-[#070604] shadow-[0_10px_24px_rgba(201,156,56,0.22)]'
+                  ? 'border-[#d6a738] bg-[#c99c38] text-[#070604]'
                   : 'border-[#c99c38]/20 bg-[#151106] text-[#d8d2c3] hover:border-[#c99c38]/50 hover:bg-[#21190c] hover:text-[#f7e7bd]'
               )}
             >

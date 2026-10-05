@@ -142,7 +142,7 @@ export default async function GuidePage({
         />
       </GuestShell>
 
-      <GuestBottomNav tagCode={tagCode} active="profile" dark />
+      <GuestBottomNav tagCode={tagCode} active="home" dark />
     </>
   );
 }

@@ -8,7 +8,6 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  ShieldCheck,
   X,
 } from 'lucide-react';
 import { loginAction, type LoginActionState } from './actions';
@@ -218,42 +217,25 @@ export function LoginForm({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 pb-1 pt-0.5">
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#c99c38]/30 to-transparent" />
-
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.17em] text-neutral-400">
-            <ShieldCheck className="size-3.5 text-[#b17a28]" />
-            Encrypted access
-          </div>
-
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#c99c38]/30 to-transparent" />
-        </div>
+        {/*
+          CP-2. "Encrypted access" between two fading gold rules, above a
+          button reading "Secure sign in" with a shield on it, above a panel
+          about auditing: four assurances that the sign-in box is a sign-in
+          box. The notice below is the only one that says anything — it tells
+          staff their access is logged — so it stays and the rest goes.
+        */}
 
         <button
           type="submit"
           disabled={pending || !email.trim() || !password}
           className="
- group relative inline-flex h-[62px] w-full
- items-center justify-center gap-2.5
- overflow-hidden 
- border border-[#d2aa62]/40
- bg-[linear-gradient(135deg,#d6b16a_0%,#ac782c_42%,#754716_100%)]
- px-5 text-sm font-semibold text-white
- 
- transition-all duration-300
- hover:-translate-y-0.5
- 
- focus:outline-none
- focus:ring-4
- focus:ring-[#c99c38]/20
- disabled:cursor-not-allowed
- disabled:translate-y-0
- disabled:opacity-50
+ inline-flex h-14 w-full items-center justify-center gap-2.5
+ bg-[#11100b] px-5 text-sm font-semibold text-white
+ transition hover:bg-neutral-800
+ focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current
+ disabled:cursor-not-allowed disabled:opacity-50
  "
         >
-          <span className="pointer-events-none absolute inset-y-0 left-0 w-24 -translate-x-[150%] skew-x-[-20deg] bg-white/20 blur-sm transition-transform duration-700 group-hover:translate-x-[600%]" />
-
-          <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" />
 
           {pending ? (
             <>
@@ -261,23 +243,14 @@ export function LoginForm({
               <span className="relative">Verifying access...</span>
             </>
           ) : (
-            <>
-              <ShieldCheck className="relative size-5" />
-              <span className="relative">Secure sign in</span>
-            </>
+            <span>Sign in</span>
           )}
         </button>
 
-        <div className="flex items-start gap-3.5 border border-[#d9b76c]/40 bg-[linear-gradient(135deg,#fffaf0_0%,#fbf4e6_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-          <span className="grid size-9 shrink-0 place-items-center bg-[#c99c38]/15 text-[#976318]">
-            <LockKeyhole className="size-4" />
-          </span>
-
-          <p className="pt-0.5 text-xs font-semibold leading-5 text-[#665d50]">
-            Authorized personnel only. Access activity may be recorded for
-            security and operational auditing.
-          </p>
-        </div>
+        <p className="border-t border-cv-hairline pt-4 text-xs leading-5 text-neutral-500">
+          Authorised personnel only. Access activity may be recorded for
+          security and operational auditing.
+        </p>
       </form>
     </>
   );

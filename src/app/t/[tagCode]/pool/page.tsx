@@ -737,7 +737,7 @@ export default async function PoolPage({
         </div>
       </main>
 
-      <GuestBottomNav tagCode={tagCode} active="profile" dark />
+      <GuestBottomNav tagCode={tagCode} active="home" dark />
     </>
   );
 }

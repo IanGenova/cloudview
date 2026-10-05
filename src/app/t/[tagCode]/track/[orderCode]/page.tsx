@@ -950,6 +950,7 @@ async function cancelGuestOrderItemAction(formData: FormData) {
   revalidatePath('/dashboard/menu');
   revalidatePath(`/t/${tagCode}/track/${order.orderCode}`);
   revalidatePath(`/t/${tagCode}/orders`);
+  revalidatePath(`/t/${tagCode}/activity`);
   revalidatePath(`/t/${tagCode}/menu`);
 
   await triggerOrderStatusUpdate({

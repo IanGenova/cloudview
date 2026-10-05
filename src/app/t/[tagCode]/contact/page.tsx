@@ -11,7 +11,6 @@ import {
   Hotel,
   KeyRound,
   Mail,
-  MessageCircle,
   Phone,
   ShieldCheck,
   ShoppingBag,
@@ -198,7 +197,7 @@ export default async function ContactPage({
     <>
       <GuestShell
         hotel={tag.hotel}
-        title="Profile"
+        title="Contact the hotel"
         subtitle={location}
         variant="dark"
         showTopBar={false}
@@ -216,12 +215,16 @@ export default async function ContactPage({
                 <ArrowLeft className="size-5" />
               </Link>
 
-              <div className="min-w-0 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
-                  Private guest profile
-                </p>
-                <h1 className="mt-1 truncate font-serif text-xl font-normal tracking-wide text-white">
-                  My Stay
+              {/*
+                IA-12, exactly as the audit put it: a tab called "Profile"
+                opened a shell titled "Profile" above an eyebrow reading
+                "Private guest profile" above a heading reading "My Stay" —
+                four names, one screen, and "My Stay" is a different screen
+                now. This one puts you in touch with the hotel.
+              */}
+              <div className="min-w-0">
+                <h1 className="truncate font-serif text-xl font-normal tracking-wide text-white">
+                  Contact the hotel
                 </h1>
               </div>
 
@@ -303,18 +306,17 @@ export default async function ContactPage({
               </div>
 
               <div className="space-y-3">
+                {/*
+                  Two rows pointing at two screens that showed overlapping
+                  halves of the same thing. One screen now holds both, so one
+                  row reaches it — and it is a tab as well, which is where a
+                  guest looks first.
+                */}
                 <ProfileActionRow
-                  href={`/t/${tagCode}/orders`}
+                  href={`/t/${tagCode}/activity`}
                   icon={ShoppingBag}
-                  title="My Orders"
-                  description="Track food orders and view your order history."
-                />
-
-                <ProfileActionRow
-                  href={`/t/${tagCode}/requests`}
-                  icon={MessageCircle}
-                  title="My Requests"
-                  description="Follow service requests and room assistance."
+                  title="My stay"
+                  description="Your orders and service requests, current and past."
                 />
 
                 <ProfileActionRow
@@ -356,7 +358,7 @@ export default async function ContactPage({
         </div>
       </GuestShell>
 
-      <GuestBottomNav tagCode={tagCode} active="profile" dark />
+      <GuestBottomNav tagCode={tagCode} active="stay" dark />
     </>
   );
 }

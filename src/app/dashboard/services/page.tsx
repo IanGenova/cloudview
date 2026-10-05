@@ -119,7 +119,7 @@ export default async function ServicesModulePage({
   return (
     <div>
       <PageHeader
-        title="Services Module"
+        title="Services"
         description="Manage the services and room add-ons shown in the Guest Portal."
       />
 

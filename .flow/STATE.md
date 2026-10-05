@@ -1013,3 +1013,107 @@ schema or any row. The guest-facing change is large and visual, so the thing to 
 guests and staff reacting to the new layouts, not data.
 
 Wakes since commit: 0.
+
+## Phase: uiux-E-navigation-and-vocabulary (5 October 2026) — Full
+
+Owner: "now continue with group E". The group the audit sealed — *"this group changes
+shape, so all of it is in the decisions below and none of it moves without your answer."*
+The answers were taken before any of it was written, and all four were the recommendation.
+
+### The four answers
+1. **Sidebar — regroup and rename.** 2. **Guest tabs — merge `/orders` and `/activity`
+into "My stay".** 3. **Vocabulary — standardise both surfaces.** 4. **Kitchen — leave as
+is**, since group C already made the readable layout the default; decision 5 is closed by
+that rather than by TV Mode.
+
+### Acceptance criteria
+- [x] E1 The menu describes the work, not the system. Five groups named after subsystems —
+      Dashboard, Hotel Setup, Guest Service, Sales & Stock — became four named after spans
+      of attention: **Today** (overview, orders, kitchen, service requests, counter sales),
+      **The hotel**, **What we sell**, **Records**. Taking counter money, which IA-10 found
+      split across two groups with nothing linking them, now sits in Today beside the
+      orders it belongs with. Three labels renamed in the one table that feeds the sidebar,
+      the mobile bar and the permissions screen: Services Module → **Services**, POS
+      Terminal → **Counter sales**, Hotel Guide → **Hotel guide**. The counter screen had
+      three names on it at once — menu item, eyebrow and heading — and now has one.
+      by artifact: `.flow/uiux/2026-10-02/applied/E-e04-sidebar--desktop--light.png`
+      from: UIUX-2026-10-02 § Information architecture — IA-1, IA-10
+- [x] E2 The sidebar admits it scrolls. It had `scrollbar-width: none` and a hidden webkit
+      scrollbar, so opening a group pushed up to six items out of sight with nothing on
+      screen saying the list continued. A 6px rule in the accent at 35% is the cue.
+      from: UIUX-2026-10-02 § Information architecture — IA-2
+- [x] E3 The mobile bar finds the page you are on. It marked the active item correctly all
+      along — the pill was never scrolled into view, so on a phone you saw the first five
+      of nineteen and none of them was where you were. It centres the marked one whenever
+      it changes. Its active pill also stopped being a gradient with a glow.
+      from: UIUX-2026-10-02 § Information architecture — IA-3
+- [x] E4 `/orders` and `/activity` were the same list twice, and the guest's own navigation
+      reached neither. `/activity` holds a stay — current orders, current requests and the
+      history of both — so it became **My stay**, got the shell and the tab bar it never
+      had, and is the fourth tab's destination. `/orders` is a redirect, not a deletion:
+      the audit promised no route would be removed, so printed QR codes and old links keep
+      working. The hub on the contact screen collapsed from two rows to one.
+      by artifact: `.flow/uiux/2026-10-02/applied/E-e01-mystay--mobile--light.png`
+      from: UIUX-2026-10-02 § Information architecture — IA-5, IA-6, IA-7
+- [x] E5 The tab bar stops lying about where you are. The resolver's last line was
+      `return 'home'`, so any route it did not recognise — requests, track, support,
+      activity — told the guest they were on the home screen. Every guest route is now
+      accounted for and an unrecognised one marks nothing. The compiler found six screens
+      declaring `active="profile"`, two of which (`/guide`, `/pool`) were not even in that
+      part of the product.
+      from: UIUX-2026-10-02 § Information architecture — IA-5
+- [x] E6 One destination, one name. A tab called "Profile" opened a shell titled "Profile"
+      above an eyebrow reading "Private guest profile" above a heading reading "My Stay" —
+      four names for one screen, and "My Stay" is a different screen now. The tab is **My
+      stay** and goes to the stay; that screen is **Contact the hotel** and does that.
+      from: UIUX-2026-10-02 § Information architecture — IA-12
+- [x] E7 One word per concept, where the words were genuinely duplicates. The third order
+      stage was called three things — the kitchen's lane said "Serving", its button said
+      "Serving", the board said "READY" and the guest saw "Ready" — and is now **Ready**
+      everywhere. "Payment pending" became **Unpaid**, which the badge beside it already
+      said. The staff surface called the sticker on the wall an "NFC tag" 58 times and an
+      "NFC card" three times; now only the first.
+      from: UIUX-2026-10-02 § Information architecture — IA-4, § Content and copy — CP-4, CP-13
+- [x] E8 The sign-in screen stopped selling the product to the person signing in. Half of
+      it was a 48px slogan, a sentence listing the modules and three tiles explaining
+      role-based access and protected sessions — to someone who already works there and is
+      holding their password. "Welcome back", the greeting the brief bans by name, is
+      **Sign in**. Gone with it: a three-stop gradient page background, a three-stop
+      gradient on the submit button with a sweeping highlight over it, two fading gold
+      rules around the words "Encrypted access", a shield on the button, and a chip reading
+      CloudView with a sparkle on it directly above the word CloudView. The one line that
+      says something — that access is logged — stays.
+      by artifact: `.flow/uiux/2026-10-02/applied/E-e03-login-before--desktop--light.png`
+      and `E-e03-login--desktop--light.png`
+      from: UIUX-2026-10-02 § Content and copy — CP-2
+- [x] E9 The last emoji in the product's chrome. A cloud stood in for a hotel that has not
+      uploaded a logo — the vendor's brand on a screen meant to be the hotel's. It is the
+      hotel's own initials now.
+- [x] E10 Machine stage green: `tsc --noEmit` clean, 257 tests pass, the production build
+      compiles, 13/13 routes HTTP 200 on both servers. Measured across the 13 captures,
+      pre-audit build to current: radius-bearing elements **823 -> 0**, elements above
+      weight 600 **869 -> 0**, document height **24,087 -> 22,140px**. The console with its
+      sidebar is 2,622 -> 2,242px at desktop and 6,686 -> 5,663px on a phone.
+      by artifact: `.flow/uiux/2026-10-02/applied/E-manifest.json`
+
+### Where the proposal was wrong, and what was done instead
+The vocabulary question was put to the owner as "'not paid yet' is written five ways". On
+inspection two of those five are not synonyms: **Not billed** means the hotel has not added
+a charge to the folio, and **Pay at counter** is a payment method. Only "Payment pending"
+was a true duplicate of Unpaid. Flattening the other two would have destroyed a real
+distinction, so they were left and only their casing was normalised.
+
+The same applies to the sticker: the staff surface says "NFC tag" and the guest surface
+says "NFC panel". That is a register difference, not an inconsistency — a guest does not
+know what a tag is — so the guest keeps "panel" deliberately.
+
+### Left open
+`IA-8` (the Wi-Fi password has three answers, two of them 450px apart), `IA-9` ("service"
+names nine things in the portal), `IA-11` ("available" is a flag on one screen and a count
+on another), and `CP-3`, `CP-5`, `CP-6`, `CP-7`, `CP-10`, `CP-11`, `CP-14`. These are the
+remaining vocabulary findings, and each is a content decision about a word the product uses
+dozens of times rather than a defect with one site. They want the same treatment this phase
+gave the order stage — one word, chosen deliberately, applied everywhere — and that is a
+sitting with the owner and a word list, not a pass by the loop.
+
+Wakes since commit: 0.

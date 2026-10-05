@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
-  ArrowLeft,
   BedDouble,
   Clock,
   ConciergeBell,
@@ -14,6 +13,7 @@ import {
   UserCircle,
 } from 'lucide-react';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { getGuestPortalActivity } from '@/lib/guest-portal-activity';
 import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
 import { db } from '@/lib/db';
@@ -141,29 +141,34 @@ export default async function GuestActivityPage({
     : 'Guest Session';
 
   return (
-    <main className="min-h-screen bg-[#080704] px-4 py-6 text-white">
-      <section className="mx-auto w-full max-w-5xl space-y-6">
-        <Link
-          href={`/t/${tagCode}`}
-          className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold tracking-wide text-white/70 transition hover:bg-white/[0.08] hover:text-white"
-        >
-          <ArrowLeft className="size-4" />
-          Back to Portal
-        </Link>
+    <>
+      {/*
+        Decision 3, the owner's: this screen and /orders were the same list
+        twice, and this one — current orders, current requests, and the history
+        of both — is the one that holds a stay. It is "My stay" now and it is
+        the fourth tab's destination, so it needs the shell and the tab bar it
+        never had: it used to be a bare page with a "Back to Portal" link and
+        no navigation, which is part of why a guest could not find it.
 
-        <section className="overflow-hidden border border-[#c99c38]/25 bg-gradient-to-br from-[#171107] via-[#0f0d09] to-[#070604] p-6 shadow-2xl">
+        Its own header went with the wrapping. It carried the guest's name at
+        36px on a gradient — the third place on the screen the name appeared,
+        and the second statement of where they are.
+      */}
+      <GuestShell
+        hotel={activity.hotel ?? tag.hotel}
+        title="My stay"
+        subtitle={roomLabel}
+        backHref={`/t/${tagCode}`}
+        variant="dark"
+      >
+        <section className="space-y-6">
+        <section className="border border-white/10 bg-white/[0.04] p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#c99c38]">
-                Guest Activity
-              </p>
-
-              <h1 className="mt-3 text-4xl font-serif font-light capitalize tracking-wide">
-                {activity.guestName || 'Guest'}
-              </h1>
-
-              <p className="mt-2 text-sm font-medium text-white/60">
-                {activity.hotel?.name || 'Cloud View'} · {roomLabel}
+              <p className="text-sm font-medium text-white/60">
+                {activity.guestName
+                  ? `${activity.guestName}, here is everything you have going on.`
+                  : 'Everything you have going on.'}
               </p>
             </div>
 
@@ -514,7 +519,10 @@ export default async function GuestActivityPage({
             </div>
           </div>
         </section>
-      </section>
-    </main>
+        </section>
+      </GuestShell>
+
+      <GuestBottomNav tagCode={tagCode} active="stay" dark />
+    </>
   );
 }

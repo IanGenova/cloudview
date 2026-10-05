@@ -1634,12 +1634,14 @@ export function POSClient({
       </div>
 
       <div className="mb-3 flex flex-col gap-2 border border-neutral-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        {/*
+          One screen, one name. "POS Terminal" above "Quick Sale" meant the
+          menu, the eyebrow and the heading gave three names to the thing a
+          member of staff calls taking money at the counter.
+        */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b88938]">
-            POS Terminal
-          </p>
-          <h1 className="mt-0.5 text-xl font-semibold text-[#11100b]">
-            Quick Sale
+          <h1 className="font-serif text-xl font-normal tracking-tight text-[#11100b]">
+            Counter sales
           </h1>
         </div>
 

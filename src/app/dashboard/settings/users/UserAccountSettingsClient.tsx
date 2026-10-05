@@ -219,7 +219,7 @@ type ToastMessage =
   },
   {
     key: 'SERVICES_MODULE' as DashboardModule,
-    label: 'Services Module',
+    label: 'Services',
     description: 'Manage hotel service catalog.',
   },
   {
@@ -229,7 +229,7 @@ type ToastMessage =
   },
   {
     key: 'POS_TERMINAL' as DashboardModule,
-    label: 'POS Terminal',
+    label: 'Counter sales',
     description: 'Access food and service POS.',
   },
   {

@@ -265,14 +265,14 @@ export function GuestPaymentStatus({
 
   const activityHref =
     flow === 'FOOD_ORDER'
-      ? `/t/${tagCode}/orders`
+      ? `/t/${tagCode}/activity`
       : `/t/${tagCode}/requests`;
 
   function buildCompletionHref(code: string | null = referenceCode) {
     if (flow === 'FOOD_ORDER') {
       return code
         ? `/t/${tagCode}/confirmed/${encodeURIComponent(code)}`
-        : `/t/${tagCode}/orders`;
+        : `/t/${tagCode}/activity`;
     }
 
     return code
