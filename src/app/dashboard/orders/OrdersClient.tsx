@@ -2424,96 +2424,17 @@ export function OrdersClient({
     <>
       <Toast message={clientMessage ?? message} />
 
-      <section className="overflow-hidden border border-neutral-200 bg-white">
-        <div className="relative overflow-hidden bg-[#11100b] p-4 text-white sm:p-6">
-          <div className="pointer-events-none absolute -right-24 -top-24 size-72 bg-[#c99c38]/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-28 left-10 size-72 bg-emerald-500/10 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 border border-[#c99c38]/35 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f1c66a]">
-                <ReceiptText className="size-4" />
-                Order Command Center
-              </p>
-
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:mt-5 sm:text-4xl">
-                Order Operations Board
-              </h2>
-
-              <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-white/60">
-                Prioritize pending approvals, kitchen movement, ready-for-delivery
-                orders, unpaid balances, and order summaries from one cleaner workflow.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 border border-white/10 bg-white/10 p-3 text-sm font-bold text-white/75">
-              <div className="bg-black/20 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#f1c66a]">
-                  Attention
-                </p>
-                <p className="mt-1 text-2xl font-semibold text-white">
-                  {attentionCount}
-                </p>
-              </div>
-              <div className="bg-black/20 p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#f1c66a]">
-                  Kitchen Queue
-                </p>
-                <p className="mt-1 text-2xl font-semibold text-white">
-                  {kitchenQueueCount}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 border-t border-neutral-100 bg-neutral-50 p-4 md:grid-cols-2 xl:grid-cols-4">
-          <OrderMetricTile
-            icon={<Clock className="size-5" />}
-            label="Active Orders"
-            value={summary.activeOrders}
-            helper="Pending to ready"
-            tone="blue"
-          />
-
-          <OrderMetricTile
-            icon={<CreditCard className="size-5" />}
-            label="Unpaid Orders"
-            value={summary.unpaidOrders}
-            helper="Needs payment follow-up"
-            tone="red"
-          />
-
-          <OrderMetricTile
-            icon={<Ban className="size-5" />}
-            label="Cancelled"
-            value={summary.cancelledOrders}
-            helper="Cancelled orders"
-            tone="amber"
-          />
-
-          <OrderMetricTile
-            icon={<ReceiptText className="size-5" />}
-            label="Total Sales"
-            value={money(summary.totalSalesCents)}
-            helper="Paid and recorded totals"
-            tone="green"
-          />
-        </div>
-      </section>
+      {/*
+        VH-10 and the owner's own note: the board said "Orders" four times
+        before the first order -- nav item, page title, "Order Operations
+        Board", "Order Queue" -- and the four tiles that stood here showed
+        the same number three times with Total Sales at PHP 0.00 rendered
+        larger than any real amount on the page. The page title says where
+        you are; the queue below says what is on it.
+      */}
 
       <section className="mt-6 border border-neutral-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
-              Workflow Filters
-            </p>
-            <h2 className="mt-1 text-xl font-semibold">Order Queue</h2>
-            <p className="mt-1 text-sm font-semibold text-neutral-500">
-              Use one-tap status filters, search, and payment filters before
-              opening details.
-            </p>
-          </div>
 
           <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
             {statusOptions.map((status) => (

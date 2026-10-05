@@ -1672,50 +1672,14 @@ export function ServiceRequestsClient({
   return (
     <>
       <Toast message={toast} />
-      <div className="mb-6 grid gap-3 md:grid-cols-5">
-        <SummaryCard
-          label="Total Request Orders"
-          value={clientSummary.totalRequests}
-          icon={MessageCircle}
-        />
-        <SummaryCard
-          label="Live Request Orders"
-          value={clientSummary.liveRequests}
-          icon={Clock}
-          tone="amber"
-        />
-        <SummaryCard
-          label="Billed"
-          value={clientSummary.billedRequests}
-          icon={CreditCard}
-          tone="green"
-        />
-        <SummaryCard
-          label="Not Billed"
-          value={clientSummary.notBilledRequests}
-          icon={ReceiptText}
-          tone="amber"
-        />
-        <SummaryCard
-          label="Add-on Revenue"
-          value={money(clientSummary.totalBilledAmount)}
-          icon={CheckCircle2}
-          tone="green"
-        />
-      </div>
+      {/*
+        The five-tile strip that stood here read 0 / 0 / 0 / 0 / ₱0.00 on a
+        fresh install and restated counts the lanes below already carry. The
+        page title says where you are; the board says what is on it.
+      */}
 
-      <div className="mb-6 border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-neutral-950 dark:text-white">
-              Service Operations Center
-            </h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Grouped by request order ID. One request card can contain multiple
-              service items.
-            </p>
-          </div>
-
+      <div className="mb-6 border-b border-cv-hairline pb-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
           <div className="grid gap-2 md:grid-cols-[1fr_180px] xl:min-w-[520px]">
             <div className="flex h-11 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
               <Search className="size-4 text-neutral-400" />

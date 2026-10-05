@@ -579,3 +579,42 @@ order lifecycle is told in four vocabularies, and choosing the one word is decis
 which the owner has not answered.
 
 Wakes since commit: 0.
+
+## Phase: uiux-C2a-headers-and-tiles (5 October 2026) — Quick
+
+Owner, pointing at the Service Requests screen and its row of five tiles reading
+0 / 0 / 0 / 0 / ₱0.00: "Can you removed all the headers and the analytics in each modules,
+it can cause caught up spaces". This is VH-10 and the vanity-stat ban from the original
+brief, and the owner asking for it outranks the group ordering.
+
+Read as: **one header per screen** — the `PageHeader` stays, the hero card that repeats it
+goes — and the stat strips go from the modules whose job is not counting.
+
+### Acceptance criteria
+- [x] H1 Service Requests: the five-tile strip and the "Service Operations Center" heading
+      are gone; the search and status filter stay. by artifact: `H-AFTER-requests`.
+      from: UIUX-2026-10-02 § Findings — VH-10, ST-9
+- [x] H2 Orders: the dark "Order Command Center / Order Operations Board" hero, its
+      ATTENTION / KITCHEN QUEUE pair, its four metric tiles and the third "Order Queue"
+      heading are gone. The board said "Orders" four times before the first order.
+      by artifact: the measurement below. from: UIUX-2026-10-02 § Findings — VH-10, VH-2
+- [x] H3 Inventory (both tabs) and Rewards: stat strips removed.
+      from: UIUX-2026-10-02 § Findings — ST-6
+- [x] H4 Measured against the pre-audit build running on the same database at the same
+      moment: total page height across eight captures **21,145px -> 17,260px, 18% shorter**.
+      Service Requests on a phone 2,650 -> 1,730 (-920px); Inventory 2,349 -> 1,617
+      (-732px); Orders 6,686 -> 5,653 (-1,033px). by artifact:
+      `.flow/uiux/2026-10-02/applied/H-*.png`. from: artifact § Five groups — Group C
+
+### Kept, deliberately
+Figures stay where counting is the module's job: `/dashboard` home, `/dashboard/analytics`,
+`/dashboard/reports`. Removing those would remove the point of the screen rather than the
+clutter.
+
+### Still carrying a hero card, not done in this phase
+`/dashboard` home, `rewards`, `services`, `settings/backups`, `tags`. Each is a bespoke
+block rather than a shared component, so each needs its own edit and its own capture; the
+generic remover walked to the wrong enclosing element and was abandoned rather than let
+loose on five files.
+
+Wakes since commit: 0.

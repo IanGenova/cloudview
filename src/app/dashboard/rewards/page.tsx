@@ -475,35 +475,9 @@ export default async function RewardsPage({
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard
-                label="Members"
-                value={formatNumber(memberCount)}
-                helper="Global loyalty guests"
-                icon={Users}
-              />
-
-              <StatCard
-                label="Available"
-                value={formatNumber(totalAvailablePoints)}
-                helper="All hotels balance"
-                icon={Sparkles}
-              />
-
-              <StatCard
-                label="Earned"
-                value={formatNumber(totalLifetimeEarned)}
-                helper="Issued points"
-                icon={Trophy}
-              />
-
-              <StatCard
-                label="Redeemed"
-                value={formatNumber(totalRedeemed)}
-                helper="Used points"
-                icon={ReceiptText}
-              />
-            </div>
+            {/*
+              A four-tile strip stood here; the lists below carry the same numbers.
+            */}
           </div>
         </div>
       </section>

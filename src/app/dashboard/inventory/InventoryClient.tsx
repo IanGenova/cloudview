@@ -2061,28 +2061,9 @@ export function InventoryClient({
 
       {activeTab === 'menu' ? (
         <>
-          <div className="mb-6 grid gap-3 md:grid-cols-6">
-            <SummaryCard label="Total Menu" value={menuSummary.totalMenuItems} />
-            <SummaryCard
-              label="Active Menu"
-              value={menuSummary.activeMenuItems}
-            />
-            <SummaryCard
-              label="Available"
-              value={menuSummary.availableItems}
-              tone="green"
-            />
-            <SummaryCard
-              label="Sold Out"
-              value={menuSummary.soldOutItems}
-              tone="red"
-            />
-            <SummaryCard
-              label="Available Qty"
-              value={menuSummary.totalAvailableQty}
-            />
-            <SummaryCard label="Sold Qty" value={menuSummary.totalSoldQty} />
-          </div>
+          {/*
+            A six-tile strip stood here restating counts the table below carries.
+          */}
 
           <Card>
             <CardContent>
@@ -2523,35 +2504,9 @@ export function InventoryClient({
 
       {activeTab === 'services' ? (
         <>
-          <div className="mb-6 grid gap-3 md:grid-cols-6">
-            <SummaryCard
-              label="Total Services"
-              value={serviceSummary.totalServices}
-            />
-            <SummaryCard
-              label="Active Services"
-              value={serviceSummary.activeServices}
-            />
-            <SummaryCard
-              label="Tracked"
-              value={serviceSummary.trackedServices}
-              tone="blue"
-            />
-            <SummaryCard
-              label="Available"
-              value={serviceSummary.serviceAvailableItems}
-              tone="green"
-            />
-            <SummaryCard
-              label="Sold Out"
-              value={serviceSummary.serviceSoldOutItems}
-              tone="red"
-            />
-            <SummaryCard
-              label="Available Qty"
-              value={serviceSummary.serviceTotalAvailableQty}
-            />
-          </div>
+          {/*
+            The services tab carried the same six-tile strip as the menu tab.
+          */}
 
           <Card>
             <CardContent>
