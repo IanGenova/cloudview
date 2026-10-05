@@ -18,6 +18,7 @@
   --cv-card: #ffffff;
   --cv-card-muted: #f6f1e8;
   --cv-border: #e8e1d4;
+  --cv-hairline: #ddd6c6;
   --cv-text: #171717;
   --cv-muted: #6b665c;
   --cv-sidebar-bg: #070604;
@@ -33,6 +34,7 @@
   --cv-status-preparing: #3b82f6;
   --cv-status-ready: #34d399;
   --cv-status-danger: #dc2626;
+  --cv-status-done: #5b6675;
 }
 
 :root[data-cloudview-palette='emerald-hotel'] {
@@ -49,6 +51,7 @@
   --cv-card: #ffffff;
   --cv-card-muted: #ecfdf5;
   --cv-border: #cdefe1;
+  --cv-hairline: #bfe6d4;
   --cv-text: #10221b;
   --cv-muted: #527064;
   --cv-sidebar-bg: #04110c;
@@ -74,6 +77,7 @@
   --cv-card: #ffffff;
   --cv-card-muted: #eff6ff;
   --cv-border: #d7e4f8;
+  --cv-hairline: #c8d9f4;
   --cv-text: #0f172a;
   --cv-muted: #52627a;
   --cv-sidebar-bg: #030a18;
@@ -99,6 +103,7 @@
   --cv-card: #ffffff;
   --cv-card-muted: #fff1f2;
   --cv-border: #f6d5db;
+  --cv-hairline: #efc6ce;
   --cv-text: #241018;
   --cv-muted: #785a63;
   --cv-sidebar-bg: #12050b;
@@ -124,6 +129,7 @@
   --cv-card: #ffffff;
   --cv-card-muted: #f1f5f9;
   --cv-border: #e2e8f0;
+  --cv-hairline: #d4dce7;
   --cv-text: #0f172a;
   --cv-muted: #64748b;
   --cv-sidebar-bg: #020617;
@@ -341,6 +347,41 @@ body {
 }
 
 /* Responsive UI/UX guardrails — presentation only. */
+/*
+ * The system, defined once. The 2 October audit found 1,996 `rounded-*` in 30
+ * distinct values and 7-10 radii on a single screen; the scale in
+ * tailwind.config.ts resolves all of them to this. Changing --cv-radius alone
+ * does not round the product back up -- that is deliberate.
+ */
+:root {
+  --cv-radius: 0;
+  --cv-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Micro-labels carry the formality: 10-11px, uppercase, widely tracked. */
+  --cv-tracking-micro: 0.2em;
+  --cv-tracking-label: 0.14em;
+}
+
+@layer base {
+  /*
+   * A11Y-10: `outline-none` sat on 149 controls, 37 of them with no
+   * replacement at all, and the 112 replacements used a gold ring at 10-35%
+   * opacity -- 1.13:1 to 1.90:1, where a focus indicator needs 3:1. This
+   * takes its colour from the element's own text, which is legible against
+   * whatever surface it sits on, in every palette and both themes. The
+   * !important is what survives a `focus:outline-none` utility until the
+   * sweep removes them.
+   */
+  :focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Figures line up wherever they are stacked. */
+  table, [data-figures] {
+    font-variant-numeric: tabular-nums;
+  }
+}
 @layer base {
   *,
   *::before,

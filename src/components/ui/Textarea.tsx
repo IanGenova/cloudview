@@ -1,5 +1,19 @@
+import { fieldClasses } from '@/lib/ui-classes';
 import { cn } from '@/lib/utils';
 
+/*
+ * Square, hairline border, and a focus outline that is never removed — see
+ * Input.tsx for what this replaced. The minimum height is the textarea's own,
+ * not the 44px tap floor, which it clears several times over.
+ */
+
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cn('min-h-28 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none ring-gold/20 transition focus:ring-4', props.className)} />;
+  const invalid = props['aria-invalid'] === true || props['aria-invalid'] === 'true';
+
+  return (
+    <textarea
+      {...props}
+      className={cn(fieldClasses({ invalid }), 'min-h-28', props.className)}
+    />
+  );
 }

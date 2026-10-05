@@ -1,13 +1,19 @@
-import { cn } from '@/lib/utils';
+import { badgeClasses, type BadgeTone } from '@/lib/ui-classes';
 
-const tones = {
-  neutral: 'bg-neutral-100 text-neutral-700',
-  gold: 'bg-yellow-100 text-yellow-800',
-  green: 'bg-green-100 text-green-800',
-  red: 'bg-red-100 text-red-800',
-  blue: 'bg-blue-100 text-blue-800'
-};
+/*
+ * A hairline and a word, never a filled pill.
+ *
+ * The filled pills were how red and green came to mean two unrelated things
+ * on one screen: the order-detail modal showed three green READY badges above
+ * an order badged UNPAID in red, and the analytics strip painted four failing
+ * metrics green because the tint belonged to the card rather than the value.
+ * A bordered badge cannot shout, so colour goes back to meaning status.
+ */
 
-export function Badge({ className, tone = 'neutral', ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: keyof typeof tones }) {
-  return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-bold', tones[tone], className)} {...props} />;
+export function Badge({
+  className,
+  tone = 'neutral',
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
+  return <span className={badgeClasses(tone, className)} {...props} />;
 }

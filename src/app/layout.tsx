@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { fontVariables } from './fonts';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -37,7 +38,7 @@ export default function RootLayout({
 
       <body
         suppressHydrationWarning
-        className="bg-neutral-100 text-neutral-900 transition-colors duration-300 dark:bg-neutral-950 dark:text-white"
+        className="bg-neutral-100 font-sans tabular-nums text-neutral-900 transition-colors duration-300 dark:bg-neutral-950 dark:text-white"
       >
         <ThemeProvider>{children}</ThemeProvider>
       </body>

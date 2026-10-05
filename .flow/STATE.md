@@ -406,4 +406,84 @@ cannot: `.flow/uiux/pending` holds every source write closed until the owner run
   zero; a plain search finds it.
 - The disposable environment is still up (pm2 app `cvuiux`, MySQL on 3399 from `D:/_ultra/db`).
 
+### What CHECK caught
+
+The first re-capture run was worthless and nearly went in as proof: the disposable MySQL
+had stopped and the minted session had expired, so every guest route captured a 500 and
+every dashboard route captured the login page. The evidence gate had already refused the
+commit for ticking S4 with no artifact on disk; this is the same failure one step later.
+Re-driven against a live database and a fresh session.
+
+Wakes since commit: 0.
+
+## Phase: uiux-A-system (5 October 2026) — Full
+
+Owner confirmed the redesign captures on 2 Oct (`.flow/uiux-confirmed`,
+`60ed6326…`) and said "start now" without answering the six decisions. Taken as
+deferral to the recommendations, recorded here as assumptions rather than
+treated as answered:
+
+- **A1 typeface = EB Garamond + Instrument Sans** — what the confirmed captures show.
+- **A2 the guest portal stays permanently dark** — it already is; this makes it a rule.
+- **A3 kitchen TV Mode becomes the default** — group C, not this phase.
+- **A4 the landing page is out of scope** — no group F.
+- **Group E is NOT assumed and does not start.** The dashboard regroup, the three renames,
+  the guest tab bar and merging `/orders` with `/activity` rename and restructure things
+  staff and guests have learned. Those wait for the owner in their own words.
+
+Authority: `.flow/UIUX-2026-10-02.md` and the review artifact
+<https://claude.ai/artifact/G2i6CALe3HjdzB3REq7rNo>.
+
+### Goal
+The product's radius, colour, type, spacing, hairlines and component states are defined
+once, in `globals.css`, `tailwind.config.ts` and one pure class module — and every screen
+inherits that without 92 files being rewritten in one commit.
+
+### Acceptance criteria
+- [x] S1 `--cv-radius: 0` and a `--cv-hairline` token exist, and every Tailwind radius scale
+      value resolves to 0, so the 1,996 `rounded-*` occurrences render square without being
+      edited. by test: a unit test asserts the config maps every radius key to `0`.
+      from: UIUX-2026-10-02 § The verdict — five causes, cause 1
+- [x] S2 `font-black` caps at 600 — the scale is remapped so the 1,481 occurrences cannot
+      render heavier than the brief allows. by test: config assertion.
+      from: UIUX-2026-10-02 § The verdict — five causes, cause 1
+- [x] S3 `shadow-soft` is no longer a 60px glow. by test: config assertion.
+      from: UIUX-2026-10-02 § The verdict — five causes, cause 1
+- [x] S4 EB Garamond and Instrument Sans load through `next/font`, exposed as
+      `--cv-serif` / `--cv-sans`, with real fallback stacks. next/font cannot be imported
+      outside a Next build, so this is not provable by unit test and the criterion says so:
+      by test: `npm run build` compiles; by artifact: a capture showing the serif rendering.
+      `src/app/fonts.ts` added to `.flow/tdd-exempt` for the same reason as next.config.mjs.
+      Proven: build green, and `interfaceSans` is the computed family on both surfaces in
+      `.flow/uiux/2026-10-02/applied/A-manifest.json`.
+      from: artifact § Six decisions, decision 1
+- [x] S5 One pure module builds every primitive's classes, tested: no radius class, no
+      weight above 600, a visible `focus-visible` ring at 2px/2px offset that does not
+      depend on `outline-none` being absent, and a 44px minimum on every interactive box.
+      by test: `src/lib/ui-classes.test.ts`. from: UIUX-2026-10-02 § Findings — A11Y-10
+- [x] S6 The six `ui/` primitives use that module and keep their public API unchanged, so
+      the 121 importing files still compile. by test: `tsc --noEmit` clean; full suite green.
+      from: artifact § Five groups — Group A
+- [x] S7 Status renders as a dot and a word, never a filled pill, from one helper.
+      by test: `ui-classes.test.ts`. from: UIUX-2026-10-02 § Findings — A11Y-8
+- [x] S8 The screens still render. 31 captures of 10 routes at both widths, all HTTP 200.
+      Measured against the 2 October captures of the same routes: radius-bearing elements
+      **1,579 -> 240**, weight-900 elements **1,475 -> 2**, both faces loading on both
+      surfaces. The 80 remaining radius kinds and the 11 glows on the cart are arbitrary
+      Tailwind values that bypass the scale — the sweep phase edits those, as framed.
+      by artifact: `.flow/uiux/2026-10-02/applied/A-*.png`.
+      from: artifact § Five groups — Group A
+
+### Tasks
+- [x] T1 `src/lib/ui-classes.ts` + test — the pure class layer (S5, S7). 15 assertions.
+- [x] T2 `tailwind.config.ts` — radius, weight, shadow, fonts, hairline (S1, S2, S3). 9 assertions in `design-tokens.test.ts`.
+- [x] T3 `src/app/fonts.ts` + `layout.tsx` — **self-hosted** via `next/font/local`, not Google. The Turbopack build cannot reach fonts.googleapis.com from this host, and a build that needs the network to compile breaks in CI; a guest's phone also stops asking Google for anything. 118KB of variable woff2 in `src/app/fonts/`. (S4)
+- [x] T4 `src/app/globals.css` — `--cv-radius`, `--cv-hairline` on all five palettes, `--cv-status-done`, and a `:focus-visible` rule that overrides the 149 `outline-none` utilities until the sweep removes them (S1)
+- [x] T5 the six primitives, on the tested class module, public API unchanged (S6)
+- [x] T6 CHECK — tsc clean, 222 tests, production build green, 31 captures re-driven
+
+Deferred to A-sweep (the next phase, not this one): deleting the now-inert `rounded-*`,
+`font-black` and `shadow-soft` class names from the 92 files, and the arbitrary-value
+radii (`rounded-[2rem]` ×145) which bypass the scale and must be edited.
+
 Wakes since commit: 0.

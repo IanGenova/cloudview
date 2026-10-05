@@ -24,3 +24,21 @@ prisma/seed.ts
 # Operational workers and maintenance scripts. Each polls one endpoint or
 # performs a one-off repair; they are not imported by the application.
 scripts/
+
+# Typeface declaration. Two next/font loader calls and the variable names they
+# expose; next/font cannot be imported outside a Next build, so the only
+# meaningful proof is the production build compiling and the serif appearing in
+# a capture. Same reasoning as next.config.mjs above.
+src/app/fonts.ts
+
+# The six ui/ primitives. Every class they render now comes from
+# src/lib/ui-classes.ts, which is pinned by 15 assertions (no radius, no weight
+# above 600, a real focus outline, 44px minimum, no accent fill). What is left
+# in these files is prop forwarding and markup. A seventh primitive that
+# carries real logic does not belong on this list.
+src/components/ui/Button.tsx
+src/components/ui/Card.tsx
+src/components/ui/Badge.tsx
+src/components/ui/Input.tsx
+src/components/ui/Select.tsx
+src/components/ui/Textarea.tsx
