@@ -24,6 +24,9 @@ import {
   Utensils,
   X,
 } from 'lucide-react';
+import { confirmMessage } from '@/lib/staff-confirm';
+import { paymentReadiness } from '@/lib/order-payment-readiness';
+import { statusDotClasses } from '@/lib/ui-classes';
 import {
   cancelOrderItemAction,
   markOrderPaidAction,
@@ -258,6 +261,27 @@ function isFinanciallySettled(status: PaymentStatus) {
   return status !== 'UNPAID';
 }
 
+/*
+ * IX-2, a blocker: Mark Paid declares that cash has been collected, and moved
+ * PHP 707.60 on one click across four cards that read identically apart from
+ * their order code. The question, and the amount in it, come from the tested
+ * rule in src/lib/staff-confirm.ts.
+ */
+function askBeforeMarkingPaid(order: DashboardOrder) {
+  return (event: React.MouseEvent<HTMLButtonElement>) => {
+    const question = confirmMessage('mark-paid', {
+      code: order.orderCode,
+      totalCents: order.totalCents,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+    });
+
+    if (question && !window.confirm(question)) {
+      event.preventDefault();
+    }
+  };
+}
+
 function canManuallyMarkPaid(order: DashboardOrder) {
   return order.paymentStatus === 'UNPAID' && order.paymentMethod !== 'XENDIT';
 }
@@ -273,39 +297,6 @@ function canStartOrderProcessing(order: DashboardOrder) {
   );
 }
 
-function getStaffReviewItems(order: DashboardOrder) {
-  const activeItems = getItemCount(order.items);
-  const paymentReady = canStartOrderProcessing(order);
-
-  return [
-    {
-      label: 'Payment verification',
-      ready: paymentReady,
-      detail:
-        order.paymentMethod === 'XENDIT'
-          ? paymentReady
-            ? 'Verified Xendit payment received.'
-            : 'Wait for the Xendit webhook before preparing.'
-          : `${label(order.paymentMethod)} follows the hotel collection workflow.`,
-    },
-    {
-      label: 'Active items',
-      ready: activeItems > 0,
-      detail:
-        activeItems > 0
-          ? `${activeItems} active item${activeItems === 1 ? '' : 's'} to fulfill.`
-          : 'No active items remain in this order.',
-    },
-    {
-      label: 'Processing stage',
-      ready: order.status !== 'DELIVERED' && order.status !== 'CANCELLED',
-      detail:
-        order.status === 'PENDING'
-          ? 'Review the order, then accept it for preparation.'
-          : `Current stage: ${label(order.status)}.`,
-    },
-  ];
-}
 
 function getNextActions(status: OrderStatus) {
   if (status === 'PENDING') {
@@ -318,7 +309,7 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Reject',
-        className: 'bg-red-600 text-white hover:bg-red-700',
+        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
       },
     ];
   }
@@ -333,7 +324,7 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Cancel',
-        className: 'bg-red-600 text-white hover:bg-red-700',
+        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
       },
     ];
   }
@@ -348,7 +339,7 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Cancel',
-        className: 'bg-red-600 text-white hover:bg-red-700',
+        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
       },
     ];
   }
@@ -363,7 +354,7 @@ function getNextActions(status: OrderStatus) {
       {
         status: 'CANCELLED' as OrderStatus,
         label: 'Cancel',
-        className: 'bg-red-600 text-white hover:bg-red-700',
+        className: 'border border-red-600/60 text-red-700 hover:border-red-600 hover:bg-red-50',
       },
     ];
   }
@@ -833,7 +824,7 @@ function OrderItemsList({
                   <button
                     type="button"
                     onClick={() => onCancelItem(item)}
-                    className="inline-flex h-8 items-center gap-1 bg-red-600 px-3 text-[10px] font-semibold text-white hover:bg-red-700"
+                    className="inline-flex h-8 items-center gap-1 border border-red-600/60 px-3 text-[10px] font-semibold text-red-700 hover:border-red-600 hover:bg-red-50"
                   >
                     <Ban className="size-3" />
                     Cancel Item
@@ -1209,7 +1200,7 @@ function OrderDetailsModal({
 }) {
   const [cancelItem, setCancelItem] = useState<OrderItem | null>(null);
   const nextActions = getNextActions(order.status);
-  const staffReviewItems = getStaffReviewItems(order);
+  const readiness = paymentReadiness(order);
   const canProcess = canStartOrderProcessing(order);
 
   return (
@@ -1310,38 +1301,30 @@ function OrderDetailsModal({
             </div>
 
             <aside className="space-y-3">
-              <div className="border border-blue-200 bg-blue-50 p-4">
-                <p className="text-sm font-semibold text-blue-950">
-                  Staff Review Checklist
+              {/*
+                CP-12: this was a "Staff Review Checklist" of three rows, each
+                with a green READY pill, sitting directly above Mark Paid. The
+                first read "Payment verification — READY" on an order badged
+                UNPAID three hundred pixels above it; none of the three could
+                show any other value, and the other two restated the item list
+                and the button below them. One true line replaces them.
+              */}
+              <div className="border border-cv-hairline bg-white p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                  Money
                 </p>
-                <p className="mt-1 text-xs font-semibold text-blue-700">
-                  Review these requirements before preparing the order.
+                <p className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-neutral-900">
+                  <span className={statusDotClasses(readiness.tone)} />
+                  {readiness.label}
                 </p>
-
-                <div className="mt-3 space-y-2">
-                  {staffReviewItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className="bg-white/80 p-3 text-xs"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <b className="text-neutral-900">{item.label}</b>
-                        <span
-                          className={
-                            item.ready
-                              ? 'bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700'
-                              : 'bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700'
-                          }
-                        >
-                          {item.ready ? 'READY' : 'REVIEW'}
-                        </span>
-                      </div>
-                      <p className="mt-1 font-semibold text-neutral-500">
-                        {item.detail}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <p className="mt-1 text-xs leading-5 text-neutral-600">
+                  {readiness.detail}
+                </p>
+                {readiness.blocksKitchen ? (
+                  <p className="mt-2 border-t border-cv-hairline pt-2 text-xs font-semibold text-red-700">
+                    The kitchen cannot start this order yet.
+                  </p>
+                ) : null}
               </div>
 
               <div className="bg-neutral-50 p-4">
@@ -1412,6 +1395,7 @@ function OrderDetailsModal({
                   <input type="hidden" name="redirectTo" value="orders" />  
                   <button
                     type="submit"
+                    onClick={askBeforeMarkingPaid(order)}
                     className="flex h-11 w-full items-center justify-center gap-2 bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
                   >
                     <CreditCard className="size-4" />
@@ -1772,6 +1756,7 @@ function MarkPaidButton({
       <input type="hidden" name="redirectTo" value="orders" />
       <button
         type="submit"
+        onClick={askBeforeMarkingPaid(order)}
         className={
           compact
             ? 'inline-flex h-9 items-center justify-center gap-2 bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700'
@@ -1962,7 +1947,7 @@ function OrderCard({
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-11 items-center justify-center gap-2 bg-red-600 text-xs font-semibold text-white hover:bg-red-700"
+            className="inline-flex h-11 items-center justify-center gap-2 border border-red-600/60 text-xs font-semibold text-red-700 hover:border-red-600 hover:bg-red-50"
           >
             <Ban className="size-4" />
             Reject

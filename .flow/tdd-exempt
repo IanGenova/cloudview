@@ -42,3 +42,10 @@ src/components/ui/Badge.tsx
 src/components/ui/Input.tsx
 src/components/ui/Select.tsx
 src/components/ui/Textarea.tsx
+
+# The kitchen's status button. The decision it used to make badly -- whether to
+# confirm -- now lives in src/lib/staff-confirm.ts, which is tested; what is
+# left here is calling it and submitting. The wiring itself is guarded by
+# src/lib/staff-confirm-wiring.test.ts, which reads the call sites and fails if
+# a destructive one stops going through the rule.
+src/components/dashboard/KitchenStatusActionButton.tsx

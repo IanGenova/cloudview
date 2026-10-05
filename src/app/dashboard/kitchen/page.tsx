@@ -725,6 +725,8 @@ function KitchenRushReadyCard({
           status={OrderStatus.DELIVERED}
           label="Delivered"
           tone="dark"
+          action="deliver"
+          order={{ code: order.orderCode, totalCents: order.totalCents }}
         />
       </div>
     </details>
@@ -951,6 +953,8 @@ function KitchenOrderCard({
                 status={OrderStatus.PREPARING}
                 label="Accept"
                 tone="dark"
+                action="start"
+                order={{ code: order.orderCode, totalCents: order.totalCents }}
               />
 
               <KitchenStatusActionButton
@@ -958,6 +962,8 @@ function KitchenOrderCard({
                 status={OrderStatus.CANCELLED}
                 label="Reject"
                 tone="danger"
+                action="reject"
+                order={{ code: order.orderCode, totalCents: order.totalCents }}
               />
             </div>
           ) : null}
@@ -968,6 +974,8 @@ function KitchenOrderCard({
               status={OrderStatus.READY}
               label="Serving"
               tone="dark"
+              action="ready"
+              order={{ code: order.orderCode, totalCents: order.totalCents }}
             />
           ) : null}
 
@@ -977,6 +985,8 @@ function KitchenOrderCard({
               status={OrderStatus.DELIVERED}
               label="Mark Delivered"
               tone="dark"
+              action="deliver"
+              order={{ code: order.orderCode, totalCents: order.totalCents }}
             />
           ) : null}
         </div>

@@ -534,3 +534,48 @@ be 400 or 500 is the per-screen work in B through E, and this phase does not pre
 have done it.
 
 Wakes since commit: 0.
+
+## Phase: uiux-C1-dangerous-actions (5 October 2026) — Full
+
+Group C, first half: the two blockers and the destructive-action vocabulary. The console's
+layout work (figure blocks, hairline tables, the duplicate headings, the kitchen's TV-Mode
+sizing) is C2 and is not in this phase.
+
+### Acceptance criteria
+- [x] C1 One tested rule decides which staff actions need confirming and what the
+      confirmation says: cancelling a guest's order and declaring money collected always
+      do, and the words always name the order and the amount; moving an order forward
+      never does. by test: `src/lib/staff-confirm.test.ts`.
+      from: UIUX-2026-10-02 § Findings — IX-1, IX-2
+- [x] C2 The kitchen's Reject goes through it. Driven live: it asks "Cancel order
+      CVDHFO000001? The whole order -- P707.60 -- is cancelled..." and dismissing it left
+      the row PENDING. Today it is a bare `onClick` that fires
+      `updateOrderStatusAction(CANCELLED)` with no dialog, no reason and no undo, 8px from
+      Accept at the same size — while the same action on the desk is gated behind a reason
+      modal. by test: the rule; by artifact: a capture of the kitchen ticket.
+      from: UIUX-2026-10-02 § Findings — IX-1 (blocker)
+- [x] C3 Both Mark Paid buttons go through it. Driven live: "Record payment for
+      CVDHFO000007? This says the hotel has P707.60... paid at the counter.", and the confirmation restates the amount.
+      by test: the rule; by artifact: a capture of an order card.
+      from: UIUX-2026-10-02 § Findings — IX-2 (blocker)
+- [x] C4 No **destructive** control is a filled slab any more. Five became hairlines; the
+      two that stay filled are the error toast icon and the final confirm inside the cancel
+      modal, where solid red is the right weight. **Not closed by this:** Mark Paid is still
+      the widest, most saturated control on the card -- that is VH-4's hierarchy half and
+      belongs to C2's layout work. Original wording:
+      Reject on the kitchen and on the board, and Cancel Item in the modal, use the
+      hairline danger variant the primitives already define. by artifact: the same captures.
+      from: UIUX-2026-10-02 § Findings — VH-4, IX-3
+- [x] C5 The three always-green READY rows above Mark Paid are gone — they could not show
+      any other value, and sat above a money decision on an order badged UNPAID.
+      by artifact: a capture of the order-detail modal.
+      from: UIUX-2026-10-02 § Findings — CP-12
+- [x] C6 tsc clean, 245 tests, production build green, 31 captures at HTTP 200.
+      by artifact: `.flow/uiux/2026-10-02/applied/C-*.png`.
+      from: artifact § Five groups — Group C
+
+Not renaming anything. "Accept", "Reject" and "Serving" stay as they are: CP-3 is that one
+order lifecycle is told in four vocabularies, and choosing the one word is decision 2,
+which the owner has not answered.
+
+Wakes since commit: 0.
