@@ -13,6 +13,10 @@ import {
 import { db } from '@/lib/db';
 import { createXenditRefund } from '@/lib/xendit';
 import {
+  MANUAL_REFUND_REQUIRED_PREFIX,
+  isPermanentXenditRefundError,
+} from '@/lib/xendit-refund-retry';
+import {
   notifyGuestXenditRefundStatus,
   notifyGuestXenditStatus,
 } from '@/lib/xendit-dashboard-notifications';
@@ -72,8 +76,6 @@ function safeIdempotencyKey(input: string) {
   const digest = createHash('sha256').update(compact).digest('hex').slice(0, 24);
   return `${compact.slice(0, 150)}-${digest}`;
 }
-
-const MANUAL_REFUND_REQUIRED_PREFIX = 'MANUAL REFUND REQUIRED:';
 
 const NON_REFUNDABLE_XENDIT_SOURCES = new Set([
   'qrph',
@@ -1067,7 +1069,13 @@ export async function retryGuestXenditRefund(refundRecordId: string) {
     },
   });
 
-  await safelyNotifyGuestRefund(refundRecord.id);
+  /*
+   * No notification here. This write only says "an automatic retry has
+   * started", which is not news to anyone — and announcing it meant each
+   * attempt produced two notifications, a "Refund Processing" and then a
+   * "Refund Failed", for a refund whose state had not actually changed. The
+   * outcome below is announced; the attempt is not.
+   */
 
   try {
     const refund = await createXenditRefund({
@@ -1126,7 +1134,19 @@ export async function retryGuestXenditRefund(refundRecordId: string) {
       status: mappedStatus,
     };
   } catch (error) {
-    const message = errorMessage(error, 'Unable to retry the Xendit refund.');
+    const raw = errorMessage(error, 'Unable to retry the Xendit refund.');
+
+    /*
+     * Read what Xendit actually said. Some answers cannot change — a channel
+     * that does not support refunds will not start supporting them on the
+     * next pass — and filing those as ordinary failures is what retried two
+     * refunds every five minutes for eighty-one days. A permanent answer is
+     * promoted to the manual-review message the retry pass already skips, so
+     * it is parked the first time rather than for ever.
+     */
+    const message = isPermanentXenditRefundError(raw)
+      ? `${MANUAL_REFUND_REQUIRED_PREFIX} ${raw} Retrying will return the same answer, so staff must settle the amount with the guest or contact Xendit Support.`
+      : raw;
 
     await db.$transaction(async (tx) => {
       await tx.guestXenditRefund.update({

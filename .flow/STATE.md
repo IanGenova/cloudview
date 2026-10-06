@@ -1137,3 +1137,71 @@ the audit is the ten vocabulary findings listed above, which need the owner's wo
 and the handful of VH items recorded as partial.
 
 Wakes since commit: 0.
+
+## Phase: xendit-refund-retry-loop (6 October 2026) — Full
+
+Owner, with a screenshot of the notification centre: "can you fix the xendit webhooks, or
+anything in the payment integration, it does repeatedly give me notifications like this".
+
+### What was actually happening
+Read from production, read-only, before changing anything: **six failed refunds. Four are
+parked correctly** as `MANUAL REFUND REQUIRED` (QR Ph) and generate no noise. **Two of
+₱50.00 each had been failing for 1,942 hours — eighty-one days**, with the same answer
+every time:
+
+    Xendit 400: REFUND_NOT_SUPPORTED — Refund request failed because refunds are not
+    supported for this channel
+
+The worker polls every five minutes. Each pass set the row to PENDING and announced
+"Refund Processing", called Xendit, caught the same 400, set FAILED and announced "Refund
+Failed". Two rows × two notifications × 12/hour × 81 days is on the order of **ninety
+thousand notifications**, and neither guest's ₱50 ever moved.
+
+The mechanism to prevent this already existed and worked — those four QR Ph rows prove it.
+But `MANUAL REFUND REQUIRED` was only ever written by `getManualRefundRequiredMessage()`,
+which checks `session.paymentSourceType` **before** the call against a hardcoded set. When
+the channel is only revealed by Xendit's reply, nothing read the reply. So the identical
+condition was parked in one case and retried for ever in the other.
+
+### Acceptance criteria
+- [x] X1 A new rule reads what Xendit returned. `isPermanentXenditRefundError` recognises
+      the six answers that cannot change — REFUND_NOT_SUPPORTED, CHANNEL_NOT_SUPPORTED,
+      INVALID_PAYMENT_STATUS, PAYMENT_NOT_FOUND, REFUND_AMOUNT_EXCEEDED, REFUND_NOT_ALLOWED
+      — in any wrapping, and treats a timeout, a 5xx, a rate limit or anything unrecognised
+      as retryable. The bias is deliberate: parking means a guest's money waits for a
+      human, so an unknown error gets another go. by test: `src/lib/xendit-refund-retry.test.ts`
+- [x] X2 The deadline, not the classifier, is what guarantees termination. A transient
+      failure is retried no more often than every **30 minutes**, and after **24 hours**
+      from its *first request* it is parked for a person. Counted from `requestedAt`, never
+      from `updatedAt`, because retrying writes `updatedAt` and a deadline measured from it
+      could never arrive. This alone would have caught the two in a day without anyone
+      knowing the Xendit code in advance. by test: same file
+- [x] X3 Run against the exact strings read out of production: the two noisy refunds →
+      **PARK**, the four QR Ph ones → **SKIP** (unchanged), a fresh timeout → **WAIT**, an
+      unclassified error three days old → **PARK**. The two existing rows therefore heal
+      themselves on the first pass after deploy; no data migration.
+- [x] X4 A permanent answer caught during a retry is promoted to the manual-review message
+      at the point of failure too, so a new one is parked the first time rather than
+      entering the loop at all.
+- [x] X5 The retry itself stopped announcing. Setting a row to PENDING to begin an attempt
+      said "Refund Processing" to the whole dashboard — an internal transition, not news,
+      and half of all the noise. Parking announces **once**, because after that write the
+      refund is skipped on every future pass and the worker will never mention it again.
+- [x] X6 One definition of `MANUAL REFUND REQUIRED:`. It was declared separately in the
+      library and in the route, which is how the two could ever have disagreed.
+- [x] X7 Machine stage green: `tsc --noEmit` clean, **268 tests** pass (11 new), the
+      production build compiles. No migration, no schema change, no dependency change.
+
+### What this does not do
+It does not return the two guests their ₱50. It cannot: Xendit will not refund that
+channel through its API, which is what it has been saying for eighty-one days. The fix
+makes the product say so once, clearly, on the order where staff will see it, instead of
+hiding it inside a flood. **Someone still has to settle ₱100 with two guests by hand**, and
+the parked message now says exactly that.
+
+### Worth noticing
+Every gate was green throughout those eighty-one days. There is no test that fails when a
+worker retries the same doomed request nine thousand times, and no alert on notification
+volume. The thing that found it was the owner looking at their own notification centre.
+
+Wakes since commit: 0.

@@ -15,11 +15,15 @@ import {
   cleanupStagedGuestServiceAttachments,
   type StagedServiceAttachment,
 } from '@/lib/guest-service-order';
+import {
+  MANUAL_REFUND_REQUIRED_PREFIX,
+  refundRetryDecision,
+} from '@/lib/xendit-refund-retry';
+import { notifyGuestXenditRefundStatus } from '@/lib/xendit-dashboard-notifications';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MANUAL_REFUND_REQUIRED_PREFIX = 'MANUAL REFUND REQUIRED:';
 
 function isAuthorized(request: Request) {
   const secret =
@@ -126,6 +130,8 @@ async function run(request: Request) {
     });
   }
 
+  const now = new Date();
+
   const failedRefunds = await db.guestXenditRefund.findMany({
     where: {
       status: GuestXenditRefundStatus.FAILED,
@@ -134,24 +140,67 @@ async function run(request: Request) {
     select: {
       id: true,
       errorMessage: true,
+      requestedAt: true,
+      updatedAt: true,
     },
     orderBy: { updatedAt: 'asc' },
     take: 50,
   });
 
-  const manualReviewRefunds = failedRefunds.filter((refund) =>
-    String(refund.errorMessage ?? '').startsWith(
-      MANUAL_REFUND_REQUIRED_PREFIX
-    )
-  );
+  /*
+   * Every failed refund used to be retried on every pass unless its message
+   * began with MANUAL REFUND REQUIRED — a message only ever written by a check
+   * made before the call. Two refunds whose channel Xendit refused in its
+   * *reply* were therefore retried every five minutes for eighty-one days,
+   * announcing a start and a failure each time. The rule now reads the reply,
+   * spaces the attempts, and gives unrecognised errors a deadline.
+   */
+  const decisions = failedRefunds.map((refund) => ({
+    refund,
+    decision: refundRetryDecision({
+      errorMessage: refund.errorMessage,
+      requestedAt: refund.requestedAt,
+      updatedAt: refund.updatedAt,
+      now,
+    }),
+  }));
 
-  const retryableRefunds = failedRefunds
-    .filter(
-      (refund) =>
-        !String(refund.errorMessage ?? '').startsWith(
-          MANUAL_REFUND_REQUIRED_PREFIX
-        )
-    )
+  /* Permanent, or past the deadline: write the reason once and stop. */
+  const refundsToPark = decisions.filter((d) => d.decision.action === 'park');
+
+  for (const { refund, decision } of refundsToPark) {
+    await db.guestXenditRefund.update({
+      where: { id: refund.id },
+      data: {
+        errorMessage:
+          `${MANUAL_REFUND_REQUIRED_PREFIX} ${decision.reason}`.slice(0, 2000),
+      },
+    });
+
+    /*
+     * Once, and then never again: after this write the refund is skipped on
+     * every future pass, so this is the last thing anyone hears about it from
+     * the retry worker. "This is now yours" is worth one notification; the
+     * ninety thousand that preceded it were not.
+     */
+    try {
+      await notifyGuestXenditRefundStatus({ refundId: refund.id });
+    } catch (error) {
+      console.warn('[refund-retry] Unable to announce a parked refund.', {
+        refundId: refund.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const manualReviewRefunds = [
+    ...decisions.filter((d) => d.decision.action === 'skip'),
+    ...refundsToPark,
+  ].map((d) => d.refund);
+
+  const retryableRefunds = decisions
+    .filter((d) => d.decision.action === 'retry')
+    .map((d) => d.refund)
     .slice(0, 20);
 
   const refundResults = [];
