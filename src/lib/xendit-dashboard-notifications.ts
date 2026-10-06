@@ -547,3 +547,35 @@ export async function notifyStuckWork(input: {
     },
   });
 }
+
+/*
+ * A scheduled worker that has stopped reporting in.
+ *
+ * Its own type, separate from BACKGROUND_WORK_STUCK, because the two mean
+ * different things and want different responses: stuck work is a record that
+ * cannot finish and needs a person to settle it, while a silent worker is
+ * infrastructure that has fallen over and needs restarting. Telling a hotel
+ * about the first when the truth is the second would send them looking in
+ * entirely the wrong place.
+ */
+export async function notifySilentWorker(input: {
+  hotelId: string;
+  label: string;
+  description: string;
+  silentMinutes: number;
+}) {
+  return createUniqueNotification({
+    hotelId: input.hotelId,
+    type: 'BACKGROUND_WORKER_SILENT',
+    title: `${input.label} has stopped running`,
+    message: input.description,
+    url: '/dashboard',
+    payload: {
+      dedupeKey: `silent:${input.label}`,
+      label: input.label,
+      silentMinutes: Number.isFinite(input.silentMinutes)
+        ? input.silentMinutes
+        : -1,
+    },
+  });
+}

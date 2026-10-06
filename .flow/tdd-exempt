@@ -59,3 +59,6 @@ src/app/dashboard/error.tsx
 
 # Renders the age wording from src/lib/loaded-at.ts, which is tested.
 src/components/dashboard/LoadedAt.tsx
+
+# Database access only; the rule it calls is src/lib/worker-heartbeat.ts, tested.
+src/lib/worker-heartbeat-store.ts

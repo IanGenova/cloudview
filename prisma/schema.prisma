@@ -2123,3 +2123,31 @@ model DataBackupAudit {
   @@index([action])
   @@index([createdAt])
 }
+
+/// A scheduled worker saying it is still alive.
+///
+/// Two refunds looped for eighty-one days and the stuck-work scan now catches
+/// that class of fault — but only for work that leaves a row behind. A worker
+/// that stops running altogether writes nothing, so nothing is late, nothing
+/// is failed, and every check stays green while the job silently does not
+/// happen. The only evidence of a dead worker is the absence of evidence.
+///
+/// So each scheduled job records that it ran. One row per worker, overwritten
+/// every pass; the row's age is the signal.
+model WorkerHeartbeat {
+  id String @id @default(cuid())
+
+  /// Stable identifier for the job, e.g. "xendit-refund-retry".
+  name String @unique @db.VarChar(120)
+
+  /// Last time the job reported in.
+  lastSeenAt DateTime @default(now())
+
+  /// Whatever the job wants to say about the pass it just finished.
+  detail String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lastSeenAt])
+}

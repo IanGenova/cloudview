@@ -21,6 +21,7 @@ import {
 } from '@/lib/xendit-refund-retry';
 import {
   notifyGuestXenditRefundStatus,
+  notifySilentWorker,
   notifyStuckWork,
 } from '@/lib/xendit-dashboard-notifications';
 import {
@@ -30,6 +31,11 @@ import {
   type WorkItem,
 } from '@/lib/stalled-work-alert';
 import { money } from '@/lib/money';
+import {
+  describeSilentWorker,
+  getSilentWorkers,
+  recordHeartbeat,
+} from '@/lib/worker-heartbeat-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -141,6 +147,9 @@ async function run(request: Request) {
   }
 
   const now = new Date();
+
+  /* This worker saying it is alive. See the release endpoint for why. */
+  await recordHeartbeat('xendit-refund-retry');
 
   const failedRefunds = await db.guestXenditRefund.findMany({
     where: {
@@ -289,10 +298,20 @@ async function run(request: Request) {
    */
   const stuckWork = await scanForStuckWork(now);
 
+  /*
+   * And whether any OTHER worker has gone quiet. This pass cannot notice its
+   * own death — nothing running inside a dead process can — which is why the
+   * console also shows worker health on a page a person opens. Between them
+   * the two cover each other: this catches a silent worker while the
+   * schedule still runs, the page catches it when the schedule does not.
+   */
+  const silentWorkers = await raiseSilentWorkerAlerts(now);
+
   return NextResponse.json({
     ok: true,
     stuckWorkFound: stuckWork.length,
     stuckWork,
+    silentWorkers,
     expiredCheckoutsScanned: expiredCheckoutCandidates.length,
     expiredCheckoutResults,
     failedRefundsScanned: failedRefunds.length,
@@ -412,6 +431,51 @@ async function scanForStuckWork(now: Date) {
 }
 
 
+
+
+/*
+ * Alert on workers that have gone quiet.
+ *
+ * Reported to every hotel, because a dead worker is not any one hotel's
+ * record going wrong — it is the whole schedule stopping, and the people who
+ * can act on it are whoever sees it first.
+ */
+async function raiseSilentWorkerAlerts(now: Date) {
+  /* Alerting, not drawing a screen: hold back on never-seen until proven. */
+  const silent = await getSilentWorkers(now, { alertOnNeverSeen: true });
+
+  if (!silent.length) {
+    return [];
+  }
+
+  const hotels = await db.hotel.findMany({ select: { id: true }, take: 50 });
+
+  for (const worker of silent) {
+    for (const hotel of hotels) {
+      try {
+        await notifySilentWorker({
+          hotelId: hotel.id,
+          label: worker.label,
+          description: describeSilentWorker(worker),
+          silentMinutes: worker.silentMinutes,
+        });
+      } catch (error) {
+        console.warn('[refund-retry] Unable to raise a silent-worker alert.', {
+          worker: worker.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  return silent.map((worker) => ({
+    name: worker.name,
+    silentMinutes: Number.isFinite(worker.silentMinutes)
+      ? worker.silentMinutes
+      : null,
+    neverSeen: worker.neverSeen,
+  }));
+}
 
 export const POST = run;
 export const GET = run;

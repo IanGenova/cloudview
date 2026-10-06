@@ -33,6 +33,10 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { money } from '@/lib/money';
 import { endOfBusinessDay, startOfBusinessDay } from '@/lib/business-day';
 import { db } from '@/lib/db';
+import {
+  describeSilentWorker,
+  getSilentWorkers,
+} from '@/lib/worker-heartbeat-store';
 import { requireUser } from '@/lib/auth';
 import {
   getFirstVisibleDashboardHref,
@@ -1109,6 +1113,13 @@ db.order.count({
 const attentionScore =
   pendingRequests + liveKitchenOrders + totalInventoryAlerts + checkoutsToday;
 
+/*
+ * Read once per page load. The table holds one row per worker, so this is a
+ * two-row query, and it fails soft: a monitoring read must never be able to
+ * take down the screen that displays it.
+ */
+const silentWorkers = await getSilentWorkers();
+
 const quickActions = [
   {
     href: '/dashboard/guest-stays',
@@ -1217,6 +1228,30 @@ return (
         <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
             <h1 className="font-serif text-3xl font-normal tracking-tight">Today</h1>
+
+            {/*
+              The half of the heartbeat that survives the watcher dying.
+              Nothing running inside a stopped schedule can report that the
+              schedule stopped, so the one check that still works is a page a
+              person opens. It says nothing at all when the workers are
+              healthy — this is the only line on the screen that appears
+              solely because something is wrong.
+            */}
+            {silentWorkers.length ? (
+              <div className="mt-4 max-w-xl border border-red-400/40 bg-red-500/10 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-200">
+                  Background jobs
+                </p>
+                {silentWorkers.map((worker) => (
+                  <p
+                    key={worker.name}
+                    className="mt-2 text-sm font-medium leading-6 text-red-100"
+                  >
+                    {describeSilentWorker(worker)}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="min-w-[260px] border border-white/10 bg-white/10 p-5 backdrop-blur">

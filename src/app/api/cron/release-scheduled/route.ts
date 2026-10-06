@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
+import { recordHeartbeat } from '@/lib/worker-heartbeat-store';
 import { createDashboardNotification } from '@/lib/dashboard-notifications';
 import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
@@ -437,6 +438,16 @@ async function handleReleaseScheduled(request: Request) {
       }
     );
   }
+
+  /*
+   * Say we ran. A worker that stops running writes nothing at all, so the
+   * only way to notice is to have written something while it was alive.
+   * Recorded after the auth check so an unauthorised caller cannot forge a
+   * heartbeat, and before the work so a pass that throws still counts as the
+   * worker being alive — this answers "is it running", not "is it working",
+   * which is what the stuck-work scan is for.
+   */
+  await recordHeartbeat('scheduled-release');
 
   const now = new Date();
 
