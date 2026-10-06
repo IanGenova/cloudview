@@ -1388,4 +1388,44 @@ correctness. The stuck-work scan covers the half of that which leaves rows behin
 remaining sliver is work that is silently skipped without failing, and nothing short of
 asserting expected outcomes per job would catch it.
 
+Deployed (6 October 2026, 06:07Z): owner said "deploy". `main` pushed `d6c486c..54aebff`.
+
+**A backup was taken first, and the first attempt at it was no good.** This is the only
+release in the sequence that changes the schema, so the database was dumped before
+anything touched it — and the dump came back at 2,421 bytes against the 62,680 of the
+previous one on record. It had stopped after a single table: `mysqldump` 8.0 against a
+MariaDB 11.8 server, which needs `--column-statistics=0`. stderr had been sent to
+/dev/null, which is why it looked like a backup. Re-run with the flag: **562,069 bytes, 60
+tables, "Dump completed"**, verified by unzipping it, and stored as
+`/var/www/cloudview-backups/pre-heartbeat-migration-20261006-060536.sql.gz`. An incomplete
+backup is worse than none, because it looks like one.
+
+Deploy itself: dry run first, `Applying migration 20261006_add_worker_heartbeat`, "All
+migrations have been successfully applied", built, reloaded, health check 200, server on
+`54aebff`.
+
+**Verified live.** The refund worker wrote its first heartbeat within a minute. The
+deployed endpoint, asked directly, answered `silentWorkers: []` — correct, and the proof
+that the grace period works: the only worker with a row had reported a minute earlier, so
+the never-seen peer is not alerted on yet. It will be once that row is thirty minutes old.
+
+### It found a real fault on its first day
+`cloudview-scheduler` has never been running. pm2 reports it `online` with **pid
+undefined**, and its configuration is a Windows path concatenated onto a Linux one:
+
+    script args: -c /var/www/cloudview/D:/Genova/NASPIN TECH/PROJECTS/cloud-view-mvp/scripts/release-scheduled-worker.mjs
+    exec cwd:    /var/www/cloudview/D:/Genova/NASPIN TECH/PROJECTS/cloud-view-mvp
+
+That directory does not exist; both log files are empty. So scheduled order releases have
+not been running, and pm2 has been reporting the job healthy the entire time — which is
+precisely the failure this phase was built to catch, found on the day it shipped.
+
+**Nobody has been harmed by it.** All 27 orders on production are `NOT_SCHEDULED`: the
+scheduled pre-order feature has never been used, so there is no order that missed its
+time. The fault was caught before it cost anything rather than after.
+
+**Not fixed, deliberately.** Repairing it means deleting and re-adding a pm2 process and
+re-saving the dump — a change to production infrastructure rather than a code deploy, and
+the owner asked for a deployment, not a re-configuration. It is reported to them instead.
+
 Wakes since commit: 0.
