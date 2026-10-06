@@ -1294,4 +1294,27 @@ being scheduled, an outbound call nobody records. This watches state that exists
 cannot watch for the absence of state. A heartbeat per worker would, and is a separate
 piece of work.
 
+Deployed (6 October 2026, 02:20Z): owner said "push and deploy". `main` pushed
+`4d77922..95c62c5`. Dry run first; the real database; no migration, no dependency change;
+`pm2 reload cloudview-nextjs`; health check 200.
+
+**Verified by running a pass against production, not by assertion.** The endpoint answered
+`{"stuckWorkFound": 0, "stuckWork": [], "failedRefundsScanned": 6,
+"retryableRefundsScanned": 0, "manualReviewRefundsSkipped": 6}` — the scan is live and
+silent, which is the correct answer while everything is parked, and no
+`BACKGROUND_WORK_STUCK` alert has ever been written, so deploying it did not greet itself
+with a burst.
+
+**And the drip is measurably dead.** The newest refund notification in the database is
+`2026-10-06T01:50:11Z`; server time at verification was `02:20:21Z`. The worker is online
+with zero restarts and has run roughly six scheduled passes in that window, plus two
+manual triggers, and written **nothing**. The refund notification count is unchanged at
+217 — the same figure measured before the fix.
+
+One thing promised to the owner did not happen, and it does not matter: the "one last
+notification" when the two refunds were parked was itself swallowed by the twelve-hour
+dedupe, because an identical XENDIT_REFUND_FAILED message already existed inside the
+window. The result is total silence rather than one final message. Worth knowing, because
+the same dedupe is why the first alert design failed.
+
 Wakes since commit: 0.
