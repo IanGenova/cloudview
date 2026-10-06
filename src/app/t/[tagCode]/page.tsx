@@ -23,10 +23,8 @@ import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { getGuestPortalActivity } from '@/lib/guest-portal-activity';
 import {
-  GuestAnimatedBackground,
   GuestPressable,
   GuestReveal,
-  GuestShimmer,
 } from './GuestPortalMotion';
 
 const fallbackResortImage =
@@ -77,49 +75,56 @@ function PrimaryActionCard({
 }) {
   return (
     <GuestPressable className="h-full">
+      {/*
+        Each of these was a bordered, filled, blurred box carrying an icon in
+        its own gold plate, a chevron, a tracked-caps label and a sentence —
+        four pieces of furniture around one destination, five times over. A
+        guest choosing where to go does not need a diagram of the choice.
+        What is left is the name, set properly, and one line saying what it
+        is for; the rule above each replaces the box around it.
+      */}
       <Link
         href={href}
+        /*
+          The primary action was a flat mustard rectangle — the loudest thing
+          on the screen, and once everything around it had quietened down,
+          jarring rather than inviting. The original brief put it plainly:
+          gold is a line, a rule or one word, never a filled surface.
+
+          It is still unmistakably first — it keeps the only coloured rule on
+          the screen, the only warm wash, and the only white title at full
+          strength — without being a slab of paint.
+        */
         className={
           gold
-            ? 'group block h-full bg-gold p-4 text-black transition'
-            : 'group block h-full border border-white/10 bg-white/10 p-4 text-white shadow-sm backdrop-blur transition hover:border-gold/50 hover:bg-gold/10'
+            ? 'group flex h-full flex-col border-t-2 border-gold bg-gold/[0.07] p-5 text-white transition hover:bg-gold/[0.12]'
+            : 'group flex h-full flex-col border-t border-white/15 p-5 pl-0 text-white transition hover:border-white/40'
         }
       >
       <div className="flex items-start justify-between gap-3">
-        <span
-          className={
-            gold
-              ? 'grid size-12 place-items-center bg-black/10 text-black'
-              : 'grid size-12 place-items-center bg-gold/20 text-gold'
-          }
-        >
-          <Icon className="size-6" />
+        <span className={gold ? 'text-gold' : 'text-white/45'}>
+          <Icon className="size-5" strokeWidth={1.5} />
         </span>
 
         <ChevronRight
           className={
             gold
-              ? 'size-5 text-black/45 transition group-hover:translate-x-1'
-              : 'size-5 text-gold transition group-hover:translate-x-1'
+              ? 'size-4 text-gold/60 transition group-hover:translate-x-1'
+              : 'size-4 text-white/25 transition group-hover:translate-x-1'
           }
         />
       </div>
 
-      <p
-        className={
-          gold
-            ? 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-black/60'
-            : 'mt-4 text-[11px] font-semibold uppercase tracking-widest text-gold'
-        }
-      >
+      <p className="mt-5 font-serif text-[19px] font-normal leading-tight tracking-wide text-white">
         {title}
       </p>
 
+      {/* The supporting line steps down properly instead of matching the name. */}
       <p
         className={
           gold
-            ? 'mt-1 text-base font-serif font-medium leading-5 text-black'
-            : 'mt-1 text-base font-serif font-medium leading-5 text-white'
+            ? 'mt-2 text-[13px] font-medium leading-5 text-white/65'
+            : 'mt-2 text-[13px] font-medium leading-5 text-white/50'
         }
       >
         {description}
@@ -142,48 +147,37 @@ function MiniActionCard({
     <GuestPressable className="h-full">
       <Link
         href={href}
-        className="group flex min-h-24 flex-col justify-between border border-white/10 bg-white/10 p-4 text-white backdrop-blur transition hover:border-gold/50 hover:bg-gold/10"
+        className="group flex min-h-24 flex-col justify-between border-t border-white/15 py-4 pr-4 text-white transition hover:border-white/40"
       >
       <div className="flex items-center justify-between">
-        <span className="grid size-11 place-items-center bg-gold/20 text-gold">
-          <Icon className="size-5" />
+        <span className="text-white/40">
+          <Icon className="size-5" strokeWidth={1.5} />
         </span>
 
-        <ChevronRight className="size-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-gold" />
+        <ChevronRight className="size-4 text-white/20 transition group-hover:translate-x-1" />
       </div>
 
-      <p className="mt-3 line-clamp-2 text-[15px] font-serif font-medium leading-tight tracking-wide">{title}</p>
+      <p className="mt-4 line-clamp-2 font-serif text-[17px] font-normal leading-tight tracking-wide">{title}</p>
     </Link>
     </GuestPressable>
   );
 }
 
-function StayInfoCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-}) {
+/*
+ * Two of these sat side by side as bordered, filled, backdrop-blurred boxes,
+ * each with a gold icon tile — four containers and two gold marks to tell a
+ * guest two short facts. They are facts, so they are set as facts: a label
+ * and a value, on the photograph, with nothing drawn around them.
+ */
+function StayFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-white/10 bg-black/35 p-4 backdrop-blur">
-      <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center bg-gold/20 text-gold">
-          <Icon className="size-5" />
-        </span>
-
-        <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-            {label}
-          </p>
-          {/* Swapped truncate for line-clamp-2 so longer values display fully without cutting off */}
-          <p className="mt-1 line-clamp-2 text-[15px] font-serif font-medium leading-tight tracking-wide text-white">
-            {value}
-          </p>
-        </div>
-      </div>
+    <div className="min-w-0">
+      <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+        {label}
+      </p>
+      <p className="mt-1.5 line-clamp-2 font-serif text-[17px] font-normal leading-tight tracking-wide text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -292,37 +286,22 @@ function RecommendedCard({
   );
 }
 
-function getHotelInitials(hotelName: string) {
-  const words = hotelName
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (!words.length) {
-    return 'H';
-  }
-
-  return words
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join('');
-}
-
+/*
+ * A boxed gold monogram floated in the middle of the hotel's own photograph,
+ * with the hotel's name under it and the words "Guest Portal" under that —
+ * three pieces of branding stacked over the building they are branding, and
+ * one of them naming the software rather than the hotel. A guest reading this
+ * is standing inside the place; they do not need to be told whose portal it
+ * is, and the photograph is the identity.
+ *
+ * What is left is the name, small, in the tracked caps a hotel would set it
+ * in, at the top of the frame where a masthead belongs.
+ */
 function DynamicHotelLogo({ hotelName }: { hotelName: string }) {
   return (
-    <div className="flex flex-col items-center text-center">
-      <div className="grid size-16 place-items-center border border-gold/50 bg-black/35 text-2xl font-serif font-medium tracking-wide text-gold backdrop-blur-md">
-        {getHotelInitials(hotelName)}
-      </div>
-
-      <p className="mt-4 max-w-[300px] text-center text-sm font-serif uppercase leading-5 tracking-[0.2em] text-white drop-shadow-[0_3px_16px_rgba(0,0,0,0.9)]">
-        {hotelName}
-      </p>
-
-      <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-gold/80">
-        Guest Portal
-      </p>
-    </div>
+    <p className="max-w-[300px] text-sm font-serif uppercase leading-5 tracking-[0.28em] text-white/90 drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
+      {hotelName}
+    </p>
   );
 }
 
@@ -388,60 +367,87 @@ export default async function GuestHome({ params }: GuestHomeProps) {
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
       <div className="mx-auto min-h-screen max-w-md bg-[#050505]">
-        <section className="relative overflow-hidden px-5 pb-6 pt-7">
+        {/*
+          The hotel's own photograph was under three stacked black gradients —
+          90% from the top, 80% from the left, and a 256px wash from the
+          bottom — plus an animated background and a shimmer. It was not a
+          dark photograph; it was a good one buried. On a screen whose whole
+          job is to feel like somewhere worth staying, the picture of the
+          place is the most expensive thing available and it was the least
+          visible.
+
+          One scrim now, weighted to the bottom where the type sits, and the
+          hero is tall enough to be a photograph rather than a letterbox. The
+          animation and the shimmer are gone: motion over a still photograph
+          reads as a screensaver, not as luxury.
+        */}
+        <section className="relative flex min-h-[62vh] flex-col justify-end overflow-hidden px-5 pb-8 pt-7">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${heroImage})` }}
           />
 
-          <GuestAnimatedBackground />
-          <GuestShimmer />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/55 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
 
-          <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/70 to-[#050505]" />
-          <div className="absolute inset-y-0 left-0 w-3/4 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#050505] via-[#050505]/90 to-transparent" />
-
-          <GuestReveal delay={0.05} className="relative z-10 flex justify-center pt-2">
+          <GuestReveal delay={0.05} className="relative z-10 mb-auto flex items-start justify-between pt-2">
               <DynamicHotelLogo hotelName={tag.hotel.name} />
 
               <Link
                 href={`/t/${normalizedTagCode}/activity`}
-                className="absolute right-0 top-3 grid size-11 place-items-center border border-white/10 bg-black/35 text-white backdrop-blur transition hover:bg-white/10"
+                className="grid size-11 shrink-0 place-items-center text-white/80 transition hover:text-white"
                 aria-label="Guest activity"
               >
                 <Bell className="size-5" />
 
+                {/*
+                  A filled gold square with a number in it, top-right, was
+                  competing with the hotel's name for the first thing seen. A
+                  guest with one thing in progress does not need it counted at
+                  them from the masthead — they need to know there is
+                  something. A dot says that.
+                */}
                 {activeActivityCount > 0 ? (
-                  <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center bg-gold px-1.5 py-0.5 text-[10px] font-semibold text-black">
-                    {activeActivityCount}
-                  </span>
+                  <span
+                    className="absolute right-2 top-2 size-1.5 rounded-dot bg-gold"
+                    aria-label={`${activeActivityCount} in progress`}
+                  />
                 ) : null}
               </Link>
             </GuestReveal>
           <GuestReveal delay={0.14} className="relative z-10 pt-24">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">
+            {/*
+              Gold appeared thirteen times on this screen: the greeting, the
+              logo, two icon tiles, two tile labels, the chevrons, a filled
+              tile, the badge and the navigation. Thirteen uses is not an
+              accent, it is a theme colour, and gold as a theme colour is the
+              most reliable signal of imitation luxury there is. It is kept
+              for one thing per screen — here, the single action a guest is
+              most likely to want — and everything else is the white ramp.
+            */}
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/50">
               {greeting}
             </p>
 
             {/* Added break-words, text-balance, and scaled font dynamically. Lowercased to force proper capitalize. */}
-            <h1 className="mt-3 max-w-[280px] break-words font-serif text-4xl font-light capitalize leading-[1.05] tracking-wide text-white text-balance drop-shadow-md sm:text-5xl">
+            {/*
+              Bigger, because the hero is now tall enough to carry it and
+              because a guest's own name is the one thing on this screen that
+              is about them. The type scale had eight steps between 9px and
+              24px, which is a lot of sizes saying nothing in particular; this
+              is the top of a shorter scale with real distance in it.
+
+              The sentence that stood here — "You are at Pool Deck." — said
+              exactly what the Location fact two lines below says.
+            */}
+            <h1 className="mt-4 max-w-[300px] break-words font-serif text-[2.75rem] font-light capitalize leading-[1.02] tracking-tight text-white text-balance sm:text-6xl">
               {guestDisplayName.toLowerCase()}
             </h1>
-
-            {/*
-              CP-1. "Welcome to <hotel>. Everything you need during your stay is
-              just one tap away." sat under the hotel's name on a screen whose
-              whole content is the things you can tap. The sentence that
-              remains tells the guest something only this screen knows.
-            */}
-            <p className="mt-4 max-w-xs text-sm font-medium leading-6 text-white/70">
-              You are at {locationName}.
-            </p>
           </GuestReveal>
 
-          <GuestReveal delay={0.24} className="relative z-10 mt-6 grid grid-cols-2 gap-3">
-            <StayInfoCard icon={KeyRound} label="Location" value={locationName} />
-            <StayInfoCard icon={Wifi} label="Wi-Fi" value={wifiName} />
+          <GuestReveal delay={0.24} className="relative z-10 mt-10 grid grid-cols-2 gap-6">
+            <StayFact label="Location" value={locationName} />
+            <StayFact label="Wi-Fi" value={wifiName} />
           </GuestReveal>
         </section>
 

@@ -1,0 +1,132 @@
+{
+ "arrival": {
+  "goldText": 8,
+  "goldBg": 1,
+  "goldBorder": 1,
+  "goldTotal": 10,
+  "borderedBoxes": 17,
+  "typeSizes": [
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   17,
+   19,
+   24,
+   44
+  ],
+  "typeSizeCount": 10,
+  "largestType": 44,
+  "spacingValues": [
+   2,
+   4,
+   6,
+   8,
+   12,
+   16,
+   20,
+   24,
+   28,
+   40,
+   96
+  ],
+  "spacingCount": 11,
+  "inkCoverage": 3.49,
+  "elements": 184
+ },
+ "menu": {
+  "goldText": 8,
+  "goldBg": 0,
+  "goldBorder": 0,
+  "goldTotal": 8,
+  "borderedBoxes": 17,
+  "typeSizes": [
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   24
+  ],
+  "typeSizeCount": 8,
+  "largestType": 24,
+  "spacingValues": [
+   4,
+   6,
+   8,
+   12,
+   14,
+   16
+  ],
+  "spacingCount": 6,
+  "inkCoverage": 4.59,
+  "elements": 129
+ },
+ "my stay": {
+  "goldText": 2,
+  "goldBg": 0,
+  "goldBorder": 0,
+  "goldTotal": 2,
+  "borderedBoxes": 17,
+  "typeSizes": [
+   10,
+   12,
+   14,
+   15,
+   16,
+   24,
+   30
+  ],
+  "typeSizeCount": 7,
+  "largestType": 30,
+  "spacingValues": [
+   4,
+   6,
+   8,
+   12,
+   16,
+   20,
+   24
+  ],
+  "spacingCount": 7,
+  "inkCoverage": 4.14,
+  "elements": 92
+ },
+ "guide": {
+  "goldText": 10,
+  "goldBg": 4,
+  "goldBorder": 0,
+  "goldTotal": 14,
+  "borderedBoxes": 20,
+  "typeSizes": [
+   10,
+   12,
+   14,
+   15,
+   16,
+   18,
+   30,
+   32,
+   44
+  ],
+  "typeSizeCount": 9,
+  "largestType": 44,
+  "spacingValues": [
+   4,
+   6,
+   8,
+   10,
+   12,
+   14,
+   16,
+   20
+  ],
+  "spacingCount": 8,
+  "inkCoverage": 4.95,
+  "elements": 210
+ }
+}

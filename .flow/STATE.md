@@ -1429,3 +1429,59 @@ re-saving the dump — a change to production infrastructure rather than a code 
 the owner asked for a deployment, not a re-configuration. It is reported to them instead.
 
 Wakes since commit: 0.
+
+## Phase: guest-portal-restraint (6 October 2026) — Full
+
+Owner: "Can you make the guest portal UI/UX will be more luxury and elegant??" — then,
+after seeing before-and-after captures of the two screens: "deploy".
+
+### Measured first, because "luxury" is a taste claim and taste claims are cheap
+A probe counted what is actually on a guest screen: every element rendering in a gold
+hue, every bordered or filled container above 60×40, every distinct type size, every
+distinct spacing value. On arrival: **gold 13 times, 22 bordered boxes, 8 type sizes
+between 9px and 24px**. Thirteen uses of an accent is not an accent, it is a theme
+colour, and gold as a theme colour is the most reliable signal of imitation luxury there
+is. Eight type sizes inside a 15px range is a lot of steps saying nothing in particular.
+
+And the hotel's own photograph — the single most expensive asset on the screen — sat
+under **three stacked black gradients** (90% from the top, 80% from the left, a 256px
+wash from the bottom) plus an animated background and a shimmer. It was not a dark
+photograph. It was a good one buried.
+
+### Acceptance criteria
+- [x] L1 The photograph is a photograph: one scrim weighted to where the type sits, and
+      a hero tall enough to hold it. The animation and shimmer are gone — motion over a
+      still photograph reads as a screensaver.
+      by artifact: `.flow/uiux/2026-10-02/applied/LUX-arrival-before--mobile--light.png`
+      and `LUX-arrival--mobile--light.png`
+- [x] L2 Gold is rationed to one thing per screen. On arrival it is a single rule above
+      the first action, which replaced a filled mustard tile; on the menu, **filled gold
+      went 2 → 0** and the accent survives only as the active category's underline, the
+      prices, and the ADD outline. The brief said it in the first place: gold is a line,
+      a rule or one word, never a filled surface.
+- [x] L3 Fewer objects. Boxes on the menu **22 → 17**; distinct spacing values 7 → 6. Two
+      bordered info chips became two plain facts; the action tiles lost their borders,
+      icon plates and tracked-caps labels, keeping a hairline rule above each; the search
+      field stopped being a box inside a box.
+- [x] L4 The masthead stopped competing with the building. A boxed gold monogram, the
+      hotel name, and the words "Guest Portal" were stacked over the photograph — three
+      pieces of branding, one of them naming the software. A guest reading this is
+      standing inside the hotel. What is left is the name, in tracked caps, at the top.
+- [x] L5 Stock control stopped being shouted at guests. "SINGLE ITEM" said nothing, and a
+      green "10 AVAILABLE" is an inventory readout. Availability now appears only when it
+      changes a decision — "Only 3 left", or "Unavailable today" where a saturated red bar
+      used to be laid across a picture of the food.
+      by artifact: `.flow/uiux/2026-10-02/applied/LUX-menu-before--mobile--light.png`
+      and `LUX-menu--mobile--light.png`
+- [x] L6 Machine stage green: `tsc --noEmit` clean, 291 tests pass, the production build
+      compiles. No schema change, no dependency change.
+
+### Two screens, not sixteen — and the owner was told before deploying
+Arrival and the menu are converted. **My stay, the guide, the cart, the service screens
+and the rest still carry the old treatment**, and the guide still measures 14 gold
+elements and 20 boxes. The portal is therefore internally inconsistent until the rest
+follow. This was put to the owner in writing with the captures, along with the fact that
+the bottom navigation still uses gold for its active tab, and they said deploy. The
+remaining screens are the obvious next phase.
+
+Wakes since commit: 0.

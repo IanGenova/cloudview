@@ -1971,10 +1971,14 @@ const [scheduledNote, setScheduledNote] = useState('');
         Both gone; the cart moved into the bar that is already sticky, so it is
         reachable the whole way down the menu instead of scrolling away.
       */}
-      <div className="sticky top-[4.5rem] z-40 -mx-1 mb-6 border border-white/10 bg-black/85 p-2 backdrop-blur-xl">
+      {/* A bordered, filled container wrapped a bordered, filled search field
+          and a row of chips: a box holding a box. The bar still needs an opaque
+          backing so the menu does not scroll through it, but it does not need
+          to be drawn as an object. */}
+      <div className="sticky top-[4.5rem] z-40 -mx-5 mb-7 bg-[#050505]/95 px-5 pb-3 pt-2 backdrop-blur-xl">
         <div className="flex items-center gap-2">
-          <div className="flex h-12 min-w-0 flex-1 items-center gap-3 bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
-            <Search className="size-4.5 shrink-0 text-gold" />
+          <div className="flex h-12 min-w-0 flex-1 items-center gap-3 border-b border-white/15 transition focus-within:border-gold/50">
+            <Search className="size-4.5 shrink-0 text-white/35" />
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
@@ -1997,7 +2001,7 @@ const [scheduledNote, setScheduledNote] = useState('');
           <button
             type="button"
             onClick={openCart}
-            className="relative grid size-12 shrink-0 place-items-center border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/10"
+            className="relative grid size-12 shrink-0 place-items-center text-white/70 transition hover:text-white"
             aria-label="Open cart"
           >
             <ShoppingBag className="size-5" />
@@ -2023,18 +2027,24 @@ const [scheduledNote, setScheduledNote] = useState('');
                 key={category}
                 type="button"
                 onClick={() => setActiveCategory(category)}
+                /*
+                  Filter chips were filled boxes, the active one a mustard
+                  slab. A menu's own sections are not buttons on a dashboard:
+                  they read as words, and the one you are on is simply
+                  underlined.
+                */
                 className={cn(
-                  'flex shrink-0 items-center gap-2 border px-4 py-3 text-xs font-semibold transition',
+                  'flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-1 pb-2 text-[13px] font-medium transition',
                   active
-                    ? 'border-gold bg-gold text-black'
-                    : 'border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
+                    ? 'border-gold text-white'
+                    : 'border-transparent text-white/45 hover:text-white/80'
                 )}
               >
                 {category}
                 <span
                   className={cn(
-                    'px-2 py-0.5 text-[9px]',
-                    active ? 'bg-black/12 text-black/70' : 'bg-white/10 text-white/45'
+                    'text-[10px] tabular-nums',
+                    active ? 'text-white/45' : 'text-white/25'
                   )}
                 >
                   {count}
@@ -2111,28 +2121,26 @@ const [scheduledNote, setScheduledNote] = useState('');
               ) : null}
 
               <div className="mt-4 flex items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+                {/*
+                  Three filled pills used to sit under every dish: "Bundle" or
+                  "Single item", and a green "10 AVAILABLE". A guest reading a
+                  menu in a good hotel is not doing stock control, and being
+                  told a dish is a single item tells them nothing at all. What
+                  survives is the one fact that changes a decision: that
+                  something is nearly gone, or gone.
+                */}
+                <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium uppercase tracking-[0.18em]">
                   {isBundleProduct(featured) ? (
-                    <span className="bg-gold/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
-                      Bundle
+                    <span className="text-gold/80">Set menu</span>
+                  ) : null}
+
+                  {isProductSoldOut(featured) ? (
+                    <span className="text-white/40">Unavailable today</span>
+                  ) : getProductAvailableQty(featured) <= 5 ? (
+                    <span className="text-white/55">
+                      Only {getProductAvailableQty(featured)} left
                     </span>
-                  ) : (
-                    <span className="bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/60">
-                      Single item
-                    </span>
-                  )}
-                  <span
-                    className={cn(
-                      'px-3 py-1 text-[10px] font-semibold uppercase tracking-widest',
-                      isProductSoldOut(featured)
-                        ? 'bg-red-500/15 text-red-200'
-                        : 'bg-emerald-400/15 text-emerald-200'
-                    )}
-                  >
-                    {isProductSoldOut(featured)
-                      ? 'Sold out'
-                      : `${getProductAvailableQty(featured)} available`}
-                  </span>
+                  ) : null}
                 </div>
 
                 {getCartQuantity(featured.id) > 0 ? (
@@ -2166,7 +2174,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                   <TapButton
                     onTap={() => add(featured.id)}
                     disabled={isProductSoldOut(featured)}
-                    className="inline-flex min-h-11 shrink-0 items-center gap-2 bg-gold px-4 text-xs font-semibold text-black shadow-[0_10px_25px_rgba(214,167,56,0.2)]"
+                    className="inline-flex min-h-11 shrink-0 items-center gap-2 border border-gold/60 px-5 text-xs font-medium uppercase tracking-[0.16em] text-gold transition hover:bg-gold/10"
                     aria-label={`Add ${featured.name}`}
                   >
                     Add
@@ -2232,9 +2240,15 @@ const [scheduledNote, setScheduledNote] = useState('');
                     {product.categoryName}
                   </span>
 
+                  {/*
+                    A saturated red bar was laid across the photograph of the
+                    food. Red is the loudest colour available and it was
+                    spending it on "we have run out of pancakes". The card
+                    dims instead, and says so in words.
+                  */}
                   {soldOut ? (
-                    <span className="absolute inset-x-2.5 bottom-2.5 bg-red-600 px-3 py-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-white">
-                      Sold out
+                    <span className="absolute inset-x-0 bottom-0 bg-black/70 px-3 py-2 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-white/70 backdrop-blur-sm">
+                      Unavailable today
                     </span>
                   ) : null}
                 </div>
@@ -2267,9 +2281,9 @@ const [scheduledNote, setScheduledNote] = useState('');
                         <p className="text-[15px] font-semibold text-gold">
                           {simpleMoney(product.priceCents, currency)}
                         </p>
-                        {!soldOut ? (
-                          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-300/80">
-                            {getProductAvailableQty(product)} available
+                        {!soldOut && getProductAvailableQty(product) <= 5 ? (
+                          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/50">
+                            Only {getProductAvailableQty(product)} left
                           </p>
                         ) : null}
                       </div>
@@ -2301,7 +2315,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                         <TapButton
                           onTap={() => add(product.id)}
                           disabled={soldOut}
-                          className="grid size-11 shrink-0 place-items-center bg-white text-black shadow-lg"
+                          className="grid size-11 shrink-0 place-items-center border border-white/25 text-white transition hover:border-gold/70 hover:text-gold"
                           aria-label={`Add ${product.name}`}
                         >
                           <Plus className="size-5" />
