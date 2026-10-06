@@ -1227,3 +1227,71 @@ product would have noticed this, and the next doomed background job will look ex
 same from the inside.
 
 Wakes since commit: 0.
+
+## Correction to the phase above
+
+**"Roughly ninety thousand notifications" is wrong — by about three orders of magnitude.**
+It is written into the commit message of `382989d` and into the record above, and it was
+arithmetic from the worker's five-minute interval rather than anything measured.
+
+`createUniqueNotification` suppresses an identical notification — same hotel, type, title
+and message — for **twelve hours**. So the loop produced at most two rows per refund per
+twelve hours, not two every five minutes. Counted on production: **217 refund notification
+rows across 15 distinct messages**, of which the four belonging to the two stuck refunds
+hold 52, 52, 51 and 51 occurrences. Roughly **eight notifications a day**, 217 in total.
+
+The defect and the fix are unchanged. The characterisation was wrong, and the wrong figure
+is the one that made it into a permanent record.
+
+## Phase: stuck-work-alert (6 October 2026) — Full
+
+Owner: "yes add the alert", after the refund loop.
+
+### The first design was wrong, and the real data said so
+The obvious instrument was the notification table: a looping job must be shouting, so
+watch for the same message coming back day after day. A rule was written and tested that
+way — group by exact text, require N occurrences spanning H hours, require recent
+activity so a fixed problem stops being reported.
+
+Then it was replayed against the real production history, 289 rows exported and run
+day by day. **It first fires on day 58 of 82.** Every threshold pair from three
+occurrences upward gave the same answer — 58, 59 or 60 — with zero false alarms, which
+means the thresholds were never the constraint. The twelve-hour dedupe is: it made the
+notifications sparse, so watching them measures how *loud* a failure is, not how *long*
+it has been failing. The two refunds announced themselves roughly three times in the
+first 58 days.
+
+That approach was deleted rather than tuned. What was continuous was never the
+announcements — it was the work. A row sat in a failed, retryable state for 1,942 hours
+and was visible in its own table the entire time.
+
+### Acceptance criteria
+- [x] A1 The rule reads the work, not the announcements: anything still waiting to
+      succeed after **24 hours** is a fault rather than a hiccup. Replayed against the
+      real fault hour by hour, it fires on **day 2** instead of day 58.
+      by test: `src/lib/stalled-work-alert.test.ts`
+- [x] A2 It is about the shape of the problem, not the type of record, so it covers work
+      nobody has thought about yet. The scan currently gathers unparked failed refunds
+      and long-pending payment sessions; adding a kind is a query in one place rather
+      than instrumentation inside a worker. The next doomed job will not be a refund and
+      whoever writes it will not add a counter.
+- [x] A3 It is silent when the product is healthy. Parked refunds are waiting for a
+      person, not stuck, so they are skipped — against production's current state (six
+      refunds, all parked; zero pending sessions) the scan raises **zero** alerts, which
+      matters because an alert that greets its own deployment with a burst is the noise
+      this whole exercise is removing.
+- [x] A4 When it does fire it says the thing nobody could see: *"A refund for
+      CVDHSE000001 has been retrying for 81 days without succeeding, and will not fix
+      itself. ₱50.00 has not gone back to the guest."* The age is in the title too, and it
+      is its own notification type so the twelve-hour dedupe on the underlying failure
+      cannot swallow it.
+- [x] A5 Machine stage green: `tsc --noEmit` clean, **277 tests** pass, the production
+      build compiles in 74s. No migration, no schema change, no dependency change.
+
+### What this still does not cover
+Work that fails without writing a row anywhere — a crashed worker, a cron that stopped
+being scheduled, an outbound call nobody records. This watches state that exists; it
+cannot watch for the absence of state. A heartbeat per worker would, and is a separate
+piece of work.
+
+Wakes since commit: 0.

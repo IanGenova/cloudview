@@ -512,3 +512,38 @@ export async function notifyGuestXenditRefundStatus(input: {
 
   return null;
 }
+
+/*
+ * Background work that cannot finish, reported to the hotel it belongs to.
+ *
+ * Deliberately its own notification type, so it is not swallowed by the same
+ * twelve-hour dedupe as the thing it is reporting — and so staff can tell "a
+ * refund failed", which happens and is usually fixed by the next attempt,
+ * from "a refund has been failing for eighty-one days", which is the sentence
+ * nobody ever got to read.
+ *
+ * The age is in the title because the age is the part that was invisible.
+ */
+export async function notifyStuckWork(input: {
+  hotelId: string;
+  kind: string;
+  reference: string;
+  ageHours: number;
+  description: string;
+}) {
+  const days = Math.max(1, Math.round(input.ageHours / 24));
+
+  return createUniqueNotification({
+    hotelId: input.hotelId,
+    type: 'BACKGROUND_WORK_STUCK',
+    title: `A ${input.kind} has been stuck for ${days} day${days === 1 ? '' : 's'}`,
+    message: input.description,
+    url: '/dashboard/orders',
+    payload: {
+      dedupeKey: `stuck:${input.kind}:${input.reference}`,
+      stuckKind: input.kind,
+      reference: input.reference,
+      ageHours: input.ageHours,
+    },
+  });
+}

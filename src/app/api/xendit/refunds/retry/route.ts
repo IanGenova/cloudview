@@ -19,7 +19,17 @@ import {
   MANUAL_REFUND_REQUIRED_PREFIX,
   refundRetryDecision,
 } from '@/lib/xendit-refund-retry';
-import { notifyGuestXenditRefundStatus } from '@/lib/xendit-dashboard-notifications';
+import {
+  notifyGuestXenditRefundStatus,
+  notifyStuckWork,
+} from '@/lib/xendit-dashboard-notifications';
+import {
+  describeStuckWork,
+  findStuckWork,
+  type StuckWork,
+  type WorkItem,
+} from '@/lib/stalled-work-alert';
+import { money } from '@/lib/money';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -268,8 +278,21 @@ async function run(request: Request) {
     }
   }
 
+  /*
+   * Whatever else this pass did, look at whether anything in the product is
+   * stuck in a loop — not just refunds. A doomed background job does not make
+   * a noise loud enough to notice: notifications dedupe on identical text for
+   * twelve hours, so it drips rather than floods, and the two refunds this
+   * endpoint has just stopped had been dripping for about 27 days with every
+   * gate green. The signal is the same message still arriving on its tenth
+   * day, which is visible in the notification table and nowhere else.
+   */
+  const stuckWork = await scanForStuckWork(now);
+
   return NextResponse.json({
     ok: true,
+    stuckWorkFound: stuckWork.length,
+    stuckWork,
     expiredCheckoutsScanned: expiredCheckoutCandidates.length,
     expiredCheckoutResults,
     failedRefundsScanned: failedRefunds.length,
@@ -281,6 +304,114 @@ async function run(request: Request) {
     sessionResults,
   });
 }
+
+/*
+ * One alert per stuck thing, and the notification layer's own twelve-hour
+ * window keeps it to at most two a day even if this runs every five minutes.
+ * The alert is deliberately louder than what it is reporting: it says how
+ * many days, because the number of days is the thing nobody could see.
+ */
+/*
+ * Look for background work that cannot finish — any of it, not just refunds.
+ *
+ * Gathering happens here because only this layer knows which tables hold
+ * work; the rule that decides what counts as stuck lives in
+ * `stalled-work-alert.ts` and is tested there. Adding a new kind of
+ * background job means adding a query to this list, which is a visible,
+ * deliberate act, rather than remembering to instrument the job itself.
+ */
+async function scanForStuckWork(now: Date) {
+  const items: WorkItem[] = [];
+
+  /*
+   * A refund that is still FAILED and not yet parked. After the park deadline
+   * this should be empty by construction — which is the point of including
+   * it: if the park ever stops working, this says so instead of nothing
+   * saying so for eighty-one days.
+   */
+  const failedRefundItems = await db.guestXenditRefund.findMany({
+    where: {
+      status: GuestXenditRefundStatus.FAILED,
+      guestPaymentSession: { paymentProvider: 'XENDIT' },
+    },
+    select: {
+      id: true,
+      requestedAt: true,
+      errorMessage: true,
+      amountCents: true,
+      guestPaymentSession: { select: { hotelId: true, orderCode: true } },
+    },
+    take: 200,
+  });
+
+  for (const refund of failedRefundItems) {
+    if (String(refund.errorMessage ?? '').startsWith(MANUAL_REFUND_REQUIRED_PREFIX)) {
+      /* Already a person's job and already said so. Not stuck, waiting. */
+      continue;
+    }
+
+    items.push({
+      kind: 'refund',
+      reference: refund.guestPaymentSession.orderCode || refund.id,
+      since: refund.requestedAt,
+      detail: `${money(refund.amountCents)} has not gone back to the guest.`,
+      hotelId: refund.guestPaymentSession.hotelId,
+    } as WorkItem & { hotelId: string });
+  }
+
+  /*
+   * A guest checkout still PENDING long after it was opened. Nothing watches
+   * these today; an abandoned one is harmless, but one that has been pending
+   * for days with the guest's money taken is not.
+   */
+  const pendingSessions = await db.guestXenditSession.findMany({
+    where: { status: GuestXenditStatus.PENDING, paymentProvider: 'XENDIT' },
+    select: { id: true, createdAt: true, hotelId: true, orderCode: true },
+    take: 200,
+  });
+
+  for (const session of pendingSessions) {
+    items.push({
+      kind: 'payment session',
+      reference: session.orderCode || session.id,
+      since: session.createdAt,
+      hotelId: session.hotelId,
+    } as WorkItem & { hotelId: string });
+  }
+
+  const stuck = findStuckWork(items, { now });
+
+  for (const item of stuck) {
+    const hotelId = (item as StuckWork & { hotelId?: string }).hotelId;
+
+    if (!hotelId) {
+      continue;
+    }
+
+    try {
+      await notifyStuckWork({
+        hotelId,
+        kind: item.kind,
+        reference: item.reference,
+        ageHours: item.ageHours,
+        description: describeStuckWork(item),
+      });
+    } catch (error) {
+      console.warn('[refund-retry] Unable to raise a stuck-work alert.', {
+        reference: item.reference,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return stuck.map((item) => ({
+    kind: item.kind,
+    reference: item.reference,
+    days: Math.round(item.ageHours / 24),
+  }));
+}
+
+
 
 export const POST = run;
 export const GET = run;
