@@ -1205,3 +1205,25 @@ worker retries the same doomed request nine thousand times, and no alert on noti
 volume. The thing that found it was the owner looking at their own notification centre.
 
 Wakes since commit: 0.
+
+Deployed (6 October 2026, ~Manila): owner said "push and deploy". `main` pushed
+`c7a1146..382989d`, one commit. Dry run first; `.env.production.local ->
+@srv2093.hstgr.io:3306/u610581005_cloudviewdb`; no migration, no dependency change; built
+under nvm's Node 22; `pm2 reload cloudview-nextjs`; health check 200.
+
+**Proven on production data, not by assertion.** One retry pass was triggered by hand
+against the live endpoint immediately after the reload. It answered
+`{"parked": 6, "retried": 0}` — up from four parked and two retried — and reading the rows
+back shows all six `FAILED` refunds now carrying the `MANUAL REFUND REQUIRED:` prefix,
+with the two ₱50.00 ones reading "Xendit reported that this payment cannot be refunded
+through its API". They are skipped on every future pass. **The loop is closed: those two
+rows will not produce another notification.**
+
+Still outstanding, and not something code can do: **₱100 is owed to two guests** and has
+to be settled by hand. The amount and the reason are on the order for staff to act on.
+
+Worth doing next, cheaply: an alert on retry volume for a single record. Nothing in the
+product would have noticed this, and the next doomed background job will look exactly the
+same from the inside.
+
+Wakes since commit: 0.
