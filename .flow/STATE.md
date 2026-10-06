@@ -1484,4 +1484,20 @@ follow. This was put to the owner in writing with the captures, along with the f
 the bottom navigation still uses gold for its active tab, and they said deploy. The
 remaining screens are the obvious next phase.
 
+Deployed (6 October 2026): `main` pushed `a42d2a5..bfa2908`. Dry run first; "No pending
+migrations to apply"; no dependency change; built, reloaded, health check 200, server on
+`bfa2908`.
+
+**Verified through the built bundle rather than the live screen.** A bare request to any
+`/t/` path answers 307 from the NFC guard, so reaching a production guest screen needs
+that tag's scan secret — a credential not worth extracting in order to take a screenshot.
+The proof used instead: the two strings that exist nowhere but this change, "Unavailable
+today" and "Set menu", are present in the deployed server bundle.
+
+A note for anyone running the same check later. "Single item" and "Guest Portal" still
+appear in the build, and that is correct: they are dashboard copy — a product type in
+inventory, an order source on the board, "Show in Guest Portal" on the guide — not the
+guest-facing instances this phase removed. Grepping for their absence would be a false
+alarm.
+
 Wakes since commit: 0.
