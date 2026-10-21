@@ -3,8 +3,60 @@
 import { DashboardModule, Role, type TagType } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
+import { mkdir, unlink, writeFile } from 'fs/promises';
+import path from 'path';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
+import { getRuntimeMediaDirectory } from '@/lib/runtime-media-storage';
+
+const LOCATION_HERO_DIR = getRuntimeMediaDirectory('location-hero');
+const LOCATION_HERO_URL = '/uploads/location-hero';
+
+function normalizeHeroUrl(value: string) {
+  if (!value) return null;
+  if (value.startsWith('/') && !value.startsWith('//')) return value;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' || url.protocol === 'http:') {
+      return url.toString();
+    }
+  } catch {
+    // Show a form error for malformed URLs.
+  }
+
+  throw new Error('Enter an http(s) image URL or upload an image.');
+}
+
+async function resolveLocationHeroImage(formData: FormData) {
+  const file = formData.get('heroImage');
+  if (!(file instanceof File) || file.size === 0) {
+    return { url: normalizeHeroUrl(cleanText(formData.get('heroImageUrl'), 700)), uploaded: false };
+  }
+
+  const extensions: Record<string, string> = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+  };
+  const extension = extensions[file.type];
+  if (!extension || file.size > 4 * 1024 * 1024) {
+    throw new Error('Upload a JPG, PNG, or WEBP image no larger than 4 MB.');
+  }
+
+  await mkdir(LOCATION_HERO_DIR, { recursive: true });
+  const filename = `${randomUUID()}${extension}`;
+  await writeFile(path.join(LOCATION_HERO_DIR, filename), Buffer.from(await file.arrayBuffer()));
+  return { url: `${LOCATION_HERO_URL}/${filename}`, uploaded: true };
+}
+
+async function removeUploadedLocationHero(url: string | null) {
+  if (!url?.startsWith(`${LOCATION_HERO_URL}/`)) return;
+  const filename = path.basename(url);
+  if (!/^[-a-f0-9]+\.(jpg|png|webp)$/.test(filename)) return;
+  await unlink(path.join(LOCATION_HERO_DIR, filename)).catch(() => undefined);
+}
 
 const LOCATION_TYPES = [
   'ROOM',
@@ -69,6 +121,7 @@ function finishDirectoryAction({
 }) {
   revalidatePath('/dashboard/locations');
   revalidatePath('/dashboard/tags');
+  revalidatePath('/t/[tagCode]', 'page');
 
   return {
     ok: true,
@@ -281,17 +334,24 @@ export async function createLocationAction(formData: FormData) {
   });
 
   assertHotelAccess(user, parsed.hotelId);
+  const heroImage = await resolveLocationHeroImage(formData);
 
-  await db.location.create({
-    data: {
-      hotelId: parsed.hotelId,
-      name: parsed.name,
-      type: parsed.type,
-      description: parsed.description || null,
-      isActive: true,
-      deletedAt: null,
-    },
-  });
+  try {
+    await db.location.create({
+      data: {
+        hotelId: parsed.hotelId,
+        name: parsed.name,
+        type: parsed.type,
+        description: parsed.description || null,
+        heroImageUrl: heroImage.url,
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+  } catch (error) {
+    if (heroImage.uploaded) await removeUploadedLocationHero(heroImage.url);
+    throw error;
+  }
 
   return finishDirectoryAction({
     success: 'location-created',
@@ -328,19 +388,28 @@ export async function updateLocationAction(formData: FormData) {
 
   assertHotelAccess(user, existing.hotelId);
   assertHotelAccess(user, parsed.hotelId);
+  const heroImage = await resolveLocationHeroImage(formData);
 
-  await db.location.update({
-    where: {
-      id: parsed.locationId,
-    },
-    data: {
-      hotelId: parsed.hotelId,
-      name: parsed.name,
-      type: parsed.type,
-      description: parsed.description || null,
-      isActive: parsed.isActive,
-    },
-  });
+  try {
+    await db.location.update({
+      where: { id: parsed.locationId },
+      data: {
+        hotelId: parsed.hotelId,
+        name: parsed.name,
+        type: parsed.type,
+        description: parsed.description || null,
+        heroImageUrl: heroImage.url,
+        isActive: parsed.isActive,
+      },
+    });
+  } catch (error) {
+    if (heroImage.uploaded) await removeUploadedLocationHero(heroImage.url);
+    throw error;
+  }
+
+  if (existing.heroImageUrl !== heroImage.url) {
+    await removeUploadedLocationHero(existing.heroImageUrl);
+  }
 
   return finishDirectoryAction({
     success: 'location-updated',

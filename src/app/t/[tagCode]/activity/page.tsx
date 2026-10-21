@@ -138,7 +138,15 @@ export default async function GuestActivityPage({
     ? `Room ${activity.guestStay.room.number}${
         activity.guestStay.room.name ? ` · ${activity.guestStay.room.name}` : ''
       }`
-    : 'Guest Session';
+    : tag.location?.name ?? tag.label;
+  const hasActivity = Boolean(
+    activity.guestStay ||
+      recentXenditPayments.length ||
+      activity.currentOrders.length ||
+      activity.currentServiceRequests.length ||
+      activity.pastOrders.length ||
+      activity.pastServiceRequests.length
+  );
 
   return (
     <>
@@ -156,12 +164,30 @@ export default async function GuestActivityPage({
       */}
       <GuestShell
         hotel={activity.hotel ?? tag.hotel}
-        title="My stay"
+        title="My activity"
         subtitle={roomLabel}
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
         <section className="space-y-6">
+        {!hasActivity ? (
+          <section className="border border-white/10 bg-white/[0.04] px-6 py-12 text-center">
+            <ShoppingBag className="mx-auto size-8 text-[#c99c38]" />
+            <h2 className="mt-5 font-serif text-2xl">Your activity will appear here</h2>
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              Orders and service requests from this visit will be easy to track here.
+            </p>
+            <div className="mt-7 grid gap-3">
+              <Link href={`/t/${tagCode}/menu`} className="flex min-h-12 items-center justify-center bg-[#d6a738] px-4 text-sm font-semibold text-black">
+                Explore food & drinks
+              </Link>
+              <Link href={`/t/${tagCode}/service`} className="flex min-h-12 items-center justify-center border border-white/20 px-4 text-sm font-semibold text-white">
+                Browse services
+              </Link>
+            </div>
+          </section>
+        ) : (
+        <>
         <section className="border border-white/10 bg-white/[0.04] p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
@@ -286,7 +312,7 @@ export default async function GuestActivityPage({
           <div className="border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ShoppingBag className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Current Stay Orders</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Current orders</h2>
             </div>
 
             <div className="space-y-3">
@@ -339,7 +365,7 @@ export default async function GuestActivityPage({
               {!activity.currentOrders.length ? (
                 <EmptyState
                   title="No current orders yet"
-                  description="Food orders from this current stay will appear here."
+                  description="Food orders from this visit will appear here."
                 />
               ) : null}
             </div>
@@ -348,7 +374,7 @@ export default async function GuestActivityPage({
           <div className="border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ConciergeBell className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Current Service Requests</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Current requests</h2>
             </div>
 
             <div className="space-y-3">
@@ -388,7 +414,7 @@ export default async function GuestActivityPage({
               {!activity.currentServiceRequests.length ? (
                 <EmptyState
                   title="No current requests yet"
-                  description="Service requests from this current stay will appear here."
+                  description="Service requests from this visit will appear here."
                 />
               ) : null}
             </div>
@@ -479,7 +505,7 @@ export default async function GuestActivityPage({
           <div className="border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ReceiptText className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Past Service Requests</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Past requests</h2>
             </div>
 
             <div className="space-y-3">
@@ -519,6 +545,8 @@ export default async function GuestActivityPage({
             </div>
           </div>
         </section>
+        </>
+        )}
         </section>
       </GuestShell>
 

@@ -86,12 +86,13 @@ export default async function GuidePage({
       <GuestShell
         hotel={tag.hotel}
         title="Hotel Guide"
-        subtitle="Everything you need during your stay"
+        subtitle={tag.roomId ? 'Everything you need during your stay' : 'Explore the hotel from here'}
         backHref={`/t/${tagCode}`}
         variant="dark"
       >
         <HotelGuideContent
           tagCode={tagCode}
+          isPublicLocation={!tag.roomId}
           sections={sections.map((section) => ({
             id: section.id,
             title: section.title,

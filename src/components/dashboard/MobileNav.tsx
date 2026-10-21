@@ -20,7 +20,7 @@ const dataBackupNavItem: DashboardNavItem = {
 
 const mobileLabelMap: Record<string, string> = {
   OVERVIEW: 'Home',
-  HOTELS: 'Hotels',
+  HOTELS: 'Properties',
   HOTEL_GUIDE: 'Guide',
   ROOMS_LOCATIONS: 'Rooms',
   NFC_TAGS: 'NFC Tags',
@@ -29,13 +29,13 @@ const mobileLabelMap: Record<string, string> = {
   GUEST_STAYS: 'Stays',
   ORDERS: 'Orders',
   KITCHEN_DISPLAY: 'Kitchen',
-  SERVICES_MODULE: 'Services',
+  SERVICES_MODULE: 'Catalog',
   SERVICE_REQUESTS: 'Requests',
   POS_TERMINAL: 'POS',
   ANALYTICS: 'Analytics',
   REPORTS: 'Reports',
   HOTEL_SETTINGS: 'Hotel Settings',
-  USER_ACCOUNT_SETTINGS: 'Users',
+  USER_ACCOUNT_SETTINGS: 'Users & Access',
   REWARDS: 'Rewards',
   DATA_BACKUP: 'Backup',
 };

@@ -550,7 +550,10 @@ export async function GET(
       }
 
       return NextResponse.redirect(
-        guestUrlForRequest(request, '/nfc-access-denied?reason=no-active-stay')
+        guestUrlForRequest(
+          request,
+          `/nfc-access-denied?reason=no-active-stay&tag=${encodeURIComponent(tag.code)}`
+        )
       );
     }
 

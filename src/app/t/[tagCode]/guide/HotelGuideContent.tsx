@@ -379,6 +379,7 @@ function SearchResultInfoCard({
 
 export function HotelGuideContent({
   tagCode,
+  isPublicLocation,
   sections,
   wifiName,
   wifiPassword,
@@ -386,6 +387,7 @@ export function HotelGuideContent({
   checkOutTime,
 }: {
   tagCode: string;
+  isPublicLocation: boolean;
   sections: GuideSection[];
   wifiName: string;
   wifiPassword: string;
@@ -486,7 +488,7 @@ export function HotelGuideContent({
             <div className="flex items-center justify-between gap-3">
               <span className="inline-flex items-center gap-2 border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#e8c66f] backdrop-blur-xl">
                 <Sparkles className="size-3.5" />
-                Private concierge
+                {isPublicLocation ? 'Hotel guide' : 'Private concierge'}
               </span>
 
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">
@@ -496,7 +498,7 @@ export function HotelGuideContent({
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#d5ad55]">
-                Welcome to your stay
+                {isPublicLocation ? 'Welcome to the hotel' : 'Welcome to your stay'}
               </p>
               <h1 className="mt-3 max-w-sm font-serif text-[2.75rem] font-light leading-[0.98] tracking-[-0.02em] text-[#fbf7ee]">
                 Everything,
@@ -599,7 +601,7 @@ export function HotelGuideContent({
                 <ServiceAction
                   href={`/t/${tagCode}/menu`}
                   icon={Utensils}
-                  label="In-room dining"
+                  label={isPublicLocation ? 'Food & drinks' : 'In-room dining'}
                   detail="Browse menu & order"
                 />
                 <ServiceAction
@@ -713,7 +715,7 @@ export function HotelGuideContent({
 
             <section className="mb-8">
               <SectionHeading
-                eyebrow="Curated for your stay"
+                eyebrow={isPublicLocation ? 'Curated for your visit' : 'Curated for your stay'}
                 title="Explore the hotel"
                 description="Every detail, destination and service—beautifully organised for you."
               />

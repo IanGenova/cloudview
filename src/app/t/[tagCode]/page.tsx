@@ -27,9 +27,6 @@ import {
   GuestReveal,
 } from './GuestPortalMotion';
 
-const fallbackResortImage =
-  'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80';
-
 type GuestHomeProps = {
   params: Promise<{
     tagCode: string;
@@ -123,8 +120,8 @@ function PrimaryActionCard({
       <p
         className={
           gold
-            ? 'mt-2 text-[13px] font-medium leading-5 text-white/65'
-            : 'mt-2 text-[13px] font-medium leading-5 text-white/50'
+            ? 'mt-2 text-sm font-medium leading-5 text-white/75'
+            : 'mt-2 text-sm font-medium leading-5 text-white/65'
         }
       >
         {description}
@@ -172,7 +169,7 @@ function MiniActionCard({
 function StayFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/75">
         {label}
       </p>
       <p className="mt-1.5 line-clamp-2 font-serif text-[17px] font-normal leading-tight tracking-wide text-white">
@@ -320,6 +317,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
     select: {
       status: true,
       label: true,
+      tagType: true,
 
       hotel: {
         include: {
@@ -336,6 +334,9 @@ export default async function GuestHome({ params }: GuestHomeProps) {
       location: {
         select: {
           name: true,
+          type: true,
+          description: true,
+          heroImageUrl: true,
         },
       },
     },
@@ -353,16 +354,35 @@ export default async function GuestHome({ params }: GuestHomeProps) {
     ? `Room ${tag.room.number}`
     : tag.location?.name ?? tag.label;
 
-  const guestDisplayName = activity.guestName || 'Guest';
+  const isPublicLocation = !tag.room;
+  const isPoolLocation =
+    tag.location?.type === 'POOL' || tag.tagType === 'POOL';
+  const heroTitle = isPublicLocation
+    ? isPoolLocation
+      ? 'Welcome to the Pool Deck'
+      : `Welcome to ${locationName}`
+    : activity.guestName
+      ? `Welcome, ${activity.guestName}`
+      : 'Welcome to your room';
+  const heroDescription = isPublicLocation
+    ? tag.location?.description?.trim() ||
+      (isPoolLocation
+        ? 'Relax by the water. Order refreshments or ask our team for anything you need.'
+        : 'Explore the hotel and request service from this location.')
+    : 'Everything you need for a comfortable stay is one tap away.';
 
   const activeActivityCount =
     activity.currentActiveOrderCount +
     activity.currentActiveServiceRequestCount;
 
-  const heroImage =
-    tag.hotel.settings?.guestPortalHeroImageUrl?.trim() || fallbackResortImage;
+  const heroImage = isPublicLocation
+    ? tag.location?.heroImageUrl?.trim() ||
+      (tag.hotel.slug === 'cloud-view-demo' && isPoolLocation
+        ? '/cloudview/demo/pool-deck.webp'
+        : null)
+    : tag.hotel.settings?.guestPortalHeroImageUrl?.trim() || null;
 
-  const wifiName = tag.hotel.settings?.wifiName || 'Ask front desk';
+  const wifiName = tag.hotel.settings?.wifiName?.trim();
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
@@ -381,13 +401,13 @@ export default async function GuestHome({ params }: GuestHomeProps) {
           animation and the shimmer are gone: motion over a still photograph
           reads as a screensaver, not as luxury.
         */}
-        <section className="relative flex min-h-[62vh] flex-col justify-end overflow-hidden px-5 pb-8 pt-7">
+        <section className="relative flex min-h-[350px] flex-col justify-end overflow-hidden px-5 pb-6 pt-7 sm:min-h-[400px]">
           <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${heroImage})` }}
+            className="absolute inset-0 bg-[radial-gradient(circle_at_60%_20%,#55452d_0%,#171a1b_45%,#070707_100%)] bg-cover bg-center"
+            style={heroImage ? { backgroundImage: `url(${heroImage})` } : undefined}
           />
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/55 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/70 to-black/15" />
           <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
 
           <GuestReveal delay={0.05} className="relative z-10 mb-auto flex items-start justify-between pt-2">
@@ -415,7 +435,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
                 ) : null}
               </Link>
             </GuestReveal>
-          <GuestReveal delay={0.14} className="relative z-10 pt-24">
+          <GuestReveal delay={0.14} className="relative z-10 pt-20">
             {/*
               Gold appeared thirteen times on this screen: the greeting, the
               logo, two icon tiles, two tile labels, the chevrons, a filled
@@ -425,11 +445,10 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               for one thing per screen — here, the single action a guest is
               most likely to want — and everything else is the white ramp.
             */}
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/50">
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/85">
               {greeting}
             </p>
 
-            {/* Added break-words, text-balance, and scaled font dynamically. Lowercased to force proper capitalize. */}
             {/*
               Bigger, because the hero is now tall enough to carry it and
               because a guest's own name is the one thing on this screen that
@@ -440,14 +459,20 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               The sentence that stood here — "You are at Pool Deck." — said
               exactly what the Location fact two lines below says.
             */}
-            <h1 className="mt-4 max-w-[300px] break-words font-serif text-[2.75rem] font-light capitalize leading-[1.02] tracking-tight text-white text-balance sm:text-6xl">
-              {guestDisplayName.toLowerCase()}
+            <h1 className="mt-3 max-w-[390px] break-words font-serif text-[2.6rem] font-light leading-[1.05] tracking-tight text-white text-balance sm:text-5xl">
+              {heroTitle}
             </h1>
+            <p className="mt-3 max-w-[350px] text-sm leading-6 text-white/85">
+              {heroDescription}
+            </p>
           </GuestReveal>
 
-          <GuestReveal delay={0.24} className="relative z-10 mt-10 grid grid-cols-2 gap-6">
-            <StayFact label="Location" value={locationName} />
-            <StayFact label="Wi-Fi" value={wifiName} />
+          <GuestReveal delay={0.24} className="relative z-10 mt-6 grid grid-cols-2 gap-6 border-t border-white/35 pt-4">
+            <StayFact
+              label={isPoolLocation ? 'Pool hours' : 'Location'}
+              value={isPoolLocation ? tag.hotel.settings?.poolHours || 'Ask our team' : locationName}
+            />
+            {wifiName ? <StayFact label="Wi-Fi" value={wifiName} /> : null}
           </GuestReveal>
         </section>
 
@@ -462,7 +487,9 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               href={`/t/${normalizedTagCode}/menu`}
               icon={ShoppingBag}
               title="Order Food"
-              description="Browse menu and order room service."
+              description={tag.room
+                ? 'Browse the menu and order to your room.'
+                : 'Enjoy a meal here or pick up at the counter.'}
               gold
             />
 
@@ -470,7 +497,9 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               href={`/t/${normalizedTagCode}/service`}
               icon={ConciergeBell}
               title="Request Service"
-              description="Ask for towels, cleaning, help, and more."
+              description={tag.room
+                ? 'Ask for towels, cleaning, help, and more.'
+                : 'Ask for towels, water, or help here.'}
             />
           </div>
 
@@ -509,7 +538,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               Recommended
             </p>
             <h2 className="mt-1 text-2xl font-serif font-normal text-white tracking-wide">
-              Helpful during your stay
+              {tag.room ? 'Helpful during your stay' : 'Helpful while you are here'}
             </h2>
           </div>
 
@@ -534,7 +563,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               href={`/t/${normalizedTagCode}/rewards`}
               icon={Gift}
               eyebrow="Rewards"
-              title="Claim points from your stay"
+              title={tag.room ? 'Claim points from your stay' : 'Claim points from your visit'}
               description="Earn points from visits, orders, and completed requests."
             />
 
@@ -559,7 +588,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
                 <p className="text-2xl font-serif font-normal">One tap guest portal</p>
                 <p className="mt-1 text-sm font-medium leading-6 text-black/75">
                   No app install needed. Scan, browse, order, request, and enjoy
-                  your stay.
+                  your visit.
                 </p>
 
                 <Link

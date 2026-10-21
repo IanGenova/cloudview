@@ -1972,9 +1972,9 @@ function pushTestNotification() {
  ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200'
  : 'border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
  }`}
-          title={`Kitchen: ${kitchenStatus}. Service: ${serviceStatus}. Operations: ${operationsStatus}.${
-            lastRealtimeIssue ? ` Issue: ${lastRealtimeIssue}` : ''
-          }`}
+          title={hasRealtimeError
+            ? 'Live alerts are unavailable. Saved notifications refresh every 10 seconds.'
+            : `Live alert status: ${realtimeStatusLabel.toLowerCase()}. Saved notifications refresh every 10 seconds.`}
         >
           <BellRing className="size-4" />
           <span className="hidden sm:inline">Notifications</span>
@@ -2073,6 +2073,12 @@ function pushTestNotification() {
                   <RealtimeIcon className="size-3.5" />
                   {realtimeStatusLabel}
                 </span>
+
+                {hasRealtimeError ? (
+                  <span role="status" className="text-xs leading-5 text-amber-800 dark:text-amber-200">
+                    Live alerts unavailable. Saved notifications refresh every 10 seconds.
+                  </span>
+                ) : null}
 
                 <button
                   type="button"

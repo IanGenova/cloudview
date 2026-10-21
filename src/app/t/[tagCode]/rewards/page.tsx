@@ -523,20 +523,32 @@ function ClaimRewardsCard({
         <form action={claimNfcRewardsAction} className="mt-8 space-y-3.5">
           <input type="hidden" name="tagCode" value={tagCode} />
 
+          <label htmlFor="rewards-name" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+            Full name
+          </label>
           <input
+            id="rewards-name"
             name="name"
             required
             placeholder="Your full name"
             className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           />
 
+          <label htmlFor="rewards-phone" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+            Phone number
+          </label>
           <input
+            id="rewards-phone"
             name="phone"
             placeholder="Phone number"
             className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
           />
 
+          <label htmlFor="rewards-email" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+            Email address
+          </label>
           <input
+            id="rewards-email"
             name="email"
             type="email"
             placeholder="Email address"

@@ -2,6 +2,7 @@
 import type { Prisma } from '@prisma/client';
 import {
   DashboardModule,
+  GuestStayStatus,
   MenuAvailabilityMovementType,
   MenuProductType,
   OrderStatus,
@@ -142,7 +143,8 @@ export async function getActivePOSRooms(hotelIdInput: string) {
 
   assertHotelScope(user, hotelId);
 
-  return db.room.findMany({
+  const now = new Date();
+  const rooms = await db.room.findMany({
     where: {
       hotelId,
       isActive: true,
@@ -152,6 +154,20 @@ export async function getActivePOSRooms(hotelIdInput: string) {
       id: true,
       number: true,
       name: true,
+      guestStays: {
+        where: {
+          status: GuestStayStatus.ACTIVE,
+          checkedOutAt: null,
+          checkInAt: { lte: now },
+          OR: [
+            { expectedCheckOutAt: null },
+            { expectedCheckOutAt: { gte: now } },
+          ],
+          folio: null,
+        },
+        select: { id: true },
+        take: 1,
+      },
     },
     orderBy: [
       {
@@ -162,6 +178,11 @@ export async function getActivePOSRooms(hotelIdInput: string) {
       },
     ],
   });
+
+  return rooms.map(({ guestStays, ...room }) => ({
+    ...room,
+    canRoomCharge: guestStays.length > 0,
+  }));
 }
 
 type POSOrderActor = {
@@ -225,6 +246,10 @@ async function createPOSOrderInternal(
         'The selected room was deleted or is no longer active. Please select another room.'
       );
     }
+  }
+
+  if (paymentMethod === PaymentMethod.ROOM_CHARGE && !roomId) {
+    throw new Error('Room charge requires a selected room with a current guest stay.');
   }
 
   const quantityByProductId = new Map<string, number>();
@@ -376,20 +401,6 @@ async function createPOSOrderInternal(
     }
   }
 
-  const fixedPriceServices = normalizedServices.filter((item) => {
-    const service = serviceMap.get(item.serviceId);
-
-    return service?.billingMode === ServiceBillingMode.FIXED_PRICE;
-  });
-
-  if (
-    fixedPriceServices.length > 0 &&
-    paymentMethod === PaymentMethod.ROOM_CHARGE &&
-    !roomId
-  ) {
-    throw new Error('Room charge requires a selected room.');
-  }
-
   const stockRequirements = new Map<string, StockRequirement>();
 
   for (const item of normalizedItems) {
@@ -478,6 +489,32 @@ let groupedServiceRequestCode: string | null = null;
         if (!hotel) {
           throw new Error('Hotel was not found.');
         }
+    let chargeGuestStayId: string | null = null;
+
+    if (paymentMethod === PaymentMethod.ROOM_CHARGE) {
+      const now = new Date();
+      const stay = await tx.guestStay.findFirst({
+        where: {
+          hotelId,
+          roomId: roomId!,
+          status: GuestStayStatus.ACTIVE,
+          checkedOutAt: null,
+          checkInAt: { lte: now },
+          OR: [
+            { expectedCheckOutAt: null },
+            { expectedCheckOutAt: { gte: now } },
+          ],
+          folio: null,
+        },
+        select: { id: true },
+      });
+
+      if (!stay) {
+        throw new Error('This room has no current checked-in stay available for room charges.');
+      }
+
+      chargeGuestStayId = stay.id;
+    }
     const foodStockByProductId = new Map<
       string,
       {
@@ -588,6 +625,7 @@ let groupedServiceRequestCode: string | null = null;
         data: {
           hotelId,
           roomId: roomId || null,
+          guestStayId: chargeGuestStayId,
           locationId: null,
           tagId: null,
           orderCode,
@@ -767,6 +805,7 @@ let groupedServiceRequestCode: string | null = null;
         data: {
           hotelId,
           roomId: roomId || null,
+          guestStayId: chargeGuestStayId,
           locationId: null,
           tagId: null,
           requestCode: groupedServiceRequestCode!,

@@ -1462,7 +1462,9 @@ export async function markOrderPaidAction(formData: FormData) {
       id: true,
       hotelId: true,
       orderCode: true,
+      status: true,
       paymentMethod: true,
+      paymentStatus: true,
       tag: {
         select: {
           code: true,
@@ -1484,14 +1486,29 @@ export async function markOrderPaidAction(formData: FormData) {
     );
   }
 
-  await db.order.update({
+  if (order.status === OrderStatus.CANCELLED) {
+    throw new Error('Cancelled orders cannot be marked paid.');
+  }
+
+  if (order.paymentStatus !== PaymentStatus.UNPAID) {
+    throw new Error('This order is no longer awaiting payment. Refresh and review its status.');
+  }
+
+  const paidUpdate = await db.order.updateMany({
     where: {
       id: order.id,
+      status: { not: OrderStatus.CANCELLED },
+      paymentMethod: { not: PaymentMethod.XENDIT },
+      paymentStatus: PaymentStatus.UNPAID,
     },
     data: {
       paymentStatus: PaymentStatus.PAID,
     },
   });
+
+  if (paidUpdate.count !== 1) {
+    throw new Error('The order changed while you were reviewing it. Refresh and try again.');
+  }
   await safelySyncOrderPoints(order.id);
 
   revalidateOrderPaths(order);

@@ -1880,6 +1880,16 @@ function handleResetPasscode(guestStayId: string) {
   />
 </section>
 
+{overdueCheckoutCount > 0 ? (
+  <div role="status" className="flex items-start gap-3 border border-red-300/35 bg-red-950/20 p-4 text-sm leading-6">
+    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-400" />
+    <p>
+      {overdueCheckoutCount} open stay{overdueCheckoutCount === 1 ? '' : 's'} passed the expected checkout time.
+      Private room NFC access closes when a stay is overdue. Review the dates or complete checkout below.
+    </p>
+  </div>
+) : null}
+
 <section className="flex flex-col gap-3 border border-neutral-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
   <div>
     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
@@ -1957,10 +1967,10 @@ function handleResetPasscode(guestStayId: string) {
 
       <section className="overflow-hidden border border-neutral-200 bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1240px] text-left">
+          <table className="cv-responsive-table w-full min-w-[1240px] text-left">
             <thead className="sticky top-0 z-10 bg-neutral-50/95 backdrop-blur">
               <tr>
-                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
+                <th scope="col" className="sticky left-0 z-20 bg-neutral-50 px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Guest
                 </th>
                 <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
@@ -1984,7 +1994,7 @@ function handleResetPasscode(guestStayId: string) {
                 <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Status
                 </th>
-                <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
+                <th scope="col" className="sticky right-0 z-20 border-l border-neutral-200 bg-neutral-50 px-5 py-3 text-xs font-semibold uppercase text-neutral-500">
                   Actions
                 </th>
               </tr>
@@ -1996,14 +2006,14 @@ function handleResetPasscode(guestStayId: string) {
 
           return (
             <tr key={stay.id} className="border-t border-neutral-100 transition hover:bg-[#fffaf0]">
-                  <td className="px-5 py-4">
+                  <td data-label="Guest" className="sticky left-0 z-10 bg-[var(--cv-card)] px-5 py-4">
                     <p className="font-semibold">{stay.guestName}</p>
                     <p className="text-xs font-semibold text-neutral-500">
                       {stay.guestPhone || stay.guestEmail || 'No contact'}
                     </p>
                   </td>
 
-                  <td className="px-5 py-4">
+                  <td data-label="Hotel / Room" className="px-5 py-4">
                     <p className="font-semibold">{stay.hotelName}</p>
                     <p className="text-xs font-semibold text-neutral-500">
                       Room {stay.roomNumber}
@@ -2022,18 +2032,18 @@ function handleResetPasscode(guestStayId: string) {
                     </span>
                   </td>
 
-                  <td className="px-5 py-4 font-bold">
+                  <td data-label="Devices" className="px-5 py-4 font-bold">
                     {stay.nfcRoomPasscodeEnabled
                       ? `${stay.activeDevices} / ${stay.maxDevices}`
                       : 'No limit'}
                   </td>
 
-                  <td className="px-5 py-4 font-bold">
+                  <td data-label="Orders / Requests" className="px-5 py-4 font-bold">
                     {stay.orderCount} orders · {stay.serviceRequestCount}{' '}
                     requests
                   </td>
 
-                                  <td className="px-5 py-4">
+                                  <td data-label="Points" className="px-5 py-4">
                   <p className="font-semibold text-[#11100b]">
                     {stay.availablePoints} available
                   </p>
@@ -2042,15 +2052,15 @@ function handleResetPasscode(guestStayId: string) {
                   </p>
                 </td>
 
-                  <td className="px-5 py-4 text-sm font-bold">
+                  <td data-label="Check-in" className="px-5 py-4 text-sm font-bold">
                     {formatDateTime(stay.checkInAt)}
                   </td>
 
-                  <td className="px-5 py-4 text-sm font-bold">
+                  <td data-label="Expected checkout" className="px-5 py-4 text-sm font-bold">
                     {formatDateTime(stay.expectedCheckOutAt)}
                   </td>
 
-                  <td className="px-5 py-4">
+                  <td data-label="Status" className="px-5 py-4">
                     <div className="space-y-1">
                     <FrontDeskStatusBadge
                       label={frontDeskStatus.label}
@@ -2063,7 +2073,7 @@ function handleResetPasscode(guestStayId: string) {
                   </div>
                   </td>
 
-                  <td className="px-5 py-4">
+                  <td data-label="Actions" className="sticky right-0 z-10 border-l border-neutral-200 bg-[var(--cv-card)] px-5 py-4">
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"

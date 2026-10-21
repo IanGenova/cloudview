@@ -8,6 +8,7 @@ import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { MenuClient } from '@/components/guest/MenuClient';
 import { getGuestRewardsContextForTag } from '@/lib/nfc-rewards';
 import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
+import { getDemoMenuFallback } from '@/lib/demo-menu-image';
 
 export const dynamic = 'force-dynamic';
 
@@ -310,6 +311,7 @@ export default async function GuestMenuPage({
       description: product.description,
       priceCents: product.priceCents,
       imageUrl: product.images[0]?.url || product.imageUrl || null,
+      fallbackImageUrl: getDemoMenuFallback(tag.hotel.slug, product.name),
       categoryName: product.category?.name ?? 'Uncategorized',
 
       productType: product.productType,

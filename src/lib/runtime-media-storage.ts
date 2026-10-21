@@ -4,6 +4,7 @@ export const RUNTIME_MEDIA_FOLDERS = [
   'menu',
   'hotel-guide',
   'hotel-settings',
+  'location-hero',
   'images',
   'service-requests',
   'service-request-paymongo',

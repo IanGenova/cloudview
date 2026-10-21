@@ -22,7 +22,6 @@ import {
   PanelLeftOpen,
   RadioTower,
   Settings,
-  ShieldCheck,
   ShoppingBag,
   UserCheck,
   Utensils,
@@ -48,18 +47,6 @@ type BuiltSidebarGroup = SidebarGroup & {
 
 const SETTINGS_GROUP_KEY = '__settings__';
 
-const reportsNavItem: DashboardNavItem = {
-  module: 'REPORTS',
-  label: 'Reports',
-  href: '/dashboard/reports',
-};
-
-const guestStaysNavItem: DashboardNavItem = {
-  module: 'GUEST_STAYS',
-  label: 'Guest Stays',
-  href: '/dashboard/guest-stays',
-};
-
 const dataBackupNavItem: DashboardNavItem = {
   module: 'DATA_BACKUP',
   label: 'Data Backup & Recovery',
@@ -74,14 +61,11 @@ const dataBackupNavItem: DashboardNavItem = {
  * in. Taking counter money, for instance, was split across Sales & Stock and
  * Guest Service with nothing linking them (IA-10).
  *
- * These four groups are spans of attention instead. "Today" is the shift: the
- * screens someone opens because something is happening right now. "The hotel"
- * is the place and the people in it. "What we sell" is the catalogue and its
- * stock. "Records" is what you read afterwards.
+ * Group routes by the work they support so the label predicts what is inside.
  */
 const navGroups: SidebarGroup[] = [
   {
-    label: 'Today',
+    label: 'Daily Operations',
     modules: [
       'OVERVIEW',
       'ORDERS',
@@ -91,16 +75,23 @@ const navGroups: SidebarGroup[] = [
     ],
   },
   {
-    label: 'The hotel',
-    modules: ['GUEST_STAYS', 'ROOMS_LOCATIONS', 'NFC_TAGS', 'HOTEL_GUIDE'],
+    label: 'Property & Guests',
+    modules: [
+      'HOTELS',
+      'GUEST_STAYS',
+      'ROOMS_LOCATIONS',
+      'NFC_TAGS',
+      'HOTEL_GUIDE',
+      'REWARDS',
+    ],
   },
   {
-    label: 'What we sell',
-    modules: ['MENU', 'SERVICES_MODULE', 'INVENTORY', 'REWARDS'],
+    label: 'Catalog & Stock',
+    modules: ['MENU', 'SERVICES_MODULE', 'INVENTORY'],
   },
   {
-    label: 'Records',
-    modules: ['ANALYTICS', 'REPORTS', 'HOTELS'],
+    label: 'Insights',
+    modules: ['ANALYTICS', 'REPORTS'],
   },
 ];
 
@@ -169,51 +160,6 @@ function getActiveHref(
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
-}
-
-function insertReportsItem(items: DashboardNavItem[]) {
-  const hasReports = items.some(
-    (item) => item.module === 'REPORTS' || item.href === '/dashboard/reports'
-  );
-
-  if (hasReports) {
-    return items;
-  }
-
-  const analyticsIndex = items.findIndex((item) => item.module === 'ANALYTICS');
-
-  if (analyticsIndex >= 0) {
-    return [
-      ...items.slice(0, analyticsIndex + 1),
-      reportsNavItem,
-      ...items.slice(analyticsIndex + 1),
-    ];
-  }
-
-  return [...items, reportsNavItem];
-}
-
-function insertGuestStaysItem(items: DashboardNavItem[]) {
-  const hasGuestStays = items.some(
-    (item) =>
-      item.module === 'GUEST_STAYS' || item.href === '/dashboard/guest-stays'
-  );
-
-  if (hasGuestStays) {
-    return items;
-  }
-
-  const ordersIndex = items.findIndex((item) => item.module === 'ORDERS');
-
-  if (ordersIndex >= 0) {
-    return [
-      ...items.slice(0, ordersIndex),
-      guestStaysNavItem,
-      ...items.slice(ordersIndex),
-    ];
-  }
-
-  return [...items, guestStaysNavItem];
 }
 
 function insertDataBackupItem(
@@ -375,7 +321,10 @@ function SidebarSection({
 
   if (!isSidebarOpen) {
     return (
-      <section className="space-y-1.5 pb-2">
+      <section
+        aria-label={group.label}
+        className="space-y-1.5 border-b border-white/10 pb-3 last:border-b-0"
+      >
         {group.items.map((item) => (
           <SidebarLink
             key={`${group.label}-${item.module}`}
@@ -389,7 +338,7 @@ function SidebarSection({
   }
 
   return (
-    <section className="">
+    <section aria-label={group.label}>
       <button
         type="button"
         onClick={onToggle}
@@ -459,14 +408,9 @@ export function Sidebar({
     });
   }
 
-  const originalMainItems = useMemo(
+  const mainItems = useMemo(
     () => navItems.filter((item) => item.group !== 'settings'),
     [navItems]
-  );
-
-  const mainItems = useMemo(
-    () => insertGuestStaysItem(insertReportsItem(originalMainItems)),
-    [originalMainItems]
   );
 
   const groupedMainItems = useMemo(
@@ -502,50 +446,25 @@ export function Sidebar({
     (item) => item.href === activeHref
   );
 
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
+  const activeGroupKey = hasActiveSettings
+    ? SETTINGS_GROUP_KEY
+    : groupedMainItems.find((group) =>
+        group.items.some((item) => item.href === activeHref)
+      )?.label ?? null;
 
-    for (const group of groupedMainItems) {
-      const hasActiveItem = group.items.some(
-        (item) => item.href === activeHref
-      );
-
-      if (hasActiveItem || group.label === 'Dashboard') {
-        initial.add(group.label);
-      }
-    }
-
-    if (hasActiveSettings) {
-      initial.add(SETTINGS_GROUP_KEY);
-    }
-
-    return initial;
-  });
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    () => new Set(activeGroupKey ? [activeGroupKey] : [])
+  );
 
   useEffect(() => {
     setOpenGroups((current) => {
-      const next = new Set(current);
-      let changed = false;
-
-      for (const group of groupedMainItems) {
-        const hasActiveItem = group.items.some(
-          (item) => item.href === activeHref
-        );
-
-        if (hasActiveItem && !next.has(group.label)) {
-          next.add(group.label);
-          changed = true;
-        }
+      if (activeGroupKey && current.size === 1 && current.has(activeGroupKey)) {
+        return current;
       }
 
-      if (hasActiveSettings && !next.has(SETTINGS_GROUP_KEY)) {
-        next.add(SETTINGS_GROUP_KEY);
-        changed = true;
-      }
-
-      return changed ? next : current;
+      return new Set(activeGroupKey ? [activeGroupKey] : []);
     });
-  }, [activeHref, groupedMainItems, hasActiveSettings]);
+  }, [activeHref, activeGroupKey]);
 
   function toggleGroup(key: string) {
     setOpenGroups((current) => {
@@ -560,8 +479,6 @@ export function Sidebar({
       return next;
     });
   }
-
-  const moduleCount = mainItems.length + settingsItems.length;
 
   return (
     <aside
@@ -614,17 +531,6 @@ export function Sidebar({
               ) : null}
             </div>
 
-            {isSidebarOpen ? (
-              <div className="mt-3 flex items-center justify-between gap-3 border border-[var(--cv-accent)]/15 bg-black/20 px-3 py-2">
-                <p className="truncate text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--cv-accent)]">
-                  Admin Portal
-                </p>
-
-                <span className="bg-emerald-500/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-emerald-300">
-                  Active
-                </span>
-              </div>
-            ) : null}
           </Link>
 
           <button
@@ -643,22 +549,11 @@ export function Sidebar({
           </button>
         </div>
 
-        <div
-          className={cx(
-            'mb-3 flex shrink-0 items-center px-2',
-            isSidebarOpen ? 'justify-between' : 'justify-center'
-          )}
-        >
-          {isSidebarOpen ? (
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--cv-sidebar-muted)]">
-              Menu
-            </p>
-          ) : null}
-
-          <span className="border border-[var(--cv-accent)]/20 bg-white/[0.045] px-2 py-1 text-[10px] font-semibold text-[var(--cv-accent)]">
-            {moduleCount}
-          </span>
-        </div>
+        {isSidebarOpen ? (
+          <p className="relative z-10 mb-3 shrink-0 px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--cv-sidebar-muted)]">
+            Navigation
+          </p>
+        ) : null}
 
         <nav
           className={cx(
@@ -672,7 +567,7 @@ export function Sidebar({
             isSidebarOpen ? 'w-full pr-1' : 'w-full px-0'
           )}
         >
-          {groupedMainItems.length > 0 ? (
+          {groupedMainItems.length > 0 || settingsItems.length > 0 ? (
             <div className="space-y-1 pb-4">
               {groupedMainItems.map((group) => (
                 <SidebarSection
@@ -687,7 +582,7 @@ export function Sidebar({
 
               {settingsItems.length > 0 ? (
                 isSidebarOpen ? (
-                  <section className="pt-1">
+                  <section aria-label="Settings" className="pt-1">
                     <button
                       type="button"
                       onClick={() => toggleGroup(SETTINGS_GROUP_KEY)}
@@ -706,7 +601,7 @@ export function Sidebar({
 
                         <span className="min-w-0">
                           <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--cv-accent)]">
-                            Admin Setup
+                            Settings
                           </span>
                         </span>
                       </span>
@@ -733,7 +628,7 @@ export function Sidebar({
                     ) : null}
                   </section>
                 ) : (
-                  <section className="space-y-1.5 pt-1 pb-3">
+                  <section aria-label="Settings" className="space-y-1.5 pt-1 pb-3">
                     {settingsItems.map((item) => (
                       <SidebarLink
                         key={`${item.module}-${item.href}`}
@@ -753,34 +648,6 @@ export function Sidebar({
           )}
         </nav>
 
-        <div
-          className={cx(
-            'mt-3 shrink-0 overflow-hidden border border-[var(--cv-accent)]/20 bg-white/[0.045] p-3 backdrop-blur',
-            isSidebarOpen ? 'w-full' : 'w-14'
-          )}
-        >
-          <div
-            className={cx(
-              'flex items-center gap-3',
-              !isSidebarOpen && 'justify-center'
-            )}
-          >
-            <span className="grid size-10 shrink-0 place-items-center bg-black/35 text-[var(--cv-accent)]">
-              <ShieldCheck className="size-5" />
-            </span>
-
-            {isSidebarOpen ? (
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--cv-accent)]">
-                  Access Control
-                </p>
-                <p className="mt-0.5 truncate text-xs font-semibold text-[var(--cv-sidebar-text)]">
-                  Role-based menu
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </div>
       </div>
     </aside>
   );

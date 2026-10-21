@@ -178,7 +178,7 @@ type ToastMessage =
   },
   {
     key: 'HOTELS' as DashboardModule,
-    label: 'Hotels',
+    label: 'Properties',
     description: 'Create and manage hotel records.',
     superAdminOnly: true,
   },
@@ -219,7 +219,7 @@ type ToastMessage =
   },
   {
     key: 'SERVICES_MODULE' as DashboardModule,
-    label: 'Services',
+    label: 'Service Catalog',
     description: 'Manage hotel service catalog.',
   },
   {
@@ -229,7 +229,7 @@ type ToastMessage =
   },
   {
     key: 'POS_TERMINAL' as DashboardModule,
-    label: 'Counter sales',
+    label: 'Counter Sales',
     description: 'Access food and service POS.',
   },
   {
@@ -244,7 +244,7 @@ type ToastMessage =
   },
   {
     key: 'USER_ACCOUNT_SETTINGS' as DashboardModule,
-    label: 'User Account Settings',
+    label: 'Users & Access',
     description: 'Manage dashboard users and access.',
   },
 
@@ -1805,7 +1805,7 @@ export function UserAccountSettingsClient({
                 Access Control
               </p>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-                User Account Settings
+                Users & Access
               </h2>
               <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/60">
                 Create accounts, assign hotel access, and control exactly which
@@ -1952,10 +1952,10 @@ export function UserAccountSettingsClient({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1080px] text-left">
+            <table className="cv-responsive-table w-full min-w-[1080px] text-left">
               <thead className="bg-neutral-50">
                 <tr>
-                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="sticky left-0 z-10 bg-neutral-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     User
                   </th>
                   <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
@@ -1970,7 +1970,7 @@ export function UserAccountSettingsClient({
                   <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Access
                   </th>
-                  <th scope="col" className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  <th scope="col" className="sticky right-0 z-10 border-l border-neutral-200 bg-neutral-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Actions
                   </th>
                 </tr>
@@ -1989,7 +1989,7 @@ export function UserAccountSettingsClient({
 
                   return (
                     <tr key={account.id} className="border-t border-neutral-100">
-                      <td className="px-5 py-4">
+                      <td data-label="User" className="sticky left-0 z-10 bg-[var(--cv-card)] px-5 py-4">
                         <p className="font-semibold text-[#11100b]">
                           {account.name}
                         </p>
@@ -1998,17 +1998,17 @@ export function UserAccountSettingsClient({
                         </p>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td data-label="Role" className="px-5 py-4">
                         <span className="inline-flex bg-[#fff8e7] px-3 py-1 text-xs font-semibold text-[#9a6b18]">
                           {roleLabels[account.role]}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4 text-sm font-bold text-neutral-700">
+                      <td data-label="Hotel" className="px-5 py-4 text-sm font-bold text-neutral-700">
                         {account.hotel?.name ?? 'No hotel assigned'}
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td data-label="Status" className="px-5 py-4">
                         <span
                           className={
                             account.isActive
@@ -2020,7 +2020,7 @@ export function UserAccountSettingsClient({
                         </span>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td data-label="Access" className="px-5 py-4">
                         <p className="text-sm font-semibold text-[#11100b]">
                           {visibleModules} visible modules
                         </p>
@@ -2037,7 +2037,7 @@ export function UserAccountSettingsClient({
                         </p>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td data-label="Actions" className="sticky right-0 z-10 border-l border-neutral-200 bg-[var(--cv-card)] px-5 py-4">
                         <div className="flex flex-wrap gap-2">
                           <button
                             type="button"

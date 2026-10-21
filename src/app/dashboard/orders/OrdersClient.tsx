@@ -3,6 +3,7 @@
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
 import { LoadedAt } from '@/components/dashboard/LoadedAt';
 import { emptyState } from '@/lib/empty-state';
+import { STALE_ORDER_THRESHOLD_MS } from '@/lib/duration';
 import { renderNonFiscalNoticeHtml } from '@/lib/fiscal-notice';
 
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -195,6 +196,7 @@ function formatDateTime(value: string) {
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'Asia/Manila',
   }).format(new Date(value));
 }
 
@@ -285,7 +287,9 @@ function askBeforeMarkingPaid(order: DashboardOrder) {
 }
 
 function canManuallyMarkPaid(order: DashboardOrder) {
-  return order.paymentStatus === 'UNPAID' && order.paymentMethod !== 'XENDIT';
+  return order.status !== 'CANCELLED' &&
+    order.paymentStatus === 'UNPAID' &&
+    order.paymentMethod !== 'XENDIT';
 }
 
 function canStartOrderProcessing(order: DashboardOrder) {
@@ -455,6 +459,11 @@ function getOrderAgeClass(order: DashboardOrder, now: number) {
 function getOrderTimestamp(value: string) {
   const timestamp = new Date(value).getTime();
   return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function isStaleOpenOrder(order: DashboardOrder, now: number) {
+  return activeOrderStatuses.includes(order.status) &&
+    now - getOrderTimestamp(order.createdAt) >= STALE_ORDER_THRESHOLD_MS;
 }
 
 function compareOrdersNewestFirst(
@@ -1825,7 +1834,8 @@ function OrderCard({
   const isAttentionOrder =
     order.status === 'PENDING' ||
     order.status === 'READY' ||
-    order.paymentStatus === 'UNPAID';
+    isStaleOpenOrder(order, now) ||
+    (order.status !== 'CANCELLED' && order.paymentStatus === 'UNPAID');
 
   return (
     <article
@@ -1859,6 +1869,9 @@ function OrderCard({
 
             <p className="mt-1 text-xs font-semibold text-neutral-400">
               {order.hotelName} · {getSourceLabel(order)}
+            </p>
+            <p className="mt-1 text-xs font-medium text-neutral-600">
+              Placed {formatDateTime(order.createdAt)}
             </p>
           </div>
 
@@ -2017,9 +2030,13 @@ function PriorityQueue({
       (order) =>
         order.status === 'PENDING' ||
         order.status === 'READY' ||
-        order.paymentStatus === 'UNPAID'
+        isStaleOpenOrder(order, now) ||
+        (order.status !== 'CANCELLED' && order.paymentStatus === 'UNPAID')
     )
-    .sort(compareOrdersNewestFirst)
+    .sort((left, right) => {
+      const staleDifference = Number(isStaleOpenOrder(right, now)) - Number(isStaleOpenOrder(left, now));
+      return staleDifference || compareOrdersNewestFirst(left, right);
+    })
     .slice(0, 6);
 
   return (
@@ -2101,7 +2118,7 @@ function PriorityQueue({
               <p className="mt-1 text-xs text-neutral-500">
                 {narrowed
                   ? 'Clear the filters to see the whole queue.'
-                  : 'Pending, ready, or unpaid orders will appear here.'}
+                  : 'Pending, ready, stale open, or unpaid orders will appear here.'}
               </p>
             </div>
           )}
@@ -2147,12 +2164,14 @@ function PriorityQueue({
 }
 
 export function OrdersClient({
+  initialSearch = '',
   message,
   summary,
   statusCounts,
   orders,
   loadedAt,
 }: {
+  initialSearch?: string;
   message?: Message;
   summary: Summary;
   statusCounts: StatusCounts;
@@ -2166,7 +2185,7 @@ export function OrdersClient({
   const [clientMessage, setClientMessage] = useState<Message>(null);
   const [isMutating, setIsMutating] = useState(false);
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<DashboardOrder | null>(
@@ -2588,7 +2607,7 @@ export function OrdersClient({
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-2">
+          <div className="grid gap-4 2xl:grid-cols-2">
             {paginatedOrders.map((order) => (
               <OrderCard
                 key={order.id}
@@ -2621,7 +2640,7 @@ export function OrdersClient({
                 });
 
                 return (
-                  <div className="border border-dashed border-neutral-300 bg-white p-10 text-center lg:col-span-2">
+                  <div className="border border-dashed border-neutral-300 bg-white p-10 text-center 2xl:col-span-2">
                     <p className="font-semibold">{state.title}</p>
                     <p className="mt-1 text-sm text-neutral-500">{state.detail}</p>
                     {state.canClear ? (

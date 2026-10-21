@@ -231,6 +231,7 @@ export default async function ServiceRequestsPage({
   searchParams?: Promise<{
     success?: string;
     error?: string;
+    q?: string;
   }>;
 }) {
   const user = await requireDashboardPermission(
@@ -595,6 +596,7 @@ const totalBilledAmount = groupedRequests.reduce(
 
 
       <ServiceRequestsClient
+        initialQuery={params?.q?.trim().slice(0, 100) || ''}
         message={message}
         statuses={Object.values(ServiceRequestStatus)}
         staff={staff.map((staffMember) => ({

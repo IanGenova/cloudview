@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
+import { getGuestContact } from '@/lib/guest-contact';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,8 +35,7 @@ export default async function HelpSupportPage({
     notFound();
   }
 
-  const phone = tag.hotel.settings?.contactPhone;
-  const email = tag.hotel.settings?.contactEmail;
+  const { phone, email } = getGuestContact(tag.hotel.settings);
 
   const location = tag.room
     ? `Room ${tag.room.number}`
@@ -76,13 +76,18 @@ export default async function HelpSupportPage({
               </h2>
               <p className="mt-2 text-sm leading-6 text-white/50">
                 Contact the front desk, follow up an order, check your service
-                request, or ask for room assistance.
+                request, or ask for assistance at your location.
               </p>
             </div>
           </div>
         </section>
 
         <section className="mt-5 grid gap-3">
+          {!phone && !email ? (
+            <div role="status" className="border border-white/15 bg-white/[0.05] p-4 text-sm leading-6 text-white/70">
+              Direct contact details are not configured yet. Please speak with the nearest hotel staff member or send a request below.
+            </div>
+          ) : null}
           {phone ? (
             <SupportAction
               href={`tel:${phone}`}
@@ -105,8 +110,10 @@ export default async function HelpSupportPage({
           <SupportAction
             href={`/t/${tagCode}/service`}
             icon={Wrench}
-            title="Request Room Assistance"
-            description="Housekeeping, toiletries, maintenance, amenities, and other support."
+            title="Request Assistance"
+            description={tag.roomId
+              ? 'Housekeeping, toiletries, maintenance, amenities, and other support.'
+              : 'Towels, water, maintenance, and help at this location.'}
           />
 
           <SupportAction
@@ -160,7 +167,7 @@ export default async function HelpSupportPage({
           <div className="space-y-3">
             <FaqItem
               question="Where can I see my food order?"
-              answer="Open My Orders from your Profile. Tap an order to view its live tracking page."
+              answer="Open Activity and tap an order to view its latest status."
             />
 
             <FaqItem
@@ -170,7 +177,7 @@ export default async function HelpSupportPage({
 
             <FaqItem
               question="How do I ask for towels, toiletries, or maintenance?"
-              answer="Open Request Room Assistance and choose one or more services."
+              answer="Open Services and choose the help you need."
             />
 
             <FaqItem
@@ -184,7 +191,7 @@ export default async function HelpSupportPage({
           href={`/t/${tagCode}/contact`}
           className="mt-6 block bg-white/8 p-4 text-center font-semibold text-sand"
         >
-          Back to Profile
+          Back to contact
         </Link>
       </div>
 

@@ -68,6 +68,7 @@ export default async function OrdersPage({
   searchParams?: Promise<{
     success?: string;
     error?: string;
+    q?: string;
   }>;
 }) {
   const user = await requireDashboardPermission(
@@ -247,6 +248,7 @@ export default async function OrdersPage({
       />
 
       <OrdersClient
+        initialSearch={params?.q?.trim().slice(0, 100) || ''}
         loadedAt={new Date().toISOString()}
         message={message}
         summary={{

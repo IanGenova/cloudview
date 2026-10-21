@@ -3,6 +3,8 @@ import { type ReactNode } from 'react';
 import { DashboardModule, MenuProductType, type Prisma } from '@prisma/client';
 import { Plus, Pencil, X, CheckCircle2, Search, SlidersHorizontal, UploadCloud } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
+import { ProductMedia } from '@/components/dashboard/ProductMedia';
+import { getDemoMenuFallback } from '@/lib/demo-menu-image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -221,45 +223,14 @@ function Modal({
   );
 }
 
-const fallbackFoodImages = {
-  breakfast:
-    'https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=900&q=80',
-  sandwich:
-    'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=900&q=80',
-  burger:
-    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=80',
-  tea:
-    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=900&q=80',
-  default:
-    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=80',
-};
-
 function getProductImage(product: {
   name: string;
   category: { name: string };
   images: { url: string }[];
+  imageUrl: string | null;
+  hotel: { slug: string };
 }) {
-  if (product.images[0]?.url) return product.images[0].url;
-
-  const text = `${product.name} ${product.category.name}`.toLowerCase();
-
-  if (text.includes('pancake') || text.includes('breakfast')) {
-    return fallbackFoodImages.breakfast;
-  }
-
-  if (text.includes('sandwich') || text.includes('club')) {
-    return fallbackFoodImages.sandwich;
-  }
-
-  if (text.includes('burger')) {
-    return fallbackFoodImages.burger;
-  }
-
-  if (text.includes('tea') || text.includes('drink')) {
-    return fallbackFoodImages.tea;
-  }
-
-  return fallbackFoodImages.default;
+  return product.images[0]?.url || product.imageUrl;
 }
 
 function productTypeLabel(productType: MenuProductType) {
@@ -417,6 +388,7 @@ const productWhere: Prisma.MenuProductWhereInput = {
       hotel: {
         select: {
           name: true,
+          slug: true,
         },
       },
       category: {
@@ -543,7 +515,7 @@ const bulkDefaultHotelId =
   <div className="flex flex-col gap-2 sm:flex-row">
     <ModalOpenButton
       modalId="category-modal"
-      className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100"
+      className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
     >
       <Plus className="size-4" />
       Add / Manage Categories
@@ -705,7 +677,7 @@ const bulkDefaultHotelId =
   </div>
 ) : (
 
-<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
   {products.map((product) => {
     const imageUrl = getProductImage(product);
     const editModalId = `edit-product-${product.id}`;
@@ -721,16 +693,19 @@ return (
   <div key={product.id} className="contents">
     <article className="overflow-hidden border border-neutral-200 bg-white">
 
-        <div
-          className="h-32 bg-neutral-100 bg-cover bg-center"
-          style={{ backgroundImage: `url(${imageUrl})` }}
+        <ProductMedia
+          src={imageUrl}
+          fallbackSrc={getDemoMenuFallback(product.hotel.slug, product.name)}
+          name={product.name}
+          label={product.category.name}
+          className="h-36 sm:h-40"
         />
 
         <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="truncate text-base font-semibold">
+                <h3 className="text-base font-semibold leading-snug">
                   {product.name}
                 </h3>
 

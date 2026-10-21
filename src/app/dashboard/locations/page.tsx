@@ -15,6 +15,7 @@ import {
   DirectoryConfirmButton,
   DirectoryHotelFilter,
 } from './DirectoryClientActions';
+import { LocationHeroImageInput } from './LocationHeroImageInput';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import {
@@ -793,6 +794,13 @@ export default async function RoomsAndLocationsPage({
                   key={location.id}
                   className="overflow-hidden border border-neutral-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl"
                 >
+                  {location.heroImageUrl ? (
+                    <img
+                      src={location.heroImageUrl}
+                      alt={`${location.name} guest portal image`}
+                      className="h-32 w-full object-cover"
+                    />
+                  ) : null}
                   <div className="border-b border-neutral-100 bg-neutral-50 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -826,24 +834,14 @@ export default async function RoomsAndLocationsPage({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div>
                       <ModalOpenButton
                         modalId={editModalId}
-                        className="h-9 gap-1.5 border border-neutral-200 bg-white text-xs font-semibold text-black hover:bg-neutral-100"
+                        className="h-11 w-full gap-1.5 border border-neutral-200 bg-white text-sm font-semibold text-black hover:bg-neutral-100"
                       >
                         <Pencil className="size-3.5" />
-                        Edit
+                        Edit location
                       </ModalOpenButton>
-
-                     <DirectoryConfirmButton
-                            id={location.id}
-                            fieldName="locationId"
-                            itemName={location.name}
-                            itemType="location"
-                            action={deleteLocationAction}
-                            successMessage="Location successfully deleted."
-                            className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-red-600 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                          />
                     </div>
                   </div>
 
@@ -910,6 +908,8 @@ export default async function RoomsAndLocationsPage({
                         />
                       </FormField>
 
+                      <LocationHeroImageInput currentUrl={location.heroImageUrl} />
+
                       <label className="flex items-center gap-3 bg-neutral-50 p-3 md:col-span-2">
                         <input
                           name="isActive"
@@ -934,6 +934,17 @@ export default async function RoomsAndLocationsPage({
                         </Button>
                       </div>
                    </DirectoryActionForm>
+                   <div className="mt-6 border-t border-neutral-200 pt-4">
+                     <DirectoryConfirmButton
+                       id={location.id}
+                       fieldName="locationId"
+                       itemName={location.name}
+                       itemType="location"
+                       action={deleteLocationAction}
+                       successMessage="Location successfully deleted."
+                       className="inline-flex min-h-11 items-center gap-2 px-2 text-sm font-medium text-red-700 hover:underline disabled:opacity-50"
+                     />
+                   </div>
                   </Modal>
                 </article>
               );
@@ -1038,6 +1049,8 @@ export default async function RoomsAndLocationsPage({
               placeholder="Example: Pool area near the towel station. Guests can request towels and order drinks here."
             />
           </FormField>
+
+          <LocationHeroImageInput />
 
           <div className="md:col-span-2">
             <Button className="w-full">Add Location</Button>

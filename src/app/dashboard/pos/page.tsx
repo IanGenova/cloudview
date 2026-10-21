@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
+import { getDemoMenuFallback } from '@/lib/demo-menu-image';
 import { POSClient } from './POSClient';
 
 function safeRequiredQuantity(value: number) {
@@ -190,6 +191,7 @@ export default async function POSPage({
         description: product.description,
         priceCents: product.priceCents,
         imageUrl: product.images[0]?.url || null,
+        fallbackImageUrl: getDemoMenuFallback(hotel.slug, product.name),
         categoryName: product.category?.name ?? 'Uncategorized',
 
         productType: product.productType,
@@ -272,6 +274,7 @@ export default async function POSPage({
       description: product.description,
       priceCents: product.priceCents,
       imageUrl: product.images[0]?.url || null,
+      fallbackImageUrl: getDemoMenuFallback(hotel.slug, product.name),
       categoryName: product.category?.name ?? 'Uncategorized',
 
       productType: product.productType,

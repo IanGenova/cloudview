@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 import { DashboardRangeSelect } from '@/components/dashboard/DashboardRangeSelect';
 import {
   AlertTriangle,
+  ArrowUpRight,
   Boxes,
   CalendarDays,
   ChefHat,
@@ -835,6 +836,14 @@ function MiniProgressBar({
   );
 }
 
+function queueTime(date: Date) {
+  return new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 export default async function DashboardHome({
   searchParams,
 }: {
@@ -898,6 +907,8 @@ const [
   checkoutsToday,
   liveKitchenOrders,
   scheduledOrders,
+  nextFoodOrders,
+  nextServiceRequests,
 ] = await Promise.all([
   
     db.order.count({
@@ -910,10 +921,13 @@ const [
     db.serviceRequest.count({
       where: {
         ...hotelWhere,
-        createdAt: operationCreatedAt,
         status: {
           in: [ServiceRequestStatus.NEW, ServiceRequestStatus.IN_PROGRESS],
         },
+        OR: [
+          { fulfillmentTiming: FulfillmentTiming.ASAP },
+          { releasedAt: { not: null } },
+        ],
       },
     }),
 
@@ -1097,6 +1111,47 @@ db.order.count({
   },
 }),
 
+db.order.findMany({
+  where: {
+    ...hotelWhere,
+    status: OrderStatus.PENDING,
+    OR: [
+      { fulfillmentTiming: FulfillmentTiming.ASAP },
+      { releasedAt: { not: null } },
+    ],
+  },
+  select: {
+    id: true,
+    orderCode: true,
+    createdAt: true,
+    room: { select: { number: true } },
+    location: { select: { name: true } },
+  },
+  orderBy: { createdAt: 'asc' },
+  take: 3,
+}),
+
+db.serviceRequest.findMany({
+  where: {
+    ...hotelWhere,
+    status: ServiceRequestStatus.NEW,
+    OR: [
+      { fulfillmentTiming: FulfillmentTiming.ASAP },
+      { releasedAt: { not: null } },
+    ],
+  },
+  select: {
+    id: true,
+    requestCode: true,
+    type: true,
+    createdAt: true,
+    room: { select: { number: true } },
+    location: { select: { name: true } },
+  },
+  orderBy: { createdAt: 'asc' },
+  take: 3,
+}),
+
 ]);
 
   const menuInventoryAlerts = menuInventory.filter(
@@ -1220,6 +1275,52 @@ const analyticsOptions = [
 
 return (
   <div className="space-y-7">
+    <section aria-labelledby="action-queue-title" className="border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="border-b border-neutral-200 px-5 py-4 dark:border-neutral-800 sm:px-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9b7024] dark:text-[#d6a738]">Action queue</p>
+        <h2 id="action-queue-title" className="mt-1 font-serif text-2xl text-neutral-950 dark:text-white">Next to act</h2>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">New requests are shown oldest first. Scheduled requests appear when released to staff.</p>
+      </div>
+      <div className="grid divide-y divide-neutral-200 dark:divide-neutral-800 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+        <div className="p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-neutral-950 dark:text-white">Food orders</h3>
+            <Link href="/dashboard/orders" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#805b1c] hover:underline dark:text-[#e5bd68]">Open orders <ArrowUpRight className="size-4" /></Link>
+          </div>
+          <div className="space-y-2">
+            {nextFoodOrders.map((order) => (
+              <Link key={order.id} href={`/dashboard/orders?q=${encodeURIComponent(order.orderCode)}`} className="flex min-h-16 items-center justify-between gap-3 border border-neutral-200 px-4 py-3 transition hover:border-[#c99c38] dark:border-neutral-800 dark:hover:border-[#c99c38]">
+                <span className="min-w-0">
+                  <span className="block font-semibold text-neutral-950 dark:text-white">{order.orderCode}</span>
+                  <span className="block text-xs text-neutral-600 dark:text-neutral-300">{order.room ? `Room ${order.room.number}` : order.location?.name || 'Guest location'}</span>
+                </span>
+                <span className="shrink-0 text-right text-xs text-neutral-600 dark:text-neutral-300">{queueTime(order.createdAt)}</span>
+              </Link>
+            ))}
+            {!nextFoodOrders.length ? <p className="border border-dashed border-neutral-300 px-4 py-5 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">No new food orders waiting.{liveKitchenOrders > 0 ? ` ${liveKitchenOrders} already in the kitchen workflow.` : ''}</p> : null}
+          </div>
+        </div>
+        <div className="p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-neutral-950 dark:text-white">Service requests</h3>
+            <Link href="/dashboard/service-requests" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#805b1c] hover:underline dark:text-[#e5bd68]">Open services <ArrowUpRight className="size-4" /></Link>
+          </div>
+          <div className="space-y-2">
+            {nextServiceRequests.map((request) => (
+              <Link key={request.id} href={`/dashboard/service-requests?q=${encodeURIComponent(request.requestCode)}`} className="flex min-h-16 items-center justify-between gap-3 border border-neutral-200 px-4 py-3 transition hover:border-[#c99c38] dark:border-neutral-800 dark:hover:border-[#c99c38]">
+                <span className="min-w-0">
+                  <span className="block font-semibold text-neutral-950 dark:text-white">{request.type}</span>
+                  <span className="block text-xs text-neutral-600 dark:text-neutral-300">{request.requestCode} · {request.room ? `Room ${request.room.number}` : request.location?.name || 'Guest location'}</span>
+                </span>
+                <span className="shrink-0 text-right text-xs text-neutral-600 dark:text-neutral-300">{queueTime(request.createdAt)}</span>
+              </Link>
+            ))}
+            {!nextServiceRequests.length ? <p className="border border-dashed border-neutral-300 px-4 py-5 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">No new service requests waiting.{pendingRequests > 0 ? ` ${pendingRequests} open in the service workflow.` : ''}</p> : null}
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
       <div className="relative p-6">
         <div className="pointer-events-none absolute -right-20 -top-20 size-72 bg-[#c99c38]/25 blur-3xl" />
@@ -1334,25 +1435,7 @@ return (
       </div>
     </section>
 
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <AttentionItemCard
-        title="Live Kitchen"
-        value={liveKitchenOrders}
-        description="Pending, preparing, and ready orders"
-        href="/dashboard/kitchen"
-        icon={ChefHat}
-        tone={liveKitchenOrders > 0 ? 'amber' : 'green'}
-      />
-
-      <AttentionItemCard
-        title="Open Services"
-        value={pendingRequests}
-        description="New and in-progress service requests"
-        href="/dashboard/service-requests"
-        icon={ConciergeBell}
-        tone={pendingRequests > 0 ? 'blue' : 'green'}
-      />
-
+    <section aria-label="Operational watchlist" className="grid gap-4 md:grid-cols-2">
       <AttentionItemCard
         title="Inventory Alerts"
         value={totalInventoryAlerts}

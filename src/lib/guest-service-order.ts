@@ -38,6 +38,7 @@ import {
   GuestOrderIdentityError,
   resolveGuestOrderIdentity,
 } from '@/lib/guest-order-identity';
+import { isServiceAvailableAtPublicLocation } from '@/lib/guest-service-location';
 
 export type GuestServiceSelection = {
   serviceCode: string;
@@ -253,6 +254,16 @@ export async function prepareGuestServiceRequest(
     throw new GuestServiceRequestError(
       'invalid_service',
       'One or more services are no longer available.'
+    );
+  }
+
+  if (
+    !context.tag.roomId &&
+    records.some((service) => !isServiceAvailableAtPublicLocation(service))
+  ) {
+    throw new GuestServiceRequestError(
+      'invalid_service',
+      'One or more services are only available from a guest room.'
     );
   }
 

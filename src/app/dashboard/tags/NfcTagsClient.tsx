@@ -1379,7 +1379,7 @@ return (
   ) : null}
 </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {filteredTags.map((tag) => {
         const secureLaunchUrl = tag.secureLaunchUrl;
         const lockedDestinationUrl = tag.lockedDestinationUrl;
@@ -1402,7 +1402,7 @@ return (
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-lg font-semibold text-[#11100b] dark:text-white">
+            <h3 className="text-lg font-semibold leading-snug text-[#11100b] dark:text-white">
               {tag.label}
             </h3>
 

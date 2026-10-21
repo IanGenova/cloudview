@@ -1,8 +1,12 @@
 import {
   LockKeyhole,
+  Mail,
+  Phone,
   RefreshCcw,
   ShieldAlert,
 } from 'lucide-react';
+import { db } from '@/lib/db';
+import { getGuestContact } from '@/lib/guest-contact';
 
 function messageForReason(reason?: string) {
   switch (reason) {
@@ -52,7 +56,7 @@ function messageForReason(reason?: string) {
       return 'This NFC tag is not connected to a valid room. Please contact the front desk.';
 
     case 'no-active-stay':
-      return 'No active guest stay was found for this room. Please contact the front desk.';
+      return 'Room access could not be opened. Please ask the front desk to check your current stay and expected checkout time.';
 
     case 'session-check-failed':
       return 'CloudView could not verify the current NFC session. Check your connection, then tap the NFC panel again.';
@@ -106,6 +110,30 @@ export default async function NfcAccessDeniedPage({
   const reason = params?.reason;
   const tagCode = params?.tag;
   const isConnectionError = reason === 'session-check-failed';
+  const canRetryAtPanel = ![
+    'no-active-stay',
+    'inactive-tag',
+    'inactive-hotel',
+    'room-required',
+    'tag-not-found',
+  ].includes(reason || '');
+  const contact = reason === 'no-active-stay' && tagCode
+    ? await db.nfcTag.findUnique({
+        where: { code: tagCode },
+        select: {
+          hotel: {
+            select: {
+              settings: {
+                select: { contactPhone: true, contactEmail: true },
+              },
+            },
+          },
+        },
+      })
+    : null;
+  const { phone: contactPhone, email: contactEmail } = getGuestContact(
+    contact?.hotel.settings
+  );
 
   return (
     <main
@@ -173,7 +201,32 @@ export default async function NfcAccessDeniedPage({
         </div>
 
         <div className="space-y-3 p-5">
-          <div
+          {contactPhone || contactEmail ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {contactPhone ? (
+                <a
+                  href={`tel:${contactPhone.replace(/[^\d+]/g, '')}`}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#d6a738]/35 px-3 text-sm font-semibold text-[#e6c475]"
+                >
+                  <Phone className="size-4" /> Call front desk
+                </a>
+              ) : null}
+              {contactEmail ? (
+                <a
+                  href={`mailto:${contactEmail}`}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 border border-white/15 px-3 text-sm font-semibold text-white"
+                >
+                  <Mail className="size-4" /> Email front desk
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+          {reason === 'no-active-stay' && !contactPhone && !contactEmail ? (
+            <p className="border border-white/15 bg-white/[0.04] p-4 text-sm leading-6 text-white/70">
+              Hotel staff can confirm your check-in and restore access if the stay is still current.
+            </p>
+          ) : null}
+          {canRetryAtPanel ? <div
             className="flex items-start gap-3 border p-4"
             style={{
               backgroundColor: '#1b1b1b',
@@ -192,7 +245,7 @@ export default async function NfcAccessDeniedPage({
               Hold your phone near the room or hotel NFC panel, then open the
               official NFC notification again.
             </p>
-          </div>
+          </div> : null}
 
           {tagCode ? (
             <p

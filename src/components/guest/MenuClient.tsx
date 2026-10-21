@@ -4,6 +4,7 @@ import {
   type ButtonHTMLAttributes,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from 'react';
@@ -59,6 +60,7 @@ type Product = {
   description: string | null;
   priceCents: number;
   imageUrl: string | null;
+  fallbackImageUrl?: string | null;
   categoryName: string;
 
   productType?: MenuProductTypeValue;
@@ -113,7 +115,7 @@ const orderTypeLabels: Record<OrderType, string> = {
 };
 
 const checkoutFieldClass =
-  'w-full border border-white/15 !bg-[#0b0b0b] px-4 text-[15px] font-medium !text-white caret-gold outline-none placeholder:!text-white/30 transition focus:border-gold/60 focus:ring-4 focus:ring-gold/10';
+  'w-full border border-white/30 !bg-[#0b0b0b] px-4 text-[15px] font-medium !text-white caret-gold outline-none placeholder:!text-white/60 transition focus:border-gold/60 focus:ring-4 focus:ring-gold/10';
 
 const checkoutFieldStyle = {
   backgroundColor: '#0b0b0b',
@@ -155,10 +157,12 @@ function TapButton({
 }
 
 function simpleMoney(cents: number, currency: string) {
+  const fractionDigits = cents % 100 === 0 ? 0 : 2;
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(cents / 100);
 }
 
@@ -197,20 +201,37 @@ function ProductImage({
   product: Product;
   className?: string;
 }) {
-  if (!product.imageUrl) {
+  const [failedSources, setFailedSources] = useState<string[]>([]);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const imageSrc = [product.imageUrl, product.fallbackImageUrl].find(
+    (src) => src && !failedSources.includes(src)
+  );
+  const showImage = Boolean(imageSrc);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (image?.complete && image.naturalWidth === 0 && imageSrc) {
+      setFailedSources((previous) => [...previous, imageSrc]);
+    }
+  }, [imageSrc]);
+
+  if (!showImage) {
     return (
       <div
         className={cn(
-          'relative grid place-items-center overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(214,167,56,0.18),transparent_34%),linear-gradient(145deg,#191919,#0d0d0d)] text-white/55',
+          'relative grid max-h-28 place-items-center overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(214,167,56,0.18),transparent_34%),linear-gradient(145deg,#191919,#0d0d0d)] text-white/55',
           className
         )}
         aria-label={`${product.name} image placeholder`}
       >
         <span className="absolute -right-8 -top-8 size-24 border border-gold/10" />
         <span className="absolute -bottom-10 -left-8 size-28 border border-white/5" />
-        <span className="relative grid size-12 place-items-center border border-white/10 bg-black/25 text-gold backdrop-blur">
-          <Utensils className="size-5" strokeWidth={1.6} />
-        </span>
+        <div className="relative flex items-center gap-3 px-4 text-left">
+          <span className="grid size-11 shrink-0 place-items-center border border-gold/25 bg-black/25 text-gold">
+            <Utensils className="size-5" strokeWidth={1.6} />
+          </span>
+          <span className="font-serif text-lg text-white/75">{product.name}</span>
+        </div>
       </div>
     );
   }
@@ -218,15 +239,19 @@ function ProductImage({
   return (
     <div
       className={cn(
-        'relative overflow-hidden bg-neutral-900 bg-cover bg-center',
+        'relative overflow-hidden bg-neutral-900',
         className
       )}
-      style={{
-        backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.18), transparent 55%), url(${product.imageUrl})`,
-      }}
-      role="img"
-      aria-label={product.name}
-    />
+    >
+      <img
+        ref={imageRef}
+        src={imageSrc!}
+        alt={product.name}
+        className="h-full w-full object-cover"
+        onError={() => setFailedSources((previous) => [...previous, imageSrc!])}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+    </div>
   );
 }
 
@@ -430,11 +455,13 @@ export function MenuClient({
   const [roomNumber, setRoomNumber] = useState('');
   const [roomPasscode, setRoomPasscode] = useState('');
   const [notes, setNotes] = useState('');
-  const [orderType, setOrderType] = useState<OrderType>('ROOM_SERVICE');
+  const [orderType, setOrderType] = useState<OrderType>(
+    isPublicLocation ? 'DINE_IN' : 'ROOM_SERVICE'
+  );
   const [confirmedClause, setConfirmedClause] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<
     'ROOM_CHARGE' | 'PAY_AT_COUNTER' | 'CASH' | 'XENDIT'
-  >('ROOM_CHARGE');
+  >(isPublicLocation ? 'PAY_AT_COUNTER' : 'ROOM_CHARGE');
 
   const [fulfillmentTiming, setFulfillmentTiming] =
   useState<FulfillmentTimingValue>('ASAP');
@@ -1493,14 +1520,14 @@ const [scheduledNote, setScheduledNote] = useState('');
 
             <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
               <h3 className="mb-5 font-serif text-xl font-normal tracking-wide text-white">
-                Delivery preferences
+                Order preferences
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="menu-ordered-by" className="mb-2 flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-ordered-by" className="mb-2 flex items-baseline justify-between gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     <span>Ordered by</span>
-                    <span className="text-white/35">Required</span>
+                    <span className="text-white/65">Required</span>
                   </label>
                   <input
             id="menu-ordered-by"
@@ -1523,7 +1550,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                     location with no stay attached to it. It only says so when
                     it is true.
                   */}
-                  <p id="menu-ordered-by-note" className={cn('mt-2 text-xs font-medium leading-5', errorFor('name') ? 'text-red-200' : 'text-white/40')}>
+                  <p id="menu-ordered-by-note" className={cn('mt-2 text-xs font-medium leading-5', errorFor('name') ? 'text-red-200' : 'text-white/70')}>
                     {errorFor('name') ??
                       (defaultGuestName
                         ? 'Taken from your stay. Change it if someone else is ordering.'
@@ -1532,9 +1559,9 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label htmlFor="menu-phone-number" className="mb-2 flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-phone-number" className="mb-2 flex items-baseline justify-between gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     <span>Phone number</span>
-                    <span className="text-white/35">Required</span>
+                    <span className="text-white/65">Required</span>
                   </label>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
@@ -1553,7 +1580,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                       style={checkoutFieldStyle}
                     />
                   </div>
-                  <p id="menu-phone-number-note" className={cn('mt-2 text-xs font-medium leading-5', errorFor('phone') ? 'text-red-200' : 'text-white/40')}>
+                  <p id="menu-phone-number-note" className={cn('mt-2 text-xs font-medium leading-5', errorFor('phone') ? 'text-red-200' : 'text-white/70')}>
                     {errorFor('phone') ??
                       (defaultGuestPhone
                         ? 'Taken from your stay. Staff call this number about the order.'
@@ -1562,7 +1589,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label htmlFor="menu-order-type" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-order-type" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     Order type
                   </label>
                   <select
@@ -1594,7 +1621,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 </div>
 
                 <div>
-                  <label htmlFor="menu-order-time" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-order-time" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     Order time
                   </label>
                   <select
@@ -1673,7 +1700,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                 ) : null}
 
                 <div>
-                  <label htmlFor="menu-payment-method" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+                  <label htmlFor="menu-payment-method" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     Payment method
                   </label>
                   <select
@@ -1728,7 +1755,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                   ) : null}
                 </div>
 
-                {isPublicLocation ? (
+                {isPublicLocation && requiresRoomVerification ? (
                   <div className={cn(
                     'border p-4',
                     requiresRoomVerification
@@ -1742,9 +1769,7 @@ const [scheduledNote, setScheduledNote] = useState('');
                       <div>
                         <p className="text-sm font-semibold text-white">Secure room assignment</p>
                         <p className="mt-1 text-xs font-medium leading-5 text-white/50">
-                          {requiresRoomVerification
-                            ? 'Room number and passcode are required for room delivery or room charging from this public NFC location.'
-                            : 'Room verification is not needed for this order type and payment method.'}
+                          Room number and passcode are required for room delivery or room charging from this public NFC location.
                         </p>
                       </div>
                     </div>
@@ -1984,7 +2009,7 @@ const [scheduledNote, setScheduledNote] = useState('');
               onChange={(event) => setSearchQuery(event.target.value)}
               aria-label="Search dishes, bundles, or categories"
               placeholder="Search dishes, bundles, or categories"
-              className="h-full w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/35"
+              className="h-full w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/65"
             />
             {searchQuery ? (
               <button
@@ -2072,6 +2097,15 @@ const [scheduledNote, setScheduledNote] = useState('');
         ) : null}
       </div>
 
+      {serviceChargeRate > 0 || taxRate > 0 ? (
+        <p className="mb-5 border-l-2 border-gold/65 pl-3 text-xs leading-5 text-white/55">
+          Menu prices exclude{' '}
+          {serviceChargeRate > 0 ? `${Math.round(serviceChargeRate * 100)}% service charge` : ''}
+          {serviceChargeRate > 0 && taxRate > 0 ? ' and ' : ''}
+          {taxRate > 0 ? `${Math.round(taxRate * 100)}% tax` : ''}. Your full total appears before you place an order.
+        </p>
+      ) : null}
+
       {featured ? (
         <section className="mb-7">
           {/*
@@ -2097,7 +2131,7 @@ const [scheduledNote, setScheduledNote] = useState('');
             <div className="relative">
               <ProductImage
                 product={featured}
-                className="h-40 w-full sm:h-48"
+                className={featured.imageUrl || featured.fallbackImageUrl ? 'h-40 w-full sm:h-48' : 'h-28 w-full'}
               />
               <span className="absolute right-3 top-3 border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur">
                 {featured.categoryName}
@@ -2228,7 +2262,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                 <div className="relative">
                   <ProductImage
                     product={product}
-                    className="aspect-[4/3] w-full transition duration-300 group-hover:scale-[1.02]"
+                    className={cn(
+                      'w-full transition duration-300 group-hover:scale-[1.02]',
+                      product.imageUrl || product.fallbackImageUrl ? 'aspect-[4/3]' : 'h-24'
+                    )}
                   />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
 
@@ -2266,12 +2303,12 @@ const [scheduledNote, setScheduledNote] = useState('');
                   </div>
 
                   {product.description ? (
-                    <p className="mt-2 line-clamp-2 text-[11px] font-medium leading-4 text-white/45">
+                    <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-white/70">
                       {product.description}
                     </p>
                   ) : (
-                    <p className="mt-2 text-[11px] font-medium text-white/25">
-                      Freshly prepared by the hotel kitchen.
+                    <p className="mt-2 text-xs font-medium leading-5 text-white/70">
+                      {product.categoryName}
                     </p>
                   )}
 
@@ -2376,25 +2413,19 @@ const [scheduledNote, setScheduledNote] = useState('');
         </div>
       ) : null}
 
-      {itemCount > 0 ? (
+      {itemCount > 0 && screen === 'menu' ? (
         <button
           type="button"
           onClick={openCart}
-          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black transition hover:brightness-105"
+          className="fixed inset-x-5 bottom-[5.5rem] z-30 mx-auto flex min-h-12 max-w-md items-center justify-between gap-3 border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-2 text-black transition hover:brightness-105"
         >
-          <span className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center bg-black/12">
-              <ShoppingBag className="size-4.5" />
-            </span>
-            <span className="text-left">
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-black/55">
-                {itemCount} item{itemCount === 1 ? '' : 's'} selected
-              </span>
-              <span className="mt-0.5 block text-sm font-semibold">Review order</span>
-            </span>
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <ShoppingBag className="size-4" />
+            Review order
+            <span className="text-xs text-black/60">· {itemCount}</span>
           </span>
 
-          <span className="flex items-center gap-2 font-serif text-lg font-medium">
+          <span className="flex items-center gap-1 font-serif text-base font-medium">
             {money(total, currency)}
             <ChevronRight className="size-4" />
           </span>

@@ -1367,12 +1367,14 @@ function Toast({
 }
 
 export function ServiceRequestsClient({
+  initialQuery = '',
   message,
   statuses,
   staff,
   summary: _summary,
   requests,
 }: {
+  initialQuery?: string;
   message?: ToastMessage;
   statuses: string[];
   staff: StaffOption[];
@@ -1392,7 +1394,7 @@ export function ServiceRequestsClient({
   const [isMutating, setIsMutating] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabValue>('LIVE');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const deferredQuery = useDeferredValue(query);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedRequest, setSelectedRequest] = useState<RequestGroup | null>(

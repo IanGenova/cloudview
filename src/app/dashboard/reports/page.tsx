@@ -1834,7 +1834,7 @@ export default async function ReportsPage({
       </section>
 
       <section className="border border-neutral-200 bg-white p-3">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex flex-wrap gap-2">
           {reportTabs.map((tab) => {
                     const active = tab.key === activeReport;
 

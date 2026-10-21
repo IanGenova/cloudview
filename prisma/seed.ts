@@ -66,12 +66,12 @@ async function main() {
   const room = await prisma.room.upsert({
     where: { hotelId_number: { hotelId: hotel.id, number: '305' } },
     update: {},
-    create: { hotelId: hotel.id, number: '305', name: 'Deluxe Room 305', floor: '3rd Floor' }
+    create: { hotelId: hotel.id, number: '305', name: 'Deluxe Room', floor: '3rd Floor' }
   });
 
   const pool =
     (await prisma.location.findFirst({ where: { hotelId: hotel.id, name: 'Pool Deck' } })) ??
-    (await prisma.location.create({ data: { hotelId: hotel.id, name: 'Pool Deck', type: TagType.POOL, description: 'Poolside NFC panel for food, towels, and pool info.' } }));
+    (await prisma.location.create({ data: { hotelId: hotel.id, name: 'Pool Deck', type: TagType.POOL, description: 'Relax by the water. Order refreshments or ask our team for anything you need.', heroImageUrl: '/cloudview/demo/pool-deck.webp' } }));
 
   /*
    * Seeded tags need a scan secret, or they cannot be opened at all.
@@ -137,10 +137,10 @@ async function main() {
     return prisma.menuProduct.create({ data: { hotelId: hotel.id, categoryId, name, priceCents, description, imageUrl, prepTimeMinutes: 15 } });
   }
 
-  const club = await product('Cloud Club Sandwich', mains.id, 32000, 'Chicken, bacon, egg, lettuce, tomato, and fries.', 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af');
-  const burger = await product('Signature Burger', mains.id, 38000, 'Beef patty, cheese, lettuce, tomato, and house sauce.', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd');
-  const pancakes = await product('Breakfast Pancakes', breakfast.id, 26000, 'Pancakes with butter, syrup, and fresh fruit.', 'https://images.unsplash.com/photo-1528207776546-365bb710ee93');
-  const tea = await product('Iced Tea', drinks.id, 12000, 'Freshly brewed iced tea served cold.', 'https://images.unsplash.com/photo-1556679343-c7306c1976bc');
+  const club = await product('Cloud Club Sandwich', mains.id, 32000, 'Chicken, bacon, egg, lettuce, tomato, and fries.', '/cloudview/menu/cloud-club-sandwich.webp');
+  const burger = await product('Signature Burger', mains.id, 38000, 'Beef patty, cheese, lettuce, tomato, and house sauce.', '/cloudview/menu/signature-burger.webp');
+  const pancakes = await product('Breakfast Pancakes', breakfast.id, 26000, 'Pancakes with butter, syrup, and fresh fruit.', '/cloudview/menu/breakfast-pancakes.webp');
+  const tea = await product('Iced Tea', drinks.id, 12000, 'Freshly brewed iced tea served cold.', '/cloudview/menu/iced-tea.webp');
 
   async function inventory(name: string, unit: string, qty: number, reorder: number) {
     return prisma.inventoryItem.upsert({

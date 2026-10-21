@@ -27,6 +27,7 @@ import { RealtimeKitchenRefresh } from '@/components/dashboard/RealtimeKitchenRe
 import { db } from '@/lib/db';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { money } from '@/lib/money';
+import { STALE_ORDER_THRESHOLD_MS } from '@/lib/duration';
 import { cn } from '@/lib/utils';
 import { updateOrderStatusAction } from '../orders/actions';
 import { KitchenStatusActionButton } from '@/components/dashboard/KitchenStatusActionButton';
@@ -316,19 +317,14 @@ function KitchenToast({
   );
 }
 
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
-}
-
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat('en-PH', {
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'Asia/Manila',
   }).format(date);
 }
 
@@ -884,10 +880,10 @@ function KitchenOrderCard({
 
           <p>
             <span className="font-semibold text-neutral-950 dark:text-white">
-              Order Time:
+              Placed:
             </span>{' '}
             <span className="font-semibold text-neutral-600 dark:text-neutral-400">
-              {formatTime(order.createdAt)}
+              {formatDateTime(order.createdAt)}
             </span>
           </p>
 
@@ -1188,7 +1184,9 @@ function KitchenLane({
           ? type === 'ready'
             ? 'min-h-[260px]'
             : 'min-h-[360px]'
-          : 'min-h-[420px]',
+          : !isTvMode && orders.length === 0
+            ? 'min-h-[200px] order-last'
+            : 'min-h-[420px]',
         usesLaneTheme
           ? `${laneTheme} ${isTvMode ? 'min-h-[calc(100dvh-220px)]' : ''}`
           : 'border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900'
@@ -1520,12 +1518,16 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   const readyOrders = liveOrders.filter(
     (order) => order.status === OrderStatus.READY
   );
+  const staleLiveOrderCount = liveOrders.filter(
+    (order) => Date.now() - order.createdAt.getTime() >= STALE_ORDER_THRESHOLD_MS
+  ).length;
 
   return (
       <div
         id="kitchen-display-fullscreen"
         className={cn(
-            'h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white md:overflow-hidden',
+            'h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white',
+            isTvMode || isRushMode ? 'md:overflow-hidden' : '2xl:overflow-hidden',
             isTvMode
               ? 'bg-neutral-950 p-5'
               : 'bg-white px-3 pb-24 pt-3 dark:bg-neutral-950 md:px-4 md:pb-4 md:pt-4 xl:px-6'
@@ -1668,9 +1670,22 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
 </div>
 </div>
 
+      {activeView === 'live' && !isTvMode && staleLiveOrderCount > 0 ? (
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+          <span className="inline-flex items-center gap-2">
+            <AlertTriangle className="size-4 shrink-0" />
+            {staleLiveOrderCount} open {staleLiveOrderCount === 1 ? 'order is' : 'orders are'} over 12 hours old. Confirm these tickets before changing their status.
+          </span>
+          <Link href="/dashboard/orders" className="font-semibold underline underline-offset-4">Review orders</Link>
+        </div>
+      ) : null}
+
       <div
           className={cn(
-            'grid min-h-0 gap-3 md:h-[calc(100dvh-160px)] xl:h-[calc(100dvh-170px)]',
+            'grid min-h-0 gap-3',
+            isTvMode || isRushMode
+              ? 'md:h-[calc(100dvh-160px)] xl:h-[calc(100dvh-170px)]'
+              : '2xl:h-[calc(100dvh-170px)]',
             showHistory && !isTvMode && !isScheduledView
               ? 'md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]'
               : 'md:grid-cols-1'
@@ -1678,7 +1693,8 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
         >
             <main
           className={cn(
-            'min-h-0 flex-col overflow-hidden',
+            'min-h-0 flex-col',
+            isTvMode || isRushMode ? 'overflow-hidden' : 'overflow-visible 2xl:overflow-hidden',
             isTvMode ? 'gap-5' : isRushMode ? 'gap-3' : 'gap-4',
             showHistory && !isTvMode && !isScheduledView ? 'hidden md:flex' : 'flex'
           )}
@@ -1777,7 +1793,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     </KitchenTvPagedLane>
   </div>
 ) : (
-  <div className="grid min-h-0 gap-3 md:grid-cols-3 xl:gap-4">
+  <div className="grid min-h-0 gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:gap-4">
     <KitchenLane
       title="Pending"
       description="New orders waiting for accept or reject."

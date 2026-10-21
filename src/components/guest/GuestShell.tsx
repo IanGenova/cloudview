@@ -229,7 +229,7 @@ const navItems = [
   },
   {
     key: 'stay',
-    label: 'My stay',
+    label: 'Activity',
     href: (tagCode: string) => `/t/${tagCode}/activity`,
     icon: UserRound,
   },
@@ -283,22 +283,26 @@ function resolveActiveGuestNav(
 
   if (
     isRoute(normalizedPathname, `${basePath}/service`) ||
-    isRoute(normalizedPathname, `${basePath}/services`)
+    isRoute(normalizedPathname, `${basePath}/services`) ||
+    isRoute(normalizedPathname, `${basePath}/contact`) ||
+    isRoute(normalizedPathname, `${basePath}/support`)
   ) {
     return 'services';
   }
 
-  // Everything the guest already has going on, and who they are to the hotel.
+  // Rewards is a separate identity flow, so no activity tab should claim it.
+  if (isRoute(normalizedPathname, `${basePath}/rewards`)) {
+    return null;
+  }
+
+  // Orders, requests, and their status belong to Activity.
   if (
     isRoute(normalizedPathname, `${basePath}/activity`) ||
     isRoute(normalizedPathname, `${basePath}/orders`) ||
     isRoute(normalizedPathname, `${basePath}/requests`) ||
     isRoute(normalizedPathname, `${basePath}/track`) ||
-    isRoute(normalizedPathname, `${basePath}/contact`) ||
     isRoute(normalizedPathname, `${basePath}/profile`) ||
-    isRoute(normalizedPathname, `${basePath}/account`) ||
-    isRoute(normalizedPathname, `${basePath}/rewards`) ||
-    isRoute(normalizedPathname, `${basePath}/support`)
+    isRoute(normalizedPathname, `${basePath}/account`)
   ) {
     return 'stay';
   }

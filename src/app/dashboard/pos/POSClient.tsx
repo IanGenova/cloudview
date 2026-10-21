@@ -1,6 +1,7 @@
 'use client';
 
 import { DashboardToastViewport } from '@/components/dashboard/DashboardToastViewport';
+import { ProductMedia } from '@/components/dashboard/ProductMedia';
 import { NON_FISCAL_DOCUMENT_NOTICE_SHORT } from '@/lib/fiscal-notice';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
@@ -44,6 +45,7 @@ type POSRoom = {
   id: string;
   number: string;
   name?: string | null;
+  canRoomCharge?: boolean;
 };
 
 type POSProductType = 'SINGLE' | 'BUNDLE';
@@ -64,6 +66,7 @@ type POSProduct = {
   name: string;
   description?: string | null;
   imageUrl?: string | null;
+  fallbackImageUrl?: string | null;
   categoryName: string;
   priceCents: number;
 
@@ -1242,8 +1245,19 @@ export function POSClient({
   );
   const itemCount = foodItemCount + serviceItemCount;
 
-  const cashValue = Number(cashTendered || 0) * 100;
+  const enteredCash = Number(cashTendered);
+  const cashInputValid =
+    /^\d+(?:\.\d{1,2})?$/.test(cashTendered.trim()) &&
+    Number.isFinite(enteredCash) &&
+    Number.isSafeInteger(Math.round(enteredCash * 100));
+  const cashValue = cashInputValid
+    ? Math.round(enteredCash * 100)
+    : 0;
   const change = paymentMethod === 'CASH' ? Math.max(0, cashValue - total) : 0;
+  const chargeableRooms = activeRooms.filter((room) => room.canRoomCharge);
+  const selectedRoomCanCharge = activeRooms.some(
+    (room) => room.id === roomId && room.canRoomCharge
+  );
 
   function addFoodItem(productId: string) {
     setLastReceiptLabel(null);
@@ -1468,6 +1482,16 @@ export function POSClient({
       return;
     }
 
+    if (paymentMethod === 'ROOM_CHARGE' && !selectedRoomCanCharge) {
+      showError('Select a room with a current checked-in stay before charging this sale.');
+      return;
+    }
+
+    if (paymentMethod === 'CASH' && !cashInputValid) {
+      showError('Enter the cash tendered in pesos with up to two decimal places.');
+      return;
+    }
+
     if (paymentMethod === 'CASH' && cashValue < total) {
       showError('Cash tendered is lower than the total amount.');
       return;
@@ -1649,7 +1673,7 @@ export function POSClient({
           <span className="bg-neutral-100 px-3 py-1 text-neutral-600">
             {itemCount} item{itemCount === 1 ? '' : 's'}
           </span>
-          <span className="bg-[#fff8e7] px-3 py-1 text-[#9a6b18]">
+          <span className="bg-[#fff8e7] px-3 py-1 text-[#765513]">
             {money(total, currency)}
           </span>
         </div>
@@ -1689,7 +1713,7 @@ export function POSClient({
               </button>
             </div>
 
-            <div className="grid gap-2 md:grid-cols-[220px_1fr_200px]">
+            <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-[220px_minmax(0,1fr)_200px]">
               <div>
                 <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
                   Hotel
@@ -1728,7 +1752,7 @@ export function POSClient({
                     </div>
                   </div>
 
-                  <div>
+                  <div className="sm:col-span-2 2xl:col-span-1">
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
                       Food Stock Filter
                     </label>
@@ -1768,7 +1792,7 @@ export function POSClient({
                     </div>
                   </div>
 
-                  <div>
+                  <div className="sm:col-span-2 2xl:col-span-1">
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
                       Service Filter
                     </label>
@@ -1828,7 +1852,7 @@ export function POSClient({
           </div>
 
           {activeMode === 'food' ? (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
               {filteredProducts.map((product) => {
                 const sellable = canSellProduct(product);
 
@@ -1845,13 +1869,11 @@ export function POSClient({
                         : 'cursor-not-allowed opacity-60'
                     )}
                   >
-                    <div
-                      className="relative h-24 bg-neutral-100 bg-cover bg-center sm:h-28"
-                      style={{
-                        backgroundImage: product.imageUrl
-                          ? `url(${product.imageUrl})`
-                          : undefined,
-                      }}
+                    <ProductMedia
+                      src={product.imageUrl}
+                      fallbackSrc={product.fallbackImageUrl}
+                      name={product.name}
+                      className="h-24 sm:h-28"
                     >
                       <span
                         className={`absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate px-2 py-0.5 text-[9px] font-semibold ${getProductStockBadgeClass(
@@ -1868,7 +1890,7 @@ export function POSClient({
                           </span>
                         </div>
                       ) : null}
-                    </div>
+                    </ProductMedia>
 
                     <div className="p-3">
                       <div className="flex items-start justify-between gap-3">
@@ -1904,7 +1926,7 @@ export function POSClient({
                       </div>
 
                       <div className="mt-2 flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-gold">
+                        <p className="text-sm font-semibold text-[#765513]">
                           {money(product.priceCents, currency)}
                         </p>
 
@@ -1929,7 +1951,7 @@ export function POSClient({
               ) : null}
             </div>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
               {filteredServices.map((service) => {
                 const sellable = canSellService(service);
 
@@ -2280,8 +2302,15 @@ export function POSClient({
                     </option>
 
                     {activeRooms.map((room) => (
-                      <option key={room.id} value={room.id}>
+                      <option
+                        key={room.id}
+                        value={room.id}
+                        disabled={paymentMethod === 'ROOM_CHARGE' && !room.canRoomCharge}
+                      >
                         Room {room.number} {room.name ? `- ${room.name}` : ''}
+                        {paymentMethod === 'ROOM_CHARGE' && !room.canRoomCharge
+                          ? ' — no current stay'
+                          : ''}
                       </option>
                     ))}
                   </select>
@@ -2315,6 +2344,15 @@ export function POSClient({
                   <p className="mt-1 text-[11px] font-bold text-neutral-500">
                     Cash, room charge, and pay-later sales follow the hotel workflow. Card, e-wallet, and QR payments open Xendit's secure checkout and create the POS sale only after payment confirmation.
                   </p>
+                  {paymentMethod === 'ROOM_CHARGE' ? (
+                    <p className="mt-2 border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-[#765513]">
+                      {roomsLoading
+                        ? 'Checking which rooms have a current guest stay…'
+                        : chargeableRooms.length === 0
+                          ? 'No rooms have a current checked-in stay. Ask the front desk to update the stay before using room charge.'
+                          : 'Select a room with a current checked-in stay. The charge will appear on that stay’s checkout bill.'}
+                    </p>
+                  ) : null}
                 </div>
 
                 {paymentMethod === 'CASH' ? (
@@ -2400,7 +2438,7 @@ export function POSClient({
                 <button
                   type="button"
                   onClick={completeSale}
-                  disabled={pending || itemCount === 0}
+                  disabled={pending || itemCount === 0 || (paymentMethod === 'ROOM_CHARGE' && !selectedRoomCanCharge)}
                   className="min-h-10 touch-manipulation bg-black px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {pending

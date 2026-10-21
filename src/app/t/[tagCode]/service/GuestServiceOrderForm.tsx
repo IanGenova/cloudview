@@ -260,6 +260,28 @@ function getServiceIcon(service: GuestServiceItem) {
   return iconMap[service.iconKey] ?? ConciergeBell;
 }
 
+function getServiceDescription(service: GuestServiceItem) {
+  if (service.description.trim()) return service.description;
+
+  const descriptions: Record<string, string> = {
+    'extra towels': 'Fresh towels brought where you need them.',
+    'room cleaning': 'Arrange a convenient time for housekeeping.',
+    laundry: 'Let our team collect and care for your garments.',
+    maintenance: 'Tell us what needs attention and we will help.',
+    'extra amenities': 'Add the little comforts your room needs.',
+    'baby cot': 'A comfortable cot prepared for your room.',
+    'airport transfer': 'Share your travel details and let us arrange the ride.',
+    toiletries: 'Restock your everyday essentials.',
+    'late checkout': 'Ask for a little more time before departure.',
+    'water refill': 'Fresh drinking water when you need it.',
+    'extra pillow': 'Find the comfort that suits your sleep.',
+    'other request': 'Tell us how we can make your stay easier.',
+  };
+
+  return descriptions[service.name.trim().toLowerCase()] ??
+    'Tell us what you need and our team will help.';
+}
+
 function getServicePriceText(service: GuestServiceItem) {
   if (service.billingMode === 'FREE') {
     return 'Complimentary';
@@ -397,11 +419,11 @@ export function GuestServiceOrderForm({
   const [roomPasscode, setRoomPasscode] = useState('');
   const [requestDestination, setRequestDestination] = useState<
     'CURRENT_LOCATION' | 'GUEST_ROOM'
-  >(isPublicLocation ? 'GUEST_ROOM' : 'CURRENT_LOCATION');
+  >('CURRENT_LOCATION');
   const [notes, setNotes] = useState('');
   const [chargeConsent, setChargeConsent] = useState(false);
   const [paymentMethod, setPaymentMethod] =
-    useState<ServicePaymentMethod>('ROOM_CHARGE');
+    useState<ServicePaymentMethod>(isPublicLocation ? 'XENDIT' : 'ROOM_CHARGE');
   const [fulfillmentTiming, setFulfillmentTiming] =
     useState<FulfillmentTimingValue>('ASAP');
   const [scheduledDate, setScheduledDate] = useState('');
@@ -435,6 +457,7 @@ export function GuestServiceOrderForm({
         scheduledTime?: unknown;
         scheduledNote?: unknown;
         paymentMethod?: unknown;
+        checkoutDefaultsVersion?: unknown;
         xenditSessionId?: unknown;
       };
 
@@ -491,6 +514,19 @@ export function GuestServiceOrderForm({
           service?.billingMode === 'FIXED_PRICE' && service.unitPrice > 0
         );
       });
+      const migratePublicDefaults =
+        isPublicLocation &&
+        draft.checkoutDefaultsVersion !== 2 &&
+        !draft.xenditSessionId;
+
+      if (migratePublicDefaults) {
+        draft.requestDestination = 'CURRENT_LOCATION';
+        draft.paymentMethod = 'XENDIT';
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify({ ...draft, checkoutDefaultsVersion: 2 })
+        );
+      }
 
       setCart(restoredCart);
       setScreen('cart');
@@ -522,7 +558,8 @@ export function GuestServiceOrderForm({
       }
 
       setPaymentMethod(
-        restoredHasPayableItem && draft.paymentMethod === 'XENDIT'
+        draft.paymentMethod === 'XENDIT' &&
+          (isPublicLocation || restoredHasPayableItem)
           ? 'XENDIT'
           : 'ROOM_CHARGE'
       );
@@ -738,7 +775,7 @@ export function GuestServiceOrderForm({
       setGuestName(defaultGuestName);
       setNotes('');
       setChargeConsent(false);
-      setPaymentMethod('ROOM_CHARGE');
+      setPaymentMethod(isPublicLocation ? 'XENDIT' : 'ROOM_CHARGE');
       setFulfillmentTiming('ASAP');
       setScheduledDate('');
       setScheduledTime('');
@@ -895,11 +932,11 @@ export function GuestServiceOrderForm({
       (hasPayableFixedPrice && effectivePaymentMethod === 'ROOM_CHARGE'));
 
   useEffect(() => {
-    if (!hasPayableFixedPrice && paymentMethod !== 'ROOM_CHARGE') {
+    if (!isPublicLocation && !hasPayableFixedPrice && paymentMethod !== 'ROOM_CHARGE') {
       setPaymentMethod('ROOM_CHARGE');
       setChargeConsent(false);
     }
-  }, [hasPayableFixedPrice, paymentMethod]);
+  }, [hasPayableFixedPrice, isPublicLocation, paymentMethod]);
 
   useEffect(() => {
     if (
@@ -1001,7 +1038,7 @@ export function GuestServiceOrderForm({
     setCart([]);
     setNotes('');
     setChargeConsent(false);
-    setPaymentMethod('ROOM_CHARGE');
+    setPaymentMethod(isPublicLocation ? 'XENDIT' : 'ROOM_CHARGE');
     setPaymentMessage(null);
     setLocalError(null);
     clearAttachments();
@@ -1396,6 +1433,7 @@ export function GuestServiceOrderForm({
     sessionStorage.setItem(
       checkoutStorageKey,
       JSON.stringify({
+        checkoutDefaultsVersion: 2,
         cart,
         guestName,
         guestPhone,
@@ -1698,7 +1736,9 @@ export function GuestServiceOrderForm({
                     }}
                   />
                   <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-                    Auto-filled from the active stay. Confirm the name before sending.
+                    {defaultGuestName
+                      ? 'Filled from your guest profile. Confirm the name before sending.'
+                      : 'Enter the name staff should use for this request.'}
                   </p>
                 </div>
 
@@ -1747,7 +1787,7 @@ export function GuestServiceOrderForm({
                         Send / assign to my guest room
                       </option>
                       <option value="CURRENT_LOCATION" className="bg-[#111] text-white">
-                        Handle at this public location
+                        Help me at {roomLabel}
                       </option>
                     </select>
                     {hasPayableFixedPrice && paymentMethod === 'ROOM_CHARGE' ? (
@@ -2175,11 +2215,13 @@ export function GuestServiceOrderForm({
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
               <Sparkles className="size-3.5" />
-              Private concierge
+              {isPublicLocation ? 'Service at this location' : 'Private concierge'}
             </div>
 
             <h2 className="mt-4 max-w-[17rem] font-serif text-[2rem] font-normal leading-[1.05] tracking-tight text-white">
-              Comfort, delivered to your room.
+              {isPublicLocation
+                ? 'Thoughtful service, wherever you are.'
+                : 'Comfort, delivered to your room.'}
             </h2>
 
             {/*
@@ -2189,7 +2231,9 @@ export function GuestServiceOrderForm({
             */}
             <p className="mt-3 max-w-xs text-sm font-medium leading-6 text-white/55">
               {services.length
-                ? 'Request housekeeping, room amenities, maintenance assistance, and thoughtful add-ons.'
+                ? isPublicLocation
+                  ? 'Ask for towels, water, assistance, or help at this location.'
+                  : 'Request housekeeping, room amenities, maintenance assistance, and thoughtful add-ons.'
                 : 'The hotel has not listed any services for this location yet.'}
             </p>
           </div>
@@ -2250,6 +2294,7 @@ export function GuestServiceOrderForm({
         </p>
       </section>
 
+      {services.length > 6 ? (
       <div className="sticky top-[4.5rem] z-20 -mx-1 mb-7 border border-white/10 bg-black/90 p-2 backdrop-blur-xl">
         <div className="flex h-12 items-center gap-3 bg-white/[0.07] px-4 transition focus-within:bg-white/[0.1] focus-within:ring-1 focus-within:ring-gold/35">
           <Search className="size-4.5 shrink-0 text-gold" />
@@ -2308,6 +2353,7 @@ export function GuestServiceOrderForm({
           })}
         </div>
       </div>
+      ) : null}
 
       <div className="space-y-8">
         {categories
@@ -2342,7 +2388,7 @@ export function GuestServiceOrderForm({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3">
                   {categoryServices.map((service) => {
                     const Icon = getServiceIcon(service);
                     const badge = getBillingBadge(service);
@@ -2353,7 +2399,7 @@ export function GuestServiceOrderForm({
                       <article
                         key={service.code}
                         className={cn(
-                          'flex min-h-[220px] flex-col overflow-hidden border bg-white/[0.04] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
+                          'flex min-h-[190px] flex-col overflow-hidden border bg-white/[0.04] p-4 shadow-[0_14px_36px_rgba(0,0,0,0.16)] transition',
                           unavailable
                             ? 'border-red-400/15 bg-red-500/[0.04] opacity-70'
                             : quantity > 0
@@ -2379,15 +2425,9 @@ export function GuestServiceOrderForm({
                           {service.name}
                         </h4>
 
-                        {service.description ? (
-                          <p className="mt-2 line-clamp-3 text-[11px] font-medium leading-4 text-white/45">
-                            {service.description}
-                          </p>
-                        ) : (
-                          <p className="mt-2 text-[11px] font-medium text-white/25">
-                            Personalized assistance from our hotel team.
-                          </p>
-                        )}
+                        <p className="mt-2 line-clamp-3 text-xs font-medium leading-5 text-white/55">
+                          {getServiceDescription(service)}
+                        </p>
 
                         <div className="mt-auto pt-4">
                           <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-white/35">
@@ -2493,27 +2533,19 @@ export function GuestServiceOrderForm({
         ) : null}
       </div>
 
-      {selectedCount > 0 ? (
+      {selectedCount > 0 && screen === 'services' ? (
         <button
           type="button"
           onClick={() => setScreen('cart')}
-          className="fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-md items-center justify-between gap-4 border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-3.5 text-black transition hover:brightness-105"
+          className="fixed inset-x-5 bottom-[5.5rem] z-30 mx-auto flex min-h-12 max-w-md items-center justify-between gap-3 border border-gold/25 bg-[linear-gradient(135deg,#d9ad45,#c79022)] px-4 py-2 text-black transition hover:brightness-105"
         >
-          <span className="flex items-center gap-3">
-            <span className="grid size-11 place-items-center bg-black/12">
-              <ShoppingBag className="size-4.5" />
-            </span>
-            <span className="text-left">
-              <span className="block text-[10px] font-semibold uppercase tracking-widest text-black/55">
-                {selectedCount} request{selectedCount === 1 ? '' : 's'} selected
-              </span>
-              <span className="mt-0.5 block text-sm font-semibold">
-                Review requests
-              </span>
-            </span>
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <ShoppingBag className="size-4" />
+            Review requests
+            <span className="text-xs text-black/60">· {selectedCount}</span>
           </span>
 
-          <span className="flex items-center gap-2 font-serif text-lg font-medium">
+          <span className="flex items-center gap-1 font-serif text-base font-medium">
             {fixedPriceTotal > 0 ? money(fixedPriceTotal) : 'Review'}
             <ChevronRight className="size-4" />
           </span>

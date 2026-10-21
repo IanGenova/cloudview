@@ -6,6 +6,7 @@ import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { db } from '@/lib/db';
 import { GuestServiceOrderForm } from './GuestServiceOrderForm';
 import { getCurrentNfcGuestIdentity } from '@/lib/nfc-guest-session';
+import { isServiceAvailableAtPublicLocation } from '@/lib/guest-service-location';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export default async function ServicePage({
       <>
         <GuestShell
           hotel={tag.hotel}
-          title="Services & Room Add-ons"
+          title={tag.room ? 'Services & Room Add-ons' : 'Services & Add-ons'}
           subtitle={roomLabel}
           backHref={`/t/${tagCode}`}
           variant="dark"
@@ -109,12 +110,19 @@ export default async function ServicePage({
   const defaultGuestPhone = guestIdentity.guestMember?.phone || '';
   const isPublicLocation = !tag.roomId;
 
-  const guestServices = services.map((service) => ({
+  const visibleServices = isPublicLocation
+    ? services.filter(isServiceAvailableAtPublicLocation)
+    : services;
+
+  const guestServices = visibleServices.map((service) => ({
     id: service.id,
     code: service.code,
     name: service.name,
-    category: service.category,
-    description: service.description ?? '',
+    category: isPublicLocation ? 'At this location' : service.category,
+    description:
+      isPublicLocation && service.code === 'OTHER_REQUEST'
+        ? 'Tell us what you need at this location.'
+        : service.description ?? '',
     iconKey: service.iconKey,
     billingMode: service.billingMode,
     unitPrice: Number(service.unitPrice),
@@ -135,7 +143,7 @@ export default async function ServicePage({
     <>
       <GuestShell
         hotel={tag.hotel}
-        title="Services & Room Add-ons"
+        title={tag.room ? 'Services & Room Add-ons' : 'Services'}
         subtitle={roomLabel}
         backHref={`/t/${tagCode}`}
         variant="dark"
