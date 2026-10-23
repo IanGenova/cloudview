@@ -189,7 +189,7 @@ export default async function GuestActivityPage({
         ) : (
         <>
         <section className="border border-white/10 bg-white/[0.04] p-6">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-5">
             <div>
               <p className="text-sm font-medium text-white/60">
                 {activity.guestName
@@ -220,7 +220,7 @@ export default async function GuestActivityPage({
           </div>
 
           {activity.guestStay ? (
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="mt-6 grid gap-3">
               <div className="bg-black/25 p-4">
                 <div className="flex items-center gap-2 text-[#c99c38]">
                   <BedDouble className="size-4" />
@@ -264,14 +264,14 @@ export default async function GuestActivityPage({
               </h2>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3">
               {recentXenditPayments.map((payment) => (
                 <div
                   key={payment.id}
                   className="border border-white/10 bg-black/25 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <p className="font-serif text-lg font-medium tracking-wide text-[#c99c38]">
                         {formatCurrency(payment.amountCents)}
                       </p>
@@ -279,7 +279,7 @@ export default async function GuestActivityPage({
                         {formatDateTime(payment.createdAt)}
                       </p>
                     </div>
-                    <span className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(payment.status)}`}>
+                    <span className={`max-w-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(payment.status)}`}>
                       {formatStatus(payment.status)}
                     </span>
                   </div>
@@ -308,8 +308,8 @@ export default async function GuestActivityPage({
           </section>
         ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="border border-white/10 bg-white/[0.04] p-5">
+        <section className="grid gap-6">
+          <div className="min-w-0 border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ShoppingBag className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Current orders</h2>
@@ -322,16 +322,16 @@ export default async function GuestActivityPage({
                   href={`/t/${tagCode}/track/${order.orderCode}`}
                   className="block border border-white/10 bg-black/25 p-4 transition hover:border-[#c99c38]/45 hover:bg-black/35"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-serif font-medium tracking-wide text-[15px]">{order.orderCode}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all font-serif font-medium tracking-wide text-[15px]">{order.orderCode}</p>
                       <p className="mt-1 text-xs font-medium text-white/50">
                         {formatDateTime(order.createdAt)}
                       </p>
                     </div>
 
                     <span
-                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+                      className={`max-w-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
  order.status
  )}`}
                     >
@@ -371,7 +371,7 @@ export default async function GuestActivityPage({
             </div>
           </div>
 
-          <div className="border border-white/10 bg-white/[0.04] p-5">
+          <div className="min-w-0 border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ConciergeBell className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Current requests</h2>
@@ -383,9 +383,9 @@ export default async function GuestActivityPage({
                   key={request.id}
                   className="border border-white/10 bg-black/25 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-serif font-medium tracking-wide text-[15px]">{request.requestCode}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all font-serif font-medium tracking-wide text-[15px]">{request.requestCode}</p>
                       <p className="mt-1 text-sm font-medium text-white/75">
                         {request.type}
                       </p>
@@ -395,7 +395,7 @@ export default async function GuestActivityPage({
                     </div>
 
                     <span
-                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+                      className={`max-w-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
  request.status
  )}`}
                     >
@@ -428,7 +428,7 @@ export default async function GuestActivityPage({
               <h2 className="text-2xl font-serif font-normal tracking-wide">Order Again</h2>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr))' }}>
               {activity.orderAgainItems.map((item) => (
                 <Link
                   key={item.productId}
@@ -449,8 +449,8 @@ export default async function GuestActivityPage({
           </section>
         ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="border border-white/10 bg-white/[0.035] p-5">
+        <section className="grid gap-6">
+          <div className="min-w-0 border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <History className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Past Orders</h2>
@@ -462,16 +462,16 @@ export default async function GuestActivityPage({
                   key={order.id}
                   className="border border-white/10 bg-black/20 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-serif font-medium tracking-wide text-[15px]">{order.orderCode}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all font-serif font-medium tracking-wide text-[15px]">{order.orderCode}</p>
                       <p className="mt-1 text-xs font-medium text-white/50">
                         {formatDateTime(order.createdAt)}
                       </p>
                     </div>
 
                     <span
-                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+                      className={`max-w-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
  order.status
  )}`}
                     >
@@ -502,7 +502,7 @@ export default async function GuestActivityPage({
             </div>
           </div>
 
-          <div className="border border-white/10 bg-white/[0.035] p-5">
+          <div className="min-w-0 border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ReceiptText className="size-5 text-[#c99c38]" />
               <h2 className="text-2xl font-serif font-normal tracking-wide">Past requests</h2>
@@ -514,9 +514,9 @@ export default async function GuestActivityPage({
                   key={request.id}
                   className="border border-white/10 bg-black/20 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-serif font-medium tracking-wide text-[15px]">{request.requestCode}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all font-serif font-medium tracking-wide text-[15px]">{request.requestCode}</p>
                       <p className="mt-1 text-sm font-medium text-white/75">
                         {request.type}
                       </p>
@@ -526,7 +526,7 @@ export default async function GuestActivityPage({
                     </div>
 
                     <span
-                      className={` px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
+                      className={`max-w-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${statusClass(
  request.status
  )}`}
                     >
