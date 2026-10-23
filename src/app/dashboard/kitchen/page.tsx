@@ -853,7 +853,7 @@ function KitchenOrderCard({
 
           <div className={cn('flex items-center [&>*]:mt-0', isRushMode ? 'shrink-0 flex-nowrap justify-end gap-1 whitespace-nowrap' : 'w-full flex-wrap justify-start gap-2')}>
             {!isRushMode ? <StatusBadge status={displayStatus} /> : null}
-            <KitchenRunningTimer startedAt={order.createdAt.toISOString()} />
+            <KitchenRunningTimer startedAt={(order.releasedAt ?? order.createdAt).toISOString()} />
           </div>
         </div>
 
@@ -1179,7 +1179,8 @@ function KitchenLane({
       <section
       data-kitchen-drop-status={dropStatus}
       className={cn(
-        'flex flex-col overflow-hidden border md:h-full',
+        'flex flex-col border',
+        (isTvMode || isRushMode) && 'overflow-hidden md:h-full',
         isRushMode
           ? type === 'ready'
             ? 'min-h-[260px]'
@@ -1230,7 +1231,10 @@ function KitchenLane({
 
       <div
           className={cn(
-            'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+            'min-h-0 flex-1',
+            isTvMode || isRushMode
+              ? 'overflow-y-auto overscroll-contain'
+              : 'overflow-visible',
             isTvMode
               ? 'p-5 pr-3'
               : isRushMode && type === 'ready'
@@ -1502,7 +1506,15 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   }),
 ]);
 
-  const pendingOrders = liveOrders.filter(
+  const oldTicketCutoff = Date.now() - STALE_ORDER_THRESHOLD_MS;
+  const olderOrders = liveOrders.filter(
+    (order) => (order.releasedAt ?? order.createdAt).getTime() <= oldTicketCutoff
+  );
+  const currentOrders = liveOrders.filter(
+    (order) => (order.releasedAt ?? order.createdAt).getTime() > oldTicketCutoff
+  );
+
+  const pendingOrders = currentOrders.filter(
     (order) => order.status === OrderStatus.PENDING
   );
 
@@ -1511,23 +1523,22 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
     OrderStatus.PREPARING,
   ];
 
-  const preparingOrders = liveOrders.filter((order) =>
+  const preparingOrders = currentOrders.filter((order) =>
     preparingStatuses.includes(order.status)
   );
 
-  const readyOrders = liveOrders.filter(
+  const readyOrders = currentOrders.filter(
     (order) => order.status === OrderStatus.READY
   );
-  const staleLiveOrderCount = liveOrders.filter(
-    (order) => Date.now() - order.createdAt.getTime() >= STALE_ORDER_THRESHOLD_MS
-  ).length;
 
   return (
       <div
         id="kitchen-display-fullscreen"
         className={cn(
-            'h-[100dvh] overflow-y-auto text-neutral-950 dark:text-white',
-            isTvMode || isRushMode ? 'md:overflow-hidden' : '2xl:overflow-hidden',
+            'text-neutral-950 dark:text-white',
+            isTvMode || isRushMode
+              ? 'h-[100dvh] overflow-y-auto md:overflow-hidden'
+              : 'min-h-dvh overflow-visible',
             isTvMode
               ? 'bg-neutral-950 p-5'
               : 'bg-white px-3 pb-24 pt-3 dark:bg-neutral-950 md:px-4 md:pb-4 md:pt-4 xl:px-6'
@@ -1561,7 +1572,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
   ) : (
     <PageHeader
       title="Kitchen Display"
-      description="Live kitchen workflow for verified orders only. Review, prepare, mark ready, deliver, or cancel with automatic stock and refund handling."
+      description="Manage verified orders from arrival through delivery."
     />
   )}
 
@@ -1595,7 +1606,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
           : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
       )}
     >
-      {isTvMode ? 'Exit TV' : 'TV Mode'}
+      {isTvMode ? 'Exit TV' : 'TV'}
     </Link>
   ) : null}
 
@@ -1614,7 +1625,7 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
         }
       >
         <Clock className="size-4" />
-        Scheduled Orders
+        Scheduled
 
         {scheduledOrders.length > 0 ? (
           <span className="grid size-6 place-items-center bg-amber-100 text-[11px] font-semibold text-amber-800">
@@ -1663,21 +1674,39 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
             : 'border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800'
         )}
       >
-        {isRushMode ? 'Exit Rush' : 'Rush Mode'}
+        {isRushMode ? 'Exit Rush' : 'Rush'}
       </Link>
     </>
   ) : null}
 </div>
 </div>
 
-      {activeView === 'live' && !isTvMode && staleLiveOrderCount > 0 ? (
-        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
-          <span className="inline-flex items-center gap-2">
-            <AlertTriangle className="size-4 shrink-0" />
-            {staleLiveOrderCount} open {staleLiveOrderCount === 1 ? 'order is' : 'orders are'} over 12 hours old. Confirm these tickets before changing their status.
-          </span>
-          <Link href="/dashboard/orders" className="font-semibold underline underline-offset-4">Review orders</Link>
-        </div>
+      {activeView === 'live' && !isTvMode && olderOrders.length > 0 ? (
+        <details className="group mb-4 border border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm marker:hidden">
+            <span className="inline-flex items-center gap-2 font-semibold">
+              <AlertTriangle className="size-4 shrink-0" />
+              {olderOrders.length} older open {olderOrders.length === 1 ? 'ticket needs' : 'tickets need'} review
+            </span>
+            <span className="text-xs font-medium underline underline-offset-4 group-open:hidden">Show tickets</span>
+            <span className="hidden text-xs font-medium underline underline-offset-4 group-open:inline">Hide tickets</span>
+          </summary>
+          <div className="border-t border-amber-300/70 px-4 pb-4 pt-3 dark:border-amber-500/30">
+            <p className="mb-3 text-sm">These orders are over 12 hours old. Check each one in Orders before changing its status.</p>
+            <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
+              {olderOrders.map((order) => (
+                <Link
+                  key={order.id}
+                  href={`/dashboard/orders?q=${encodeURIComponent(order.orderCode)}`}
+                  className="flex min-h-14 items-center justify-between gap-3 border border-amber-400/50 bg-white/75 px-3 py-2 text-sm transition hover:border-amber-600 dark:bg-black/20"
+                >
+                  <span className="font-semibold">{order.orderCode}</span>
+                  <span className="text-right text-xs">{order.status} · {(order.releasedAt ?? order.createdAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </details>
       ) : null}
 
       <div
@@ -1792,6 +1821,22 @@ const [liveOrders, scheduledOrders, historyOrders] = await Promise.all([
       ))}
     </KitchenTvPagedLane>
   </div>
+) : currentOrders.length === 0 ? (
+  <section className="flex min-h-64 flex-col items-center justify-center border border-neutral-200 bg-white px-6 py-10 text-center dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="grid size-12 place-items-center bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+      <CheckCircle2 className="size-6" />
+    </div>
+    <h2 className="mt-4 font-serif text-2xl text-neutral-950 dark:text-white">No current kitchen orders</h2>
+    <p className="mt-2 max-w-md text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+      New orders will appear here as they arrive.
+      {olderOrders.length > 0 ? ` ${olderOrders.length} older ${olderOrders.length === 1 ? 'ticket still needs' : 'tickets still need'} review above.` : ''}
+    </p>
+    {olderOrders.length > 0 ? (
+      <Link href="/dashboard/orders" className="mt-5 inline-flex min-h-11 items-center border border-neutral-300 px-4 text-sm font-semibold text-neutral-900 hover:bg-neutral-50 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800">
+        Review older orders
+      </Link>
+    ) : null}
+  </section>
 ) : (
   <div className="grid min-h-0 gap-3 md:grid-cols-2 2xl:grid-cols-3 xl:gap-4">
     <KitchenLane

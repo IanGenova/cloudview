@@ -2079,22 +2079,6 @@ const [scheduledNote, setScheduledNote] = useState('');
           })}
         </div>
 
-        {itemCount > 0 ? (
-          <button
-            type="button"
-            onClick={openCart}
-            className="mt-2 flex min-h-12 w-full items-center justify-between gap-3 bg-gold px-4 text-black shadow-[0_10px_28px_rgba(214,167,56,0.2)] transition hover:brightness-105"
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <ShoppingBag className="size-4" />
-              Review order
-            </span>
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              {itemCount} item{itemCount === 1 ? '' : 's'} · {money(total, currency)}
-              <ChevronRight className="size-4" />
-            </span>
-          </button>
-        ) : null}
       </div>
 
       {serviceChargeRate > 0 || taxRate > 0 ? (

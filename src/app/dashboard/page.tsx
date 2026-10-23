@@ -4,6 +4,9 @@ import {
   FulfillmentTiming,
   GuestStayStatus,
   OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
   ServiceRequestStatus,
 } from '@prisma/client';
 import { redirect } from 'next/navigation';
@@ -32,6 +35,8 @@ import {
 
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { money } from '@/lib/money';
+import { STALE_ORDER_THRESHOLD_MS } from '@/lib/duration';
+import { getGuestContact } from '@/lib/guest-contact';
 import { endOfBusinessDay, startOfBusinessDay } from '@/lib/business-day';
 import { db } from '@/lib/db';
 import {
@@ -890,6 +895,13 @@ export default async function DashboardHome({
     gte: analyticsRange.start,
     lt: analyticsRange.end,
   };
+  const oldTicketCutoff = new Date(Date.now() - STALE_ORDER_THRESHOLD_MS);
+  const verifiedKitchenPaymentWhere: Prisma.OrderWhereInput = {
+    OR: [
+      { paymentMethod: { not: PaymentMethod.XENDIT } },
+      { paymentStatus: { in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED] } },
+    ],
+  };
 
 const [
   ordersInRange,
@@ -906,9 +918,11 @@ const [
   activeGuestStays,
   checkoutsToday,
   liveKitchenOrders,
+  oldKitchenOrders,
   scheduledOrders,
   nextFoodOrders,
   nextServiceRequests,
+  guestContactSettings,
 ] = await Promise.all([
   
     db.order.count({
@@ -1087,6 +1101,7 @@ db.order.count({
         OrderStatus.READY,
       ],
     },
+    AND: [verifiedKitchenPaymentWhere],
     OR: [
       {
         fulfillmentTiming: FulfillmentTiming.ASAP,
@@ -1096,6 +1111,20 @@ db.order.count({
           not: null,
         },
       },
+    ],
+  },
+}),
+
+db.order.count({
+  where: {
+    ...hotelWhere,
+    status: {
+      in: [OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY],
+    },
+    AND: [verifiedKitchenPaymentWhere],
+    OR: [
+      { fulfillmentTiming: FulfillmentTiming.ASAP, createdAt: { lt: oldTicketCutoff } },
+      { fulfillmentTiming: FulfillmentTiming.SCHEDULED, releasedAt: { lt: oldTicketCutoff } },
     ],
   },
 }),
@@ -1152,6 +1181,13 @@ db.serviceRequest.findMany({
   take: 3,
 }),
 
+user.role === 'SUPER_ADMIN'
+  ? Promise.resolve(null)
+  : db.hotelSettings.findUnique({
+      where: { hotelId: user.hotelId! },
+      select: { contactPhone: true, contactEmail: true },
+    }),
+
 ]);
 
   const menuInventoryAlerts = menuInventory.filter(
@@ -1167,6 +1203,9 @@ db.serviceRequest.findMany({
 
 const attentionScore =
   pendingRequests + liveKitchenOrders + totalInventoryAlerts + checkoutsToday;
+const currentKitchenOrders = Math.max(liveKitchenOrders - oldKitchenOrders, 0);
+const { phone: guestContactPhone, email: guestContactEmail } = getGuestContact(guestContactSettings);
+const guestContactMissing = user.role !== 'SUPER_ADMIN' && !guestContactPhone && !guestContactEmail;
 
 /*
  * Read once per page load. The table holds one row per worker, so this is a
@@ -1275,15 +1314,26 @@ const analyticsOptions = [
 
 return (
   <div className="space-y-7">
+    {guestContactMissing ? (
+      <section role="status" className="flex flex-wrap items-center justify-between gap-3 border border-amber-300 bg-amber-50 px-5 py-4 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+        <div>
+          <p className="font-semibold">Guest contact needs setup</p>
+          <p className="mt-1 text-sm">The guest portal can receive service requests, but it has no phone number or email to show guests.</p>
+        </div>
+        <Link href="/dashboard/settings#guest-contact" className="inline-flex min-h-11 items-center gap-2 border border-current px-4 text-sm font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/10">
+          Add contact details <ArrowUpRight className="size-4" />
+        </Link>
+      </section>
+    ) : null}
     <section aria-labelledby="action-queue-title" className="border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="border-b border-neutral-200 px-5 py-4 dark:border-neutral-800 sm:px-6">
+      <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9b7024] dark:text-[#d6a738]">Action queue</p>
         <h2 id="action-queue-title" className="mt-1 font-serif text-2xl text-neutral-950 dark:text-white">Next to act</h2>
         <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">New requests are shown oldest first. Scheduled requests appear when released to staff.</p>
       </div>
       <div className="grid divide-y divide-neutral-200 dark:divide-neutral-800 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-        <div className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-neutral-950 dark:text-white">Food orders</h3>
             <Link href="/dashboard/orders" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#805b1c] hover:underline dark:text-[#e5bd68]">Open orders <ArrowUpRight className="size-4" /></Link>
           </div>
@@ -1297,11 +1347,11 @@ return (
                 <span className="shrink-0 text-right text-xs text-neutral-600 dark:text-neutral-300">{queueTime(order.createdAt)}</span>
               </Link>
             ))}
-            {!nextFoodOrders.length ? <p className="border border-dashed border-neutral-300 px-4 py-5 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">No new food orders waiting.{liveKitchenOrders > 0 ? ` ${liveKitchenOrders} already in the kitchen workflow.` : ''}</p> : null}
+            {!nextFoodOrders.length ? <p className="border border-dashed border-neutral-300 px-4 py-4 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">No new food orders waiting.{currentKitchenOrders > 0 ? ` ${currentKitchenOrders} in the current kitchen workflow.` : ''}{oldKitchenOrders > 0 ? ` ${oldKitchenOrders} older ${oldKitchenOrders === 1 ? 'ticket needs' : 'tickets need'} review.` : ''}</p> : null}
           </div>
         </div>
-        <div className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-neutral-950 dark:text-white">Service requests</h3>
             <Link href="/dashboard/service-requests" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[#805b1c] hover:underline dark:text-[#e5bd68]">Open services <ArrowUpRight className="size-4" /></Link>
           </div>
@@ -1322,13 +1372,37 @@ return (
     </section>
 
     <section className="overflow-hidden border border-[#c99c38]/25 bg-[#11100b] text-white">
-      <div className="relative p-6">
+      <div className="relative p-5">
         <div className="pointer-events-none absolute -right-20 -top-20 size-72 bg-[#c99c38]/25 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-10 size-72 bg-emerald-500/10 blur-3xl" />
 
-        <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_auto] xl:items-end">
+        <div className="relative z-10 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(230px,0.9fr)] md:items-start">
           <div>
             <h1 className="font-serif text-3xl font-normal tracking-tight">Today</h1>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-white/65">A clear view of current work and tickets that need follow-up.</p>
+
+            <dl className="mt-5 grid grid-cols-2 gap-2">
+              <div className="bg-white/[0.07] p-3">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d6a738]">Sales</dt>
+                <dd className="mt-1 text-2xl font-semibold">{money(salesAgg._sum.totalCents ?? 0)}</dd>
+                <p className="mt-1 text-xs text-white/55">{operationRange.label}, excluding cancelled</p>
+              </div>
+              <div className="bg-white/[0.07] p-3">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d6a738]">Orders</dt>
+                <dd className="mt-1 text-2xl font-semibold">{ordersInRange}</dd>
+                <p className="mt-1 text-xs text-white/55">Created in selected period</p>
+              </div>
+              <div className="bg-white/[0.07] p-3">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d6a738]">Active stays</dt>
+                <dd className="mt-1 text-2xl font-semibold">{activeGuestStays}</dd>
+                <p className="mt-1 text-xs text-white/55">{checkoutsToday} checking out today</p>
+              </div>
+              <div className="bg-white/[0.07] p-3">
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d6a738]">Kitchen</dt>
+                <dd className="mt-1 text-2xl font-semibold">{currentKitchenOrders}</dd>
+                <p className="mt-1 text-xs text-white/55">{oldKitchenOrders} older · {scheduledOrders} scheduled</p>
+              </div>
+            </dl>
 
             {/*
               The half of the heartbeat that survives the watcher dying.
@@ -1355,23 +1429,23 @@ return (
             ) : null}
           </div>
 
-          <div className="min-w-[260px] border border-white/10 bg-white/10 p-5 backdrop-blur">
+          <div className="border border-white/10 bg-white/10 p-4 backdrop-blur">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
               Needs Attention
             </p>
 
-            <p className="mt-2 text-5xl font-semibold">{attentionScore}</p>
+            <p className="mt-1 text-4xl font-semibold">{attentionScore}</p>
 
             <p className="mt-1 text-xs font-semibold text-white/45">
-              Live kitchen, services, checkouts, and inventory alerts.
+              Open kitchen tickets, services, checkouts, and inventory alerts.
             </p>
 
-            <div className="mt-5 space-y-3">
+            <div className="mt-3 space-y-2">
               <MiniProgressBar
                 label="Kitchen"
                 value={liveKitchenOrders}
                 max={Math.max(attentionScore, 1)}
-                helper={`${liveKitchenOrders} live`}
+                helper={`${currentKitchenOrders} current · ${oldKitchenOrders} older`}
               />
               <MiniProgressBar
                 label="Services"
@@ -1390,49 +1464,6 @@ return (
         </div>
       </div>
 
-      <div className="grid border-t border-white/10 bg-black/20 sm:grid-cols-4">
-        <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-            Sales
-          </p>
-          <p className="mt-1 text-3xl font-semibold">
-            {money(salesAgg._sum.totalCents ?? 0)}
-          </p>
-          <p className="mt-1 text-xs font-semibold text-white/45">
-            {operationRange.label}, excluding cancelled orders
-          </p>
-        </div>
-
-        <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-            Orders
-          </p>
-          <p className="mt-1 text-3xl font-semibold">{ordersInRange}</p>
-          <p className="mt-1 text-xs font-semibold text-white/45">
-            Created in selected period
-          </p>
-        </div>
-
-        <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-            Active Stays
-          </p>
-          <p className="mt-1 text-3xl font-semibold">{activeGuestStays}</p>
-          <p className="mt-1 text-xs font-semibold text-white/45">
-            {checkoutsToday} checking out today
-          </p>
-        </div>
-
-        <div className="p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d6a738]">
-            Kitchen
-          </p>
-          <p className="mt-1 text-3xl font-semibold">{liveKitchenOrders}</p>
-          <p className="mt-1 text-xs font-semibold text-white/45">
-            {scheduledOrders} scheduled pre-orders
-          </p>
-        </div>
-      </div>
     </section>
 
     <section aria-label="Operational watchlist" className="grid gap-4 md:grid-cols-2">

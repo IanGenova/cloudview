@@ -591,18 +591,18 @@ function FrontDeskMetricCard({
           : 'bg-white text-[#b88938]';
 
   return (
-    <div className={` border p-5 ${className}`}>
+    <div className={`border p-3 ${className}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
             {label}
           </p>
-          <p className="mt-2 text-3xl font-semibold">{value}</p>
+          <p className="mt-1 text-2xl font-semibold">{value}</p>
           <p className="mt-1 text-xs font-bold opacity-70">{helper}</p>
         </div>
 
         {icon ? (
-          <span className={`grid size-11 shrink-0 place-items-center ${iconClassName}`}>
+          <span className={`grid size-8 shrink-0 place-items-center ${iconClassName}`}>
             {icon}
           </span>
         ) : null}
@@ -1806,7 +1806,7 @@ function handleResetPasscode(guestStayId: string) {
   }, [xenditReturn, router]);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       <ExistingXenditSessionGuard
         open={Boolean(existingXenditSession)}
         title={
@@ -1847,7 +1847,7 @@ function handleResetPasscode(guestStayId: string) {
         </div>
       ) : null}
 
-<section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+<section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
   <FrontDeskMetricCard
     icon={<UserCheck className="size-5" />}
     label="Active Stays"
@@ -1890,7 +1890,7 @@ function handleResetPasscode(guestStayId: string) {
   </div>
 ) : null}
 
-<section className="flex flex-col gap-3 border border-neutral-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+<section className="flex flex-col gap-3 border border-neutral-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
   <div>
     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
       Stay Records
@@ -1900,9 +1900,6 @@ function handleResetPasscode(guestStayId: string) {
       Room Stay List
     </h2>
 
-    <p className="mt-1 text-sm font-medium text-neutral-500">
-      View, edit, check out, and manage active or recent guest room stays.
-    </p>
   </div>
 
   <button

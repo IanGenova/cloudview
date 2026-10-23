@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Gift,
-  Lock,
   Sparkles,
   Ticket,
 } from 'lucide-react';
@@ -247,7 +246,7 @@ export default async function GuestRewardsPage({
     <>
       <GuestShell
         hotel={tag.hotel}
-        title="CloudView Rewards"
+        title="Rewards"
         subtitle={location}
         backHref={`/t/${tagCode}`}
         variant="dark"
@@ -266,7 +265,7 @@ export default async function GuestRewardsPage({
           ) : null}
 
           {!guestMember ? (
-            <ClaimRewardsCard tagCode={tagCode} hotelName={tag.hotel.name} />
+            <ClaimRewardsCard tagCode={tagCode} hotelName={tag.hotel.name} featuredReward={rewards[0] ?? null} />
           ) : (
             <>
               <section className="relative overflow-hidden border border-gold/25 bg-white/[0.04] backdrop-blur-xl">
@@ -498,29 +497,45 @@ export default async function GuestRewardsPage({
 function ClaimRewardsCard({
   tagCode,
   hotelName,
+  featuredReward,
 }: {
   tagCode: string;
   hotelName: string;
+  featuredReward: {
+    name: string;
+    pointsCost: number;
+    rewardType: string;
+    discountCents: number | null;
+    discountPercent: number | null;
+  } | null;
 }) {
   return (
-    <section className="relative overflow-hidden border border-gold/25 bg-white/[0.04] p-8 backdrop-blur-xl">
+    <section className="relative overflow-hidden border border-gold/25 bg-white/[0.04] p-5 backdrop-blur-xl">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(214,167,56,0.1),transparent_60%)]" />
       
       <div className="relative z-10">
-        <div className="mx-auto grid size-20 place-items-center bg-gold/15 text-gold shadow-sm">
-          <Lock className="size-8" />
+        <div className="mx-auto grid size-12 place-items-center text-gold">
+          <Sparkles className="size-8" />
         </div>
 
-        <h1 className="mt-6 text-center font-serif text-3xl font-normal tracking-wide text-white">
-          Claim your rewards
-        </h1>
+        <h2 className="mt-3 text-center font-serif text-[1.7rem] font-normal tracking-wide text-white">
+          {featuredReward ? 'Make more of your stay' : 'Keep your points together'}
+        </h2>
 
-        <p className="mx-auto mt-4 max-w-[280px] text-center text-[15px] font-medium leading-7 text-white/60">
-          Add your name and contact details so {hotelName} can connect your
-          points, orders, requests, and redemptions.
+        <p className="mx-auto mt-3 max-w-[300px] text-center text-sm font-medium leading-6 text-white/75">
+          Earn points on eligible paid orders at {hotelName}.
+          {featuredReward ? (
+            <> Redeem from {pointLabel(featuredReward.pointsCost)} for {featuredReward.name} ({formatRewardValue(featuredReward)}).</>
+          ) : (
+            <> You can save your points now; the hotel has not published any redemption offers yet.</>
+          )}
         </p>
 
-        <form action={claimNfcRewardsAction} className="mt-8 space-y-3.5">
+        <p className="mx-auto mt-2 max-w-[280px] text-center text-xs leading-5 text-white/60">
+          Add a phone number or email so your points can be recognised on future visits.
+        </p>
+
+        <form action={claimNfcRewardsAction} className="mt-5 space-y-3">
           <input type="hidden" name="tagCode" value={tagCode} />
 
           <label htmlFor="rewards-name" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
@@ -531,7 +546,7 @@ function ClaimRewardsCard({
             name="name"
             required
             placeholder="Your full name"
-            className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="h-12 w-full border border-white/10 bg-black/40 px-4 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60"
           />
 
           <label htmlFor="rewards-phone" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
@@ -541,7 +556,7 @@ function ClaimRewardsCard({
             id="rewards-phone"
             name="phone"
             placeholder="Phone number"
-            className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="h-12 w-full border border-white/10 bg-black/40 px-4 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60"
           />
 
           <label htmlFor="rewards-email" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
@@ -552,7 +567,7 @@ function ClaimRewardsCard({
             name="email"
             type="email"
             placeholder="Email address"
-            className="h-14 w-full border border-white/10 bg-black/40 px-5 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="h-12 w-full border border-white/10 bg-black/40 px-4 text-[15px] font-medium text-white placeholder:text-white/40 outline-none transition focus:border-gold/50 focus:bg-black/60"
           />
 
           <p className="pt-2 text-center text-xs font-medium leading-5 text-white/50">
@@ -561,9 +576,9 @@ function ClaimRewardsCard({
 
           <button
             type="submit"
-            className="mt-4 h-14 w-full bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_12px_30px_rgba(214,167,56,0.25)] transition hover:brightness-110"
+            className="mt-3 h-12 w-full bg-gold text-[15px] font-semibold tracking-wide text-black transition hover:brightness-110"
           >
-            Claim Rewards
+            {featuredReward ? 'Claim Rewards' : 'Save my points'}
           </button>
         </form>
       </div>

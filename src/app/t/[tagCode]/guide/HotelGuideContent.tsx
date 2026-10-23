@@ -476,7 +476,7 @@ export function HotelGuideContent({
       <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 bg-[#9f7425]/10 blur-[110px]" />
 
       <div className="relative mx-auto max-w-xl">
-        <section className="relative mb-7 min-h-[400px] overflow-hidden border border-white/10 bg-[#11110e]">
+        <section className="relative mb-5 min-h-[340px] overflow-hidden bg-[#11110e]">
           <div
             className="absolute inset-0 scale-[1.02] bg-cover bg-center"
             style={{ backgroundImage: `url(${heroImage})` }}
@@ -484,26 +484,23 @@ export function HotelGuideContent({
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.2)_0%,rgba(0,0,0,0.35)_38%,rgba(5,5,4,0.98)_100%)]" />
           <div className="absolute inset-0 ring-1 ring-inset ring-white/[0.06]" />
 
-          <div className="relative z-10 flex min-h-[400px] flex-col justify-between p-5">
+          <div className="relative z-10 flex min-h-[340px] flex-col justify-between p-5">
             <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2 border border-[#d5ad55]/45 bg-black/35 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#e8c66f] backdrop-blur-xl">
+              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#e8c66f]">
                 <Sparkles className="size-3.5" />
                 {isPublicLocation ? 'Hotel guide' : 'Private concierge'}
               </span>
 
-              <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">
-                CloudView
-              </span>
             </div>
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#d5ad55]">
                 {isPublicLocation ? 'Welcome to the hotel' : 'Welcome to your stay'}
               </p>
-              <h1 className="mt-3 max-w-sm font-serif text-[2.75rem] font-light leading-[0.98] tracking-[-0.02em] text-[#fbf7ee]">
+              <h2 className="mt-2 max-w-sm font-serif text-[2.4rem] font-light leading-[1.04] tracking-[-0.02em] text-[#fbf7ee]">
                 Everything,
                 <br /> thoughtfully within reach.
-              </h1>
+              </h2>
               <p className="mt-4 max-w-sm text-sm leading-6 text-white/62">
                 Discover hotel essentials, dining, amenities and personalised
                 assistance in one refined guide.

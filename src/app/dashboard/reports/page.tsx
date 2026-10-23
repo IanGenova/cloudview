@@ -1340,7 +1340,9 @@ export default async function ReportsPage({
         ) : (
           <StatusPill tone="green">Clear</StatusPill>
         ),
-        `Average completion: ${formatMinutes(averageServiceResolutionMinutes)}`,
+        completedServiceRequests.length
+          ? `Average completion: ${formatMinutes(averageServiceResolutionMinutes)}`
+          : 'No completed requests in this period',
       ],
       [
         'Guest Portal',
@@ -1616,17 +1618,17 @@ export default async function ReportsPage({
 
   const paymentCollectionRate = totalSalesCents
     ? Math.round((paidSalesCents / totalSalesCents) * 100)
-    : 0;
+    : null;
 
   const orderCompletionRate = nonCancelledOrders.length
     ? Math.round((deliveredOrders.length / nonCancelledOrders.length) * 100)
-    : 0;
+    : null;
 
   const serviceCompletionRate = serviceRequests.length
     ? Math.round(
         (completedServiceRequests.length / serviceRequests.length) * 100
       )
-    : 0;
+    : null;
 
   const healthyInventoryItems = menuStocks.filter((stock) => {
     const availableQty = Number(stock.availableQty);
@@ -1640,7 +1642,7 @@ export default async function ReportsPage({
 
   const inventoryHealthRate = menuStocks.length
     ? Math.round((healthyInventoryItems / menuStocks.length) * 100)
-    : 0;
+    : null;
 
   const todayPreset = toInputDate(today);
   const last7DaysStart = new Date(today);
@@ -1675,13 +1677,12 @@ export default async function ReportsPage({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-neutral-950">Reports</h1>
-          <p className="mt-2 text-sm font-medium text-neutral-500">
-            CloudView Daily Operations, Sales, Inventory, Services, Guest
-            Portal, and Audit reports.
+          <h1 className="text-2xl font-semibold text-neutral-950">Reports</h1>
+          <p className="mt-1 text-sm font-medium text-neutral-500">
+            Operational reports and exports.
           </p>
         </div>
 
@@ -1729,8 +1730,8 @@ export default async function ReportsPage({
 </div>
       </section>
 
-      <section className="border border-neutral-200 bg-white p-5">
-        <form className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]" method="GET">
+      <section className="border border-neutral-200 bg-white p-4">
+        <form className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]" method="GET">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
               Start Date
@@ -1789,7 +1790,7 @@ export default async function ReportsPage({
           </div>
         </form>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-4">
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3">
           <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             Quick Range
           </span>
@@ -1938,7 +1939,9 @@ export default async function ReportsPage({
               <p>
                 Avg. Service Completion:{' '}
                 <span className="font-semibold text-neutral-950">
-                  {formatMinutes(averageServiceResolutionMinutes)}
+                  {completedServiceRequests.length
+                    ? formatMinutes(averageServiceResolutionMinutes)
+                    : 'No completed requests'}
                 </span>
               </p>
 
@@ -1990,14 +1993,16 @@ export default async function ReportsPage({
                 <div key={metric.label}>
                   <div className="flex items-center justify-between gap-3 text-xs font-semibold">
                     <span className="text-neutral-600">{metric.label}</span>
-                    <span className="text-neutral-950">{metric.value}%</span>
+                    <span className="text-neutral-950">
+                      {metric.value === null ? 'No data' : `${metric.value}%`}
+                    </span>
                   </div>
 
                   <div className="mt-2 h-2 overflow-hidden bg-neutral-100">
                     <div
                       className="h-full bg-[#c99c38]"
                       style={{
-                        width: `${Math.min(100, Math.max(0, metric.value))}%`,
+                        width: `${Math.min(100, Math.max(0, metric.value ?? 0))}%`,
                       }}
                     />
                   </div>

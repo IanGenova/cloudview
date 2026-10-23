@@ -847,8 +847,11 @@ function handleDeleteServiceConfirm() {
         </button>
       </div>
 
-      <section className="mb-5 border border-cv-hairline bg-white p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <details className="mb-4 border border-cv-hairline bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-neutral-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current">
+          Add recommended services
+        </summary>
+        <div className="flex flex-col gap-4 border-t border-neutral-100 p-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <h2 className="font-serif text-xl font-normal tracking-tight text-[#11100b]">
               Recommended services
@@ -886,10 +889,10 @@ function handleDeleteServiceConfirm() {
             </Button>
           </form>
         </div>
-      </section>
+      </details>
 
-      <section className="mt-5 border border-neutral-200 bg-white">
-        <div className="border-b border-neutral-100 p-5">
+      <section className="border border-neutral-200 bg-white">
+        <div className="border-b border-neutral-100 p-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b88938]">
@@ -921,13 +924,13 @@ function handleDeleteServiceConfirm() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_180px_210px]">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(16rem,1fr)_155px_140px_170px]">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search service, code, hotel, category, or description..."
+                placeholder="Search services..."
                 className="h-12 w-full border border-neutral-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-[#b88938] focus:ring-4 focus:ring-[#b88938]/10"
               />
             </label>

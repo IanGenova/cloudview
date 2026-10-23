@@ -22,6 +22,7 @@ import {
 import { db } from '@/lib/db';
 import { GuestBottomNav } from '@/components/guest/GuestShell';
 import { getGuestPortalActivity } from '@/lib/guest-portal-activity';
+import { getGuestContact } from '@/lib/guest-contact';
 import {
   GuestPressable,
   GuestReveal,
@@ -346,7 +347,21 @@ export default async function GuestHome({ params }: GuestHomeProps) {
     notFound();
   }
 
-  const activity = await getGuestPortalActivity(normalizedTagCode);
+  const rewardNow = new Date();
+  const [activity, availableRewardCount] = await Promise.all([
+    getGuestPortalActivity(normalizedTagCode),
+    db.reward.count({
+      where: {
+        hotelId: tag.hotel.id,
+        isActive: true,
+        AND: [
+          { OR: [{ validFrom: null }, { validFrom: { lte: rewardNow } }] },
+          { OR: [{ validUntil: null }, { validUntil: { gte: rewardNow } }] },
+        ],
+      },
+    }),
+  ]);
+  const { phone: guestPhone, email: guestEmail } = getGuestContact(tag.hotel.settings);
 
   const greeting = getGuestGreeting();
 
@@ -563,8 +578,8 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               href={`/t/${normalizedTagCode}/rewards`}
               icon={Gift}
               eyebrow="Rewards"
-              title={tag.room ? 'Claim points from your stay' : 'Claim points from your visit'}
-              description="Earn points from visits, orders, and completed requests."
+              title={availableRewardCount > 0 ? (tag.room ? 'Claim points from your stay' : 'Claim points from your visit') : 'Keep your points together'}
+              description={availableRewardCount > 0 ? 'Earn points and explore available rewards.' : 'Save eligible points while the hotel prepares reward offers.'}
             />
 
             <RecommendedCard
@@ -572,7 +587,7 @@ export default async function GuestHome({ params }: GuestHomeProps) {
               icon={Hotel}
               eyebrow="Support"
               title="Need staff assistance?"
-              description="Contact front desk or send a service request."
+              description={guestPhone || guestEmail ? 'Contact front desk or send a service request.' : 'Send a request to the hotel team.'}
             />
           </div>
         </GuestReveal>

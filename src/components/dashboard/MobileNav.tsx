@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronDown, Menu } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
@@ -40,158 +41,147 @@ const mobileLabelMap: Record<string, string> = {
   DATA_BACKUP: 'Backup',
 };
 
+const mobileGroups = [
+  {
+    label: 'Daily operations',
+    modules: ['OVERVIEW', 'ORDERS', 'KITCHEN_DISPLAY', 'SERVICE_REQUESTS', 'POS_TERMINAL'],
+  },
+  {
+    label: 'Property & guests',
+    modules: ['HOTELS', 'GUEST_STAYS', 'ROOMS_LOCATIONS', 'NFC_TAGS', 'HOTEL_GUIDE', 'REWARDS'],
+  },
+  {
+    label: 'Catalog & stock',
+    modules: ['MENU', 'SERVICES_MODULE', 'INVENTORY'],
+  },
+  {
+    label: 'Insights',
+    modules: ['ANALYTICS', 'REPORTS'],
+  },
+  {
+    label: 'Settings',
+    modules: ['HOTEL_SETTINGS', 'DATA_BACKUP', 'USER_ACCOUNT_SETTINGS'],
+  },
+];
+
 function getMobileLabel(item: DashboardNavItem) {
   return mobileLabelMap[item.module] ?? item.label;
 }
 
 function normalizeRoute(value: string) {
-  if (value.length > 1 && value.endsWith('/')) {
-    return value.slice(0, -1);
-  }
-
-  return value;
+  return value.length > 1 && value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
 function routeMatches(pathname: string, href: string) {
   const normalizedPathname = normalizeRoute(pathname);
   const normalizedHref = normalizeRoute(href);
 
-  if (normalizedHref === '/dashboard') {
-    return normalizedPathname === '/dashboard';
-  }
-
-  return (
-    normalizedPathname === normalizedHref ||
-    normalizedPathname.startsWith(`${normalizedHref}/`)
-  );
-}
-
-function getActiveHref(pathname: string, items: DashboardNavItem[]) {
-  return (
-    items
-      .filter((item) => routeMatches(pathname, item.href))
-      .sort(
-        (first, second) =>
-          normalizeRoute(second.href).length -
-          normalizeRoute(first.href).length
-      )[0]?.href ?? null
-  );
+  return normalizedHref === '/dashboard'
+    ? normalizedPathname === '/dashboard'
+    : normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`);
 }
 
 function insertDataBackupItem(items: DashboardNavItem[]) {
-  const hasBackupItem = items.some(
-    (item) =>
-      item.module === 'DATA_BACKUP' ||
-      item.href === dataBackupNavItem.href
-  );
-
-  if (hasBackupItem) {
+  if (items.some((item) => item.module === 'DATA_BACKUP' || item.href === dataBackupNavItem.href)) {
     return items;
   }
 
-  /**
-   * navItems is permission-filtered by the dashboard layout.
-   * Do not expose the backup route unless HOTEL_SETTINGS is available.
-   */
-  const canAccessHotelSettings = items.some(
-    (item) => item.module === 'HOTEL_SETTINGS'
-  );
-
-  if (!canAccessHotelSettings) {
+  // navItems is already permission-filtered by the dashboard layout.
+  const hotelSettingsIndex = items.findIndex((item) => item.module === 'HOTEL_SETTINGS');
+  if (hotelSettingsIndex < 0) {
     return items;
   }
 
-  const hotelSettingsIndex = items.findIndex(
-    (item) => item.module === 'HOTEL_SETTINGS'
-  );
-
-  if (hotelSettingsIndex >= 0) {
-    return [
-      ...items.slice(0, hotelSettingsIndex + 1),
-      dataBackupNavItem,
-      ...items.slice(hotelSettingsIndex + 1),
-    ];
-  }
-
-  return [...items, dataBackupNavItem];
+  return [
+    ...items.slice(0, hotelSettingsIndex + 1),
+    dataBackupNavItem,
+    ...items.slice(hotelSettingsIndex + 1),
+  ];
 }
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
-}
-
-export function MobileNav({
-  navItems = [],
-}: {
-  navItems?: DashboardNavItem[];
-}) {
+export function MobileNav({ navItems = [] }: { navItems?: DashboardNavItem[] }) {
   const pathname = usePathname();
-
-  /**
-   * Important:
-   * Do not manually expose permission-restricted modules.
-   * Backup is inserted only when the already-filtered HOTEL_SETTINGS item exists.
-   */
-  const mobileNavItems = useMemo(
-    () =>
-      insertDataBackupItem(
-        navItems.filter((item) => item.href && item.label)
-      ),
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const items = useMemo(
+    () => insertDataBackupItem(navItems.filter((item) => item.href && item.label)),
     [navItems]
   );
-
-  const activeHref = useMemo(
-    () => getActiveHref(pathname, mobileNavItems),
-    [pathname, mobileNavItems]
+  const activeItem = useMemo(
+    () =>
+      items
+        .filter((item) => routeMatches(pathname, item.href))
+        .sort((first, second) => normalizeRoute(second.href).length - normalizeRoute(first.href).length)[0],
+    [pathname, items]
   );
-
-  /*
-   * IA-3. Nineteen items become a horizontal strip of pills below 1024px, and
-   * the current page was marked all along — it was just never scrolled to. On
-   * a phone you saw the first five and none of them was where you were, so the
-   * bar read as though it had lost track of you. Bring the marked one into
-   * view whenever it changes.
-   */
-  const activeRef = useRef<HTMLAnchorElement | null>(null);
+  const groupedItems = useMemo(() => {
+    const knownModules = new Set(mobileGroups.flatMap((group) => group.modules));
+    const groups = mobileGroups.map((group) => ({
+      label: group.label,
+      items: group.modules.flatMap((module) => items.filter((item) => item.module === module)),
+    })).filter((group) => group.items.length > 0);
+    const otherItems = items.filter((item) => !knownModules.has(item.module));
+    return otherItems.length > 0 ? [...groups, { label: 'Other', items: otherItems }] : groups;
+  }, [items]);
 
   useEffect(() => {
-    activeRef.current?.scrollIntoView({
-      block: 'nearest',
-      inline: 'center',
-      behavior: 'smooth',
-    });
-  }, [activeHref]);
+    menuRef.current?.removeAttribute('open');
+  }, [pathname]);
 
-  if (!mobileNavItems.length) {
+  if (!items.length) {
     return null;
   }
 
   return (
-    <nav
-      aria-label="Mobile dashboard navigation"
-      className="h-16 border-b border-[#2b2416] bg-[#090806]/95 px-2 py-2 shadow-[0_14px_35px_rgba(0,0,0,0.35)] backdrop-blur lg:hidden"
-    >
-      <div className="no-scrollbar flex h-full snap-x snap-mandatory items-center gap-2 overflow-x-auto overscroll-x-contain scroll-smooth">
-        {mobileNavItems.map((item) => {
-          const active = item.href === activeHref;
+    <nav aria-label="Mobile dashboard navigation" className="sticky top-0 z-50 border-b border-[#2b2416] bg-[#090806] text-white lg:hidden">
+      <div className="flex h-16 items-center justify-between gap-3 px-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d6a738]">CloudView</p>
+          <p className="truncate text-sm font-semibold">{activeItem ? getMobileLabel(activeItem) : 'Dashboard'}</p>
+        </div>
 
-          return (
-            <Link
-              key={`${item.module}-${item.href}`}
-              href={item.href}
-              ref={active ? activeRef : undefined}
-              aria-current={active ? 'page' : undefined}
-              className={cx(
-                'inline-flex min-h-11 shrink-0 snap-start scroll-mx-2 items-center border px-3 text-xs font-semibold transition sm:px-4 sm:text-sm',
-                active
-                  ? 'border-[#d6a738] bg-[#c99c38] text-[#070604]'
-                  : 'border-[#c99c38]/20 bg-[#151106] text-[#d8d2c3] hover:border-[#c99c38]/50 hover:bg-[#21190c] hover:text-[#f7e7bd]'
-              )}
-            >
-              {getMobileLabel(item)}
-            </Link>
-          );
-        })}
+        <details
+          ref={menuRef}
+          className="group shrink-0"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              menuRef.current?.removeAttribute('open');
+              menuRef.current?.querySelector('summary')?.focus();
+            }
+          }}
+        >
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 border border-[#c99c38]/50 px-3 text-sm font-semibold text-[#f7e7bd] marker:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d6a738]">
+            <Menu className="size-4" /> All pages <ChevronDown className="size-4 transition group-open:rotate-180" />
+          </summary>
+          <div className="absolute inset-x-0 top-full max-h-[calc(100dvh-4rem)] overflow-y-auto border-b border-[#c99c38]/30 bg-[#100d08] p-4 shadow-[0_22px_35px_rgba(0,0,0,0.45)]">
+            <div className="mx-auto grid max-w-2xl gap-5 sm:grid-cols-2">
+              {groupedItems.map((group) => (
+                <section key={group.label}>
+                  <h2 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.17em] text-[#d6a738]">{group.label}</h2>
+                  <div className="grid gap-1">
+                    {group.items.map((item) => {
+                      const active = item.href === activeItem?.href;
+                      return (
+                        <Link
+                          key={`${item.module}-${item.href}`}
+                          href={item.href}
+                          aria-current={active ? 'page' : undefined}
+                          onClick={() => menuRef.current?.removeAttribute('open')}
+                          className={`flex min-h-11 items-center border px-3 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d6a738] ${
+                            active
+                              ? 'border-[#d6a738] bg-[#c99c38] text-[#080604]'
+                              : 'border-white/10 bg-white/[0.04] text-[#f1e9d7] hover:border-[#c99c38]/50 hover:bg-[#251c0e]'
+                          }`}
+                        >
+                          {getMobileLabel(item)}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </details>
       </div>
     </nav>
   );

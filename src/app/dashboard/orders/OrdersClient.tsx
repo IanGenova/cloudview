@@ -429,12 +429,38 @@ function formatDuration(milliseconds: number) {
 }
 
 function getOrderAgeLabel(order: DashboardOrder, now: number) {
-  const startAt = getCurrentStatusStartedAt(order);
-  const endAt = activeOrderStatuses.includes(order.status)
+  const isActive = activeOrderStatuses.includes(order.status);
+  const startAt = isActive ? getCurrentStatusStartedAt(order) : order.createdAt;
+  const endAt = isActive
     ? now
-    : new Date(order.updatedAt).getTime();
+    : new Date(getCurrentStatusStartedAt(order)).getTime();
+
+  if (isActive && endAt - new Date(startAt).getTime() >= 24 * 60 * 60 * 1000) {
+    return `since ${formatShortDate(startAt)}`;
+  }
 
   return formatDuration(endAt - new Date(startAt).getTime());
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function getOrderTimingText(order: DashboardOrder, now: number) {
+  const age = getOrderAgeLabel(order, now);
+
+  if (activeOrderStatuses.includes(order.status)) return `Waiting ${age}`;
+  return age === '0m' ? 'Completed same minute' : `Duration ${age}`;
+}
+
+function getPriorityAgeLabel(order: DashboardOrder, now: number) {
+  if (activeOrderStatuses.includes(order.status)) return getOrderAgeLabel(order, now);
+  if (order.paymentStatus === 'UNPAID') return `Unpaid since ${formatShortDate(order.createdAt)}`;
+  return getOrderAgeLabel(order, now);
 }
 
 function getOrderAgeClass(order: DashboardOrder, now: number) {
@@ -1256,9 +1282,7 @@ function OrderDetailsModal({
  now
  )}`}
                   >
-                    {activeOrderStatuses.includes(order.status)
-                      ? `Waiting ${getOrderAgeLabel(order, now)}`
-                      : `Duration ${getOrderAgeLabel(order, now)}`}
+                    {getOrderTimingText(order, now)}
                   </span>
                 </div>
 
@@ -1827,7 +1851,7 @@ function OrderCard({
 }) {
   const itemCount = getItemCount(order.items);
   const preview = getOrderPreview(order.items);
-  const waitingLabel = getOrderAgeLabel(order, now);
+  const timingLabel = getOrderTimingText(order, now);
   const nextStatus = getPrimaryNextStatus(order.status);
   const canProcess = canStartOrderProcessing(order);
   const hasAction = Boolean(nextStatus) && canProcess;
@@ -1881,9 +1905,7 @@ function OrderCard({
  now
  )}`}
           >
-            {activeOrderStatuses.includes(order.status)
-              ? `Waiting ${waitingLabel}`
-              : `Duration ${waitingLabel}`}
+            {timingLabel}
           </span>
         </div>
 
@@ -1966,15 +1988,7 @@ function OrderCard({
             )}
             {getPrimaryActionText(order.status)}
           </OrderActionButton>
-        ) : (
-          <button
-            type="button"
-            onClick={onView}
-            className="inline-flex h-11 items-center justify-center bg-black text-xs font-semibold text-white hover:bg-neutral-800"
-          >
-            View Details
-          </button>
-        )}
+        ) : null}
 
         <button
           type="button"
@@ -2103,7 +2117,7 @@ function PriorityQueue({
  now
  )}`}
                   >
-                    {getOrderAgeLabel(order, now)}
+                    {getPriorityAgeLabel(order, now)}
                   </span>
                 </div>
               </button>
@@ -2125,40 +2139,6 @@ function PriorityQueue({
         </div>
       </section>
 
-      <section className="border border-neutral-200 bg-white p-4 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-          Status Breakdown
-        </p>
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {statusOptions
-            .filter((status) => status !== 'ALL')
-            .map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => {
-                  const firstOrderWithStatus = orders.find(
-                    (order) => order.status === status
-                  );
-
-                  if (firstOrderWithStatus) {
-                    onSelectOrder(firstOrderWithStatus);
-                  }
-                }}
-                disabled={!orders.some((order) => order.status === status)}
-                className="border border-neutral-200 bg-neutral-50 p-3 text-left disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <p className="text-[10px] font-semibold uppercase text-neutral-400">
-                  {label(status)}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-neutral-950">
-                  {orders.filter((order) => order.status === status).length}
-                </p>
-              </button>
-            ))}
-        </div>
-      </section>
     </aside>
   );
 }

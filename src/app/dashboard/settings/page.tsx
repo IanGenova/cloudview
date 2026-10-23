@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { db } from '@/lib/db';
+import { getGuestContact } from '@/lib/guest-contact';
 import { requireDashboardPermission } from '@/lib/dashboard-permissions';
 import { saveHotelSettingsAction } from './actions';
 import { HotelSettingsFormClient } from './HotelSettingsFormClient';
@@ -16,14 +17,16 @@ function FormField({
   helper,
   children,
   className = '',
+  id,
 }: {
   label: string;
   helper?: string;
   children: ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <label className={`grid gap-2 border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 ${className}`}>
+    <label id={id} className={`grid gap-2 border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 ${className}`}>
       <span className="text-sm font-semibold text-neutral-900 dark:text-white">
         {label}
       </span>
@@ -80,6 +83,8 @@ export default async function SettingsPage({
     user.role === 'SUPER_ADMIN'
       ? hotels.find((item) => item.id === params?.hotelId) ?? hotels[0]
       : hotels[0];
+  const { phone: guestPhone, email: guestEmail } = getGuestContact(hotel?.settings);
+  const guestContactNeedsSetup = Boolean(hotel) && !guestPhone && !guestEmail;
 
   const initialSettingsValues = {
   hotelId: hotel?.id ?? '',
@@ -483,7 +488,13 @@ export default async function SettingsPage({
               <Input name="poolHours" defaultValue={hotel?.settings?.poolHours ?? '7:00 AM - 9:00 PM'} placeholder="7:00 AM - 9:00 PM" />
             </FormField>
 
-            <FormField label="Contact Phone" helper="Front desk or guest support number. This appears in Contact Staff.">
+            {guestContactNeedsSetup ? (
+              <p role="status" className="border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950 md:col-span-2 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+                The saved contact values are missing or demo placeholders. Guests can request staff assistance, but no phone number or email is shown until valid details are saved.
+              </p>
+            ) : null}
+
+            <FormField id="guest-contact" label="Contact Phone" helper="Front desk or guest support number. This appears in Contact Staff." className="scroll-mt-24">
               <Input name="contactPhone" defaultValue={hotel?.settings?.contactPhone ?? ''} placeholder="+63 900 000 0000" />
             </FormField>
 

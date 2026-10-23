@@ -174,8 +174,8 @@ function InfoStatCard({
   value: string;
 }) {
   return (
-    <div className="border border-white/10 bg-white/10 p-4 backdrop-blur">
-      <span className="grid size-11 place-items-center bg-gold/20 text-gold">
+    <div className="min-w-0 border border-white/10 bg-white/[0.06] p-4">
+      <span className="grid size-9 place-items-center text-gold">
         <Icon className="size-5" />
       </span>
 
@@ -183,7 +183,7 @@ function InfoStatCard({
         {label}
       </p>
 
-      <p className="mt-1 line-clamp-2 font-serif text-[15px] font-medium tracking-wide text-white">
+      <p className="mt-1 break-words font-serif text-[15px] font-medium leading-6 tracking-wide text-white">
         {value}
       </p>
     </div>
@@ -619,7 +619,7 @@ export default async function PoolPage({
           </header>
 
           <section className="px-5 py-5">
-            <div className="relative overflow-hidden border border-gold/30 bg-neutral-950 shadow-2xl">
+            <div className="relative overflow-hidden border border-white/10 bg-neutral-950 shadow-2xl">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-65"
                 style={{
@@ -629,8 +629,8 @@ export default async function PoolPage({
 
               <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/55 to-black" />
 
-              <div className="relative z-10 flex min-h-[430px] flex-col justify-end p-5">
-                <span className="mb-4 inline-flex w-fit items-center gap-2 border border-gold/40 bg-black/45 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-gold backdrop-blur">
+              <div className="relative z-10 flex min-h-[350px] flex-col justify-end p-5">
+                <span className="mb-3 inline-flex w-fit items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-gold">
                   <Sparkles className="size-4" />
                   Pool Experience
                 </span>
@@ -657,10 +657,12 @@ export default async function PoolPage({
           </section>
 
           <section className="px-5">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <InfoStatCard icon={Clock3} label="Hours" value={poolHours} />
               <InfoStatCard icon={MapPin} label="Access" value={accessValue} />
-              <InfoStatCard icon={ShieldCheck} label="Safety" value={safetyValue} />
+              <div className="col-span-2">
+                <InfoStatCard icon={ShieldCheck} label="Safety" value={safetyValue} />
+              </div>
             </div>
           </section>
 

@@ -35,7 +35,7 @@ function messageForReason(reason?: string) {
       return 'This session paused after a period of inactivity, which keeps your room details private. Tap the panel again to pick up where you left off.';
 
     case 'no-session':
-      return 'This page can only be opened after tapping the official NFC panel. Direct guest portal links are not accepted.';
+      return 'Your guest session is no longer available in this browser. Tap the hotel NFC panel again to securely reopen your guest portal.';
 
     case 'invalid-session':
       return 'This NFC access session is invalid, revoked, or already expired.';

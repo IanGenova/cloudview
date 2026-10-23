@@ -1665,7 +1665,7 @@ export function POSClient({
         */}
         <div>
           <h1 className="font-serif text-xl font-normal tracking-tight text-[#11100b]">
-            Counter sales
+            Counter Sales
           </h1>
         </div>
 
@@ -1861,6 +1861,7 @@ export function POSClient({
                     key={product.id}
                     type="button"
                     onClick={() => addFoodItem(product.id)}
+                    aria-label={`Add ${product.name} to sale`}
                     disabled={!sellable}
                     className={cn(
                       'touch-manipulation overflow-hidden border border-neutral-200 bg-white text-left shadow-sm transition',
@@ -1960,6 +1961,7 @@ export function POSClient({
                     key={service.id}
                     type="button"
                     onClick={() => addServiceItem(service.id)}
+                    aria-label={`Add ${service.name} to sale`}
                     disabled={!sellable}
                     className={cn(
                       'touch-manipulation overflow-hidden border border-neutral-200 bg-white p-2.5 text-left shadow-sm transition',
@@ -2039,12 +2041,12 @@ export function POSClient({
 
         <aside
           className={cn(
-            'lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]',
+            'self-start',
             mobileView === 'products' ? 'hidden lg:block' : 'block'
           )}
         >
-          <section className="flex min-h-[70vh] flex-col overflow-hidden border border-neutral-200 bg-white shadow-sm lg:h-full">
-            <div className="border-b border-neutral-100 bg-black p-4 text-white">
+          <section className="flex flex-col border border-neutral-200 bg-white shadow-sm">
+            <div className="border-b border-neutral-100 bg-black p-4 text-white lg:sticky lg:top-[4.75rem] lg:z-10">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <button
@@ -2061,6 +2063,14 @@ export function POSClient({
                       Cloud View POS
                     </p>
                     <h2 className="mt-0.5 text-xl font-semibold">Current Sale</h2>
+                    {itemCount > 0 ? (
+                      <a
+                        href="#pos-checkout"
+                        className="mt-1 inline-block text-xs font-semibold text-gold underline underline-offset-4 hover:text-white"
+                      >
+                        Review {money(total, currency)} and checkout
+                      </a>
+                    ) : null}
                   </div>
                 </div>
 
@@ -2076,7 +2086,7 @@ export function POSClient({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 p-3">
               {lastReceiptLabel ? (
                 <div className="mb-3 border border-green-200 bg-green-50 p-3 text-green-800">
                   <p className="font-semibold">Sale completed</p>
@@ -2146,6 +2156,7 @@ export function POSClient({
                             <button
                               type="button"
                               onClick={() => updateFoodQty(item.productId, 0)}
+                              aria-label={`Remove ${product.name} from sale`}
                               className="grid size-8 touch-manipulation place-items-center bg-red-50 text-red-600"
                             >
                               <Trash2 className="size-3.5" />
@@ -2154,6 +2165,7 @@ export function POSClient({
 
                           <div className="mt-3 flex items-center justify-between">
                             <QuantityControls
+                              name={product.name}
                               quantity={item.quantity}
                               onDecrease={() =>
                                 updateFoodQty(item.productId, item.quantity - 1)
@@ -2232,6 +2244,7 @@ export function POSClient({
                             <button
                               type="button"
                               onClick={() => updateServiceQty(item.serviceId, 0)}
+                              aria-label={`Remove ${service.name} from sale`}
                               className="grid size-8 touch-manipulation place-items-center bg-red-50 text-red-600"
                             >
                               <Trash2 className="size-3.5" />
@@ -2240,6 +2253,7 @@ export function POSClient({
 
                           <div className="mt-3 flex items-center justify-between">
                             <QuantityControls
+                              name={service.name}
                               quantity={item.quantity}
                               onDecrease={() =>
                                 updateServiceQty(
@@ -2341,9 +2355,11 @@ export function POSClient({
                     <option value="ROOM_CHARGE">Room Charge</option>
                     <option value="PAY_AT_COUNTER">Pay Later</option>
                   </select>
-                  <p className="mt-1 text-[11px] font-bold text-neutral-500">
-                    Cash, room charge, and pay-later sales follow the hotel workflow. Card, e-wallet, and QR payments open Xendit's secure checkout and create the POS sale only after payment confirmation.
-                  </p>
+                  {paymentMethod === 'XENDIT' ? (
+                    <p className="mt-1 text-[11px] font-medium text-neutral-500">
+                      Secure checkout opens next. The sale is created after payment confirmation.
+                    </p>
+                  ) : null}
                   {paymentMethod === 'ROOM_CHARGE' ? (
                     <p className="mt-2 border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-[#765513]">
                       {roomsLoading
@@ -2388,7 +2404,7 @@ export function POSClient({
               </div>
             </div>
 
-            <div className="border-t border-neutral-100 bg-neutral-50 p-3">
+            <div id="pos-checkout" className="border-t border-neutral-100 bg-neutral-50 p-3">
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="font-bold text-neutral-500">Food</span>
@@ -2472,11 +2488,13 @@ export function POSClient({
 }
 
 function QuantityControls({
+  name,
   quantity,
   onDecrease,
   onIncrease,
   disableIncrease,
 }: {
+  name: string;
   quantity: number;
   onDecrease: () => void;
   onIncrease: () => void;
@@ -2487,6 +2505,7 @@ function QuantityControls({
       <button
         type="button"
         onClick={onDecrease}
+        aria-label={`Decrease ${name} quantity`}
         className="grid size-8 touch-manipulation place-items-center bg-white"
       >
         <Minus className="size-3.5" />
@@ -2499,6 +2518,7 @@ function QuantityControls({
       <button
         type="button"
         onClick={onIncrease}
+        aria-label={`Increase ${name} quantity`}
         disabled={disableIncrease}
         className="grid size-8 touch-manipulation place-items-center bg-white disabled:cursor-not-allowed disabled:opacity-40"
       >

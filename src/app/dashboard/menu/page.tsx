@@ -493,6 +493,12 @@ const bulkDefaultHotelId =
   user.role === 'SUPER_ADMIN'
     ? selectedHotelId || hotels[0]?.id || ''
     : user.hotelId!;
+const missingDescriptions = products.filter(
+  (product) => product.isAvailable && !product.description?.trim()
+);
+const centavoPrices = products.filter(
+  (product) => product.isAvailable && product.priceCents % 100 !== 0
+);
 
   return (
     <div>
@@ -500,58 +506,59 @@ const bulkDefaultHotelId =
       <MenuToastListener />
       <PageHeader
         title="Menu Management"
-        description="Digital menu categories, products, images, pricing, availability, bundle menus, and recipe links."
+        description="Edit products, prices, availability, and guest-facing photos."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ModalOpenButton
+              modalId="category-modal"
+              className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
+            >
+              <Plus className="size-4" />
+              Manage Categories
+            </ModalOpenButton>
+            <ModalOpenButton
+              modalId="bulk-menu-modal"
+              className="gap-2 border border-[#c99c38]/40 bg-[#fff8e7] text-[#8a641b] hover:bg-[#fff1c7]"
+            >
+              <UploadCloud className="size-4" />
+              Bulk Upload
+            </ModalOpenButton>
+            <ModalOpenButton
+              modalId="product-modal"
+              className="gap-2 bg-black text-white hover:bg-neutral-800"
+            >
+              <Plus className="size-4" />
+              Add Product
+            </ModalOpenButton>
+          </div>
+        }
       />
 
-      <div className="mb-4 flex flex-col gap-3 border border-neutral-200 bg-white p-4 md:flex-row md:items-center md:justify-between">
-  <div>
-    <h2 className="text-xl font-semibold">Products</h2>
-    <p className="mt-1 text-sm text-neutral-500">
-      These items appear in the Guest Portal and POS Terminal. Products
-      can now be single items or fixed bundles.
-    </p>
-  </div>
-
-  <div className="flex flex-col gap-2 sm:flex-row">
-    <ModalOpenButton
-      modalId="category-modal"
-      className="gap-2 border border-neutral-200 bg-white text-black hover:bg-neutral-100 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800"
-    >
-      <Plus className="size-4" />
-      Add / Manage Categories
-    </ModalOpenButton>
-
-    <ModalOpenButton
-      modalId="bulk-menu-modal"
-      className="gap-2 border border-[#c99c38]/40 bg-[#fff8e7] text-[#8a641b] hover:bg-[#fff1c7]"
-    >
-      <UploadCloud className="size-4" />
-      Bulk Upload
-    </ModalOpenButton>
-
-    <ModalOpenButton
-      modalId="product-modal"
-      className="gap-2 bg-black text-white hover:bg-neutral-800"
-    >
-      <Plus className="size-4" />
-      Add Product
-    </ModalOpenButton>
-  </div>
-</div>
+      {missingDescriptions.length || centavoPrices.length ? (
+        <section aria-label="Menu details to review" className="mb-4 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-semibold">Review guest-facing menu details</p>
+          <p className="mt-1">{missingDescriptions.length} visible {missingDescriptions.length === 1 ? 'item has' : 'items have'} no description. {centavoPrices.length} {centavoPrices.length === 1 ? 'price includes' : 'prices include'} centavos; confirm those amounts are intentional.</p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            {[...new Map([...missingDescriptions, ...centavoPrices].map((product) => [product.id, product])).values()].map((product) => (
+              <a key={product.id} href={`#menu-product-${product.id}`} className="font-semibold underline underline-offset-4">{product.name}</a>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
 <form
   action="/dashboard/menu"
   method="get"
-  className="mb-6 border border-neutral-200 bg-white p-4"
+  className="mb-4 border border-neutral-200 bg-white p-3"
 >
-  <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <div className="flex items-center gap-2">
         <span className="grid size-9 place-items-center bg-gold/15 text-gold">
           <SlidersHorizontal className="size-4" />
         </span>
 
-        <h3 className="text-lg font-semibold">Filter Menu Products</h3>
+        <h2 className="text-base font-semibold">Filter products</h2>
       </div>
 
       <p className="mt-1 text-sm font-semibold text-neutral-500">
@@ -691,7 +698,7 @@ const bulkDefaultHotelId =
         : 0;
 return (
   <div key={product.id} className="contents">
-    <article className="overflow-hidden border border-neutral-200 bg-white">
+    <article id={`menu-product-${product.id}`} className="scroll-mt-5 overflow-hidden border border-neutral-200 bg-white">
 
         <ProductMedia
           src={imageUrl}

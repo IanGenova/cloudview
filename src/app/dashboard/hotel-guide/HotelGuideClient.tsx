@@ -2268,21 +2268,14 @@ export function HotelGuideClient({
 
       <div className="space-y-4">
         <section className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-5 p-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-col gap-3 p-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b88938]">
-                Hotel setup · Guest experience
-              </p>
-              <h2 className="mt-1 text-3xl font-semibold tracking-tight text-[#11100b]">
-                Hotel Guide
+              <h2 className="text-xl font-semibold tracking-tight text-[#11100b]">
+                Sections and items
               </h2>
-              <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-neutral-500">
-                Organize the guest guide by section, then add the information
-                cards guests should see inside each section.
-              </p>
 
               {selectedHotel ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <div className="inline-flex items-center gap-2 border border-[#c99c38]/30 bg-[#fffaf0] px-3 py-1.5 text-xs font-semibold text-[#8a651f]">
                     <Building2 className="size-4" />
                     Managing: {selectedHotel.name}
@@ -2326,35 +2319,40 @@ export function HotelGuideClient({
           </div>
 
           <div className="grid border-t border-neutral-100 bg-neutral-50 sm:grid-cols-4">
-            <div className="border-b border-neutral-200 px-5 py-4 sm:border-b-0 sm:border-r">
+            <div className="border-b border-neutral-200 px-4 py-2 sm:border-b-0 sm:border-r">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Sections
               </p>
-              <p className="mt-1 text-xl font-semibold">{sections.length}</p>
+              <p className="mt-0.5 text-base font-semibold">{sections.length}</p>
             </div>
-            <div className="border-b border-neutral-200 px-5 py-4 sm:border-b-0 sm:border-r">
+            <div className="border-b border-neutral-200 px-4 py-2 sm:border-b-0 sm:border-r">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Published
               </p>
-              <p className="mt-1 text-xl font-semibold">{publishedSections}</p>
+              <p className="mt-0.5 text-base font-semibold">{publishedSections}</p>
             </div>
-            <div className="border-b border-neutral-200 px-5 py-4 sm:border-b-0 sm:border-r">
+            <div className="border-b border-neutral-200 px-4 py-2 sm:border-b-0 sm:border-r">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Guide Items
               </p>
-              <p className="mt-1 text-xl font-semibold">{totalItems}</p>
+              <p className="mt-0.5 text-base font-semibold">{totalItems}</p>
             </div>
-            <div className="px-5 py-4">
+            <div className="px-4 py-2">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
                 Photos
               </p>
-              <p className="mt-1 text-xl font-semibold">{totalImages}</p>
+              <p className="mt-0.5 text-base font-semibold">{totalImages}</p>
             </div>
           </div>
         </section>
 
         <section className="border border-neutral-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_230px_170px_190px_auto]">
+          <div className={cn(
+            "grid gap-3 sm:grid-cols-2",
+            canChangeHotel
+              ? "xl:grid-cols-[minmax(15rem,1fr)_150px_130px_145px_auto]"
+              : "xl:grid-cols-[minmax(16rem,1fr)_130px_145px_auto]"
+          )}>
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
               <input
@@ -2365,7 +2363,7 @@ export function HotelGuideClient({
               />
             </div>
 
-            <div className="relative">
+            {canChangeHotel ? <div className="relative">
               <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a8781d]" />
               <select
                 value={defaultHotelId}
@@ -2381,7 +2379,7 @@ export function HotelGuideClient({
                 ))}
               </select>
               <ChevronRight className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 rotate-90 text-neutral-400" />
-            </div>
+            </div> : null}
 
             <select
             aria-label="Status filter"

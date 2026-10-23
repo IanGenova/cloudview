@@ -448,9 +448,11 @@ function NfcActionConfirmDialog({
 function CopyButton({
   value,
   label = 'Copy',
+  accessibleLabel,
 }: {
   value: string;
   label?: string;
+  accessibleLabel?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -471,6 +473,7 @@ function CopyButton({
     <button
       type="button"
       onClick={copyValue}
+      aria-label={accessibleLabel ?? label}
       className="inline-flex h-8 items-center justify-center gap-1.5 border border-neutral-200 bg-white px-2.5 text-[11px] font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
     >
       <Copy className="size-3.5" />
@@ -482,9 +485,11 @@ function CopyButton({
 function NfcUrlBox({
   label,
   value,
+  context,
 }: {
   label: string;
   value: string;
+  context: string;
 }) {
   return (
     <div className="border border-neutral-200 bg-neutral-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-950">
@@ -494,12 +499,13 @@ function NfcUrlBox({
         </p>
 
         <div className="flex shrink-0 gap-1.5">
-          <CopyButton value={value} label="Copy" />
+          <CopyButton value={value} label="Copy" accessibleLabel={`Copy ${label} for ${context}`} />
 
           <a
             href={value}
             target="_blank"
             rel="noreferrer"
+            aria-label={`Open ${label} for ${context}`}
             className="inline-flex h-8 items-center justify-center gap-1.5 bg-black px-2.5 text-[11px] font-semibold text-white transition hover:bg-neutral-800 dark:bg-gold dark:text-black dark:hover:bg-gold/80"
           >
             <ExternalLink className="size-3" />
@@ -1489,11 +1495,12 @@ return (
         </div>
       </div>
 
-      <NfcUrlBox label="Secure NFC URL" value={secureLaunchUrl} />
+      <NfcUrlBox label="Secure NFC URL" value={secureLaunchUrl} context={tag.label} />
 
       <NfcUrlBox
         label="Guest Destination"
         value={lockedDestinationUrl}
+        context={tag.label}
       />
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -1501,6 +1508,7 @@ return (
             type="button"
             disabled={pendingTagAction === `toggle:${tag.id}` || isMutating}
             onClick={() => handleToggleTagStatus(tag)}
+            aria-label={`${tag.status === 'ACTIVE' ? 'Set inactive' : 'Set active'}: ${tag.label}`}
             className={
               tag.status === 'ACTIVE'
                 ? 'inline-flex h-9 w-full items-center justify-center bg-neutral-900 text-xs font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-800 dark:hover:bg-neutral-700'
@@ -1517,6 +1525,7 @@ return (
         <button
           type="button"
           onClick={() => setEditingTag(tag)}
+          aria-label={`Edit ${tag.label}`}
           className="inline-flex h-9 items-center justify-center gap-1.5 border border-neutral-200 text-xs font-semibold hover:bg-neutral-50 dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-950"
         >
           <Pencil className="size-3.5" />
@@ -1527,6 +1536,7 @@ return (
         type="button"
         disabled={pendingTagAction === `rotate:${tag.id}` || isMutating}
         onClick={() => handleRotateTagSecret(tag)}
+        aria-label={`Rotate secure URL for ${tag.label}`}
         className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-amber-500 text-xs font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <RotateCcw className="size-3.5" />
@@ -1537,6 +1547,7 @@ return (
             type="button"
             disabled={pendingTagAction === `delete:${tag.id}` || isMutating}
             onClick={() => handleDeleteTag(tag)}
+            aria-label={`Delete ${tag.label}`}
             className="inline-flex h-9 w-full items-center justify-center gap-1.5 bg-red-600 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="size-3.5" />

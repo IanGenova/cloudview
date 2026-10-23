@@ -65,7 +65,15 @@ export default async function ContactPage({
             </div>
           ) : (
             <div role="status" className="mt-6 border border-white/15 bg-white/[0.05] p-4 text-sm leading-6 text-white/75">
-              Phone and email contact are not set up yet. Please speak with the nearest hotel staff member, or send a service request below.
+              <p>Send a request from {location} and the hotel team can assist you.</p>
+              <Link
+                href={`/t/${tagCode}/service`}
+                className="mt-4 flex min-h-12 items-center justify-between gap-3 bg-[#d6a738] px-4 font-semibold text-black"
+              >
+                Request staff assistance
+                <ArrowRight className="size-4" />
+              </Link>
+              <p className="mt-3 text-xs leading-5 text-white/50">Phone and email are not listed for this property. Staff nearby can also help.</p>
             </div>
           )}
         </section>
@@ -73,10 +81,12 @@ export default async function ContactPage({
         <section className="mt-6">
           <h2 className="font-serif text-2xl text-white">Other ways to get help</h2>
           <div className="mt-4 grid gap-3">
-            <Link href={`/t/${tagCode}/service`} className="flex min-h-16 items-center justify-between gap-4 border border-white/10 bg-white/[0.04] px-4 text-white">
-              <span className="flex items-center gap-3"><ConciergeBell className="size-5 text-[#d6a738]" /> Request assistance</span>
-              <ArrowRight className="size-4 text-white/50" />
-            </Link>
+            {phone || email ? (
+              <Link href={`/t/${tagCode}/service`} className="flex min-h-16 items-center justify-between gap-4 border border-white/10 bg-white/[0.04] px-4 text-white">
+                <span className="flex items-center gap-3"><ConciergeBell className="size-5 text-[#d6a738]" /> Request assistance</span>
+                <ArrowRight className="size-4 text-white/50" />
+              </Link>
+            ) : null}
             <Link href={`/t/${tagCode}/activity`} className="flex min-h-16 items-center justify-between gap-4 border border-white/10 bg-white/[0.04] px-4 text-white">
               <span className="flex items-center gap-3"><ShoppingBag className="size-5 text-[#d6a738]" /> Track an order or request</span>
               <ArrowRight className="size-4 text-white/50" />

@@ -397,7 +397,7 @@ export default async function GuestStaysPage() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-4">
       <PageHeader
         title="Guest Stays"
         description="Create check-ins, manage optional NFC room security codes, authorize devices, and track active room stays."

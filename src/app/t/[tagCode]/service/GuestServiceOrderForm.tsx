@@ -2210,15 +2210,15 @@ export function GuestServiceOrderForm({
         </div>
       ) : null}
 
-      <section className="mb-5 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.16),transparent_36%),linear-gradient(145deg,#161512,#0b0b0a)] p-5">
+      <section className="mb-4 overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(214,167,56,0.1),transparent_36%),linear-gradient(145deg,#161512,#0b0b0a)] px-2 pb-4 pt-2">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 border border-gold/20 bg-gold/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+            <div className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
               <Sparkles className="size-3.5" />
               {isPublicLocation ? 'Service at this location' : 'Private concierge'}
             </div>
 
-            <h2 className="mt-4 max-w-[17rem] font-serif text-[2rem] font-normal leading-[1.05] tracking-tight text-white">
+            <h2 className="mt-3 max-w-[17rem] font-serif text-[1.8rem] font-normal leading-[1.1] tracking-tight text-white">
               {isPublicLocation
                 ? 'Thoughtful service, wherever you are.'
                 : 'Comfort, delivered to your room.'}
@@ -2238,12 +2238,12 @@ export function GuestServiceOrderForm({
             </p>
           </div>
 
-          <span className="grid size-14 shrink-0 place-items-center border border-white/10 bg-white/[0.05] text-gold">
+          <span className="grid size-10 shrink-0 place-items-center text-gold">
             <BellRing className="size-6" strokeWidth={1.5} />
           </span>
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-3 border border-white/8 bg-black/20 px-4 py-3">
+        <div className="mt-3 flex items-center justify-between gap-3 px-1 py-2">
           <div>
             <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">
               Service location
@@ -2267,31 +2267,6 @@ export function GuestServiceOrderForm({
             {services.length ? 'Available' : 'Nothing listed'}
           </span>
         </div>
-      </section>
-
-      <section className="mb-5 border border-white/10 bg-white/[0.035] p-4">
-        <label htmlFor="svc-requesting-as" className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-gold/85">
-          Requesting as
-        </label>
-        <input
-            id="svc-requesting-as"
-          type="text"
-          autoComplete="name"
-          placeholder="Guest name"
-          value={guestName}
-          onChange={(event) => setGuestName(event.currentTarget.value)}
-          className={cn(darkFieldClass, 'mt-3 h-13')}
-          style={{
-            WebkitTextFillColor: 'white',
-            caretColor: '#d6a738',
-          }}
-        />
-        <p className="mt-2 text-xs font-medium leading-5 text-white/40">
-          {/* IX-5 again, on this form: it only claims a stay filled it in when one did. */}
-          {defaultGuestName
-            ? 'Taken from your stay. Change it if someone else is asking.'
-            : 'So staff know who the request is for.'}
-        </p>
       </section>
 
       {services.length > 6 ? (
@@ -2461,6 +2436,7 @@ export function GuestServiceOrderForm({
                             <button
                               type="button"
                               onClick={() => addService(service.code)}
+                              aria-label={`Add ${service.name} request`}
                               className="inline-flex h-11 w-full items-center justify-center gap-2 bg-white text-xs font-semibold text-black transition hover:bg-gold"
                             >
                               Add request

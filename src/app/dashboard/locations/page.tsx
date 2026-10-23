@@ -436,14 +436,10 @@ export default async function RoomsAndLocationsPage({
         description="Create and manage guest rooms, pool areas, lobby panels, restaurants, amenities, and other NFC destinations."
       />
 
-      <div className="mb-6 border border-neutral-200 bg-white p-4">
+      <div className="mb-4 border border-neutral-200 bg-white p-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Room & Location Directory</h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Use the tabs to manage rooms or non-room locations in a full-width
-              workspace.
-            </p>
 
             {selectedHotel ? (
               <div className="mt-3 inline-flex items-center gap-2 border border-[#c99c38]/25 bg-[#fffaf0] px-3 py-1.5 text-xs font-semibold text-[#8b641c]">
@@ -480,30 +476,16 @@ export default async function RoomsAndLocationsPage({
           </div>
         </div>
 
-        <div className="mt-5 border border-neutral-200 bg-neutral-50 p-3">
-          {user.role === 'SUPER_ADMIN' ? (
+        {user.role === 'SUPER_ADMIN' ? (
+          <div className="mt-4 border border-neutral-200 bg-neutral-50 p-3">
             <DirectoryHotelFilter
               hotels={hotels}
               selectedHotelId={selectedHotelId}
               activeTab={activeTab}
               searchQuery={searchQuery}
             />
-          ) : (
-            <div className="flex items-center gap-3 bg-white px-4 py-3">
-              <span className="grid size-10 place-items-center bg-[#f7f1e5] text-[#a8781d]">
-                <Building2 className="size-5" />
-              </span>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-                  Hotel / Property
-                </p>
-                <p className="mt-0.5 text-sm font-semibold text-neutral-900">
-                  {selectedHotel?.name || 'No hotel assigned'}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : null}
 
        <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-col gap-2 bg-neutral-50 p-2 sm:flex-row">
