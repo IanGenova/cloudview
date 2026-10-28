@@ -32,6 +32,25 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Some hosts start non-interactive SSH commands with the system Node 18 even
+# though Next.js 16 is deployed under NVM's Node 22. Select the supported
+# runtime before npm, Prisma, or the build runs.
+node_is_supported() {
+  node -e '
+    const [major, minor] = process.versions.node.split(".").map(Number);
+    process.exit(major > 20 || (major === 20 && minor >= 9) ? 0 : 1);
+  ' >/dev/null 2>&1
+}
+
+if ! node_is_supported && [ -s "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh"
+  nvm use 22 >/dev/null
+fi
+if ! node_is_supported; then
+  echo "Node.js 20.9 or newer is required for this deployment." >&2
+  exit 1
+fi
+
 APP_NAME="${PM2_APP_NAME:-cloudview-nextjs}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/dashboard/login}"
 
