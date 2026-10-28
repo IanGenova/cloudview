@@ -1,4 +1,4 @@
-import type { OrderStatus, Prisma, ServiceRequestStatus } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import {
   ACTIVE_ORDER_STATUSES,
@@ -43,22 +43,6 @@ const serviceRequestSelect = {
   notes: true,
   createdAt: true,
 } as const;
-
-const activeOrderStatusSet = new Set<OrderStatus>([
-  ...ACTIVE_ORDER_STATUSES,
-]);
-
-const activeServiceRequestStatusSet = new Set<ServiceRequestStatus>([
-  ...ACTIVE_SERVICE_REQUEST_STATUSES,
-]);
-
-function isActiveOrderStatus(status: OrderStatus) {
-  return activeOrderStatusSet.has(status);
-}
-
-function isActiveServiceRequestStatus(status: ServiceRequestStatus) {
-  return activeServiceRequestStatusSet.has(status);
-}
 
 type ActivityOrder = Prisma.OrderGetPayload<{
   select: typeof orderSelect;
@@ -201,8 +185,10 @@ export async function getGuestPortalActivity(tagCode: string) {
   const [
     hotel,
     guestStay,
-    currentOrders,
-    currentServiceRequests,
+    activeOrders,
+    recentCompletedOrders,
+    activeServiceRequests,
+    recentCompletedServiceRequests,
     pastOrders,
     pastServiceRequests,
   ] = await Promise.all([
@@ -257,7 +243,21 @@ export async function getGuestPortalActivity(tagCode: string) {
       : Promise.resolve(null),
 
     db.order.findMany({
-      where: currentOrderWhere,
+      where: {
+        ...currentOrderWhere,
+        status: { in: [...ACTIVE_ORDER_STATUSES] },
+      },
+      select: orderSelect,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    }),
+
+    db.order.findMany({
+      where: {
+        ...currentOrderWhere,
+        status: { notIn: [...ACTIVE_ORDER_STATUSES] },
+      },
       select: orderSelect,
       orderBy: {
         createdAt: 'desc',
@@ -266,7 +266,21 @@ export async function getGuestPortalActivity(tagCode: string) {
     }),
 
     db.serviceRequest.findMany({
-      where: currentServiceRequestWhere,
+      where: {
+        ...currentServiceRequestWhere,
+        status: { in: [...ACTIVE_SERVICE_REQUEST_STATUSES] },
+      },
+      select: serviceRequestSelect,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    }),
+
+    db.serviceRequest.findMany({
+      where: {
+        ...currentServiceRequestWhere,
+        status: { notIn: [...ACTIVE_SERVICE_REQUEST_STATUSES] },
+      },
       select: serviceRequestSelect,
       orderBy: {
         createdAt: 'desc',
@@ -297,13 +311,14 @@ export async function getGuestPortalActivity(tagCode: string) {
       : Promise.resolve([]),
   ]);
 
-      const currentActiveOrderCount = currentOrders.filter((order) =>
-        isActiveOrderStatus(order.status)
-      ).length;
-
-      const currentActiveServiceRequestCount = currentServiceRequests.filter(
-        (request) => isActiveServiceRequestStatus(request.status)
-      ).length;
+  // Keep every active item visible even if this visit has many completed items.
+  const currentOrders = [...activeOrders, ...recentCompletedOrders].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+  );
+  const currentServiceRequests = [
+    ...activeServiceRequests,
+    ...recentCompletedServiceRequests,
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return {
     hasSession: true as const,
@@ -322,7 +337,7 @@ export async function getGuestPortalActivity(tagCode: string) {
     pastOrders,
     pastServiceRequests,
     orderAgainItems: buildOrderAgainItems(pastOrders),
-    currentActiveOrderCount,
-    currentActiveServiceRequestCount,
+    currentActiveOrderCount: activeOrders.length,
+    currentActiveServiceRequestCount: activeServiceRequests.length,
   };
 }

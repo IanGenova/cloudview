@@ -623,6 +623,7 @@ function ReportTable({
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <input
               name="q"
+              aria-label="Search within this report"
               defaultValue={query}
               placeholder="Search within this report..."
               className="h-11 w-full border border-neutral-200 bg-neutral-50 pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-[#c99c38] focus:bg-white"

@@ -166,6 +166,19 @@ Kitchen: kitchen@cloudview.test / Password123!
 
 ### 8. Start development server
 
+On Windows, start the local real-time service in a separate terminal first:
+
+```powershell
+npm run dev:realtime
+```
+
+Place the Centrifugo binary at `centrifugo/centrifugo.exe` before running this
+command. The helper reads the existing local secrets, writes an ignored
+`centrifugo/config.dev.json`, and sets development-only socket and publish URLs
+in `.env.development.local`. It uses port 8001 because port 8000 may already be
+used by another local service. Keep the real-time terminal running while using
+the dashboard, then start Next.js:
+
 ```bash
 npm run dev
 ```

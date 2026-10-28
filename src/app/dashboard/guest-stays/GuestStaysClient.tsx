@@ -3174,7 +3174,7 @@ function handleResetPasscode(guestStayId: string) {
                         </p>
                         <h4 className="mt-2 text-xl font-semibold">Pay with Xendit</h4>
                         <p className="mt-1 text-xs font-semibold leading-5 text-white/55">
-                          The guest completes payment on Xendit's hosted page. Checkout is finalized only after the signed webhook confirms payment.
+                          The guest completes payment on Xendit&apos;s hosted page. Checkout is finalized only after the signed webhook confirms payment.
                         </p>
                       </div>
                       <span className="grid size-12 shrink-0 place-items-center bg-[#d6a738] text-black">

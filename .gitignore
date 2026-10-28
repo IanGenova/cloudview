@@ -38,6 +38,7 @@ ecosystem.config.js
 /.env.production
 /.env.production.local
 /centrifugo/config.json
+/centrifugo/config.dev.json
 /centrifugo/config.json.backup-*
 
 # Private VPS files

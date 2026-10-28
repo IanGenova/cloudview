@@ -170,6 +170,49 @@ else
   esac
 fi
 
+# PM2 can report an old scheduler entry as "online" even when it has no PID.
+# Recreate entries whose script path or working directory points outside this
+# checkout, then verify that the replacement has a running process.
+step "Ensuring scheduled-release worker"
+SCHEDULER_SCRIPT="$(pwd)/scripts/release-scheduled-worker.mjs"
+
+scheduler_is_healthy() {
+  pm2 jlist | node -e '
+    try {
+      const apps = JSON.parse(require("fs").readFileSync(0, "utf8"));
+      const app = apps.find((entry) => entry.name === "cloudview-scheduler");
+      const healthy = app &&
+        app.pm2_env?.status === "online" &&
+        app.pm2_env?.pm_exec_path === process.argv[1] &&
+        app.pm2_env?.pm_cwd === process.cwd() &&
+        Number(app.pid) > 0;
+      process.exit(healthy ? 0 : 1);
+    } catch {
+      process.exit(1);
+    }
+  ' "$SCHEDULER_SCRIPT"
+}
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  echo "[dry-run] verify cloudview-scheduler path, cwd, and PID; recreate if invalid"
+  echo "[dry-run] reload cloudview-scheduler and verify it again"
+else
+  if scheduler_is_healthy; then
+    pm2 reload cloudview-scheduler --update-env
+  else
+    pm2 delete cloudview-scheduler >/dev/null 2>&1 || true
+    pm2 start ecosystem.production.config.cjs --only cloudview-scheduler
+  fi
+
+  sleep 4
+  if ! scheduler_is_healthy; then
+    echo "Scheduled-release worker failed its path/PID health check." >&2
+    pm2 logs cloudview-scheduler --err --lines 20 --nostream >&2 || true
+    exit 1
+  fi
+  pm2 save
+fi
+
 step "Done"
 echo "  ${DATABASE_URL_SOURCE} -> ${SAFE_TARGET}"
 echo "  $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"

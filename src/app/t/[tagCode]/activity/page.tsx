@@ -312,7 +312,7 @@ export default async function GuestActivityPage({
           <div className="min-w-0 border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ShoppingBag className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Current orders</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Orders from this visit</h2>
             </div>
 
             <div className="space-y-3">
@@ -364,7 +364,7 @@ export default async function GuestActivityPage({
 
               {!activity.currentOrders.length ? (
                 <EmptyState
-                  title="No current orders yet"
+                  title="No orders from this visit yet"
                   description="Food orders from this visit will appear here."
                 />
               ) : null}
@@ -374,7 +374,7 @@ export default async function GuestActivityPage({
           <div className="min-w-0 border border-white/10 bg-white/[0.04] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ConciergeBell className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Current requests</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Requests from this visit</h2>
             </div>
 
             <div className="space-y-3">
@@ -413,7 +413,7 @@ export default async function GuestActivityPage({
 
               {!activity.currentServiceRequests.length ? (
                 <EmptyState
-                  title="No current requests yet"
+                  title="No requests from this visit yet"
                   description="Service requests from this visit will appear here."
                 />
               ) : null}
@@ -453,7 +453,7 @@ export default async function GuestActivityPage({
           <div className="min-w-0 border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <History className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Past Orders</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Orders from previous visits</h2>
             </div>
 
             <div className="space-y-3">
@@ -495,7 +495,7 @@ export default async function GuestActivityPage({
 
               {!activity.pastOrders.length ? (
                 <EmptyState
-                  title="No past orders yet"
+                  title="No orders from previous visits yet"
                   description="Previous orders from this guest profile will appear here."
                 />
               ) : null}
@@ -505,7 +505,7 @@ export default async function GuestActivityPage({
           <div className="min-w-0 border border-white/10 bg-white/[0.035] p-5">
             <div className="mb-4 flex items-center gap-2">
               <ReceiptText className="size-5 text-[#c99c38]" />
-              <h2 className="text-2xl font-serif font-normal tracking-wide">Past requests</h2>
+              <h2 className="text-2xl font-serif font-normal tracking-wide">Requests from previous visits</h2>
             </div>
 
             <div className="space-y-3">
@@ -538,7 +538,7 @@ export default async function GuestActivityPage({
 
               {!activity.pastServiceRequests.length ? (
                 <EmptyState
-                  title="No past service requests yet"
+                  title="No requests from previous visits yet"
                   description="Previous service requests from this guest profile will appear here."
                 />
               ) : null}
