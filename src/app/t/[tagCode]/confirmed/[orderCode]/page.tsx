@@ -13,6 +13,7 @@ import { GuestBottomNav, GuestShell } from '@/components/guest/GuestShell';
 import { money } from '@/lib/money';
 import { requireNfcGuestAccess } from '@/lib/nfc-security';
 import { requireCurrentNfcGuestSession } from '@/lib/nfc-guest-session';
+import { getGuestOrderDestination, getGuestOrderProgress } from '@/lib/guest-order-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,7 @@ export default async function OrderConfirmedPage({
       guestSessionId: guestSession.id,
     },
     include: {
+      room: { select: { number: true } },
       items: true,
       guestXenditSessions: {
         orderBy: { createdAt: 'desc' },
@@ -57,10 +59,13 @@ export default async function OrderConfirmedPage({
   if (!order) notFound();
 
   const displayName = order.guestName?.trim() || 'Guest';
-  const deliveryPlace = tag.room
-    ? `Room ${tag.room.number}`
-    : tag.location?.name || tag.label;
+  const deliveryPlace = getGuestOrderDestination(
+    order.notes,
+    order.room?.number ?? null,
+    tag.location?.name ?? ''
+  ) || tag.label;
   const payment = order.guestXenditSessions[0];
+  const progress = getGuestOrderProgress(order);
   const isCancelled = order.status === OrderStatus.CANCELLED;
   const isRefunding =
     order.paymentStatus === PaymentStatus.REFUND_PENDING ||
@@ -73,7 +78,7 @@ export default async function OrderConfirmedPage({
       ? 'Refund Update'
       : isCancelled
         ? 'Order Cancelled'
-        : 'Order Confirmed';
+        : progress.title;
 
   return (
     <>
@@ -117,7 +122,7 @@ export default async function OrderConfirmedPage({
             <p className="mt-5 text-sm font-medium text-white/70">
               {isCancelled || isRefunding || isRefunded
                 ? title
-                : `Thank you, ${displayName}. Your order is with the kitchen.`}
+                : `Thank you, ${displayName}. ${progress.subtitle}`}
             </p>
 
             <h1 className="mt-2 font-serif text-4xl font-normal leading-tight tracking-wide text-white">
@@ -142,10 +147,10 @@ export default async function OrderConfirmedPage({
                   </div>
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-widest text-white/50">
-                      Estimated Delivery
+                      {progress.etaLabel}
                     </p>
                     <p className="mt-1 font-serif text-2xl font-normal tracking-wide text-white">
-                      20–30 mins
+                      {progress.eta}
                     </p>
                   </div>
                 </div>

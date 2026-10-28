@@ -38,6 +38,7 @@ import { requestGuestFoodOrderRefund } from '@/lib/guest-xendit-refund';
 import { manualRefundDue } from '@/lib/manual-refund-due';
 import { voidSyncedOrderPoints } from '@/lib/guest-point-sync';
 import { recalculateOrderTotals } from '@/lib/order-charge-totals';
+import { getGuestOrderDestination, getGuestOrderProgress } from '@/lib/guest-order-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ const trackingSteps = [
   {
     status: OrderStatus.PENDING,
     label: 'Order Received',
-    description: 'Your order has been sent to the hotel team.',
+    description: 'Your order has been recorded.',
   },
   {
     status: OrderStatus.ACCEPTED,
@@ -64,13 +65,13 @@ const trackingSteps = [
   },
   {
     status: OrderStatus.READY,
-    label: 'Ready / Dispatching',
-    description: 'Your order is ready and will be delivered soon.',
+    label: 'Ready',
+    description: 'Your order is ready for the next handoff.',
   },
   {
     status: OrderStatus.DELIVERED,
-    label: 'Delivered',
-    description: 'Your order has been delivered.',
+    label: 'Complete',
+    description: 'The hotel team completed your order.',
   },
 ] as const;
 
@@ -183,75 +184,6 @@ function getItemStatusClass(item: TrackingOrderItem) {
   return 'bg-emerald-500/15 text-emerald-200';
 }
 
-function getStatusContent(status: OrderStatus) {
-  switch (status) {
-    case OrderStatus.PENDING:
-      return {
-        title: 'Waiting for confirmation',
-        subtitle:
-          'Your order was received and is waiting for hotel staff confirmation.',
-        etaLabel: 'Estimated confirmation time',
-        eta: '2 - 5 mins',
-        timerLabel: 'Time since order was placed',
-      };
-
-    case OrderStatus.ACCEPTED:
-      return {
-        title: 'Your order is confirmed',
-        subtitle: 'The hotel team accepted your order.',
-        etaLabel: 'Estimated delivery time',
-        eta: '20 - 25 mins',
-        timerLabel: 'Time since confirmation',
-      };
-
-    case OrderStatus.PREPARING:
-      return {
-        title: 'Your order is being prepared',
-        subtitle: 'The kitchen is currently preparing your food.',
-        etaLabel: 'Estimated remaining time',
-        eta: '15 - 20 mins',
-        timerLabel: 'Time in preparation',
-      };
-
-    case OrderStatus.READY:
-      return {
-        title: 'Your order is ready',
-        subtitle: 'Your order is ready and will be delivered to your room soon.',
-        etaLabel: 'Estimated delivery time',
-        eta: '5 - 10 mins',
-        timerLabel: 'Time since ready',
-      };
-
-    case OrderStatus.DELIVERED:
-      return {
-        title: 'Order delivered',
-        subtitle: 'Your order has been delivered. Enjoy your meal.',
-        etaLabel: 'Status',
-        eta: 'Delivered',
-        timerLabel: 'Completed in',
-      };
-
-    case OrderStatus.CANCELLED:
-      return {
-        title: 'Order cancelled',
-        subtitle:
-          'This order has been cancelled. Please contact staff if you need assistance.',
-        etaLabel: 'Status',
-        eta: 'Cancelled',
-        timerLabel: 'Cancelled after',
-      };
-
-    default:
-      return {
-        title: 'Tracking your order',
-        subtitle: 'Your order status is being updated.',
-        etaLabel: 'Estimated delivery time',
-        eta: '20 - 25 mins',
-        timerLabel: 'Running timer',
-      };
-  }
-}
-
 function getStepIndex(status: OrderStatus) {
   return trackingSteps.findIndex((step) => step.status === status);
 }
@@ -294,7 +226,7 @@ function getShortStepLabel(status: OrderStatus) {
     case OrderStatus.READY:
       return 'Ready';
     case OrderStatus.DELIVERED:
-      return 'Delivered';
+      return 'Complete';
     default:
       return status.replaceAll('_', ' ');
   }
@@ -309,7 +241,7 @@ function getProgressStatusText(status: OrderStatus) {
     case OrderStatus.PREPARING:
       return 'Kitchen is preparing your order';
     case OrderStatus.READY:
-      return 'Ready for delivery';
+      return 'Ready for handoff';
     case OrderStatus.DELIVERED:
       return 'Completed';
     case OrderStatus.CANCELLED:
@@ -993,7 +925,7 @@ function CompactOrderProgress({
       createdAt: Date;
     }
   >;
-  statusContent: ReturnType<typeof getStatusContent>;
+  statusContent: ReturnType<typeof getGuestOrderProgress>;
   timerStart: Date;
   timerEnd: Date | null;
 }) {
@@ -1435,11 +1367,13 @@ export default async function OrderTrackingPage({
     notFound();
   }
 
-  const roomLabel = order.room
-    ? `Room ${order.room.number}`
-    : order.location?.name ?? tag.location?.name ?? tag.label;
+  const roomLabel = getGuestOrderDestination(
+    order.notes,
+    order.room?.number ?? null,
+    order.location?.name ?? tag.location?.name ?? ''
+  ) || tag.label;
 
-  const statusContent = getStatusContent(order.status);
+  const statusContent = getGuestOrderProgress(order);
 
   const currentStepIndex =
     order.status === OrderStatus.CANCELLED
@@ -1609,14 +1543,14 @@ export default async function OrderTrackingPage({
             <div className="grid size-10 shrink-0 place-items-center bg-gold/10 text-gold">
               <Truck className="size-5" />
             </div>
-            <h2 className="font-serif text-xl font-normal tracking-wide">Delivery Details</h2>
+            <h2 className="font-serif text-xl font-normal tracking-wide">Fulfillment Details</h2>
           </div>
 
           <div className="space-y-3 text-[15px] font-medium">
             <div className="flex items-start gap-4 bg-white/5 p-4">
               <MapPin className="mt-0.5 size-5 shrink-0 text-gold" />
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Room / Location</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Where / How</p>
                 <p className="mt-1 font-serif tracking-wide text-white">{roomLabel}</p>
               </div>
             </div>

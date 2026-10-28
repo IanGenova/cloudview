@@ -29,6 +29,8 @@ import { triggerKitchenOrderCreated } from '@/lib/realtime/kitchen-events';
 import { triggerInventoryUpdated } from '@/lib/realtime/inventory-events';
 import { triggerServiceRequestCreated } from '@/lib/realtime/service-request-events';
 import { assertXenditWebhookRecoveryToken } from '@/lib/xendit-webhook-recovery-token';
+import { getPOSCashSettlement } from '@/lib/pos-cash-settlement';
+import { money } from '@/lib/money';
 
 
 type POSOrderInput = {
@@ -37,6 +39,7 @@ type POSOrderInput = {
   guestName?: string;
   notes?: string;
   paymentMethod: 'CASH' | 'POS' | 'ROOM_CHARGE' | 'PAY_AT_COUNTER';
+  cashTenderedCents?: number;
   items?: {
     productId: string;
     quantity: number;
@@ -465,6 +468,11 @@ async function createPOSOrderInternal(
     return sum + getServiceUnitPriceCents(service.unitPrice) * item.quantity;
   }, 0);
 
+  const saleTotalCents = foodSubtotal + serviceSubtotal;
+  const cashSettlement = paymentMethod === PaymentMethod.CASH
+    ? getPOSCashSettlement(saleTotalCents, input.cashTenderedCents)
+    : null;
+
 let orderCode: string | null = null;
 
 /**
@@ -483,6 +491,7 @@ let groupedServiceRequestCode: string | null = null;
           },
           select: {
             name: true,
+            settings: { select: { currency: true } },
           },
         });
 
@@ -941,6 +950,20 @@ let groupedServiceRequestCode: string | null = null;
       }
     }
 
+    if (paymentMethod === PaymentMethod.CASH) {
+      await tx.activityLog.create({
+        data: {
+          hotelId,
+          userId: user.id,
+          actor: user.name ?? user.email ?? 'Dashboard User',
+          action: 'SETTLE',
+          entity: 'POS_CASH_SALE',
+          entityId: createdOrder?.id ?? createdServiceRequests[0]?.id ?? null,
+          message: `Sale ${[createdOrder?.orderCode, groupedServiceRequestCode].filter(Boolean).join(' / ')}: total ${money(saleTotalCents, hotel.settings?.currency || 'PHP')}, cash received ${money(cashSettlement?.tenderedCents ?? 0, hotel.settings?.currency || 'PHP')}, change ${money(cashSettlement?.changeCents ?? 0, hotel.settings?.currency || 'PHP')}.`,
+        },
+      });
+    }
+
     return {
       order: createdOrder,
       serviceRequests: createdServiceRequests,
@@ -1042,6 +1065,8 @@ let groupedServiceRequestCode: string | null = null;
     serviceRequestCodes: Array.from(
       new Set(result.serviceRequests.map((request) => request.requestCode))
     ),
+    cashTenderedCents: cashSettlement?.tenderedCents ?? null,
+    cashChangeCents: cashSettlement?.changeCents ?? null,
   };
 }
 

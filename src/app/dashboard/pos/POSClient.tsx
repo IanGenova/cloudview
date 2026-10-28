@@ -680,6 +680,12 @@ export function POSClient({
   >('CASH');
   const [cashTendered, setCashTendered] = useState('');
   const [lastReceiptLabel, setLastReceiptLabel] = useState<string | null>(null);
+  const [lastCashSettlement, setLastCashSettlement] = useState<{
+    totalCents: number;
+    tenderedCents: number;
+    changeCents: number;
+  } | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<POSToast>(null);
 
@@ -1497,6 +1503,12 @@ export function POSClient({
       return;
     }
 
+    setReviewOpen(true);
+  }
+
+  function confirmSale() {
+    if (pending) return;
+    setReviewOpen(false);
     startTransition(async () => {
       try {
         if (paymentMethod === 'XENDIT') {
@@ -1560,6 +1572,7 @@ export function POSClient({
           guestName,
           notes,
           paymentMethod,
+          cashTenderedCents: paymentMethod === 'CASH' ? cashValue : undefined,
           items: foodCart,
           services: serviceCart,
         });
@@ -1575,6 +1588,11 @@ export function POSClient({
           const receiptLabel = parts.join(' · ') || 'Sale completed';
 
           setLastReceiptLabel(receiptLabel);
+          setLastCashSettlement(paymentMethod === 'CASH' ? {
+            totalCents: total,
+            tenderedCents: response.cashTenderedCents ?? cashValue,
+            changeCents: response.cashChangeCents ?? change,
+          } : null);
           clearCart();
           setMobileView('products');
 
@@ -2093,6 +2111,13 @@ export function POSClient({
                   <p className="mt-1 text-sm font-semibold">
                     {lastReceiptLabel}
                   </p>
+                  {lastCashSettlement ? (
+                    <div className="mt-2 space-y-1 text-sm font-semibold">
+                      <p>Total: {money(lastCashSettlement.totalCents, currency)}</p>
+                      <p>Cash received: {money(lastCashSettlement.tenderedCents, currency)}</p>
+                      <p>Change due: {money(lastCashSettlement.changeCents, currency)}</p>
+                    </div>
+                  ) : null}
                   <p className="mt-2 text-xs font-semibold text-green-700">
                     {NON_FISCAL_DOCUMENT_NOTICE_SHORT} Issue the guest&apos;s
                     official Invoice from your BIR-registered POS.
@@ -2350,10 +2375,10 @@ export function POSClient({
                     }
                     className="h-10 w-full border border-neutral-200 bg-white px-3 text-xs font-semibold outline-none"
                   >
-                    <option value="CASH">Cash</option>
+                    <option value="CASH">Cash received now</option>
                     <option value="XENDIT">Card / E-wallet / QR Ph (Xendit)</option>
                     <option value="ROOM_CHARGE">Room Charge</option>
-                    <option value="PAY_AT_COUNTER">Pay Later</option>
+                    <option value="PAY_AT_COUNTER">Collect payment later (unpaid)</option>
                   </select>
                   {paymentMethod === 'XENDIT' ? (
                     <p className="mt-1 text-[11px] font-medium text-neutral-500">
@@ -2462,14 +2487,155 @@ export function POSClient({
                       ? 'Opening Xendit...'
                       : 'Processing...'
                     : paymentMethod === 'XENDIT'
-                      ? 'Open Secure Checkout'
-                      : 'Complete Sale'}
+                      ? 'Review Secure Checkout'
+                      : 'Review Sale'}
                 </button>
               </div>
             </div>
           </section>
         </aside>
       </div>
+
+      {reviewOpen ? (
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-review-title"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setReviewOpen(false);
+              if (event.key !== 'Tab') return;
+              const buttons = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([disabled])')
+              );
+              const first = buttons[0];
+              const last = buttons[buttons.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+              }
+            }}
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto border border-neutral-200 bg-white p-5 text-neutral-950 shadow-2xl"
+          >
+            <h2 id="pos-review-title" className="font-serif text-2xl">
+              Review this sale
+            </h2>
+            <p className="mt-2 text-sm text-neutral-600">
+              Check the items, customer, and payment before creating the transaction.
+            </p>
+            <div className="mt-5 space-y-2 border-y border-neutral-200 py-4 text-sm">
+              {foodCart.map((item) => {
+                const product = productMap.get(item.productId);
+                const unitPrice = product?.priceCents ?? 0;
+                return (
+                  <p key={`food-${item.productId}`} className="flex justify-between gap-3">
+                    <span>{product?.name ?? 'Food item'}</span>
+                    <b className="shrink-0 text-right">
+                      {item.quantity} × {money(unitPrice, currency)} ={' '}
+                      {money(unitPrice * item.quantity, currency)}
+                    </b>
+                  </p>
+                );
+              })}
+              {serviceCart.map((item) => {
+                const service = serviceMap.get(item.serviceId);
+                const unitPrice = service ? getServiceUnitPriceCents(service) : 0;
+                return (
+                  <p key={`service-${item.serviceId}`} className="flex justify-between gap-3">
+                    <span>{service?.name ?? 'Service item'}</span>
+                    <b className="shrink-0 text-right">
+                      {service?.billingMode === 'PRICE_ON_CONFIRMATION'
+                        ? 'Price confirmed later'
+                        : service?.billingMode === 'FREE'
+                          ? 'Complimentary'
+                          : `${item.quantity} × ${money(unitPrice, currency)} = ${money(unitPrice * item.quantity, currency)}`}
+                    </b>
+                  </p>
+                );
+              })}
+            </div>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt>Hotel</dt>
+                <dd className="text-right font-semibold">
+                  {hotels.find((hotel) => hotel.id === selectedHotelId)?.name ?? 'Selected hotel'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Customer</dt>
+                <dd className="text-right font-semibold">{guestName.trim() || 'Walk-in customer'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Room</dt>
+                <dd className="text-right font-semibold">
+                  {activeRooms.find((room) => room.id === roomId)?.number ?? 'No room'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Payment</dt>
+                <dd className="text-right font-semibold">
+                  {paymentMethod === 'CASH'
+                    ? 'Cash received now'
+                    : paymentMethod === 'XENDIT'
+                      ? 'Secure online payment'
+                      : paymentMethod === 'ROOM_CHARGE'
+                        ? 'Add to room bill'
+                        : 'Collect later (unpaid)'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3 border-t border-neutral-200 pt-3 text-base">
+                <dt className="font-bold">Total</dt>
+                <dd className="font-bold">{money(total, currency)}</dd>
+              </div>
+              {paymentMethod === 'CASH' ? (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <dt>Cash received</dt>
+                    <dd className="font-semibold">{money(cashValue, currency)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt>Change due</dt>
+                    <dd className="font-semibold">{money(change, currency)}</dd>
+                  </div>
+                </>
+              ) : null}
+              {notes.trim() ? (
+                <div>
+                  <dt>Notes</dt>
+                  <dd className="mt-1 font-medium text-neutral-700">{notes.trim()}</dd>
+                </div>
+              ) : null}
+            </dl>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setReviewOpen(false)}
+                className="min-h-12 border border-neutral-300 px-4 text-sm font-semibold"
+              >
+                Edit sale
+              </button>
+              <button
+                type="button"
+                onClick={confirmSale}
+                disabled={pending}
+                className="min-h-12 bg-black px-4 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {paymentMethod === 'XENDIT'
+                  ? 'Continue to payment'
+                  : paymentMethod === 'ROOM_CHARGE'
+                    ? 'Charge room & create'
+                    : paymentMethod === 'PAY_AT_COUNTER'
+                      ? 'Create unpaid sale'
+                      : 'Complete cash sale'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {mobileView === 'products' && itemCount > 0 ? (
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl lg:hidden">

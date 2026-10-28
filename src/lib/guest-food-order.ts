@@ -164,6 +164,9 @@ export async function createGuestFoodOrder(
   }
 
   const orderType = input.orderType || 'ROOM_SERVICE';
+  if (input.paymentMethod === PaymentMethod.CASH && orderType !== 'ROOM_SERVICE') {
+    throw new Error('Cash on room delivery is available only for room service. Choose pay at counter or online payment.');
+  }
   const isPublicLocationTag = !tag.roomId;
   const requireRoomAssignment =
     input.paymentMethod === PaymentMethod.ROOM_CHARGE ||

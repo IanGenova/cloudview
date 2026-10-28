@@ -1520,10 +1520,13 @@ const [scheduledNote, setScheduledNote] = useState('');
 
             <section className="mt-5 border border-white/10 bg-white/[0.04] p-5">
               <h3 className="mb-5 font-serif text-xl font-normal tracking-wide text-white">
-                Order preferences
+                Finish your order
               </h3>
 
               <div className="space-y-4">
+                <p className="border-b border-white/10 pb-2 text-xs font-semibold uppercase tracking-[0.14em] text-gold">
+                  1. Your contact details
+                </p>
                 <div>
                   <label htmlFor="menu-ordered-by" className="mb-2 flex items-baseline justify-between gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
                     <span>Ordered by</span>
@@ -1588,15 +1591,22 @@ const [scheduledNote, setScheduledNote] = useState('');
                   </p>
                 </div>
 
+                <p className="border-b border-white/10 pb-2 pt-2 text-xs font-semibold uppercase tracking-[0.14em] text-gold">
+                  2. Where and when
+                </p>
                 <div>
                   <label htmlFor="menu-order-type" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
-                    Order type
+                    How should we serve your food?
                   </label>
                   <select
             id="menu-order-type"
                     value={orderType}
                     onChange={(event) => {
-                      setOrderType(event.currentTarget.value as OrderType);
+                      const nextOrderType = event.currentTarget.value as OrderType;
+                      setOrderType(nextOrderType);
+                      if (nextOrderType !== 'ROOM_SERVICE' && paymentMethod === 'CASH') {
+                        setPaymentMethod('PAY_AT_COUNTER');
+                      }
                       setConfirmedClause(false);
                     }}
                     className={cn(
@@ -1622,7 +1632,7 @@ const [scheduledNote, setScheduledNote] = useState('');
 
                 <div>
                   <label htmlFor="menu-order-time" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
-                    Order time
+                    When do you want it?
                   </label>
                   <select
             id="menu-order-time"
@@ -1639,10 +1649,10 @@ const [scheduledNote, setScheduledNote] = useState('');
                     style={checkoutFieldStyle}
                   >
                     <option value="ASAP" className="bg-[#111] text-white">
-                      ASAP / Send to kitchen now
+                      As soon as possible
                     </option>
                     <option value="SCHEDULED" className="bg-[#111] text-white">
-                      Schedule for later
+                      At a specific time
                     </option>
                   </select>
                 </div>
@@ -1657,7 +1667,9 @@ const [scheduledNote, setScheduledNote] = useState('');
                     </div>
 
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <input
+                      <label className="grid gap-2 text-sm font-medium text-white/80">
+                        Date
+                        <input
                         type="date"
                         value={scheduledDate}
                         onChange={(event) =>
@@ -1668,8 +1680,11 @@ const [scheduledNote, setScheduledNote] = useState('');
                           'h-14 border-gold/25 [color-scheme:dark]'
                         )}
                         style={checkoutFieldStyle}
-                      />
-                      <input
+                        />
+                      </label>
+                      <label className="grid gap-2 text-sm font-medium text-white/80">
+                        Time
+                        <input
                         type="time"
                         value={scheduledTime}
                         onChange={(event) =>
@@ -1680,28 +1695,32 @@ const [scheduledNote, setScheduledNote] = useState('');
                           'h-14 border-gold/25 [color-scheme:dark]'
                         )}
                         style={checkoutFieldStyle}
-                      />
+                        />
+                      </label>
                     </div>
 
-                    <textarea
+                    <label className="mt-3 grid gap-2 text-sm font-medium text-white/80">
+                      Schedule note (optional)
+                      <textarea
                       rows={3}
-                      className={cn(
-                        checkoutFieldClass,
-                        'mt-3 min-h-24 resize-y border-gold/25 p-4 leading-6'
-                      )}
+                      className={cn(checkoutFieldClass, 'min-h-24 resize-y border-gold/25 p-4 leading-6')}
                       placeholder="Optional schedule note"
                       value={scheduledNote}
                       onChange={(event) =>
                         setScheduledNote(event.currentTarget.value)
                       }
                       style={checkoutFieldStyle}
-                    />
+                      />
+                    </label>
                   </div>
                 ) : null}
 
+                <p className="border-b border-white/10 pb-2 pt-2 text-xs font-semibold uppercase tracking-[0.14em] text-gold">
+                  3. Payment
+                </p>
                 <div>
                   <label htmlFor="menu-payment-method" className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-white/75">
-                    Payment method
+                    How will you pay?
                   </label>
                   <select
             id="menu-payment-method"
@@ -1722,21 +1741,37 @@ const [scheduledNote, setScheduledNote] = useState('');
                     style={checkoutFieldStyle}
                   >
                     <option value="ROOM_CHARGE" className="bg-[#111] text-white">
-                      Room charge
+                      Add to my room bill
                     </option>
                     <option
                       value="PAY_AT_COUNTER"
                       className="bg-[#111] text-white"
                     >
-                      Pay at counter
+                      Pay at hotel counter
                     </option>
-                    <option value="CASH" className="bg-[#111] text-white">
-                      Cash
-                    </option>
+                    {orderType === 'ROOM_SERVICE' ? (
+                      <option value="CASH" className="bg-[#111] text-white">
+                        Pay cash on room delivery
+                      </option>
+                    ) : null}
                     <option value="XENDIT" className="bg-[#111] text-white">
-                      Card / E-wallet / QR Ph (Xendit)
+                      Pay online by card, E-wallet, or QR Ph
                     </option>
                   </select>
+
+                  {paymentMethod === 'PAY_AT_COUNTER' ? (
+                    <p className="mt-2 text-sm leading-6 text-white/70">
+                      Pay at the hotel counter. Staff will mark this order paid after collecting your payment.
+                    </p>
+                  ) : paymentMethod === 'CASH' ? (
+                    <p className="mt-2 text-sm leading-6 text-white/70">
+                      Have cash ready when staff delivers your food to your room.
+                    </p>
+                  ) : paymentMethod === 'ROOM_CHARGE' ? (
+                    <p className="mt-2 text-sm leading-6 text-white/70">
+                      This amount will be added to your active stay and settled at checkout.
+                    </p>
+                  ) : null}
 
                   {paymentMethod === 'XENDIT' ? (
                     <div className="mt-3 flex items-start gap-3 border border-gold/20 bg-gold/[0.08] p-4">

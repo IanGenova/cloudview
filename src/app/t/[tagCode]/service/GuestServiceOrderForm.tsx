@@ -314,12 +314,10 @@ function isServiceUnavailable(service: GuestServiceItem) {
 }
 
 function SubmitButton({
-  disabled,
   clientPending,
   paymentMethod,
   requiresPayment,
 }: {
-  disabled: boolean;
   clientPending: boolean;
   paymentMethod: ServicePaymentMethod;
   requiresPayment: boolean;
@@ -331,7 +329,7 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      disabled={disabled || pending}
+      disabled={pending}
       size="lg"
       className="mt-5 h-14 w-full bg-gold text-[15px] font-semibold tracking-wide text-black shadow-[0_16px_36px_rgba(214,167,56,0.24)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
     >
@@ -961,6 +959,13 @@ export function GuestServiceOrderForm({
   const actionError = getErrorMessage(error);
   const successMessage = getSuccessMessage(success, count);
   const visibleError = localError || actionError;
+  const missingDetails = [
+    guestName.trim().length < 2 ? 'guest name' : null,
+    guestPhone.replace(/\D/g, '').length < 7 ? 'phone number' : null,
+    requiresRoomVerification && !roomNumber.trim() ? 'room number' : null,
+    requiresRoomVerification && roomPasscode.length !== 6 ? 'six-digit room passcode' : null,
+    hasPayableFixedPrice && !chargeConsent ? 'charge confirmation' : null,
+  ].filter(Boolean);
 
   function getCartQuantity(serviceCode: string) {
     return cart.find((item) => item.serviceCode === serviceCode)?.quantity ?? 0;
@@ -1812,7 +1817,9 @@ export function GuestServiceOrderForm({
                       </div>
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <input
+                      <label className="grid gap-2 text-sm font-medium text-white/80">
+                        Room number
+                        <input
                         name="roomNumber"
                         type="text"
                         required
@@ -1821,10 +1828,13 @@ export function GuestServiceOrderForm({
                         value={roomNumber}
                         onChange={(event) => setRoomNumber(event.currentTarget.value)}
                         className={cn(darkFieldClass, 'h-14')}
-                      />
-                      <div className="relative">
-                        <KeyRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
-                        <input
+                        />
+                      </label>
+                      <label className="grid gap-2 text-sm font-medium text-white/80">
+                        Six-digit room passcode
+                        <span className="relative">
+                          <KeyRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gold" />
+                          <input
                           name="roomPasscode"
                           type="password"
                           inputMode="numeric"
@@ -1838,13 +1848,16 @@ export function GuestServiceOrderForm({
                             setRoomPasscode(event.currentTarget.value.replace(/\D/g, '').slice(0, 6))
                           }
                           className={cn(darkFieldClass, 'h-14 pl-11 font-mono tracking-[0.18em]')}
-                        />
-                      </div>
+                          />
+                        </span>
+                      </label>
                     </div>
                   </div>
                 ) : null}
 
-                <textarea
+                <label className="grid gap-2 text-sm font-medium text-white/80">
+                  Special instructions (optional)
+                  <textarea
                   name="notes"
                   rows={4}
                   placeholder="Special instructions or helpful details"
@@ -1858,7 +1871,8 @@ export function GuestServiceOrderForm({
                     WebkitTextFillColor: 'white',
                     caretColor: '#d6a738',
                   }}
-                />
+                  />
+                </label>
 
                 <div>
                   <label htmlFor="svc-request-time" className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
@@ -1896,7 +1910,9 @@ export function GuestServiceOrderForm({
                     </div>
 
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <input
+                      <label className="grid gap-2 text-sm font-medium text-white/80">
+                        Date
+                        <input
                         type="date"
                         value={scheduledDate}
                         onChange={(event) =>
@@ -1906,8 +1922,11 @@ export function GuestServiceOrderForm({
                           darkFieldClass,
                           'h-14 [color-scheme:dark]'
                         )}
-                      />
-                      <input
+                        />
+                      </label>
+                      <label className="grid gap-2 text-sm font-medium text-white/80">
+                        Time
+                        <input
                         type="time"
                         value={scheduledTime}
                         onChange={(event) =>
@@ -1917,21 +1936,22 @@ export function GuestServiceOrderForm({
                           darkFieldClass,
                           'h-14 [color-scheme:dark]'
                         )}
-                      />
+                        />
+                      </label>
                     </div>
 
-                    <textarea
+                    <label className="mt-3 grid gap-2 text-sm font-medium text-white/80">
+                      Schedule note (optional)
+                      <textarea
                       rows={3}
                       placeholder="Optional schedule note"
                       value={scheduledNote}
                       onChange={(event) =>
                         setScheduledNote(event.currentTarget.value)
                       }
-                      className={cn(
-                        darkFieldClass,
-                        'mt-3 min-h-24 resize-y p-4 leading-6'
-                      )}
-                    />
+                        className={cn(darkFieldClass, 'min-h-24 resize-y p-4 leading-6')}
+                      />
+                    </label>
                   </div>
                 ) : null}
 
@@ -2138,20 +2158,18 @@ export function GuestServiceOrderForm({
               ) : null}
 
               {visibleError ? (
-                <p className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
+                <p role="alert" className="mt-4 border border-red-400/20 bg-red-500/10 p-3 text-sm font-bold text-red-200">
                   {visibleError}
                 </p>
               ) : null}
 
+              {missingDetails.length > 0 ? (
+                <p role="status" className="mt-4 border border-white/15 bg-white/[0.04] p-3 text-sm leading-6 text-white/75">
+                  To send this request, complete: {missingDetails.join(', ')}.
+                </p>
+              ) : null}
+
               <SubmitButton
-                disabled={
-                  cart.length === 0 ||
-                  guestName.trim().length < 2 ||
-                  guestPhone.replace(/\D/g, '').length < 7 ||
-                  (requiresRoomVerification &&
-                    (!roomNumber.trim() || roomPasscode.length !== 6)) ||
-                  (hasPayableFixedPrice && !chargeConsent)
-                }
                 clientPending={paymentPending}
                 paymentMethod={effectivePaymentMethod}
                 requiresPayment={hasPayableFixedPrice}
