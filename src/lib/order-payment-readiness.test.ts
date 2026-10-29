@@ -76,6 +76,35 @@ test('an order owed a refund says that, and does not read as settled', () => {
   assert.match(r.detail, /back|refund|owe/i);
 });
 
+test('a delivered unpaid order asks staff to collect payment without kitchen guidance', () => {
+  const r = paymentReadiness({ ...COUNTER, status: 'DELIVERED' });
+
+  assert.match(r.detail, /collect/i);
+  assert.match(r.detail, /already|complete/i);
+  assert.doesNotMatch(r.detail, /kitchen can start|when the guest collects/i);
+});
+
+test('a cancelled zero-total order does not claim a payment is owed', () => {
+  const r = paymentReadiness({ ...COUNTER, status: 'CANCELLED', totalCents: 0 });
+
+  assert.equal(r.label, 'No payment due');
+  assert.doesNotMatch(r.detail, /kitchen|collect/i);
+});
+
+test('refund guidance never invents an amount from a cancelled order total', () => {
+  const r = paymentReadiness({ ...COUNTER, status: 'CANCELLED', totalCents: 0, paymentStatus: 'REFUND_PENDING' });
+
+  assert.equal(r.label, 'Refund pending');
+  assert.doesNotMatch(r.detail, /₱0\.00/);
+});
+
+test('a completed Xendit order does not say the kitchen can start', () => {
+  const r = paymentReadiness({ paymentMethod: 'XENDIT', paymentStatus: 'PAID', totalCents: 79080, status: 'DELIVERED' });
+
+  assert.equal(r.blocksKitchen, false);
+  assert.doesNotMatch(r.detail, /kitchen can start/i);
+});
+
 test('every state produces a line a person can act on', () => {
   const methods = ['PAY_AT_COUNTER', 'CASH', 'ROOM_CHARGE', 'POS', 'XENDIT', 'SOMETHING_NEW'];
   const statuses = ['UNPAID', 'PAID', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED', 'REFUND_FAILED'];

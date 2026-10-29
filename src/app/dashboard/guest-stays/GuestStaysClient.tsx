@@ -2220,11 +2220,11 @@ function handleResetPasscode(guestStayId: string) {
 
       {isCreateOpen ? (
         <Modal
-          title="Create Guest Stay"
+          title="Check In Guest"
           description={
             createSecurityCodeEnabled
               ? 'Check in a guest, generate a room passcode, and set device limits.'
-              : 'Check in a guest with direct NFC room access. No guest passcode is required.'
+              : 'Check in a guest. They can tap the room NFC tag to open the guest portal; no passcode is required.'
           }
           onClose={() => setIsCreateOpen(false)}
         >
@@ -2315,7 +2315,7 @@ function handleResetPasscode(guestStayId: string) {
               ) : null}
 
               {createdStay.securityCodeEnabled ? (
-                <p className="mt-2 text-xs font-bold text-emerald-700/80">
+                <p className="mt-2 text-xs font-bold text-emerald-700">
                   This passcode is shown only now. Store or send it to the guest
                   before closing this modal.
                 </p>
@@ -2433,19 +2433,18 @@ function handleResetPasscode(guestStayId: string) {
                 ) : null}
               </>
             ) : (
-              <div className="border border-emerald-200 bg-emerald-50 p-4">
+              <div className="border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950">
                 <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700">
+                  <span className="grid size-10 shrink-0 place-items-center bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
                     <ShieldCheck className="size-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-emerald-900">
-                      Room security code is disabled
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                      No room passcode required
                     </p>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-emerald-800/75">
+                    <p className="mt-1 text-xs font-semibold leading-5 text-emerald-800 dark:text-emerald-100">
                       Guests with an active stay can open this room&apos;s portal
-                      directly after scanning its NFC tag. Passcode SMS and
-                      device authorization limits are not used.
+                      by tapping its NFC tag. No SMS code or device limit is used.
                     </p>
                   </div>
                 </div>
@@ -2491,10 +2490,10 @@ function handleResetPasscode(guestStayId: string) {
                 <ShieldCheck className="size-4" />
               )}
               {isPending
-                ? 'Creating Stay...'
+                ? 'Checking In...'
                 : createSecurityCodeEnabled
-                  ? 'Create Stay & Generate Passcode'
-                  : 'Create Stay with Direct NFC Access'}
+                  ? 'Check In & Generate Passcode'
+                  : 'Check In Guest'}
             </button>
           </form>
         </Modal>
@@ -2647,9 +2646,9 @@ function handleResetPasscode(guestStayId: string) {
                     </p>
                   </div>
                   <p className="mt-2 text-sm font-semibold text-emerald-900">
-                    Security code disabled
+                    No room passcode required
                   </p>
-                  <p className="mt-2 text-[11px] font-semibold leading-4 text-emerald-800/75">
+                  <p className="mt-2 text-[11px] font-semibold leading-4 text-emerald-800">
                     Guests can scan the assigned room NFC tag without entering a
                     room passcode.
                   </p>

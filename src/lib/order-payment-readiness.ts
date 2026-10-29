@@ -32,13 +32,14 @@ export type PaymentReadiness = {
 const SETTLED = new Set(['PAID', 'PARTIALLY_REFUNDED']);
 
 const COLLECTED_HOW: Record<string, string> = {
-  PAY_AT_COUNTER: 'at the counter when the guest collects',
-  CASH: 'in cash on delivery',
+  PAY_AT_COUNTER: 'at the counter',
+  CASH: 'in cash',
   POS: 'at the POS terminal',
   ROOM_CHARGE: 'on the room bill at checkout',
 };
 
 export function paymentReadiness(order: {
+  status?: string;
   paymentMethod: string;
   paymentStatus: string;
   totalCents: number;
@@ -48,8 +49,8 @@ export function paymentReadiness(order: {
   if (order.paymentStatus === 'REFUND_PENDING' || order.paymentStatus === 'REFUND_FAILED') {
     return {
       tone: 'wait',
-      label: 'Refund owed',
-      detail: `${total} is owed back to the guest and has not been returned yet.`,
+      label: order.paymentStatus === 'REFUND_FAILED' ? 'Refund failed' : 'Refund pending',
+      detail: 'Check the original payment and refund history for the amount. The refund has not been confirmed.',
       blocksKitchen: false,
     };
   }
@@ -58,7 +59,7 @@ export function paymentReadiness(order: {
     return {
       tone: 'done',
       label: 'Refunded',
-      detail: `${total} has gone back to the guest. Nothing is outstanding.`,
+      detail: 'The refund is recorded as complete. Check refund history for the amount returned.',
       blocksKitchen: false,
     };
   }
@@ -72,7 +73,9 @@ export function paymentReadiness(order: {
       return {
         tone: 'live',
         label: 'Paid through Xendit',
-        detail: `${total} verified. The kitchen can start.`,
+        detail: order.status === 'DELIVERED' || order.status === 'CANCELLED'
+          ? `${total} verified through Xendit. This order is already ${order.status.toLowerCase()}.`
+          : `${total} verified. The kitchen can start.`,
         blocksKitchen: false,
       };
     }
@@ -80,8 +83,10 @@ export function paymentReadiness(order: {
     return {
       tone: 'stop',
       label: 'Payment not verified',
-      detail: `Wait for Xendit to confirm ${total} before preparing this order.`,
-      blocksKitchen: true,
+      detail: order.status === 'DELIVERED' || order.status === 'CANCELLED'
+        ? `Xendit has not confirmed ${total}. Review the payment records and resolve the discrepancy.`
+        : `Wait for Xendit to confirm ${total} before preparing this order.`,
+      blocksKitchen: order.status !== 'DELIVERED' && order.status !== 'CANCELLED',
     };
   }
 
@@ -96,10 +101,23 @@ export function paymentReadiness(order: {
 
   const how = COLLECTED_HOW[order.paymentMethod] ?? 'by the method on the order';
 
+  if (order.status === 'CANCELLED' && order.totalCents === 0) {
+    return {
+      tone: 'done',
+      label: 'No payment due',
+      detail: 'This cancelled order has no outstanding charge.',
+      blocksKitchen: false,
+    };
+  }
+
   return {
     tone: 'wait',
     label: 'To collect',
-    detail: `${total} to collect ${how}. The kitchen can start now.`,
+    detail: order.status === 'DELIVERED'
+      ? `${total} to collect ${how}. This order is complete; mark it paid only after collection.`
+      : order.status === 'CANCELLED'
+        ? `${total} remains unpaid after cancellation. Review the charge before collecting payment.`
+        : `${total} to collect ${how}. The kitchen can start now.`,
     blocksKitchen: false,
   };
 }

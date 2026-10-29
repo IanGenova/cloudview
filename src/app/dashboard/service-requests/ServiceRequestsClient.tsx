@@ -1690,6 +1690,7 @@ export function ServiceRequestsClient({
             <div className="flex h-11 items-center gap-3 border border-neutral-200 bg-neutral-50 px-4 dark:border-neutral-800 dark:bg-neutral-950">
               <Search className="size-4 text-neutral-400" />
               <input
+                aria-label="Search service requests"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search request order, room, guest, add-on..."

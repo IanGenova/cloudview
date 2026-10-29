@@ -1470,36 +1470,36 @@ export function POSClient({
     setError(null);
 
     if (existingXenditSession) {
-      showError(
+      setError(
         'An existing Xendit checkout must be continued or cancelled before another POS payment can be created.'
       );
       return;
     }
 
     if (foodCart.length === 0 && serviceCart.length === 0) {
-      showError('Please add at least one food item or service item.');
+      setError('Please add at least one food item or service item.');
       return;
     }
 
     const stockError = validateCartAgainstStock();
 
     if (stockError) {
-      showError(stockError);
+      setError(stockError);
       return;
     }
 
     if (paymentMethod === 'ROOM_CHARGE' && !selectedRoomCanCharge) {
-      showError('Select a room with a current checked-in stay before charging this sale.');
+      setError('Select a room with a current checked-in stay before charging this sale.');
       return;
     }
 
     if (paymentMethod === 'CASH' && !cashInputValid) {
-      showError('Enter the cash tendered in pesos with up to two decimal places.');
+      setError('Enter the cash received in pesos, for example 250.00.');
       return;
     }
 
     if (paymentMethod === 'CASH' && cashValue < total) {
-      showError('Cash tendered is lower than the total amount.');
+      setError('Cash received is lower than the sale total.');
       return;
     }
 
@@ -2399,14 +2399,18 @@ export function POSClient({
                 {paymentMethod === 'CASH' ? (
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-                      Cash Tendered
+                      Cash Received
                     </label>
                     <input
-                      aria-label="Cash tendered"
+                      aria-label="Cash received"
                       value={cashTendered}
-                      onChange={(event) => setCashTendered(event.target.value)}
-                      placeholder="Cash tendered"
+                      onChange={(event) => {
+                        setCashTendered(event.target.value);
+                        setError(null);
+                      }}
+                      placeholder="0.00"
                       type="number"
+                      inputMode="decimal"
                       min="0"
                       step="0.01"
                       className="h-10 w-full border border-neutral-200 px-3 text-xs font-semibold outline-none"
@@ -2454,7 +2458,11 @@ export function POSClient({
                   <div className="flex justify-between">
                     <span className="font-bold text-neutral-500">Change</span>
                     <span className="font-semibold">
-                      {money(change, currency)}
+                      {!cashInputValid
+                        ? 'Enter cash received'
+                        : cashValue < total
+                          ? `Short by ${money(total - cashValue, currency)}`
+                          : money(change, currency)}
                     </span>
                   </div>
                 ) : null}
